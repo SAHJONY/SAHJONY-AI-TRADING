@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: freebuff-api
+    env: docker
+    dockerfilePath: ./Dockerfile
+    region: oregon
+    plan: free
+    port: 3001
+    envVars:
+      - key: NODE_ENV
+        value: production

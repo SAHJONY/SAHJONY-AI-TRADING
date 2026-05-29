@@ -1,0 +1,8 @@
+// Trading Module - Main entry point
+export { MarketDataService, marketDataService } from './market-data'
+export { PortfolioService, portfolioService } from './portfolio'
+export { StrategyEngine, strategyEngine } from './strategy-engine'
+export { BacktestEngine, backtestEngine } from './backtest-engine'
+export { AgentDebateOrchestrator, agentDebateOrchestrator } from './agent-debate'
+export { KnowledgePipeline, knowledgePipeline } from './knowledge-pipeline'
+export { MetaLearningSystem, metaLearning } from './meta-learning'

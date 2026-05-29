@@ -1,0 +1,37 @@
+# Hermes Agent - Render deployment
+
+## Quick Deploy
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy)
+
+1. Click the button above or go to [render.com](https://render.com)
+2. Connect your GitHub repository
+3. Select `hermes-deployment` as the root directory
+4. Add environment variables:
+   - `ANTHROPIC_API_KEY` = your actual key
+   - `API_SERVER_KEY` = a secure random string
+5. Deploy!
+
+## Manual Deploy
+
+```bash
+# Using render-cli
+render deploy --service=hermes-agent --repo=https://github.com/SAHJONY/hermes-agent-platform
+```
+
+## Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| ANTHROPIC_API_KEY | Yes | Your Anthropic API key |
+| API_SERVER_KEY | Yes | Authentication key for API access |
+| API_SERVER_ENABLED | No | Enable API server (default: true) |
+| API_SERVER_PORT | No | Port to listen on (default: 8642) |
+| LOG_LEVEL | No | Log level (default: INFO) |
+
+## Health Check
+
+After deployment, verify with:
+```bash
+curl https://your-service.onrender.com/health
+```

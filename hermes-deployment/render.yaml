@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: hermes-agent
+    env: docker
+    dockerfilePath: ./Dockerfile
+    region: oregon
+    plan: free
+    port: 8642
+    envVars:
+      - key: API_SERVER_ENABLED
+        value: "true"
+      - key: API_SERVER_PORT
+        value: "8642"
+      - key: API_SERVER_HOST
+        value: "0.0.0.0"
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: API_SERVER_KEY
+        sync: false
