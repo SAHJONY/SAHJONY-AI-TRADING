@@ -10,6 +10,7 @@ import { AGENT_ROLES, DEFAULT_DEBATE_CONFIG } from '@/types/trading'
 import { marketDataService } from './market-data'
 import { tradingLLM } from './llm-provider'
 import { regimeGeometryDetector } from './regime-geometry-detector'
+import { knowledgeGraph } from './knowledge-graph'
 
 // ---- Analyst Agents ----
 
@@ -522,11 +523,18 @@ export class AgentDebateOrchestrator {
       patterns: ['Double bottom forming', 'Bullish divergence on RSI'],
     }
 
+    // Layer 2: Causal Analysis via Knowledge Graph
+    const causalAnalysis = this.getCausalContext(symbol, assetType, bars ?? [])
+    const causalContext = causalAnalysis?.summary ?? undefined
+
     // Layer 3: Regime Geometry — feed historical bars into the detector
     const regimeGeometry = await this.getRegimeContext(symbol, assetType, bars ?? [])
 
     // Build knowledge context with regime info
     let knowledgeContext = `Market analysis for ${symbol} (${assetType}). Current price: $${quote?.price.toFixed(2) || 'N/A'}. ${relevantNews.length} recent news articles analyzed.`
+    if (causalAnalysis) {
+      knowledgeContext += ` Attribution: ${(causalAnalysis.attribution.explainedPct * 100).toFixed(0)}% factor-driven, ${(causalAnalysis.attribution.idiosyncraticPct * 100).toFixed(0)}% idiosyncratic.`
+    }
     if (regimeGeometry) {
       knowledgeContext += ` Regime: ${regimeGeometry.regime.toUpperCase()} (confidence: ${(regimeGeometry.regimeConfidence * 100).toFixed(0)}%).`
     }
@@ -540,9 +548,34 @@ export class AgentDebateOrchestrator {
       technicalSummary: `${techSnapshot.trend === 'bullish' ? 'Bullish' : 'Bearish'} trend. RSI: ${techSnapshot.rsi?.toFixed(0)}. ${techSnapshot.patterns.join('. ')}.`,
       fundamentalSummary: `Sector: Technology. Strong earnings growth expected. Revenue growth: 12% YoY.`,
       bars,
+      causalContext,
+      causalAnalysis,
       regimeContext: regimeGeometry?.summary ?? undefined,
       regimeGeometry,
     }
+  }
+
+  /**
+   * Get causal analysis context for a symbol via the Knowledge Graph (Layer 2).
+   */
+  private getCausalContext(
+    symbol: string,
+    assetType: import('@/types/trading').AssetType,
+    bars: { close: number }[],
+  ): import('@/types/trading').CausalAnalysisResult | null {
+    if (bars.length < 5) return null
+
+    // Convert close-only bars to full HistoricalBar shape for the engine
+    const fullBars = bars.map((b, i) => ({
+      timestamp: new Date(Date.now() - (bars.length - i) * 86400000).toISOString(),
+      open: b.close,
+      high: b.close,
+      low: b.close,
+      close: b.close,
+      volume: 0,
+    }))
+
+    return knowledgeGraph.analyzeCausalStructure(symbol, assetType, fullBars)
   }
 
   /**

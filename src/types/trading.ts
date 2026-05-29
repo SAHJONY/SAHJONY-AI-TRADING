@@ -376,6 +376,10 @@ export interface MarketDebateContext {
   technicalSummary: string
   fundamentalSummary: string
   bars?: HistoricalBar[]
+  /** Causal inference context (Layer 2) — text summary for debate agents */
+  causalContext?: string
+  /** Causal inference full result (Layer 2) — for structured access */
+  causalAnalysis?: CausalAnalysisResult | null
   /** Regime geometry context (Layer 3) — text summary for debate agents */
   regimeContext?: string
   /** Regime geometry full result (Layer 3) — for structured access */
@@ -481,6 +485,8 @@ export interface KnowledgeContext {
   newsItems: MarketNewsItem[]
   sentimentSummary: NewsSentimentSummary
   technicalSnapshot: TechnicalSnapshot | null
+  /** Causal inference analysis (Layer 2) — factor exposures, Granger causality, causal paths */
+  causalAnalysis?: CausalAnalysisResult | null
   /** Regime geometry analysis (Layer 3) — Fisher metric, geodesic tracking, regime classification */
   regimeGeometry?: RegimeGeometryResult | null
   enrichedAt: string
@@ -810,6 +816,174 @@ export const DEFAULT_POD_RISK_LIMITS: PodRiskLimits = {
   maxSingleAssetPct: 0.30,
   maxCorrelation: 0.7,
   hardStopLossPct: 0.08,
+}
+
+// ============================================================
+// Layer 2: Knowledge Graph (Causal Inference Engine)
+// ============================================================
+
+/** A market factor used in causal analysis */
+export interface FactorDefinition {
+  /** Unique factor identifier (e.g. "interest_rates", "vix", "sector_tech") */
+  id: string
+  /** Human-readable name */
+  name: string
+  /** Category of this factor */
+  category: 'macro' | 'sentiment' | 'technical' | 'fundamental' | 'intermarket'
+  /** How this factor is typically measured */
+  measurement: string
+  /** Which asset types this factor applies to */
+  assetTypes: AssetType[]
+  /** Typical lag (in days) before this factor impacts markets */
+  typicalLag: number
+  /** Direction of influence (+1 = positive correlation, -1 = inverse, 0 = ambiguous) */
+  defaultDirection: number
+}
+
+/** A directed causal edge between two factors */
+export interface CausalEdge {
+  /** Source factor ID */
+  from: string
+  /** Target factor ID */
+  to: string
+  /** Strength of the causal relationship (0-1) */
+  strength: number
+  /** Statistical confidence in this edge (0-1) */
+  confidence: number
+  /** Lag in time periods (e.g., 1 = next day, 5 = next week) */
+  lag: number
+  /** Whether this edge was discovered via data vs predefined */
+  discovered: boolean
+  /** Human-readable description of the causal mechanism */
+  mechanism: string
+}
+
+/** The full causal graph structure */
+export interface CausalGraph {
+  /** All factor nodes */
+  factors: FactorDefinition[]
+  /** All directed edges */
+  edges: CausalEdge[]
+  /** When this graph was last updated */
+  updatedAt: string
+}
+
+/** How much an asset is exposed to a given factor */
+export interface FactorExposure {
+  /** Factor identifier */
+  factorId: string
+  /** Beta coefficient (regression) */
+  beta: number
+  /** R² of the factor regression */
+  rSquared: number
+  /** t-statistic for significance */
+  tStat: number
+  /** Whether this exposure is statistically significant */
+  significant: boolean
+}
+
+/** Result of a pairwise Granger causality test */
+export interface GrangerCausalityResult {
+  /** The variable being tested as cause */
+  cause: string
+  /** The variable being tested as effect */
+  effect: string
+  /** F-statistic from the Granger test */
+  fStat: number
+  /** P-value of the test */
+  pValue: number
+  /** Whether the test is significant at the 5% level */
+  significant: boolean
+  /** Optimal lag found */
+  optimalLag: number
+  /** Direction: "cause → effect", "bidirectional", or "none" */
+  direction: 'forward' | 'reverse' | 'bidirectional' | 'none'
+}
+
+/** Pairwise correlation with lag analysis */
+export interface LaggedCorrelation {
+  /** First variable */
+  series1: string
+  /** Second variable */
+  series2: string
+  /** Pearson correlation at lag 0 */
+  contemporaneous: number
+  /** Maximum cross-correlation value */
+  maxCrossCorrelation: number
+  /** Lag at which max cross-correlation occurs (positive = series1 leads) */
+  optimalLag: number
+  /** Correlation at each lag from -maxLag to +maxLag */
+  correlations: { lag: number; value: number }[]
+}
+
+/** Complete causal analysis result for a symbol */
+export interface CausalAnalysisResult {
+  symbol: string
+  assetType: AssetType
+  /** Factor exposures for this asset */
+  factorExposures: FactorExposure[]
+  /** Significant Granger-causal relationships */
+  grangerResults: GrangerCausalityResult[]
+  /** Cross-correlation analysis with key factors */
+  correlations: LaggedCorrelation[]
+  /** Inferred causal paths from macro factors to this asset */
+  causalPaths: CausalPath[]
+  /** Causal attribution: what % of returns is explained by causal factors */
+  attribution: CausalAttribution
+  /** Human-readable summary */
+  summary: string
+  /** When this analysis was computed */
+  computedAt: string
+}
+
+/** A path through the causal graph from one factor to another */
+export interface CausalPath {
+  /** Ordered sequence of factor IDs along the path */
+  path: string[]
+  /** Product of edge strengths along the path */
+  totalStrength: number
+  /** Combined lag in time periods */
+  totalLag: number
+  /** Human-readable explanation of this causal chain */
+  explanation: string
+}
+
+/** Decomposition of returns attributable to causal factors */
+export interface CausalAttribution {
+  /** Total return explained by causal factors (% of total) */
+  explainedPct: number
+  /** Idiosyncratic (unexplained) return */
+  idiosyncraticPct: number
+  /** Breakdown by factor */
+  factorContributions: { factorId: string; contribution: number; label: string }[]
+}
+
+/** Configuration for the Knowledge Graph Engine */
+export interface KnowledgeGraphConfig {
+  /** Maximum lag for Granger causality testing */
+  maxGrangerLag: number
+  /** Maximum lag for cross-correlation analysis */
+  maxCorrelationLag: number
+  /** Minimum R² for a factor to be considered meaningful */
+  minRSquared: number
+  /** P-value threshold for statistical significance */
+  significanceLevel: number
+  /** Maximum number of causal paths to enumerate */
+  maxCausalPaths: number
+  /** Maximum path length in the causal graph */
+  maxPathLength: number
+  /** Minimum edge strength for a path to be considered */
+  minPathStrength: number
+}
+
+export const DEFAULT_KNOWLEDGE_GRAPH_CONFIG: KnowledgeGraphConfig = {
+  maxGrangerLag: 5,
+  maxCorrelationLag: 10,
+  minRSquared: 0.05,
+  significanceLevel: 0.05,
+  maxCausalPaths: 20,
+  maxPathLength: 4,
+  minPathStrength: 0.01,
 }
 
 // ============================================================

@@ -9,6 +9,9 @@ export { MetaLearningSystem, metaLearning } from './meta-learning'
 export { TradingLLMProvider, tradingLLM } from './llm-provider'
 export type { LLMProviderType, TradingLLMConfig } from './llm-provider'
 
+// Layer 2: Knowledge Graph (Causal Inference Engine)
+export { KnowledgeGraphEngine, knowledgeGraph } from './knowledge-graph'
+
 // Layer 3: Regime Geometry Detector (Information Geometry)
 export { RegimeGeometryDetector, regimeGeometryDetector } from './regime-geometry-detector'
 

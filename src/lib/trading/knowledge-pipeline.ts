@@ -1,10 +1,12 @@
 // Knowledge Enrichment Pipeline — news aggregation, sentiment analysis, market context
+// Layer 2 integration: Knowledge Graph provides causal inference
 // Layer 3 integration: Regime Geometry Detector provides Fisher metric / geodesic analysis
 import type {
   KnowledgeContext, MarketNewsItem, NewsSentimentSummary,
   TechnicalSnapshot, CompanyProfile, AssetType,
 } from '@/types/trading'
 import { marketDataService } from './market-data'
+import { knowledgeGraph } from './knowledge-graph'
 import { regimeGeometryDetector } from './regime-geometry-detector'
 
 export class KnowledgePipeline {
@@ -28,6 +30,9 @@ export class KnowledgePipeline {
     const sentimentSummary = this.buildSentimentSummary(news)
     const technicalSnapshot = this.buildTechnicalSnapshot(quote, assetType)
 
+    // Layer 2: Causal Analysis via Knowledge Graph
+    const causalAnalysis = await this.getCausalAnalysis(symbol, assetType, bars)
+
     // Layer 3: Regime Geometry Analysis
     const regimeGeometry = await this.getRegimeGeometry(symbol, assetType, bars)
 
@@ -38,6 +43,7 @@ export class KnowledgePipeline {
       newsItems: news,
       sentimentSummary,
       technicalSnapshot,
+      causalAnalysis,
       regimeGeometry,
       enrichedAt: new Date().toISOString(),
     }
@@ -185,6 +191,29 @@ export class KnowledgePipeline {
   }
 
   /**
+   * Get causal analysis for a symbol via the Knowledge Graph (Layer 2).
+   */
+  private getCausalAnalysis(
+    symbol: string,
+    assetType: AssetType,
+    bars: { close: number }[] | null,
+  ): import('@/types/trading').CausalAnalysisResult | null {
+    if (!bars || bars.length < 5) return null
+
+    // Convert close-only bars to full HistoricalBar shape for the engine
+    const fullBars = bars.map((b, i) => ({
+      timestamp: new Date(Date.now() - (bars.length - i) * 86400000).toISOString(),
+      open: b.close,
+      high: b.close,
+      low: b.close,
+      close: b.close,
+      volume: 0,
+    }))
+
+    return knowledgeGraph.analyzeCausalStructure(symbol, assetType, fullBars)
+  }
+
+  /**
    * Get regime geometry analysis for a symbol by feeding historical bars
    * into the RegimeGeometryDetector (Layer 3).
    * Resets and reloads to ensure fresh data (computation is O(windowSize), trivial).
@@ -223,6 +252,22 @@ export class KnowledgePipeline {
     if (context.technicalSnapshot) {
       const t = context.technicalSnapshot
       parts.push(`\nTechnical: ${t.trend} trend, RSI: ${t.rsi?.toFixed(0)}, Patterns: ${t.patterns.join(', ')}`)
+    }
+
+    // Layer 2: Causal Graph context
+    if (context.causalAnalysis) {
+      const ca = context.causalAnalysis
+      parts.push(`\n[Causal Graph] Attribution: ${(ca.attribution.explainedPct * 100).toFixed(0)}% factor-driven, ${(ca.attribution.idiosyncraticPct * 100).toFixed(0)}% idiosyncratic`)
+      if (ca.factorExposures.filter(e => e.significant).length > 0) {
+        const topExposures = ca.factorExposures
+          .filter(e => e.significant)
+          .sort((a, b) => Math.abs(b.beta) - Math.abs(a.beta))
+          .slice(0, 3)
+        parts.push(`  Exposures: ${topExposures.map(e => `${e.factorId}(β=${e.beta.toFixed(2)})`).join(', ')}`)
+      }
+      if (ca.grangerResults.length > 0) {
+        parts.push(`  Granger: ${ca.grangerResults.map(g => `${g.cause}→${g.effect}`).join(', ')}`)
+      }
     }
 
     // Layer 3: Regime Geometry context
