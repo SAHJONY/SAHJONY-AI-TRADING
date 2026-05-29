@@ -65,6 +65,24 @@ export class HermesAgent extends BaseAgent {
         stdio: ['pipe', 'pipe', 'pipe']
       })
 
+      this.hermesProcess.on('error', (error) => {
+        console.error(`Hermes process error: ${error.message}`)
+        const err = new Error(`Hermes process error: ${error.message}`)
+        this.hermesProcess = null
+        this.rejectAllPending(err)
+        this.setStatus('failed')
+      })
+
+      this.hermesProcess.on('exit', (code) => {
+        if (code !== 0) {
+          console.warn(`Hermes exited with code ${code}`)
+          const err = new Error(`Hermes exited with code ${code}`)
+          this.hermesProcess = null
+          this.rejectAllPending(err)
+          this.setStatus('idle')
+        }
+      })
+
       if (this.hermesProcess.stdout) {
         this.hermesProcess.stdout.on('data', (data: Buffer) => {
           this.handleHermesOutput(data.toString())
@@ -77,22 +95,11 @@ export class HermesAgent extends BaseAgent {
         })
       }
 
-      this.hermesProcess.on('error', (error) => {
-        console.error(`Hermes process error: ${error.message}`)
-        this.setStatus('failed')
-      })
-
-      this.hermesProcess.on('exit', (code) => {
-        if (code !== 0) {
-          console.warn(`Hermes exited with code ${code}`)
-          this.setStatus('idle')
-        }
-      })
-
       this.setStatus('idle')
       this.emit('hermes:initialized', { sessionId: this.sessionId })
     } catch (error) {
       console.error('Failed to initialize Hermes:', error)
+      this.hermesProcess = null
       this.setStatus('failed')
     }
   }
@@ -183,6 +190,13 @@ export class HermesAgent extends BaseAgent {
     }
   }
 
+  private rejectAllPending(error: Error): void {
+    for (const [id, pending] of this.pendingRequests) {
+      pending.reject(error)
+    }
+    this.pendingRequests.clear()
+  }
+
   private sendToHermes(message: string, context: TaskContext): Promise<{ output: unknown }> {
     // Serverless fallback - Hermes CLI not available
     if (this.isServerless()) {
@@ -190,7 +204,7 @@ export class HermesAgent extends BaseAgent {
     }
 
     return new Promise((resolve, reject) => {
-      if (!this.hermesProcess) {
+      if (!this.hermesProcess || this.hermesProcess.killed || this.hermesProcess.exitCode !== null) {
         reject(new Error('Hermes process not initialized'))
         return
       }

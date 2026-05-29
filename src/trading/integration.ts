@@ -99,6 +99,7 @@ export class Layer1IntegrationClient extends EventEmitter {
     if (this.config.simulationMode) {
       console.log('[Layer4→Layer1] Running in simulation mode — Layer 1 responses will be mocked')
       this.connected = true
+      this.emit('connected', { broker: this.config.kafkaBroker, simulation: true })
       return
     }
 
