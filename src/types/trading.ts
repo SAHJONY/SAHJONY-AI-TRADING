@@ -376,6 +376,10 @@ export interface MarketDebateContext {
   technicalSummary: string
   fundamentalSummary: string
   bars?: HistoricalBar[]
+  /** Regime geometry context (Layer 3) — text summary for debate agents */
+  regimeContext?: string
+  /** Regime geometry full result (Layer 3) — for structured access */
+  regimeGeometry?: RegimeGeometryResult | null
 }
 
 export interface FinalDecision {
@@ -477,6 +481,8 @@ export interface KnowledgeContext {
   newsItems: MarketNewsItem[]
   sentimentSummary: NewsSentimentSummary
   technicalSnapshot: TechnicalSnapshot | null
+  /** Regime geometry analysis (Layer 3) — Fisher metric, geodesic tracking, regime classification */
+  regimeGeometry?: RegimeGeometryResult | null
   enrichedAt: string
 }
 

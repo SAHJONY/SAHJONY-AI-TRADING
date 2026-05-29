@@ -1,9 +1,11 @@
 // Knowledge Enrichment Pipeline — news aggregation, sentiment analysis, market context
+// Layer 3 integration: Regime Geometry Detector provides Fisher metric / geodesic analysis
 import type {
   KnowledgeContext, MarketNewsItem, NewsSentimentSummary,
   TechnicalSnapshot, CompanyProfile, AssetType,
 } from '@/types/trading'
 import { marketDataService } from './market-data'
+import { regimeGeometryDetector } from './regime-geometry-detector'
 
 export class KnowledgePipeline {
   private symbolCache: Map<string, { context: KnowledgeContext; expiresAt: number }> = new Map()
@@ -16,14 +18,18 @@ export class KnowledgePipeline {
       return cached.context
     }
 
-    const [news, quote, companyProfile] = await Promise.all([
+    const [news, quote, companyProfile, bars] = await Promise.all([
       marketDataService.getMarketNews([symbol]),
       marketDataService.getQuote(symbol, assetType),
       this.getCompanyProfile(symbol, assetType),
+      marketDataService.getHistoricalBars(symbol, assetType, '1d', 100).catch(() => null),
     ])
 
     const sentimentSummary = this.buildSentimentSummary(news)
     const technicalSnapshot = this.buildTechnicalSnapshot(quote, assetType)
+
+    // Layer 3: Regime Geometry Analysis
+    const regimeGeometry = await this.getRegimeGeometry(symbol, assetType, bars)
 
     const context: KnowledgeContext = {
       symbol,
@@ -32,6 +38,7 @@ export class KnowledgePipeline {
       newsItems: news,
       sentimentSummary,
       technicalSnapshot,
+      regimeGeometry,
       enrichedAt: new Date().toISOString(),
     }
 
@@ -177,6 +184,26 @@ export class KnowledgePipeline {
     }
   }
 
+  /**
+   * Get regime geometry analysis for a symbol by feeding historical bars
+   * into the RegimeGeometryDetector (Layer 3).
+   * Resets and reloads to ensure fresh data (computation is O(windowSize), trivial).
+   */
+  private async getRegimeGeometry(
+    symbol: string,
+    assetType: AssetType,
+    bars: { close: number }[] | null,
+  ): Promise<import('@/types/trading').RegimeGeometryResult | null> {
+    if (!bars || bars.length < 2) return null
+
+    // Reset and reload to ensure fresh regime detection
+    regimeGeometryDetector.resetSymbol(symbol, assetType)
+    const prices = bars.map(b => b.close)
+    regimeGeometryDetector.loadHistorical(symbol, assetType, prices)
+
+    return regimeGeometryDetector.getRegimeResult(symbol, assetType)
+  }
+
   async getEnrichedContext(symbol: string, assetType: AssetType): Promise<string> {
     const context = await this.enrichMarketContext(symbol, assetType)
     const parts: string[] = []
@@ -196,6 +223,18 @@ export class KnowledgePipeline {
     if (context.technicalSnapshot) {
       const t = context.technicalSnapshot
       parts.push(`\nTechnical: ${t.trend} trend, RSI: ${t.rsi?.toFixed(0)}, Patterns: ${t.patterns.join(', ')}`)
+    }
+
+    // Layer 3: Regime Geometry context
+    if (context.regimeGeometry) {
+      const rg = context.regimeGeometry
+      parts.push(`\n[Regime Geometry] Status: ${rg.regime.toUpperCase()} (confidence: ${(rg.regimeConfidence * 100).toFixed(0)}%)`)
+      parts.push(`  Geodesic velocity: ${(rg.currentVelocity * 1000).toFixed(2)}e-3 | Threshold: ${(rg.velocityThreshold * 1000).toFixed(2)}e-3`)
+      if (rg.regimeShiftDetected) {
+        parts.push(`  ⚠️ REGIME SHIFT DETECTED (severity: ${(rg.shiftSeverity * 100).toFixed(0)}%). ${rg.summary}`)
+      } else {
+        parts.push(`  ${rg.summary}`)
+      }
     }
 
     return parts.join('\n')

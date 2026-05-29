@@ -1,5 +1,6 @@
 // Agent Debate System — multi-agent trading debate with consensus and risk management
 // Phase 1: Real LLM-powered agent analysis with circuit breaker and mock fallback
+// Layer 3 integration: Regime Geometry Detector provides regime context to all agents
 import type {
   AgentTradingRole, AgentAnalysis, DebateState, MarketDebateContext,
   FinalDecision, VotingBreakdown, TradingRecommendation, ConsensusAction,
@@ -8,6 +9,7 @@ import type {
 import { AGENT_ROLES, DEFAULT_DEBATE_CONFIG } from '@/types/trading'
 import { marketDataService } from './market-data'
 import { tradingLLM } from './llm-provider'
+import { regimeGeometryDetector } from './regime-geometry-detector'
 
 // ---- Analyst Agents ----
 
@@ -28,18 +30,34 @@ function generateMacroAnalysis(input: AnalystInput): AgentAnalysis {
   const regime = regimes[Math.floor(Math.random() * regimes.length)]
   const isFavorable = regime === 'risk-on' || (regime === 'neutral' && Math.random() > 0.4)
 
+  // Layer 3: Incorporate regime geometry into macro assessment
+  const regimeGeo = context.regimeGeometry
+  const regimeAdjustment = regimeGeo
+    ? ` | Regime Geometry: ${regimeGeo.regime.toUpperCase()} (${(regimeGeo.regimeConfidence * 100).toFixed(0)}% conf). ${regimeGeo.summary}`
+    : ''
+
+  // Regime-based risk adjustment
+  let macroFlags: string[] = []
+  if (regimeGeo?.regime === 'crisis' || regimeGeo?.regime === 'transitioning') {
+    macroFlags.push(`Regime ${regimeGeo.regime} — elevated tail risk`)
+  }
+  if (regimeGeo?.regimeShiftDetected) {
+    macroFlags.push(`Regime shift detected (severity: ${(regimeGeo.shiftSeverity * 100).toFixed(0)}%)`)
+  }
+
   return {
     role: 'macro_strategist',
     recommendation: isFavorable ? 'BUY' : 'HOLD',
     confidence: 0.55 + Math.random() * 0.3,
-    reasoning: `Macro regime: ${regime}. ${isFavorable ? 'Favorable conditions with accommodative monetary policy and strong GDP growth supporting risk assets.' : 'Mixed signals with inflation concerns warranting caution.'} Context: ${context.knowledgeContext.slice(0, 100)}`,
+    reasoning: `Macro regime: ${regime}. ${isFavorable ? 'Favorable conditions with accommodative monetary policy and strong GDP growth supporting risk assets.' : 'Mixed signals with inflation concerns warranting caution.'} Context: ${context.knowledgeContext.slice(0, 100)}${regimeAdjustment}`,
     keyMetrics: {
       regime,
       gdpGrowth: (1.5 + Math.random() * 2.5).toFixed(1) + '%',
       inflation: (2 + Math.random() * 3).toFixed(1) + '%',
       fedStance: isFavorable ? 'dovish' : 'hawkish',
+      ...(regimeGeo ? { marketRegime: regimeGeo.regime, geodesicVelocity: parseFloat((regimeGeo.currentVelocity * 1000).toFixed(2)) } : {}),
     },
-    riskFlags: isFavorable ? [] : ['Inflation risk', 'Policy uncertainty'],
+    riskFlags: [...(isFavorable ? [] : ['Inflation risk', 'Policy uncertainty']), ...macroFlags],
     latencyMs: 100 + Math.floor(Math.random() * 200),
   }
 }
@@ -71,17 +89,34 @@ function generateSentimentAnalysis(input: AnalystInput): AgentAnalysis {
   const isPositive = sentiment.overallSentiment === 'positive'
   const isNegative = sentiment.overallSentiment === 'negative'
 
+  // Layer 3: Regime geometry — adjust sentiment interpretation
+  const regimeGeo = input.context.regimeGeometry
+  const regimeNote = regimeGeo
+    ? ` | Market Regime: ${regimeGeo.regime.toUpperCase()} — ${regimeGeo.regime === 'crisis' ? 'Sentiment signals may be unreliable in crisis. ' : regimeGeo.regime === 'volatile' ? 'Elevated noise in sentiment channels. ' : ''}`
+    : ''
+
+  // Dampen sentiment confidence in crisis/volatile regimes
+  let adjustedScore = sentiment.score
+  if (regimeGeo?.regime === 'crisis') adjustedScore = sentiment.score * 0.6 + 0.2 // pull toward neutral
+  else if (regimeGeo?.regime === 'volatile') adjustedScore = sentiment.score * 0.8 + 0.1
+
+  const flags: string[] = []
+  if (isNegative) flags.push('Negative sentiment cascade')
+  if (regimeGeo?.regime === 'crisis') flags.push('Sentiment unreliable — crisis regime')
+  if (regimeGeo?.regime === 'volatile') flags.push('Sentiment noise elevated — volatile regime')
+
   return {
     role: 'sentiment_agent',
     recommendation: isPositive ? 'BUY' : isNegative ? 'SELL' : 'HOLD',
-    confidence: sentiment.score,
-    reasoning: `Aggregated sentiment: ${sentiment.overallSentiment} (${(sentiment.score * 100).toFixed(0)}%). ${sentiment.articleCount} articles analyzed. Key themes: ${sentiment.keyThemes.join(', ')}. ${isPositive ? 'Bullish momentum building across social and news channels.' : isNegative ? 'Bearish pressure mounting with negative news flow.' : 'Mixed signals with no clear directional bias.'}`,
+    confidence: adjustedScore,
+    reasoning: `Aggregated sentiment: ${sentiment.overallSentiment} (${(adjustedScore * 100).toFixed(0)}%). ${sentiment.articleCount} articles analyzed. Key themes: ${sentiment.keyThemes.join(', ')}. ${isPositive ? 'Bullish momentum building across social and news channels.' : isNegative ? 'Bearish pressure mounting with negative news flow.' : 'Mixed signals with no clear directional bias.'}${regimeNote}`,
     keyMetrics: {
-      sentimentScore: sentiment.score,
+      sentimentScore: adjustedScore,
       articleCount: sentiment.articleCount,
       socialBuzz: isPositive ? 'high' : isNegative ? 'elevated' : 'moderate',
+      ...(regimeGeo ? { marketRegime: regimeGeo.regime } : {}),
     },
-    riskFlags: isNegative ? ['Negative sentiment cascade'] : [],
+    riskFlags: flags,
     latencyMs: 80 + Math.floor(Math.random() * 150),
   }
 }
@@ -106,19 +141,32 @@ function generateTechnicalAnalysis(input: AnalystInput): AgentAnalysis {
   const rsi = 30 + Math.random() * 40
   const rsiSignal = rsi > 70 ? 'overbought' : rsi < 30 ? 'oversold' : 'neutral'
 
+  // Layer 3: Incorporate regime geometry into technical assessment
+  const regimeGeo = context.regimeGeometry
+  const regimeNote = regimeGeo
+    ? ` | Regime: ${regimeGeo.regime.toUpperCase()} (Fisher det: ${regimeGeo.currentMetric.determinant.toExponential(2)}, velocity: ${(regimeGeo.currentVelocity * 1000).toFixed(2)}e-3)`
+    : ''
+
+  // Regime-based technical flags
+  const techFlags: string[] = []
+  if (regimeGeo?.regime === 'volatile') techFlags.push('Volatile regime — wider stop-loss recommended')
+  if (regimeGeo?.regime === 'trending') techFlags.push('Trending regime — trend-following signals preferred')
+  if (regimeGeo?.regime === 'crisis') techFlags.push('CRISIS regime — technical patterns may break down')
+
   return {
     role: 'technical_analyst',
     recommendation,
     confidence: 0.5 + Math.random() * 0.35,
-    reasoning: `RSI: ${rsi.toFixed(0)} (${rsiSignal}). ${techSummary || 'Multi-timeframe analysis shows mixed signals with key support at $' + (price * 0.95).toFixed(2) + ' and resistance at $' + (price * 1.05).toFixed(2) + '.'}`,
+    reasoning: `RSI: ${rsi.toFixed(0)} (${rsiSignal}). ${techSummary || 'Multi-timeframe analysis shows mixed signals with key support at $' + (price * 0.95).toFixed(2) + ' and resistance at $' + (price * 1.05).toFixed(2) + '.'}${regimeNote}`,
     keyMetrics: {
       rsi: rsi.toFixed(0),
       rsiSignal,
       supportLevel: (price * 0.95).toFixed(2),
       resistanceLevel: (price * 1.05).toFixed(2),
       volumeTrend: Math.random() > 0.5 ? 'increasing' : 'decreasing',
+      ...(regimeGeo ? { marketRegime: regimeGeo.regime, geodesicVelocity: parseFloat((regimeGeo.currentVelocity * 1000).toFixed(2)) } : {}),
     },
-    riskFlags: rsi > 70 ? ['Overbought conditions'] : rsi < 30 ? ['Oversold conditions'] : [],
+    riskFlags: [...(rsi > 70 ? ['Overbought conditions'] : rsi < 30 ? ['Oversold conditions'] : []), ...techFlags],
     latencyMs: 80 + Math.floor(Math.random() * 150),
   }
 }
@@ -126,10 +174,21 @@ function generateTechnicalAnalysis(input: AnalystInput): AgentAnalysis {
 function generateRiskAnalysis(input: AnalystInput): AgentAnalysis {
   const { context } = input
 
-  // Risk Manager is conservative by design
+  // Layer 3: Regime geometry — adjust risk stance based on market regime
+  const regimeGeo = context.regimeGeometry
+  
+  // Crisis or transitioning regimes: bias toward defensive stance
+  let riskBias = 1.0
+  if (regimeGeo?.regime === 'crisis') riskBias = 0.3  // heavily defensive
+  else if (regimeGeo?.regime === 'transitioning') riskBias = 0.6
+  else if (regimeGeo?.regime === 'volatile') riskBias = 0.8
+  else if (regimeGeo?.regime === 'trending') riskBias = 1.1  // slightly more risk-tolerant in trending
+
+  // Base risk levels with regime adjustment
   const riskLevels: TradingRecommendation[] = ['HOLD', 'SELL', 'STRONG_SELL', 'BUY', 'STRONG_BUY']
-  const riskWeights = [0.35, 0.25, 0.15, 0.15, 0.1]
-  const rand = Math.random()
+  const riskWeights = [0.35 * riskBias, 0.25 * riskBias, 0.15 / riskBias, 0.15 * riskBias, 0.1 * riskBias]
+  const totalWeight = riskWeights.reduce((s, w) => s + w, 0)
+  const rand = Math.random() * totalWeight
   let idx = 0
   let cumulative = 0
   for (let i = 0; i < riskWeights.length; i++) {
@@ -141,18 +200,30 @@ function generateRiskAnalysis(input: AnalystInput): AgentAnalysis {
   const var95 = (1 + Math.random() * 5).toFixed(1)
   const isHighRisk = recommendation === 'STRONG_SELL'
 
+  // Regime-based risk flags
+  const riskFlags: string[] = []
+  if (isHighRisk) riskFlags.push('VaR breach', 'Drawdown limit exceeded', 'Portfolio concentration')
+  if (regimeGeo?.regime === 'crisis') riskFlags.push('CRISIS regime — VaR estimates unreliable')
+  if (regimeGeo?.regime === 'transitioning') riskFlags.push('Transitioning regime — regime-switching risk elevated')
+  if (regimeGeo?.regimeShiftDetected) riskFlags.push(`Regime shift: ${regimeGeo.recentShifts[regimeGeo.recentShifts.length - 1]?.from ?? '?'} → ${regimeGeo.regime}`)
+
+  const regimeNote = regimeGeo
+    ? ` | Regime: ${regimeGeo.regime.toUpperCase()} — ${regimeGeo.summary}`
+    : ''
+
   return {
     role: 'risk_manager',
     recommendation,
     confidence: 0.6 + Math.random() * 0.3,
-    reasoning: `${isHighRisk ? 'VETO: ' : ''}VaR(95%): ${var95}%. ${isHighRisk ? 'Risk exceeds acceptable thresholds. Position sizing would breach max drawdown limits.' : 'Risk metrics within acceptable bounds. Max position size of 25% of portfolio recommended.'}`,
+    reasoning: `${isHighRisk ? 'VETO: ' : ''}VaR(95%): ${var95}%. ${isHighRisk ? 'Risk exceeds acceptable thresholds. Position sizing would breach max drawdown limits.' : 'Risk metrics within acceptable bounds. Max position size of 25% of portfolio recommended.'}${regimeNote}`,
     keyMetrics: {
       var95: var95 + '%',
       maxDrawdownRisk: (1 + Math.random() * 8).toFixed(1) + '%',
       kellyFraction: (0.1 + Math.random() * 0.3).toFixed(2),
       recommendedSize: isHighRisk ? '0%' : Math.floor(5 + Math.random() * 20) + '%',
+      ...(regimeGeo ? { marketRegime: regimeGeo.regime, regimeConfidence: parseFloat((regimeGeo.regimeConfidence * 100).toFixed(0)) } : {}),
     },
-    riskFlags: isHighRisk ? ['VaR breach', 'Drawdown limit exceeded', 'Portfolio concentration'] : [],
+    riskFlags,
     latencyMs: 120 + Math.floor(Math.random() * 200),
   }
 }
@@ -422,7 +493,7 @@ export class AgentDebateOrchestrator {
 
   async buildContext(symbol: string, assetType: import('@/types/trading').AssetType): Promise<MarketDebateContext> {
     const quote = await marketDataService.getQuote(symbol, assetType)
-    const bars = await marketDataService.getHistoricalBars(symbol, assetType, '1d', 50)
+    const bars = await marketDataService.getHistoricalBars(symbol, assetType, '1d', 100).catch(() => null)
     const news = await marketDataService.getMarketNews([symbol])
 
     // Build sentiment summary from news
@@ -451,16 +522,46 @@ export class AgentDebateOrchestrator {
       patterns: ['Double bottom forming', 'Bullish divergence on RSI'],
     }
 
+    // Layer 3: Regime Geometry — feed historical bars into the detector
+    const regimeGeometry = await this.getRegimeContext(symbol, assetType, bars ?? [])
+
+    // Build knowledge context with regime info
+    let knowledgeContext = `Market analysis for ${symbol} (${assetType}). Current price: $${quote?.price.toFixed(2) || 'N/A'}. ${relevantNews.length} recent news articles analyzed.`
+    if (regimeGeometry) {
+      knowledgeContext += ` Regime: ${regimeGeometry.regime.toUpperCase()} (confidence: ${(regimeGeometry.regimeConfidence * 100).toFixed(0)}%).`
+    }
+
     return {
       symbol,
       assetType,
       quote,
       newsSentiment: sentimentSummary,
-      knowledgeContext: `Market analysis for ${symbol} (${assetType}). Current price: $${quote?.price.toFixed(2) || 'N/A'}. ${relevantNews.length} recent news articles analyzed.`,
+      knowledgeContext,
       technicalSummary: `${techSnapshot.trend === 'bullish' ? 'Bullish' : 'Bearish'} trend. RSI: ${techSnapshot.rsi?.toFixed(0)}. ${techSnapshot.patterns.join('. ')}.`,
       fundamentalSummary: `Sector: Technology. Strong earnings growth expected. Revenue growth: 12% YoY.`,
       bars,
+      regimeContext: regimeGeometry?.summary ?? undefined,
+      regimeGeometry,
     }
+  }
+
+  /**
+   * Get regime geometry context for a symbol by feeding historical bars
+   * into the RegimeGeometryDetector (Layer 3).
+   * Resets and reloads to ensure fresh data (computation is O(windowSize), trivial).
+   */
+  private async getRegimeContext(
+    symbol: string,
+    assetType: import('@/types/trading').AssetType,
+    bars: { close: number }[],
+  ): Promise<import('@/types/trading').RegimeGeometryResult | null> {
+    if (bars.length < 2) return null
+
+    regimeGeometryDetector.resetSymbol(symbol, assetType)
+    const prices = bars.map(b => b.close)
+    regimeGeometryDetector.loadHistorical(symbol, assetType, prices)
+
+    return regimeGeometryDetector.getRegimeResult(symbol, assetType)
   }
 
   async runDebate(symbol: string, assetType: import('@/types/trading').AssetType): Promise<DebateState> {
