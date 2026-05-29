@@ -36,10 +36,15 @@ describe('OrchestrationEngine', () => {
     })
   })
 
+  afterEach(() => {
+    engine.destroy()
+  })
+
   describe('Initialization', () => {
     it('should create engine with default configuration', () => {
       const defaultEngine = new OrchestrationEngine()
       expect(defaultEngine).toBeDefined()
+      defaultEngine.destroy()
     })
 
     it('should initialize with default agents', () => {
@@ -187,6 +192,7 @@ describe('OrchestrationEngine', () => {
         const match = agents.find(a => a.id === s.agentId && a.role === s.role)
         expect(match).toBeDefined()
       }
+      newEngine.destroy()
     })
 
     it('should be idempotent — calling init() twice does not duplicate agents or events', () => {
@@ -209,6 +215,7 @@ describe('OrchestrationEngine', () => {
       // No new events fired, no new agents added
       expect(secondSpawnCount.length).toBe(0)
       expect(engine.getAllAgents().length).toBe(agentCountAfterFirstInit)
+      engine.destroy()
     })
 
     it('should emit task events when submitting tasks', async () => {
@@ -315,6 +322,7 @@ describe('OrchestrationEngine', () => {
       expect(retryEngine).toBeDefined()
       const status = retryEngine.getStatus()
       expect(status.agents.length).toBeGreaterThan(0)
+      retryEngine.destroy()
     })
   })
 
@@ -354,6 +362,10 @@ describe('OrchestrationEngine', () => {
   })
 
   describe('Singleton Behavior', () => {
+    afterEach(() => {
+      engine.destroy()
+    })
+
     it('should return same instance from getEngine', () => {
       const engine1 = getEngine()
       const engine2 = getEngine()
@@ -364,6 +376,7 @@ describe('OrchestrationEngine', () => {
       const engine1 = createEngine({ maxConcurrentAgents: 2 })
       const engine2 = getEngine()
       expect(engine1).toBe(engine2)
+      engine1.destroy()
     })
   })
 
@@ -442,6 +455,7 @@ describe('OrchestrationEngine', () => {
       deferred.init()
       const agentsAfter = deferred.getAllAgents()
       expect(agentsAfter.length).toBeGreaterThan(0)
+      deferred.destroy()
     })
   })
 })

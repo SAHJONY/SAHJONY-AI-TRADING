@@ -11,6 +11,7 @@ import { v4 as uuid } from 'uuid'
 // Hermes Agent configuration
 export interface HermesAgentConfig extends AgentConfig {
   hermesPath?: string
+  hermesArgs?: string[]
   model?: string
   personality?: string
 }
@@ -21,10 +22,13 @@ export class HermesAgent extends BaseAgent {
   private pendingRequests: Map<string, {
     resolve: (result: TaskResult) => void
     reject: (error: Error) => void
+    timer: NodeJS.Timeout | null
   }> = new Map()
   private hermesPath: string
+  private hermesArgs: string[]
   private sessionId: string
   private serverlessFallback: boolean = false
+  private destroyed: boolean = false
 
   constructor(config: HermesAgentConfig) {
     super(config)
@@ -42,8 +46,10 @@ export class HermesAgent extends BaseAgent {
       // Unix: use PATH or common install locations
       this.hermesPath = process.env.HERMES_PATH || 'hermes'
     }
-    
+
+    // Custom args override the default hermes CLI args
     this.sessionId = `workforce-${uuid()}`
+    this.hermesArgs = config.hermesArgs ?? ['--json', '--session', this.sessionId]
     
     // Skip Hermes initialization in serverless - it won't work there
     if (!this.serverlessFallback) {
@@ -61,26 +67,28 @@ export class HermesAgent extends BaseAgent {
   private async initializeHermes(): Promise<void> {
     try {
       // Start Hermes in CLI mode with JSON output
-      this.hermesProcess = spawn(this.hermesPath, ['--json', '--session', this.sessionId], {
+      this.hermesProcess = spawn(this.hermesPath, this.hermesArgs, {
         stdio: ['pipe', 'pipe', 'pipe']
       })
 
       this.hermesProcess.on('error', (error) => {
+        if (this.destroyed) return
         console.error(`Hermes process error: ${error.message}`)
         const err = new Error(`Hermes process error: ${error.message}`)
-        this.hermesProcess = null
         this.rejectAllPending(err)
         this.setStatus('failed')
+        this.cleanupProcess()
       })
 
       this.hermesProcess.on('exit', (code) => {
+        if (this.destroyed) return
         if (code !== 0) {
           console.warn(`Hermes exited with code ${code}`)
           const err = new Error(`Hermes exited with code ${code}`)
-          this.hermesProcess = null
           this.rejectAllPending(err)
           this.setStatus('idle')
         }
+        this.cleanupProcess()
       })
 
       if (this.hermesProcess.stdout) {
@@ -99,7 +107,7 @@ export class HermesAgent extends BaseAgent {
       this.emit('hermes:initialized', { sessionId: this.sessionId })
     } catch (error) {
       console.error('Failed to initialize Hermes:', error)
-      this.hermesProcess = null
+      this.cleanupProcess()
       this.setStatus('failed')
     }
   }
@@ -132,6 +140,8 @@ export class HermesAgent extends BaseAgent {
   }): void {
     if (message.requestId && this.pendingRequests.has(message.requestId)) {
       const pending = this.pendingRequests.get(message.requestId)!
+      // Clear the timeout timer so it doesn't keep the event loop alive
+      if (pending.timer) clearTimeout(pending.timer)
       this.pendingRequests.delete(message.requestId)
 
       if (message.error) {
@@ -190,8 +200,19 @@ export class HermesAgent extends BaseAgent {
     }
   }
 
+  /** Remove all listeners from child process and stdio, then null the ref */
+  private cleanupProcess(): void {
+    if (!this.hermesProcess) return
+    this.hermesProcess.removeAllListeners()
+    this.hermesProcess.stdout?.removeAllListeners()
+    this.hermesProcess.stderr?.removeAllListeners()
+    this.hermesProcess.stdin?.removeAllListeners()
+    this.hermesProcess = null
+  }
+
   private rejectAllPending(error: Error): void {
     for (const [id, pending] of this.pendingRequests) {
+      if (pending.timer) clearTimeout(pending.timer)
       pending.reject(error)
     }
     this.pendingRequests.clear()
@@ -228,7 +249,8 @@ export class HermesAgent extends BaseAgent {
             reject(new Error(result.error || 'Hermes request failed'))
           }
         },
-        reject
+        reject,
+        timer: null
       })
 
       // Send to Hermes
@@ -236,12 +258,16 @@ export class HermesAgent extends BaseAgent {
         this.hermesProcess.stdin.write(JSON.stringify(fullMessage) + '\n')
 
         // Timeout after 60 seconds
-        setTimeout(() => {
+        const timer = setTimeout(() => {
           if (this.pendingRequests.has(requestId)) {
             this.pendingRequests.delete(requestId)
             reject(new Error('Hermes request timeout'))
           }
         }, 60000)
+
+        // Store timer reference for cleanup
+        const entry = this.pendingRequests.get(requestId)
+        if (entry) entry.timer = timer
       } else {
         reject(new Error('Hermes stdin not available'))
       }
@@ -330,11 +356,16 @@ export class HermesAgent extends BaseAgent {
   }
 
   destroy(): void {
+    this.destroyed = true
+    const err = new Error('Hermes agent destroyed')
+    this.rejectAllPending(err)
     if (this.hermesProcess) {
-      this.hermesProcess.kill()
-      this.hermesProcess = null
+      // Kill first so the exit event fires (blocked by destroyed flag)
+      if (!this.hermesProcess.killed && this.hermesProcess.exitCode === null) {
+        this.hermesProcess.kill()
+      }
+      this.cleanupProcess()
     }
-    this.pendingRequests.clear()
     super.destroy()
   }
 }

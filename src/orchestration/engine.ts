@@ -396,6 +396,18 @@ export class OrchestrationEngine extends EventEmitter {
     return Array.from(this.agents.values())
   }
 
+  // Destroy all agents and clean up resources
+  destroy(): void {
+    for (const [, agent] of this.agents) {
+      agent.destroy()
+    }
+    this.agents.clear()
+    this.taskQueue = []
+    this.activeTasks.clear()
+    this.completedTasks.clear()
+    this.removeAllListeners()
+  }
+
   // Send message to agent
   sendMessage(message: AgentMessage): void {
     const agent = this.agents.get(message.recipientId || '')
