@@ -257,13 +257,13 @@ export class HermesAgent extends BaseAgent {
       if (this.hermesProcess.stdin) {
         this.hermesProcess.stdin.write(JSON.stringify(fullMessage) + '\n')
 
-        // Timeout after 60 seconds
+        // Timeout after 60 seconds (unref so it doesn't keep the process alive)
         const timer = setTimeout(() => {
           if (this.pendingRequests.has(requestId)) {
             this.pendingRequests.delete(requestId)
             reject(new Error('Hermes request timeout'))
           }
-        }, 60000)
+        }, 60000).unref()
 
         // Store timer reference for cleanup
         const entry = this.pendingRequests.get(requestId)
