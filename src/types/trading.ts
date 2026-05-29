@@ -550,3 +550,268 @@ export interface OptimizationSuggestion {
   confidence: number
   reasoning: string
 }
+
+// ============================================================
+// Layer 5: Pod Manager (Portfolio Manager Agent Hierarchy)
+// ============================================================
+
+export interface PodConfig {
+  podId: string
+  name: string
+  description: string
+  /** Assets this pod is responsible for */
+  assets: PodAsset[]
+  /** Strategy IDs deployed in this pod */
+  strategyIds: string[]
+  /** Hard risk limits — if breached, PM MUST liquidate */
+  riskLimits: PodRiskLimits
+  /** Capital allocated to this pod by CIO */
+  allocatedCapital: number
+  /** Current PM performance metrics */
+  performance: PodPerformance
+  /** PM's current conviction level (0-1) for their strategy */
+  conviction: number
+  createdAt: string
+  updatedAt: string
+}
+
+export interface PodAsset {
+  symbol: string
+  assetType: AssetType
+  /** Target allocation % of pod capital */
+  targetAllocationPct: number
+  /** Whether this asset is currently active in debates */
+  active: boolean
+}
+
+export interface PodRiskLimits {
+  /** Max position size as % of pod capital */
+  maxPositionSizePct: number
+  /** Max drawdown before forced liquidation */
+  maxDrawdownPct: number
+  /** Max daily loss before trading halted */
+  dailyLossLimitPct: number
+  /** Max single-asset concentration */
+  maxSingleAssetPct: number
+  /** Max correlation between pod assets */
+  maxCorrelation: number
+  /** Stop-loss as % below entry price */
+  hardStopLossPct: number
+}
+
+export interface PodPerformance {
+  totalPnl: number
+  totalPnlPct: number
+  sharpeRatio: number
+  maxDrawdown: number
+  winRate: number
+  totalTrades: number
+  currentDrawdown: number
+  dailyPnl: number
+  weeklyPnl: number
+  monthlyPnl: number
+}
+
+export interface PodState {
+  pod: PodConfig
+  /** Latest debate results per asset */
+  assetDebates: Record<string, DebateState>
+  /** Active holdings in this pod */
+  holdings: Holding[]
+  /** Current cash balance */
+  cashBalance: number
+  /** Total portfolio value (cash + holdings) */
+  totalValue: number
+  /** Whether risk limits are currently breached */
+  riskBreached: boolean
+  /** Which risk limits are breached */
+  breachedLimits: string[]
+  /** PM's latest decision for this cycle */
+  latestDecision: PMDecision | null
+  /** Pod activity log */
+  activityLog: string[]
+}
+
+export interface PMDecision {
+  podId: string
+  timestamp: string
+  /** Overall action: deploy, reduce, hold, liquidate */
+  overallAction: 'deploy' | 'reduce' | 'hold' | 'liquidate'
+  /** Per-asset allocation decisions */
+  assetDecisions: AssetDecision[]
+  /** Total capital to deploy this cycle */
+  capitalToDeploy: number
+  /** Reasoning behind the PM's decision */
+  reasoning: string
+  /** Risk assessment summary */
+  riskAssessment: string
+  /** CIO directives that influenced this decision */
+  cioDirectives: CIODirective[]
+  /** Confidence in this decision (0-1) */
+  confidence: number
+}
+
+export interface AssetDecision {
+  symbol: string
+  assetType: AssetType
+  action: ConsensusAction
+  allocationPct: number
+  /** The debate that produced this decision */
+  debate: DebateState | null
+  /** PM override reason (if PM overrode debate consensus) */
+  overrideReason?: string
+  targetPrice: number | null
+  stopLoss: number | null
+  takeProfit: number | null
+  quantity: number
+}
+
+// ============================================================
+// Layer 6: Chief Investment Officer (CIO Meta-Agent)
+// ============================================================
+
+export interface CIODirective {
+  id: string
+  targetPodId: string
+  type: 'allocation' | 'risk' | 'strategy' | 'halt' | 'liquidate'
+  instruction: string
+  /** New risk limits to enforce (overrides pod's own limits) */
+  riskLimitOverrides?: Partial<PodRiskLimits>
+  /** Target allocation shift */
+  allocationShift?: { fromPodId?: string; toPodId?: string; amount: number }
+  /** Priority: critical directives must be followed immediately */
+  priority: 'critical' | 'high' | 'medium' | 'advisory'
+  reasoning: string
+  issuedAt: string
+  expiresAt?: string
+}
+
+export interface CIODecision {
+  id: string
+  timestamp: string
+  /** Pod-level capital allocations */
+  podAllocations: PodCapitalAllocation[]
+  /** Directives issued to PMs this cycle */
+  directives: CIODirective[]
+  /** Overall workforce risk assessment */
+  riskAssessment: CIORiskAssessment
+  /** CIO's macro outlook driving these decisions */
+  macroOutlook: string
+  /** Overall reasoning */
+  reasoning: string
+  /** Previous cycle performance since last CIO decision */
+  sinceLastCycle: {
+    totalPnl: number
+    totalPnlPct: number
+    bestPod: string
+    worstPod: string
+  }
+}
+
+export interface PodCapitalAllocation {
+  podId: string
+  podName: string
+  allocatedCapital: number
+  allocationPct: number
+  /** Risk budget assigned to this pod (% of total) */
+  riskBudget: number
+  /** Performance score used for allocation (0-1) */
+  performanceScore: number
+  /** CIO's assessment of this pod */
+  assessment: string
+}
+
+export interface CIORiskAssessment {
+  totalPortfolioValue: number
+  totalDrawdown: number
+  totalDailyPnl: number
+  /** Value at Risk (95% confidence) */
+  var95: number
+  /** Expected shortfall / CVaR */
+  cvar95: number
+  /** Correlation matrix between pods */
+  podCorrelations: { podA: string; podB: string; correlation: number }[]
+  /** Overall risk level */
+  overallRisk: RiskLevel
+  /** Whether any risk limits are breached */
+  anyBreached: boolean
+  /** Concentration risk warnings */
+  warnings: string[]
+}
+
+export interface CIOSelfReflection {
+  id: string
+  timestamp: string
+  /** The decision being reflected on */
+  decisionId: string
+  /** Time period being reviewed */
+  reviewPeriod: { start: string; end: string }
+  /** What the CIO got right */
+  strengths: string[]
+  /** What the CIO got wrong */
+  weaknesses: string[]
+  /** Pattern recognition: recurring themes in CIO mistakes */
+  patterns: string[]
+  /** Specific lessons learned */
+  lessons: string[]
+  /** Proposed adjustments to CIO behavior */
+  adjustments: {
+    type: 'allocation' | 'risk' | 'timing' | 'pod_creation' | 'pod_dissolution'
+    description: string
+    confidence: number
+  }[]
+  /** Performance impact of this decision */
+  impact: {
+    pnlAttributed: number
+    sharpeImpact: number
+    drawdownImpact: number
+    overall: 'positive' | 'neutral' | 'negative'
+  }
+}
+
+export interface WorkforceState {
+  /** All pods in the workforce */
+  pods: PodState[]
+  /** CIO's latest decision */
+  latestCIODecision: CIODecision | null
+  /** CIO's recent self-reflections */
+  recentReflections: CIOSelfReflection[]
+  /** Aggregate workforce performance */
+  aggregatePerformance: {
+    totalCapital: number
+    totalValue: number
+    totalPnl: number
+    totalPnlPct: number
+    sharpeRatio: number
+    maxDrawdown: number
+    winRate: number
+    dailyPnl: number
+    podCount: number
+    activeDebates: number
+  }
+  /** Workforce-level activity log */
+  workforceLog: string[]
+}
+
+// ============================================================
+// Pod & CIO Defaults
+// ============================================================
+
+export const DEFAULT_POD_RISK_LIMITS: PodRiskLimits = {
+  maxPositionSizePct: 0.25,
+  maxDrawdownPct: 0.15,
+  dailyLossLimitPct: 0.05,
+  maxSingleAssetPct: 0.30,
+  maxCorrelation: 0.7,
+  hardStopLossPct: 0.08,
+}
+
+export const DEFAULT_CIO_CONFIG = {
+  maxPods: 5,
+  minPodAllocationPct: 0.10,
+  maxPodAllocationPct: 0.40,
+  rebalanceThreshold: 0.05,   // Rebalance if allocation drifts >5%
+  reflectionInterval: 7,       // Self-reflect every 7 cycles
+  maxDrawdownBeforeHalt: 0.20, // Halt all trading if drawdown >20%
+  riskFreeRate: 0.05,          // For Sharpe calculations
+} as const

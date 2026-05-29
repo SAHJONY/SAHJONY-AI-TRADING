@@ -8,3 +8,9 @@ export { KnowledgePipeline, knowledgePipeline } from './knowledge-pipeline'
 export { MetaLearningSystem, metaLearning } from './meta-learning'
 export { TradingLLMProvider, tradingLLM } from './llm-provider'
 export type { LLMProviderType, TradingLLMConfig } from './llm-provider'
+
+// Layer 5: Pod Manager
+export { PodManager, createPod } from './pod-manager'
+
+// Layer 6: CIO Agent
+export { CIOAgent, cioAgent } from './cio-agent'
