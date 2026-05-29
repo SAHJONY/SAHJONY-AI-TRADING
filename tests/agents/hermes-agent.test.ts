@@ -21,6 +21,18 @@ function makeConfig(overrides: Partial<HermesAgentConfig> = {}): HermesAgentConf
   }
 }
 
+/**
+ * Creates a config that spawns a long-running Node.js process
+ * (instead of a real hermes binary) for testing destroy/cleanup behavior.
+ */
+function makeLongRunningConfig(overrides: Partial<HermesAgentConfig> = {}): HermesAgentConfig {
+  return makeConfig({
+    hermesPath: process.execPath,
+    hermesArgs: ['-e', 'setTimeout(()=>{},30000)'],
+    ...overrides,
+  })
+}
+
 describe('HermesAgent', () => {
   let agent: HermesAgent
 
@@ -111,6 +123,126 @@ describe('HermesAgent', () => {
       await new Promise(r => setTimeout(r, 200))
       const status = agent.getHermesStatus()
       expect(status.initialized).toBe(false)
+    })
+  })
+
+  describe('Process Lifecycle / rejectAllPending', () => {
+    let liveAgent: HermesAgent
+
+    beforeEach(() => {
+      // Use a long-running node process instead of a real hermes binary
+      liveAgent = new HermesAgent(makeLongRunningConfig({ id: 'hermes-live' }))
+    })
+
+    afterEach(() => {
+      try { liveAgent.destroy() } catch { /* already destroyed */ }
+    })
+
+    it('should reject pending tasks when agent is destroyed', async () => {
+      const task = {
+        id: 'task-destroy',
+        type: 'test',
+        description: 'Task that will be interrupted',
+        priority: 'medium' as const,
+        status: 'pending' as const,
+        dependencies: [],
+        context: {
+          userRequest: 'Test request',
+          sessionId: 'test-session',
+          variables: {},
+        },
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }
+
+      // Fire off the task (it will hang waiting for hermes response)
+      const taskPromise = liveAgent.runTask(task)
+
+      // Give it a moment to register the pending request
+      await new Promise(r => setTimeout(r, 50))
+
+      // Destroy the agent while the task is pending
+      liveAgent.destroy()
+
+      // The task should resolve with a failure (not hang)
+      const result = await taskPromise
+      expect(result).toBeDefined()
+      expect(result.success).toBe(false)
+      expect(result.error).toContain('destroyed')
+    })
+
+    it('should reject multiple concurrent pending tasks on destroy', async () => {
+      const makeTask = (id: string) => ({
+        id,
+        type: 'test' as const,
+        description: `Task ${id}`,
+        priority: 'medium' as const,
+        status: 'pending' as const,
+        dependencies: [],
+        context: {
+          userRequest: 'Test request',
+          sessionId: 'test-session',
+          variables: {},
+        },
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+
+      // Fire off multiple tasks concurrently
+      const promises = [
+        liveAgent.runTask(makeTask('multi-1')),
+        liveAgent.runTask(makeTask('multi-2')),
+        liveAgent.runTask(makeTask('multi-3')),
+      ]
+
+      // Let them all register their pending requests
+      await new Promise(r => setTimeout(r, 50))
+
+      // All three should be pending
+      expect(liveAgent.getHermesStatus().pendingRequests).toBe(3)
+
+      // Destroy while tasks are pending
+      liveAgent.destroy()
+
+      // All tasks should resolve with failure (not hang)
+      const results = await Promise.all(promises)
+      for (const result of results) {
+        expect(result.success).toBe(false)
+        expect(result.error).toContain('destroyed')
+      }
+    })
+
+    it('should report zero pending requests after destroy', async () => {
+      // Fire off a task to create a pending request
+      liveAgent.runTask({
+        id: 'task-cleanup',
+        type: 'test',
+        description: 'Cleanup test',
+        priority: 'medium' as const,
+        status: 'pending' as const,
+        dependencies: [],
+        context: {
+          userRequest: 'Test',
+          sessionId: 'test-session',
+          variables: {},
+        },
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+
+      // Give the task a moment to register its pending request
+      // (runTask yields at await onTaskStart before executeTask adds to the map)
+      await new Promise(r => setTimeout(r, 50))
+
+      // Destroy should clean up all pending requests
+      liveAgent.destroy()
+
+      expect(liveAgent.getHermesStatus().pendingRequests).toBe(0)
+    })
+
+    it('should not throw when destroy is called twice', () => {
+      liveAgent.destroy()
+      expect(() => liveAgent.destroy()).not.toThrow()
     })
   })
 })
