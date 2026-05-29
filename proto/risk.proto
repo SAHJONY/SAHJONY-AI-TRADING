@@ -1,0 +1,119 @@
+syntax = "proto3";
+
+package execution_engine.risk;
+
+// ──────────────────────────────────────────────────────
+// Risk Events and Commands
+// ──────────────────────────────────────────────────────
+
+// Risk event types
+enum RiskEventType {
+    RISK_EVENT_TYPE_UNSPECIFIED = 0;
+    RISK_EVENT_TYPE_VAR_BREACH = 1;
+    RISK_EVENT_TYPE_POSITION_LIMIT_BREACH = 2;
+    RISK_EVENT_TYPE_DRAWDOWN_BREACH = 3;
+    RISK_EVENT_TYPE_MAX_ORDER_RATE_BREACH = 4;
+    RISK_EVENT_TYPE_CONCENTRATION_BREACH = 5;
+    RISK_EVENT_TYPE_EXPOSURE_BREACH = 6;
+    RISK_EVENT_TYPE_KILL_SWITCH_TRIGGERED = 7;
+    RISK_EVENT_TYPE_CIRCUIT_BREAKER_TRIPPED = 8;
+    RISK_EVENT_TYPE_GATEWAY_DISCONNECT = 9;
+    RISK_EVENT_TYPE_DATA_FEED_STALE = 10;
+}
+
+// Severity level
+enum RiskSeverity {
+    RISK_SEVERITY_UNSPECIFIED = 0;
+    RISK_SEVERITY_INFO = 1;
+    RISK_SEVERITY_WARNING = 2;
+    RISK_SEVERITY_CRITICAL = 3;
+    RISK_SEVERITY_EMERGENCY = 4;
+}
+
+// Risk limit definition
+message RiskLimit {
+    string limit_id = 1;
+    RiskLimitType limit_type = 2;
+    string scope = 3;            // "account", "strategy", "symbol", "global"
+    string scope_value = 4;      // e.g., "AAPL", "strategy_alpha_1"
+    double threshold = 5;
+    double soft_threshold = 6;   // Warning level (80% of hard by default)
+    int64 created_at_ns = 7;
+    int64 updated_at_ns = 8;
+    bool enabled = 9;
+}
+
+enum RiskLimitType {
+    RISK_LIMIT_TYPE_UNSPECIFIED = 0;
+    RISK_LIMIT_TYPE_POSITION_NOTIONAL = 1;
+    RISK_LIMIT_TYPE_MAX_ORDER_SIZE = 2;
+    RISK_LIMIT_TYPE_MAX_ORDER_RATE = 3;        // Orders per second
+    RISK_LIMIT_TYPE_MAX_DAILY_PNL = 4;
+    RISK_LIMIT_TYPE_MAX_DRAWDOWN_PCT = 5;
+    RISK_LIMIT_TYPE_VAR_LIMIT = 6;
+    RISK_LIMIT_TYPE_CONCENTRATION_PCT = 7;     // % of portfolio
+    RISK_LIMIT_TYPE_SECTOR_EXPOSURE = 8;
+    RISK_LIMIT_TYPE_MAX_GROSS_EXPOSURE = 9;
+    RISK_LIMIT_TYPE_MAX_NET_EXPOSURE = 10;
+}
+
+// Risk event notification
+message RiskEvent {
+    string event_id = 1;
+    RiskEventType event_type = 2;
+    RiskSeverity severity = 3;
+    string source = 4;           // "risk_engine", "gateway", "monitor"
+    string description = 5;
+    int64 timestamp_ns = 6;
+    map<string, string> metadata = 7;
+}
+
+// Risk check request (pre-trade)
+message RiskCheckRequest {
+    string order_id = 1;
+    string client_order_id = 2;
+    string symbol = 3;
+    string account_id = 4;
+    string strategy_id = 5;
+    double quantity = 6;
+    double price = 7;
+    string order_side = 8;       // "BUY", "SELL", "SELL_SHORT"
+}
+
+// Risk check response
+message RiskCheckResponse {
+    bool approved = 1;
+    string reject_reason = 2;
+    string risk_check_id = 3;
+    int64 timestamp_ns = 4;
+    repeated RiskViolation violations = 5;
+}
+
+message RiskViolation {
+    RiskLimit limit = 1;
+    double current_value = 2;
+    double limit_value = 3;
+    double utilization_pct = 4;
+}
+
+// Portfolio risk snapshot (published periodically)
+message PortfolioRiskSnapshot {
+    int64 timestamp_ns = 1;
+    string account_id = 2;
+    double total_equity = 3;
+    double gross_exposure = 4;
+    double net_exposure = 5;
+    double leverage = 6;
+    double var_95_daily = 7;
+    double var_99_daily = 8;
+    double expected_shortfall_95 = 9;
+    double drawdown_pct = 10;
+    double sharpe_ratio_30d = 11;
+    double sortino_ratio_30d = 12;
+    double win_rate_30d = 13;
+    double profit_factor_30d = 14;
+    int32 open_positions = 15;
+    int32 open_orders = 16;
+    repeated RiskViolation active_warnings = 17;
+    repeated RiskViolation active_critical = 18;
+}

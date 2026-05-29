@@ -24,6 +24,28 @@ import { setupPersonalAgentDashboard } from '../personal-agent/dashboard'
 // Import Personal AI Receptionist (Unified Personal Assistant + Receptionist)
 import { setupPersonalReceptionistDashboard } from '../personal-receptionist/dashboard'
 
+// Import AI Receptionist Demo Page
+import { setupReceptionistDemo } from '../web/receptionist-demo'
+
+// Import Hermes Agent
+import { HermesAgent } from '../agents/hermes-agent'
+
+// Import Hermes Dashboard
+import { setupHermesDashboard } from '../web/hermes-dashboard'
+
+// Import Hermes Cinematic Dashboard
+import { setupHermesCinematic } from '../web/hermes-cinematic'
+
+// Import Workspace Dashboard
+import { setupWorkspaceDashboard } from '../web/workspace-dashboard'
+
+// Import Workspace Routes
+import workspaceRoutes, { setWorkspaceStore } from './workspace-routes'
+import { workspaceStore } from '../shared/workspace-store'
+
+// Connect workspace store to routes
+setWorkspaceStore(workspaceStore)
+
 // Import WorkforceBridge from frontdesk-agents
 // Note: In production, this would be a proper module import
 // For now, we'll define the interface and create a mock integration
@@ -565,26 +587,152 @@ app.get('/api/workforce/agents', (_req: Request, res: Response) => {
   res.json({ agents: agentsWithMetrics })
 })
 
+// ============================================================================
+// HERMES AGENT ENDPOINTS
+// ============================================================================
+
+// Hermes instance management
+let hermesAgentInstance: HermesAgent | null = null
+
+function getHermesAgent(): HermesAgent {
+  if (!hermesAgentInstance) {
+    hermesAgentInstance = new HermesAgent({
+      id: 'hermes-1',
+      name: 'Hermes',
+      role: 'hermes',
+      capabilities: [{
+        name: 'ai_assistant',
+        description: 'Self-improving AI agent from Nous Research with memory and skills',
+        tools: [],
+        maxConcurrentTasks: 3
+      }]
+    })
+  }
+  return hermesAgentInstance
+}
+
+app.get('/api/hermes/status', (_req: Request, res: Response) => {
+  const agent = getHermesAgent()
+  res.json({
+    id: agent.id,
+    name: agent.name,
+    role: agent.role,
+    status: agent.getStatus(),
+    capabilities: agent.getCapabilities(),
+    hermesStatus: agent.getHermesStatus()
+  })
+})
+
+app.post('/api/hermes/chat', async (req: Request, res: Response) => {
+  const { message, sessionId } = req.body
+  if (!message) return res.status(400).json({ error: 'Message is required' })
+  
+  try {
+    const agent = getHermesAgent()
+    const response = await agent.chat(message)
+    res.json({
+      response,
+      agent: 'Hermes',
+      timestamp: new Date().toISOString()
+    })
+  } catch (error) {
+    res.status(500).json({ 
+      error: error instanceof Error ? error.message : 'Hermes request failed',
+      agent: 'Hermes'
+    })
+  }
+})
+
+app.post('/api/hermes/skill', async (req: Request, res: Response) => {
+  const { skillName, params } = req.body
+  if (!skillName) return res.status(400).json({ error: 'Skill name is required' })
+  
+  try {
+    const agent = getHermesAgent()
+    const result = await agent.executeSkill(skillName, params)
+    res.json({
+      result,
+      agent: 'Hermes',
+      timestamp: new Date().toISOString()
+    })
+  } catch (error) {
+    res.status(500).json({ 
+      error: error instanceof Error ? error.message : 'Skill execution failed',
+      agent: 'Hermes'
+    })
+  }
+})
+
+app.post('/api/hermes/task', async (req: Request, res: Response) => {
+  const { instruction, context } = req.body
+  if (!instruction) return res.status(400).json({ error: 'Instruction is required' })
+  
+  try {
+    const agent = getHermesAgent()
+    const taskContext = context || {
+      userRequest: instruction,
+      sessionId: `hermes-${uuid()}`,
+      variables: {}
+    }
+    
+    const result = await agent.executeTask({
+      id: `hermes-task-${uuid()}`,
+      type: 'hermes-task',
+      description: instruction,
+      priority: 'medium',
+      status: 'pending',
+      dependencies: [],
+      context: taskContext as any,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    })
+    
+    res.json({
+      taskId: `hermes-task-${uuid()}`,
+      result,
+      agent: 'Hermes',
+      timestamp: new Date().toISOString()
+    })
+  } catch (error) {
+    res.status(500).json({ 
+      error: error instanceof Error ? error.message : 'Task execution failed',
+      agent: 'Hermes'
+    })
+  }
+})
+
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   console.error('[API Error]', err)
   res.status(500).json({ error: 'Internal server error' })
+})// Initialize engine for both local and serverless
+engine = createEngine({
+  maxConcurrentAgents: 5,
+  maxQueueSize: 100,
+  defaultTimeout: 300000,
+  enableRetry: true,
+  maxRetries: 3
 })
 
-function startServer(port: number): void {
-  engine = createEngine({
-    maxConcurrentAgents: 5,
-    maxQueueSize: 100,
-    defaultTimeout: 300000,
-    enableRetry: true,
-    maxRetries: 3
-  })
+// Setup all dashboards (works for both local and serverless)
+setupReceptionistDashboard(app)
+setupPersonalAgentDashboard(app)
+setupPersonalReceptionistDashboard(app)
+setupReceptionistDemo(app)
+setupHermesDashboard(app)
+setupHermesCinematic(app)
+setupWorkspaceDashboard(app)
 
-  app.listen(port, () => {
+// Workspace API routes
+app.use('/api/workspace', workspaceRoutes)
+
+// For local development only
+if (require.main === module) {
+  app.listen(PORT, () => {
     console.log(`\n========================================`)
     console.log(`   AGENT WORKFORCE API`)
     console.log(`   REST API Server`)
     console.log(`========================================`)
-    console.log(`\nServer running on http://localhost:${port}`)
+    console.log(`\nServer running on http://localhost:${PORT}`)
     console.log(`\nEndpoints:`)
     console.log(`  GET    /health           - Health check`)
     console.log(`  GET    /api/agents        - List all agents`)
@@ -603,20 +751,8 @@ function startServer(port: number): void {
     console.log(`  GET    /api/workforce/tasks/:id - Get specific task status`)
     console.log(`  POST   /api/workforce/tasks    - Submit workforce task`)
     console.log(`  GET    /api/workforce/agents   - Workforce agent status & metrics\n`)
-    
-    // Setup AI Receptionist Dashboard
-    setupReceptionistDashboard(app)
-    
-    // Setup Personal AI Agent Dashboard
-    setupPersonalAgentDashboard(app)
-
-    // Setup Personal AI Receptionist (Unified)
-    setupPersonalReceptionistDashboard(app)
   })
 }
 
-if (require.main === module) {
-  startServer(PORT)
-}
-
-export { app, startServer }
+// Vercel serverless export
+export default app

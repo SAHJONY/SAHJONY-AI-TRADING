@@ -4,7 +4,7 @@
  */
 
 // Agent Types
-export type AgentRole = 'orchestrator' | 'researcher' | 'coder' | 'reviewer' | 'executor' | 'planner'
+export type AgentRole = 'orchestrator' | 'researcher' | 'coder' | 'reviewer' | 'executor' | 'planner' | 'hermes' | 'macro_strategist' | 'sector_analyst' | 'sentiment_agent' | 'technical_analyst' | 'risk_manager' | 'execution_optimizer'
 
 export type AgentStatus = 'idle' | 'working' | 'waiting' | 'completed' | 'failed'
 

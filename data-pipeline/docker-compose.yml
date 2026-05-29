@@ -1,0 +1,115 @@
+# ─────────────────────────────────────────────────────────────
+# Layer 1 - Execution & Risk Fabric
+# Docker Compose infrastructure for development
+# ─────────────────────────────────────────────────────────────
+
+version: "3.9"
+
+services:
+  # ── Redpanda (Kafka-compatible event streaming) ──
+  redpanda:
+    image: docker.redpanda.com/redpandadata/redpanda:v24.2.1
+    container_name: exec-engine-redpanda
+    command:
+      - redpanda start
+      - --smp 2
+      - --memory 2G
+      - --reserve-memory 0M
+      - --overprovisioned
+      - --node-id 0
+      - --kafka-addr PLAINTEXT://0.0.0.0:9092,OUTSIDE://0.0.0.0:19092
+      - --advertise-kafka-addr PLAINTEXT://redpanda:9092,OUTSIDE://localhost:19092
+      - --pandaproxy-addr 0.0.0.0:8082
+      - --advertise-pandaproxy-addr redpanda:8082
+    ports:
+      - "19092:19092"  # External Kafka API
+      - "8082:8082"    # Pandaproxy
+      - "9644:9644"    # Admin API
+    volumes:
+      - redpanda-data:/var/lib/redpanda/data
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster health | grep -q 'Healthy'"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Redpanda Console (UI) ──
+  redpanda-console:
+    image: docker.redpanda.com/redpandadata/console:v2.6.1
+    container_name: exec-engine-console
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_BROKERS: redpanda:9092
+    depends_on:
+      redpanda:
+        condition: service_healthy
+
+  # ── QuestDB (time-series database - kdb+ alternative) ──
+  questdb:
+    image: questdb/questdb:8.1.0
+    container_name: exec-engine-questdb
+    ports:
+      - "9000:9000"   # REST API & Web Console
+      - "9009:9009"   # ILP (InfluxDB Line Protocol)
+      - "8812:8812"   # PostgreSQL wire protocol
+    environment:
+      QDB_TELEMETRY_ENABLED: "false"
+    volumes:
+      - questdb-data:/root/.questdb
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9000/status || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Grafana (monitoring dashboard) ──
+  grafana:
+    image: grafana/grafana:10.4.0
+    container_name: exec-engine-grafana
+    ports:
+      - "3001:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_INSTALL_PLUGINS: grafana-clock-panel
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./grafana/datasources:/etc/grafana/provisioning/datasources
+    depends_on:
+      questdb:
+        condition: service_healthy
+
+  # ── Prometheus (metrics collection) ──
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: exec-engine-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+
+  # ── Market Data Simulator (for testing) ──
+  market-simulator:
+    build:
+      context: ./data-pipeline/feed-simulator
+    container_name: exec-engine-market-sim
+    environment:
+      KAFKA_BROKERS: redpanda:9092
+      TOPIC: market.data
+      SYMBOLS: "AAPL,GOOGL,MSFT,AMZN,TSLA,NVDA,META,JPM,BTC-USD,ETH-USD"
+      INTERVAL_MS: "100"
+    depends_on:
+      redpanda:
+        condition: service_healthy
+
+volumes:
+  redpanda-data:
+  questdb-data:
+  grafana-data:
+  prometheus-data:

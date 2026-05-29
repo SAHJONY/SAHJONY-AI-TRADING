@@ -1,0 +1,103 @@
+# ─────────────────────────────────────────────────────────────
+# Layer 1 - Execution Engine Configuration
+# ─────────────────────────────────────────────────────────────
+
+[engine]
+instance_id = "exec-engine-01"
+cpu_pin = -1                     # -1 = auto, or specify core number
+max_orders_per_second = 1000
+audit_enabled = true
+audit_path = "./audit_logs"
+heartbeat_interval_ms = 100
+heartbeat_miss_threshold = 5
+reconnect_attempts = 10
+reconnect_backoff_ms = 100
+trading_enabled = false          # Set to true to enable live trading
+
+[market_data]
+symbols = ["AAPL", "GOOGL", "MSFT", "AMZN", "TSLA", "NVDA", "META", "JPM"]
+exchanges = ["NASDAQ", "NYSE"]
+order_book_depth = 10
+max_symbols = 10000
+tick_store_capacity = 100000
+stale_threshold_ms = 5000
+build_bars = true
+bar_durations_ns = [
+    60_000_000_000,       # 1 minute
+    300_000_000_000,      # 5 minutes
+    900_000_000_000,      # 15 minutes
+    3_600_000_000_000,    # 1 hour
+    86_400_000_000_000,   # 1 day
+]
+
+[risk]
+kelly_fraction = 0.25             # Quarter-Kelly
+var_confidence = 0.99             # 99% VaR
+var_lookback = 252                # 1 year trading days
+kill_drawdown_pct = 25.0          # Kill switch at 25% drawdown
+warn_drawdown_pct = 15.0          # Warning at 15% drawdown
+max_consecutive_rejections = 10
+circuit_breaker_cooldown_secs = 60
+risk_check_timeout_us = 100       # 100μs max for pre-trade check
+
+# Risk limits
+[[risk.limits]]
+name = "max_order_size"
+limit_type = "max_order_size"
+soft_threshold = 1000.0
+hard_threshold = 5000.0
+scope = "global"
+
+[[risk.limits]]
+name = "max_position_notional"
+limit_type = "position_notional"
+soft_threshold = 1000000.0
+hard_threshold = 5000000.0
+scope = "global"
+
+[[risk.limits]]
+name = "max_daily_pnl"
+limit_type = "max_daily_pnl"
+soft_threshold = 50000.0
+hard_threshold = 100000.0
+scope = "global"
+
+[[risk.limits]]
+name = "max_drawdown"
+limit_type = "max_drawdown_pct"
+soft_threshold = 10.0
+hard_threshold = 25.0
+scope = "global"
+
+[kafka]
+brokers = "localhost:19092"
+group_id = "execution-engine"
+market_data_topic = "market.data"
+order_events_topic = "order.events"
+risk_events_topic = "risk.events"
+audit_topic = "audit.log"
+heartbeat_topic = "system.heartbeat"
+auto_offset_reset = "latest"
+enable_auto_commit = false
+session_timeout_ms = 10000
+max_poll_interval_ms = 300000
+fetch_min_bytes = 1
+fetch_max_wait_ms = 10
+linger_ms = 0                    # Send immediately
+batch_size = 16384               # 16KB
+acks = "all"                     # Strongest guarantee
+enable_idempotence = true
+
+[questdb]
+ilp_host = "http://localhost"
+ilp_port = 9009
+rest_url = "http://localhost:9000"
+batch_size = 10000
+flush_interval_ms = 1000
+enabled = true
+
+[monitoring]
+prometheus_port = 9090
+log_level = "info"
+json_logging = false
+metrics_flush_interval_secs = 10

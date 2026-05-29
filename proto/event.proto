@@ -1,0 +1,88 @@
+syntax = "proto3";
+
+package execution_engine.event;
+
+import "google/protobuf/timestamp.proto";
+
+// ──────────────────────────────────────────────────────
+// System Events (heartbeat, lifecycle, audit)
+// ──────────────────────────────────────────────────────
+
+// Component heartbeat
+message Heartbeat {
+    string component_id = 1;     // "execution_engine", "risk_engine", "gateway"
+    string instance_id = 2;      // Unique instance UUID
+    int64 timestamp_ns = 3;
+    HeartbeatStatus status = 4;
+    map<string, string> metrics = 5; // e.g., "cpu_pct": "45", "mem_mb": "2048"
+}
+
+enum HeartbeatStatus {
+    HEARTBEAT_STATUS_UNSPECIFIED = 0;
+    HEARTBEAT_STATUS_HEALTHY = 1;
+    HEARTBEAT_STATUS_DEGRADED = 2;
+    HEARTBEAT_STATUS_UNHEALTHY = 3;
+    HEARTBEAT_STATUS_STARTING = 4;
+    HEARTBEAT_STATUS_STOPPING = 5;
+}
+
+// Audit log entry (immutable, append-only)
+message AuditEntry {
+    string entry_id = 1;
+    int64 timestamp_ns = 2;
+    AuditEventType event_type = 3;
+    string actor = 4;            // "strategy_alpha", "risk_engine", "admin"
+    string action = 5;
+    string target = 6;           // Affected entity (order_id, position, etc.)
+    string details_json = 7;     // JSON-encoded details
+    string trace_id = 8;         // Distributed tracing ID
+}
+
+enum AuditEventType {
+    AUDIT_EVENT_TYPE_UNSPECIFIED = 0;
+    AUDIT_EVENT_TYPE_ORDER_CREATED = 1;
+    AUDIT_EVENT_TYPE_ORDER_FILLED = 2;
+    AUDIT_EVENT_TYPE_ORDER_CANCELLED = 3;
+    AUDIT_EVENT_TYPE_ORDER_REJECTED = 4;
+    AUDIT_EVENT_TYPE_RISK_CHECK = 5;
+    AUDIT_EVENT_TYPE_RISK_BREACH = 6;
+    AUDIT_EVENT_TYPE_CONFIG_CHANGE = 7;
+    AUDIT_EVENT_TYPE_SYSTEM_START = 8;
+    AUDIT_EVENT_TYPE_SYSTEM_STOP = 9;
+    AUDIT_EVENT_TYPE_KILL_SWITCH = 10;
+    AUDIT_EVENT_TYPE_MANUAL_OVERRIDE = 11;
+}
+
+// System command
+message SystemCommand {
+    string command_id = 1;
+    int64 timestamp_ns = 2;
+    CommandType command_type = 3;
+    string target_component = 4;  // "execution_engine", "risk_engine", etc.
+    map<string, string> parameters = 5;
+}
+
+enum CommandType {
+    COMMAND_TYPE_UNSPECIFIED = 0;
+    COMMAND_TYPE_START = 1;
+    COMMAND_TYPE_STOP = 2;
+    COMMAND_TYPE_RESTART = 3;
+    COMMAND_TYPE_PAUSE_TRADING = 4;
+    COMMAND_TYPE_RESUME_TRADING = 5;
+    COMMAND_TYPE_KILL_SWITCH = 6;
+    COMMAND_TYPE_CANCEL_ALL_ORDERS = 7;
+    COMMAND_TYPE_FLATTEN_POSITIONS = 8;
+    COMMAND_TYPE_UPDATE_RISK_LIMITS = 9;
+    COMMAND_TYPE_RECONCILE = 10;
+}
+
+// Kill switch acknowledgment
+message KillSwitchAck {
+    string command_id = 1;
+    string component_id = 2;
+    int64 timestamp_ns = 3;
+    bool executed = 4;
+    string message = 5;
+    int32 orders_cancelled = 6;
+    int32 positions_remaining = 7;
+}

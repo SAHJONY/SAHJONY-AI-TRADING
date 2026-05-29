@@ -1,0 +1,100 @@
+syntax = "proto3";
+
+package execution_engine.market_data;
+
+// ──────────────────────────────────────────────────────
+// Market Data Messages
+// ──────────────────────────────────────────────────────
+
+// Quote represents a bid/ask level (Level 1 market data)
+message Quote {
+    string symbol = 1;          // Trading symbol (e.g., "AAPL")
+    string exchange = 2;        // Exchange code (e.g., "NASDAQ")
+    int64 timestamp_ns = 3;     // Nanosecond-precision timestamp (Unix epoch)
+    double bid_price = 4;       // Best bid price
+    double bid_size = 5;        // Best bid size
+    double ask_price = 6;       // Best ask price
+    double ask_size = 7;        // Best ask size
+    QuoteCondition condition = 8;  // Quote condition flags
+    uint64 sequence_number = 9; // Monotonic sequence number from the exchange
+}
+
+enum QuoteCondition {
+    QUOTE_CONDITION_UNSPECIFIED = 0;
+    QUOTE_CONDITION_NORMAL = 1;
+    QUOTE_CONDITION_CLOSING = 2;
+    QUOTE_CONDITION_HALTED = 3;
+    QUOTE_CONDITION_FAST_MARKET = 4;
+    QUOTE_CONDITION_CROSSED = 5;
+}
+
+// Trade represents an executed trade (tick)
+message Trade {
+    string symbol = 1;
+    string exchange = 2;
+    int64 timestamp_ns = 3;
+    double price = 4;
+    double size = 5;
+    TradeCondition condition = 6;
+    uint64 sequence_number = 7;
+    uint64 trade_id = 8;        // Exchange-assigned trade ID
+}
+
+enum TradeCondition {
+    TRADE_CONDITION_UNSPECIFIED = 0;
+    TRADE_CONDITION_NORMAL = 1;
+    TRADE_CONDITION_FORM_T = 2;
+    TRADE_CONDITION_OUT_OF_SEQUENCE = 3;
+    TRADE_CONDITION_INTERMARKET_SWEEP = 4;
+    TRADE_CONDITION_ODD_LOT = 5;
+    TRADE_CONDITION_CORRECTION = 6;
+}
+
+// Level 2 order book snapshot
+message OrderBookLevel {
+    double price = 1;
+    double size = 2;
+    int32 order_count = 3;      // Number of orders at this level
+}
+
+message OrderBookSnapshot {
+    string symbol = 1;
+    string exchange = 2;
+    int64 timestamp_ns = 3;
+    repeated OrderBookLevel bids = 4;   // Sorted by price descending
+    repeated OrderBookLevel asks = 5;   // Sorted by price ascending
+    uint64 sequence_number = 6;
+}
+
+// Aggregated OHLCV bar (1-minute by default)
+message OHLCVBar {
+    string symbol = 1;
+    int64 timestamp_ns = 2;     // Bar open time
+    double open = 3;
+    double high = 4;
+    double low = 5;
+    double close = 6;
+    double volume = 7;
+    double vwap = 8;            // Volume-weighted average price
+    uint32 trade_count = 9;
+    int64 bar_duration_ns = 10; // Duration of this bar (e.g., 60_000_000_000 for 1min)
+}
+
+// Market status message
+message MarketStatus {
+    string exchange = 1;
+    MarketState state = 2;
+    int64 timestamp_ns = 3;
+    string reason = 4;
+}
+
+enum MarketState {
+    MARKET_STATE_UNSPECIFIED = 0;
+    MARKET_STATE_PRE_OPEN = 1;
+    MARKET_STATE_OPEN = 2;
+    MARKET_STATE_PAUSED = 3;
+    MARKET_STATE_HALTED = 4;
+    MARKET_STATE_CLOSING = 5;
+    MARKET_STATE_CLOSED = 6;
+    MARKET_STATE_POST_CLOSE = 7;
+}

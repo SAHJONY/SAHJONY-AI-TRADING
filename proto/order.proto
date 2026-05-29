@@ -1,0 +1,140 @@
+syntax = "proto3";
+
+package execution_engine.order;
+
+import "google/protobuf/timestamp.proto";
+
+// ──────────────────────────────────────────────────────
+// Order Messages
+// ──────────────────────────────────────────────────────
+
+// Order side
+enum OrderSide {
+    ORDER_SIDE_UNSPECIFIED = 0;
+    ORDER_SIDE_BUY = 1;
+    ORDER_SIDE_SELL = 2;
+    ORDER_SIDE_SELL_SHORT = 3;
+}
+
+// Order type
+enum OrderType {
+    ORDER_TYPE_UNSPECIFIED = 0;
+    ORDER_TYPE_MARKET = 1;
+    ORDER_TYPE_LIMIT = 2;
+    ORDER_TYPE_STOP = 3;
+    ORDER_TYPE_STOP_LIMIT = 4;
+    ORDER_TYPE_TRAILING_STOP = 5;
+    ORDER_TYPE_ICEBERG = 6;
+    ORDER_TYPE_PEGGED = 7;
+}
+
+// Time in force
+enum TimeInForce {
+    TIME_IN_FORCE_UNSPECIFIED = 0;
+    TIME_IN_FORCE_DAY = 1;
+    TIME_IN_FORCE_GTC = 2;       // Good 'til cancelled
+    TIME_IN_FORCE_IOC = 3;       // Immediate or cancel
+    TIME_IN_FORCE_FOK = 4;       // Fill or kill
+    TIME_IN_FORCE_GTD = 5;       // Good 'til date
+    TIME_IN_FORCE_ATC = 6;       // At the close
+    TIME_IN_FORCE_EXT = 7;       // Extended hours
+}
+
+// Order status
+enum OrderStatus {
+    ORDER_STATUS_UNSPECIFIED = 0;
+    ORDER_STATUS_PENDING_NEW = 1;
+    ORDER_STATUS_NEW = 2;
+    ORDER_STATUS_PARTIALLY_FILLED = 3;
+    ORDER_STATUS_FILLED = 4;
+    ORDER_STATUS_PENDING_CANCEL = 5;
+    ORDER_STATUS_CANCELLED = 6;
+    ORDER_STATUS_REJECTED = 7;
+    ORDER_STATUS_EXPIRED = 8;
+    ORDER_STATUS_SUSPENDED = 9;
+}
+
+// New order request
+message NewOrder {
+    string symbol = 1;
+    string exchange = 2;
+    OrderSide side = 3;
+    OrderType order_type = 4;
+    TimeInForce time_in_force = 5;
+    double quantity = 6;
+    double price = 7;            // 0 for market orders
+    double stop_price = 8;       // For stop/stop-limit orders
+    double trailing_amount = 9;  // For trailing stops
+    double display_quantity = 10; // For iceberg orders
+    string client_order_id = 11; // Unique client-generated ID
+    string strategy_id = 12;     // Originating strategy
+    string account_id = 13;      // Trading account
+    int64 expires_at_ns = 14;    // GTD expiration
+    map<string, string> tags = 15; // Arbitrary metadata
+}
+
+// Order acknowledgment
+message OrderAck {
+    string client_order_id = 1;
+    string exchange_order_id = 2;
+    OrderStatus status = 3;
+    string reject_reason = 4;
+    int64 timestamp_ns = 5;
+}
+
+// Execution report
+message ExecutionReport {
+    string client_order_id = 1;
+    string exchange_order_id = 2;
+    string execution_id = 3;     // Unique execution ID
+    OrderStatus order_status = 4;
+    string symbol = 5;
+    OrderSide side = 6;
+    double executed_quantity = 7;
+    double executed_price = 8;
+    double remaining_quantity = 9;
+    double commission = 10;
+    string commission_currency = 11;
+    int64 timestamp_ns = 12;
+    int64 exchange_timestamp_ns = 13;
+    string liquidity_flag = 14;  // "A" for add, "R" for remove liquidity
+}
+
+// Cancel request
+message CancelOrder {
+    string client_order_id = 1;
+    string exchange_order_id = 2;
+    string symbol = 3;
+}
+
+// Cancel acknowledgment
+message CancelAck {
+    string client_order_id = 1;
+    string exchange_order_id = 2;
+    bool success = 3;
+    string reject_reason = 4;
+    int64 timestamp_ns = 5;
+}
+
+// Replace/modify request
+message ReplaceOrder {
+    string client_order_id = 1;
+    string exchange_order_id = 2;
+    string symbol = 3;
+    double new_quantity = 4;
+    double new_price = 5;
+    double new_stop_price = 6;
+}
+
+// Position snapshot
+message Position {
+    string symbol = 1;
+    string account_id = 2;
+    double quantity = 3;         // Positive = long, negative = short
+    double average_entry_price = 4;
+    double realized_pnl = 5;
+    double unrealized_pnl = 6;
+    double market_price = 7;
+    double market_value = 8;
+    int64 last_update_ns = 9;
+}

@@ -26,7 +26,8 @@ import {
   ResearcherAgent,
   CoderAgent,
   ReviewerAgent,
-  ExecutorAgent
+  ExecutorAgent,
+  HermesAgent
 } from '../agents'
 
 // Register all agent types
@@ -35,6 +36,7 @@ registerAgent('researcher', ResearcherAgent)
 registerAgent('coder', CoderAgent)
 registerAgent('reviewer', ReviewerAgent)
 registerAgent('executor', ExecutorAgent)
+registerAgent('hermes', HermesAgent)
 
 export interface OrchestratorConfig {
   maxConcurrentAgents: number
@@ -86,7 +88,8 @@ export class OrchestrationEngine extends EventEmitter {
       { role: 'researcher', name: 'Research Specialist', count: 2 },
       { role: 'coder', name: 'Code Specialist', count: 3 },
       { role: 'reviewer', name: 'Review Specialist', count: 2 },
-      { role: 'executor', name: 'Execution Specialist', count: 2 }
+      { role: 'executor', name: 'Execution Specialist', count: 2 },
+      { role: 'hermes', name: 'Hermes Agent', count: 1 }
     ]
 
     for (const spec of specializations) {

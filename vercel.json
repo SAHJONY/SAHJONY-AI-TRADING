@@ -1,0 +1,35 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "dist/api/server.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/dist/api/server.js"
+    },
+    {
+      "src": "/personal-assistant",
+      "dest": "/dist/api/server.js"
+    },
+    {
+      "src": "/receptionist",
+      "dest": "/dist/api/server.js"
+    },
+    {
+      "src": "/personal-receptionist",
+      "dest": "/dist/api/server.js"
+    },
+    {
+      "src": "/ai-receptionist",
+      "dest": "/dist/api/server.js"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/dist/api/server.js"
+    }
+  ]
+}

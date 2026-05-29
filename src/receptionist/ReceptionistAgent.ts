@@ -305,7 +305,7 @@ export class ReceptionistAgent extends EventEmitter {
   
   private async handleScheduling(input: string): Promise<{ content: string; agent: string; actions: string[]; requiresEscalation: boolean }> {
     // Extract potential date/time
-    const dateMatch = input.match(/\n?+(?:tomorrow|next week|(\n?+\/\n?+\/\n?+))/)
+    const dateMatch = input.match(/\b(tomorrow|next week|\d{1,2}\/\d{1,2}\/\d{2,4})\b/)
     const serviceMatch = input.match(/(?:consultation|appointment|meeting|checkup)/i)
     
     const result = await this.tools.get('chronos_book')?.execute({

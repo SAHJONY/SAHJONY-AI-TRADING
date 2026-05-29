@@ -20,16 +20,21 @@ function getAgent(): ReceptionistAgent {
 // ============================================================================
 
 router.post('/chat', (req: Request, res: Response) => {
-  const { message, visitorId } = req.body
+  const { message, visitorId, industry, sessionId } = req.body
   if (!message) return res.status(400).json({ error: 'Message required' })
   
-  getAgent().processVisitorInput(message, visitorId)
+  // Use sessionId for visitor tracking if provided
+  const effectiveVisitorId = visitorId || sessionId || `VIS-${Date.now()}`
+  
+  getAgent().processVisitorInput(message, effectiveVisitorId)
     .then(response => res.json({
       response: response.content,
       agent: response.agent,
       actions: response.actions,
       requiresHumanEscalation: response.requiresEscalation,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      sessionId: effectiveVisitorId,
+      industry: industry || 'corporate'
     }))
     .catch(error => res.status(500).json({ error: error.message }))
 })

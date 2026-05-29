@@ -7,6 +7,8 @@ import { createInterface } from 'readline'
 import { v4 as uuid } from 'uuid'
 import { OrchestrationEngine, getEngine, createEngine } from '../orchestration/engine'
 import { TaskContext, AgentRole, TaskResult } from '../types'
+import type { MetaLearningPipeline } from '../meta'
+import { renderMetaDashboard, renderMetaStatusLine } from './meta-dashboard'
 
 const rl = createInterface({
   input: process.stdin,
@@ -16,11 +18,17 @@ const rl = createInterface({
 class AgentWorkforceCLI {
   private engine: OrchestrationEngine
   private sessionId: string
+  private metaPipeline: MetaLearningPipeline | null = null
 
   constructor() {
     this.sessionId = `cli-${uuid()}`
     this.engine = getEngine()
     this.setupEventHandlers()
+  }
+
+  /** Attach a meta-learning pipeline for `/meta` dashboard commands. */
+  setMetaPipeline(pipeline: MetaLearningPipeline): void {
+    this.metaPipeline = pipeline
   }
 
   private setupEventHandlers(): void {
@@ -92,6 +100,9 @@ class AgentWorkforceCLI {
       case '/queue':
         this.showQueue()
         break
+      case '/meta':
+        await this.handleMetaCommand(command)
+        break
       case '/exit':
       case '/quit':
         console.log('\nShutting down agent workforce...\n')
@@ -155,6 +166,69 @@ class AgentWorkforceCLI {
     return null
   }
 
+  private async handleMetaCommand(command: string): Promise<void> {
+    if (!this.metaPipeline) {
+      console.log('\nNo meta-learning pipeline attached. Attach one via CLI.setMetaPipeline() to use /meta commands.')
+      return
+    }
+
+    const parts = command.split(/\s+/)
+    const sub = parts[1]?.toLowerCase() || 'dashboard'
+
+    switch (sub) {
+      case 'dashboard':
+      case 'dash':
+        console.log(renderMetaDashboard(this.metaPipeline))
+        break
+      case 'status':
+        console.log(renderMetaStatusLine(this.metaPipeline))
+        break
+      case 'overview':
+        console.log(renderMetaDashboard(this.metaPipeline, { panels: ['overview'] }))
+        break
+      case 'agents':
+        console.log(renderMetaDashboard(this.metaPipeline, { panels: ['agents'] }))
+        break
+      case 'ga':
+      case 'fitness':
+        console.log(renderMetaDashboard(this.metaPipeline, { panels: ['ga'] }))
+        break
+      case 'bandit':
+      case 'models':
+        console.log(renderMetaDashboard(this.metaPipeline, { panels: ['bandit'] }))
+        break
+      case 'suggestions':
+      case 'sug':
+        console.log(renderMetaDashboard(this.metaPipeline, { panels: ['suggestions'] }))
+        break
+      case 'trades':
+      case 'history':
+        console.log(renderMetaDashboard(this.metaPipeline, { panels: ['trades'], tradeCount: 20 }))
+        break
+      case 'help':
+        this.showMetaHelp()
+        break
+      default:
+        console.log(`Unknown /meta sub-command: ${sub}`)
+        this.showMetaHelp()
+    }
+  }
+
+  private showMetaHelp(): void {
+    console.log(`
+Meta-Learning Dashboard Commands:
+  /meta               - Show full dashboard
+  /meta status        - Show compact one-line status
+  /meta overview      - Show system KPI overview only
+  /meta agents        - Show agent performance trends
+  /meta ga            - Show GA fitness history chart
+  /meta bandit        - Show bandit model dominance
+  /meta suggestions   - Show optimization suggestions
+  /meta trades        - Show recent trade history
+  /meta help          - Show this help
+`)
+  }
+
   private showHelp(): void {
     console.log(`
 Available Commands:
@@ -163,6 +237,7 @@ Available Commands:
   /agents    - List all agents and their status
   /tasks     - Show completed tasks
   /queue     - Show pending tasks in queue
+  /meta      - Meta-learning dashboard
   /exit      - Exit the CLI
 `)
   }
