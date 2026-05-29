@@ -1,5 +1,7 @@
 # Agent Workforce — Multi-Agent AI Trading System
 
+[![CI](https://github.com/SAHJONY/SAHJONY-AI-TRADING/actions/workflows/test.yml/badge.svg)](https://github.com/SAHJONY/SAHJONY-AI-TRADING/actions/workflows/test.yml)
+
 A three-layer autonomous trading system built with TypeScript and LangGraph: knowledge enrichment, multi-agent collaborative debate, and self-evolving meta-learning.
 
 ## Architecture
@@ -184,6 +186,7 @@ npm run lint
 
 GitHub Actions workflow (`.github/workflows/test.yml`) runs on every push and PR to `master`/`main`:
 
+- **Lint** — `eslint . --max-warnings 0`
 - **TypeCheck** — `tsc --noEmit`
 - **Tests** — `jest` (all test suites)
 
