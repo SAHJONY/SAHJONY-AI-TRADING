@@ -46,8 +46,7 @@ export class ReviewerAgent extends BaseAgent {
     this.registerTool({
       name: 'review_code',
       description: 'Review code for issues, bugs, and improvements',
-      execute: async (params: unknown) => {
-        const p = params as { code: string; language: string }
+      execute: async (_params: unknown) => {
         return {
           success: true,
           output: {
@@ -66,8 +65,7 @@ export class ReviewerAgent extends BaseAgent {
     this.registerTool({
       name: 'security_scan',
       description: 'Scan code for security vulnerabilities',
-      execute: async (params: unknown) => {
-        const p = params as { code: string }
+      execute: async (_params: unknown) => {
         return {
           success: true,
           output: {
@@ -84,8 +82,7 @@ export class ReviewerAgent extends BaseAgent {
     this.registerTool({
       name: 'analyze_performance',
       description: 'Analyze code for performance issues',
-      execute: async (params: unknown) => {
-        const p = params as { code: string }
+      execute: async (_params: unknown) => {
         return {
           success: true,
           output: {
@@ -102,8 +99,7 @@ export class ReviewerAgent extends BaseAgent {
     this.registerTool({
       name: 'lint',
       description: 'Check code against style guides and linting rules',
-      execute: async (params: unknown) => {
-        const p = params as { code: string; rules?: string[] }
+      execute: async (_params: unknown) => {
         return {
           success: true,
           output: {

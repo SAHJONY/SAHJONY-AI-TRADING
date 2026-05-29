@@ -15,7 +15,7 @@ import {
   TradeOutcome,
   ModelReward,
 } from './types'
-import type { AgentTradingRole, AgentAnalysis, FinalDecision } from './types'
+import type { AgentTradingRole, AgentAnalysis } from './types'
 import * as path from 'path'
 import * as fs from 'fs'
 

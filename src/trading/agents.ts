@@ -5,7 +5,7 @@
  * with LLM-powered analysis, structured output, and debate capabilities.
  */
 
-import { BaseAgent, AgentTool } from '../agents/base-agent'
+import { BaseAgent } from '../agents/base-agent'
 import { Task, TaskResult, AgentConfig } from '../types'
 import { BaseChatModel } from '@langchain/core/language_models/chat_models'
 import { z } from 'zod'

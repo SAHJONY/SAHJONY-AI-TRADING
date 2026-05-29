@@ -14,7 +14,7 @@
     "dev": "tsc && npm run start",
     "test": "jest",
     "test:watch": "jest --watch",
-    "lint": "eslint src --ext .ts",
+    "lint": "eslint .",
     "typecheck": "tsc --noEmit"
   },
   "keywords": [
@@ -26,6 +26,10 @@
   ],
   "author": "",
   "license": "MIT",
+  "engines": {
+    "node": ">=20.0.0 <21.0.0",
+    "npm": ">=10.0.0"
+  },
   "dependencies": {
     "@lancedb/lancedb": "^0.30.0",
     "@langchain/anthropic": "^1.4.0",
@@ -46,6 +50,9 @@
     "@types/jest": "^29.5.14",
     "@types/node": "^20.10.0",
     "@types/uuid": "^9.0.7",
+    "@typescript-eslint/eslint-plugin": "^8.60.0",
+    "@typescript-eslint/parser": "^8.60.0",
+    "eslint": "^10.4.0",
     "jest": "^29.7.0",
     "ts-jest": "^29.4.11",
     "typescript": "^5.3.3"

@@ -121,7 +121,6 @@ import { MetaLearningPipeline } from '../../src/meta/pipeline'
 import { PerformanceTracker } from '../../src/meta/performance-tracker'
 import type {
   AgentTradingRole,
-  DebateState,
   MarketDataInput,
   FinalDecision,
   AgentAnalysis,
@@ -1433,7 +1432,7 @@ describe('TradingWorkforce + MetaLearningPipeline Integration', () => {
       const execGoogl = makeMockExecution({ orderId: 'sim-googl', symbol: 'GOOGL', avgFillPrice: 185.75 })
 
       // Mock each call in sequence
-      const spy = jest.spyOn(workforce.getLayer1Client(), 'executeDecision')
+      const _spy = jest.spyOn(workforce.getLayer1Client(), 'executeDecision')
         .mockResolvedValueOnce({
           success: true,
           action: 'EXECUTED',

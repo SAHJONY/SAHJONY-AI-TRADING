@@ -3,7 +3,7 @@
  * Specialized agent for executing, testing, and deploying solutions
  */
 
-import { BaseAgent, ToolResult } from './base-agent'
+import { BaseAgent } from './base-agent'
 import { AgentConfig, Task, TaskResult, TaskContext } from '../types'
 
 export interface ExecutionResult {

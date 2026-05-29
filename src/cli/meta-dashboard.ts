@@ -16,7 +16,6 @@ import type {
   MetaLearningPipeline,
   MetaLearningStatus,
   SystemPerformanceMetrics,
-  AgentPerformanceMetrics,
   OptimizationSuggestion,
   GARunResult,
 } from '../meta'

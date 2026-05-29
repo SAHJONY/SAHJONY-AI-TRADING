@@ -6,7 +6,7 @@
  */
 
 import * as path from 'path'
-import { MetaLearningConfig, GAConfig, BanditConfig, BacktestConfig } from './types'
+import { MetaLearningConfig } from './types'
 import {
   DEFAULT_GA_CONFIG,
   DEFAULT_GENE_POOL,
@@ -14,7 +14,6 @@ import {
 import { DEFAULT_BANDIT_CONFIG } from './model-router'
 import { DEFAULT_BACKTEST_CONFIG } from './backtest-engine'
 import { DEFAULT_PROMPT_OPTIMIZER_CONFIG } from './prompt-optimizer'
-import { DEFAULT_META_CONFIG } from './pipeline'
 
 // ── Environment Helpers ──
 

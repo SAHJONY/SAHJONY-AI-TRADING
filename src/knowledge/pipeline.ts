@@ -17,7 +17,6 @@ import {
   PipelineStatus,
   PipelineError,
   KnowledgeSystemConfig,
-  CompanyFacts,
   AltDataSnapshot,
 } from './types'
 import { SecEdgarClient, DEFAULT_SEC_CONFIG } from './sec-client'
@@ -55,6 +54,7 @@ export class KnowledgePipeline {
   private status: PipelineStatus
   private running = false
   private cronInterval: NodeJS.Timeout | null = null
+  private cronTask: { stop: () => void } | null = null
 
   constructor(config: Partial<KnowledgeSystemConfig> = {}) {
     this.config = { ...DEFAULT_SYSTEM_CONFIG, ...config }
@@ -99,8 +99,8 @@ export class KnowledgePipeline {
 
     // Schedule periodic refreshes using node-cron
     try {
-      const cron = require('node-cron')
-      this.cronInterval = cron.schedule(this.config.refreshCron, async () => {
+      const cron = (await import('node-cron')).default
+      this.cronTask = cron.schedule(this.config.refreshCron, async () => {
         console.log('[KnowledgePipeline] Cron-triggered refresh')
         await this.refreshAll()
       })
@@ -127,6 +127,11 @@ export class KnowledgePipeline {
     if (this.cronInterval) {
       clearInterval(this.cronInterval)
       this.cronInterval = null
+    }
+
+    if (this.cronTask) {
+      this.cronTask.stop()
+      this.cronTask = null
     }
 
     await this.graph.shutdown()

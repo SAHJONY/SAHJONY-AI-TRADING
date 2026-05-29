@@ -15,8 +15,6 @@ export function setupHermesCinematic(app: express.Application): void {
 }
 
 function getCinematicDashboard(): string {
-  const t = (s: string) => s
-  
   return `<!DOCTYPE html>
 <html lang=\"en\">
 <head>

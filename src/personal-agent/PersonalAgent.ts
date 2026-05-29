@@ -12,7 +12,6 @@ import { EventEmitter } from 'events'
 import {
   PersonalContext,
   UserPreferences,
-  ConversationMemory,
   Task,
   CalendarEvent,
   Note,
@@ -22,7 +21,6 @@ import {
   FinanceAccount,
   TravelPlan,
   HealthMetrics,
-  ResearchItem,
   AIAgentResponse,
   ConversationMessage,
   AgentTier

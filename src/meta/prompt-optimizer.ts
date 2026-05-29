@@ -23,9 +23,8 @@ import {
   FewShotExample,
   PromptOptimizationResult,
   AgentTradingRole,
-  AgentPerformanceMetrics,
 } from './types'
-import { AgentAnalysis, MarketDataInput } from '../trading/types'
+import { AgentAnalysis } from '../trading/types'
 import { PerformanceTracker } from './performance-tracker'
 
 // ═══════════════════════════════════════════════════════════════
@@ -334,7 +333,6 @@ export class PromptOptimizer {
     }
 
     // 4. Evaluate baseline accuracy against historical data
-    const roles: AgentTradingRole[] = [role]
     const agentMetrics = this.tracker.getMetrics()?.agentMetrics
     if (agentMetrics && agentMetrics[role]) {
       const metrics = agentMetrics[role]

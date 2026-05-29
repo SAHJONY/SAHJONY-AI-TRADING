@@ -11,7 +11,6 @@ import {
   TaskResult, 
   TaskContext,
   ExecutionPlan,
-  WorkflowTask,
   AgentMessage
 } from '../types'
 

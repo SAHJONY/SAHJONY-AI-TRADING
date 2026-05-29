@@ -52,7 +52,7 @@ router.get('/visitors', (_req: Request, res: Response) => {
 })
 
 router.post('/visitors/checkin', (req: Request, res: Response) => {
-  const { name, purpose, email, phone } = req.body
+  const { name, purpose, email } = req.body
   if (!name || !purpose) return res.status(400).json({ error: 'name and purpose required' })
   
   const visitor = getAgent().checkInVisitor(name, purpose, email)

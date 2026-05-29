@@ -10,7 +10,7 @@
 import { EventEmitter } from 'events'
 import { v4 as uuid } from 'uuid'
 import { IndustryType } from './types'
-import { Visitor, Appointment, Message, EscalationTicket, ReceptionistContext, AgentStats, QueueStats } from './types'
+import { Visitor, Appointment, EscalationTicket, ReceptionistContext, AgentStats, QueueStats } from './types'
 
 // Simulated receptionist agents (in production, would import from frontdesk-agents)
 class MockReceptionistTool {

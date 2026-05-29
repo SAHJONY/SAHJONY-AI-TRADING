@@ -11,8 +11,7 @@ import {
   AgentRole,
   Task, 
   TaskResult,
-  AgentMessage,
-  TaskContext
+  AgentMessage
 } from '../types'
 
 // Tool definitions for agents

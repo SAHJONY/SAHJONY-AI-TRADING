@@ -16,7 +16,6 @@ import {
   OrderIntent,
   RiskCheckRequest,
   RiskCheckResponse,
-  MarketDataInput,
 } from './types'
 
 // ── Integration Configuration ──
@@ -124,11 +123,11 @@ export class Layer1IntegrationClient extends EventEmitter {
     this.connected = false
     // Reject all pending requests
     const timeoutError = new Error('Layer 1 connection closed')
-    for (const [id, pending] of this.pendingRiskChecks) {
+    for (const [_id, pending] of this.pendingRiskChecks) {
       clearTimeout(pending.timer)
       pending.reject(timeoutError)
     }
-    for (const [id, pending] of this.pendingOrders) {
+    for (const [_id, pending] of this.pendingOrders) {
       clearTimeout(pending.timer)
       pending.reject(timeoutError)
     }

@@ -3,7 +3,7 @@
  * Specialized agent for gathering, analyzing, and synthesizing information
  */
 
-import { BaseAgent, ToolResult } from './base-agent'
+import { BaseAgent } from './base-agent'
 import { AgentConfig, Task, TaskResult, TaskContext } from '../types'
 import { v4 as uuid } from 'uuid'
 
@@ -206,7 +206,6 @@ export class ResearcherAgent extends BaseAgent {
     if (query.toLowerCase().includes('code') || query.toLowerCase().includes('implement')) {
       const codeResult = await this.executeTool('code_search', { query })
       if (codeResult.success && codeResult.output) {
-        const codeData = codeResult.output as { matches?: unknown[] }
         // Process code search results
       }
     }

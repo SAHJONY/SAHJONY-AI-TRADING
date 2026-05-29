@@ -17,16 +17,12 @@ import {
   MarketDataInput,
   DebateState,
   FinalDecision,
-  TradingAgentConfig,
   AgentTradingRole,
-  AgentAnalysis,
-  OrderIntent,
-  RiskCheckRequest,
   RiskCheckResponse,
 } from './types'
 import { TradingAgent, ExecutionOptimizerAgent, MacroStrategistAgent, SectorAnalystAgent, SentimentAgent, TechnicalAnalystAgent, RiskManagerAgent } from './agents'
 import { buildDebateGraph, DebateGraphConfig } from './supervisor'
-import { Layer1IntegrationClient, ExecutionReport, createLayer1Client, Layer1IntegrationConfig } from './integration'
+import { Layer1IntegrationClient, ExecutionReport, createLayer1Client } from './integration'
 import { TradingSystemConfig, DEFAULT_TRADING_CONFIG, buildAgentConfigs, buildHistoricalWeights } from './config'
 // Layer 5 meta-learning imports (optional — workforce works without them)
 import type { MetaLearningPipeline } from '../meta/pipeline'

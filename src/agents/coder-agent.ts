@@ -3,9 +3,8 @@
  * Specialized agent for writing, implementing, and refactoring code
  */
 
-import { BaseAgent, ToolResult } from './base-agent'
+import { BaseAgent } from './base-agent'
 import { AgentConfig, Task, TaskResult, TaskContext } from '../types'
-import { v4 as uuid } from 'uuid'
 
 export interface CodeImplementation {
   language: string

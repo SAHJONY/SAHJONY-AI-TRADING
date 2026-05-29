@@ -6,7 +6,7 @@
 import { createInterface } from 'readline'
 import { v4 as uuid } from 'uuid'
 import { OrchestrationEngine, getEngine, createEngine } from '../orchestration/engine'
-import { TaskContext, AgentRole, TaskResult } from '../types'
+import { TaskContext, TaskResult } from '../types'
 import type { MetaLearningPipeline } from '../meta'
 import { renderMetaDashboard, renderMetaStatusLine } from './meta-dashboard'
 

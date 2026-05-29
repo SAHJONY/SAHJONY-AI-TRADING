@@ -4,7 +4,24 @@
  */
 
 import { OrchestrationEngine, createEngine } from '../src/orchestration/engine'
+import type { OrchestratorConfig } from '../src/orchestration/engine'
 import { TaskContext, AgentRole, WorkflowDefinition } from '../src/types'
+
+/**
+ * Helper: creates an OrchestrationEngine with deferInit so listeners can
+ * be registered before constructor events fire. After registration,
+ * calls engine.init() to trigger agent spawning/registration events.
+ */
+function createEngineWithListener(
+  event: string,
+  listener: (...args: any[]) => void,
+  config?: Partial<OrchestratorConfig>
+): OrchestrationEngine {
+  const engine = new OrchestrationEngine({ ...(config ?? { maxConcurrentAgents: 3, maxQueueSize: 10, defaultTimeout: 5000, enableRetry: false, maxRetries: 1 }), deferInit: true })
+  engine.on(event, listener)
+  engine.init()
+  return engine
+}
 
 describe('OrchestrationEngine', () => {
   let engine: OrchestrationEngine
@@ -150,24 +167,60 @@ describe('OrchestrationEngine', () => {
   })
 
   describe('Event Handling', () => {
-    it('should have agents spawned on initialization', () => {
-      const newEngine = new OrchestrationEngine()
+    it('should emit agent:spawned for each agent during initialization', () => {
+      const spawned: Array<{ agentId: string; role: string }> = []
+
+      // Use helper that registers listener BEFORE init fires constructor events
+      const newEngine = createEngineWithListener('agent:spawned', (data) => {
+        spawned.push({ agentId: data.agentId, role: data.role })
+      })
+
+      // All agents should have been spawned during init()
       const agents = newEngine.getAllAgents()
-      expect(agents.length).toBeGreaterThan(0)
-      expect(agents[0].id).toBeDefined()
-      expect(agents[0].role).toBeDefined()
+      expect(spawned.length).toBe(agents.length)
+      expect(spawned.length).toBeGreaterThan(0)
+
+      // Each spawned event matches a real agent
+      for (const s of spawned) {
+        expect(s.agentId).toBeDefined()
+        expect(s.role).toBeDefined()
+        const match = agents.find(a => a.id === s.agentId && a.role === s.role)
+        expect(match).toBeDefined()
+      }
+    })
+
+    it('should be idempotent — calling init() twice does not duplicate agents or events', () => {
+      const firstSpawnCount: Array<{ agentId: string }> = []
+
+      const engine = createEngineWithListener('agent:spawned', (data) => {
+        firstSpawnCount.push({ agentId: data.agentId })
+      })
+
+      const agentCountAfterFirstInit = engine.getAllAgents().length
+      expect(firstSpawnCount.length).toBe(agentCountAfterFirstInit)
+
+      // Call init() again — should be a no-op
+      const secondSpawnCount: Array<{ agentId: string }> = []
+      engine.on('agent:spawned', (data) => {
+        secondSpawnCount.push({ agentId: data.agentId })
+      })
+      engine.init()
+
+      // No new events fired, no new agents added
+      expect(secondSpawnCount.length).toBe(0)
+      expect(engine.getAllAgents().length).toBe(agentCountAfterFirstInit)
     })
 
     it('should emit task events when submitting tasks', async () => {
-      let taskSubmitted = false
-      let taskAssigned = false
+      let _taskSubmitted = false
+      let _taskAssigned = false
 
       engine.on('task:submitted', () => {
-        taskSubmitted = true
+        _taskSubmitted = true
       })
 
       engine.on('agent:task_assigned', () => {
-        taskAssigned = true
+        _taskAssigned = true
       })
 
       const context: TaskContext = {

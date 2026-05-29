@@ -11,8 +11,7 @@ import {
   CreateAgentRequest,
   CreateWorkflowRequest,
   ExecuteTaskRequest,
-  TaskContext,
-  Task
+  TaskContext
 } from '../types'
 
 // Import AI Receptionist Dashboard
@@ -228,7 +227,7 @@ app.get('/api/agents/:id', (req: Request, res: Response) => {
 })
 
 app.post('/api/agents', (req: Request, res: Response) => {
-  const { name, role, capabilities } = req.body as CreateAgentRequest
+  const { name, role } = req.body as CreateAgentRequest
   
   if (!name || !role) {
     return res.status(400).json({ error: 'Name and role are required' })
@@ -624,7 +623,7 @@ app.get('/api/hermes/status', (_req: Request, res: Response) => {
 })
 
 app.post('/api/hermes/chat', async (req: Request, res: Response) => {
-  const { message, sessionId } = req.body
+  const { message } = req.body
   if (!message) return res.status(400).json({ error: 'Message is required' })
   
   try {

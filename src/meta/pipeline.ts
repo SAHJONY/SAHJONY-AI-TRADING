@@ -16,9 +16,7 @@
  */
 
 import { EventEmitter } from 'events'
-import { createHash } from 'crypto'
 import * as path from 'path'
-import * as fs from 'fs'
 import {
   MetaLearningConfig,
   MetaLearningStatus,
@@ -27,7 +25,6 @@ import {
   AgentTradingRole,
   DebateRecord,
   TradeOutcomeRecord,
-  ModelReward,
   SystemPerformanceMetrics,
 } from './types'
 import { PerformanceTracker } from './performance-tracker'
@@ -35,7 +32,7 @@ import { StrategyGA } from './strategy-ga'
 import { PromptOptimizer } from './prompt-optimizer'
 import { ModelRouter } from './model-router'
 import { BacktestEngine } from './backtest-engine'
-import { AgentAnalysis, FinalDecision } from '../trading/types'
+import { AgentAnalysis } from '../trading/types'
 
 // ═══════════════════════════════════════════════════════════════
 // Default Configuration
@@ -151,6 +148,7 @@ export class MetaLearningPipeline extends EventEmitter {
   private status: MetaLearningStatus
   private running = false
   private cronInterval: NodeJS.Timeout | null = null
+  private cronTask: { stop: () => void } | null = null
 
   // Cache for prompt text hashing
   private promptTexts: Map<AgentTradingRole, string> = new Map()
@@ -203,8 +201,8 @@ export class MetaLearningPipeline extends EventEmitter {
 
     // Schedule periodic evolution
     try {
-      const cron = require('node-cron')
-      this.cronInterval = cron.schedule(this.config.schedule.evolutionCron, async () => {
+      const cron = (await import('node-cron')).default
+      this.cronTask = cron.schedule(this.config.schedule.evolutionCron, async () => {
         console.log('[MetaLearning] Cron-triggered evolution')
         await this.triggerEvolution('schedule')
       })
@@ -230,6 +228,11 @@ export class MetaLearningPipeline extends EventEmitter {
     if (this.cronInterval) {
       clearInterval(this.cronInterval)
       this.cronInterval = null
+    }
+
+    if (this.cronTask) {
+      this.cronTask.stop()
+      this.cronTask = null
     }
 
     await this.tracker.shutdown()

@@ -16,7 +16,6 @@ import {
   ParsedFiling,
   CompanyFacts,
   XbrlFinancials,
-  FactEntry,
   SecEdgarConfig,
 } from './types'
 
@@ -372,7 +371,6 @@ export class SecEdgarClient {
   }
 
   private getXbrlUrl(recent: any, index: number, cik: string, accession: string): string | undefined {
-    const items = recent.items?.[index] || ''
     const files = recent.documentFormatFiles?.[index] || []
     // SEC interactive data: look for _htm.xml or _cal.xml
     for (const file of files) {

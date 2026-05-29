@@ -6,15 +6,11 @@
 import { EventEmitter } from 'events'
 import { v4 as uuid } from 'uuid'
 import {
-  AgentConfig,
   AgentRole,
   Task,
   TaskResult,
   TaskContext,
-  TaskStatus,
-  OrchestrationResult,
   WorkflowDefinition,
-  WorkflowTask,
   SystemEvent,
   AgentMessage
 } from '../types'
@@ -44,6 +40,8 @@ export interface OrchestratorConfig {
   defaultTimeout: number
   enableRetry: boolean
   maxRetries: number
+  /** When true, skips initializeDefaultAgents() in constructor — caller must call init() manually */
+  deferInit?: boolean
 }
 
 export class OrchestrationEngine extends EventEmitter {
@@ -53,6 +51,7 @@ export class OrchestrationEngine extends EventEmitter {
   private completedTasks: Map<string, Task> = new Map()
   private config: OrchestratorConfig
   private mainOrchestrator?: OrchestratorAgent
+  private initialized = false
 
   constructor(config: Partial<OrchestratorConfig> = {}) {
     super()
@@ -61,9 +60,22 @@ export class OrchestrationEngine extends EventEmitter {
       maxQueueSize: config.maxQueueSize || 100,
       defaultTimeout: config.defaultTimeout || 300000,
       enableRetry: config.enableRetry ?? true,
-      maxRetries: config.maxRetries || 3
+      maxRetries: config.maxRetries || 3,
+      deferInit: config.deferInit ?? false
     }
 
+    if (!this.config.deferInit) {
+      this.initialized = true
+      this.initializeDefaultAgents()
+    }
+  }
+
+  /** Initialize default agents. Called automatically by constructor unless deferInit is true. */
+  init(): void {
+    if (this.initialized) {
+      return
+    }
+    this.initialized = true
     this.initializeDefaultAgents()
   }
 
