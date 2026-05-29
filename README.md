@@ -1,6 +1,7 @@
 # Agent Workforce — Multi-Agent AI Trading System
 
 [![CI](https://github.com/SAHJONY/SAHJONY-AI-TRADING/actions/workflows/test.yml/badge.svg)](https://github.com/SAHJONY/SAHJONY-AI-TRADING/actions/workflows/test.yml)
+[![codecov](https://codecov.io/gh/SAHJONY/SAHJONY-AI-TRADING/graph/badge.svg)](https://codecov.io/gh/SAHJONY/SAHJONY-AI-TRADING)
 
 A three-layer autonomous trading system built with TypeScript and LangGraph: knowledge enrichment, multi-agent collaborative debate, and self-evolving meta-learning.
 
