@@ -1,4 +1,5 @@
 // Agent Debate System — multi-agent trading debate with consensus and risk management
+// Phase 1: Real LLM-powered agent analysis with circuit breaker and mock fallback
 import type {
   AgentTradingRole, AgentAnalysis, DebateState, MarketDebateContext,
   FinalDecision, VotingBreakdown, TradingRecommendation, ConsensusAction,
@@ -6,6 +7,7 @@ import type {
 } from '@/types/trading'
 import { AGENT_ROLES, DEFAULT_DEBATE_CONFIG } from '@/types/trading'
 import { marketDataService } from './market-data'
+import { tradingLLM } from './llm-provider'
 
 // ---- Analyst Agents ----
 
@@ -324,6 +326,100 @@ function aggregateResults(analyses: AgentAnalysis[], context: MarketDebateContex
 // ---- Main Debate Orchestrator ----
 
 export class AgentDebateOrchestrator {
+  private llmAvailable: boolean | null = null
+
+  /** Run a round of agent analyses — LLM-powered with mock fallback */
+  private async runAgentRound(
+    roles: AgentTradingRole[],
+    context: MarketDebateContext,
+    supervisorInstruction: string,
+    previousRoundAnalyses: AgentAnalysis[] | undefined,
+    debateLog: string[],
+  ): Promise<AgentAnalysis[]> {
+    // Check LLM availability (cached after first check)
+    if (this.llmAvailable === null) {
+      this.llmAvailable = await tradingLLM.checkAvailability()
+    }
+
+    if (this.llmAvailable) {
+      try {
+        console.log('[AgentDebate] Using LLM-powered agents')
+        const llmAnalyses = await tradingLLM.runAllAgents(
+          context, supervisorInstruction, previousRoundAnalyses,
+        )
+
+        // If we got results from all 6 agents, use them
+        if (llmAnalyses.length === roles.length) {
+          for (const analysis of llmAnalyses) {
+            debateLog.push(`  🤖 ${AGENT_ROLES[analysis.role].label}: ${analysis.recommendation} (${(analysis.confidence * 100).toFixed(0)}%, ${analysis.latencyMs}ms)`)
+          }
+          return llmAnalyses
+        }
+
+        // Partial results: fill in gaps with mock
+        if (llmAnalyses.length > 0) {
+          console.warn(`[AgentDebate] Only ${llmAnalyses.length}/${roles.length} LLM agents succeeded, filling gaps with mock`)
+          const successfulRoles = new Set(llmAnalyses.map(a => a.role))
+          const analyses: AgentAnalysis[] = [...llmAnalyses]
+
+          for (const role of roles) {
+            if (!successfulRoles.has(role)) {
+              const mockAnalysis = this.runMockAgent(role, context, supervisorInstruction)
+              analyses.push(mockAnalysis)
+              debateLog.push(`  ⚡ ${AGENT_ROLES[role].label}: ${mockAnalysis.recommendation} (${(mockAnalysis.confidence * 100).toFixed(0)}%, mock)`)
+            }
+          }
+          return analyses
+        }
+
+        // All LLM agents failed — fall through to mock
+        console.warn('[AgentDebate] All LLM agents failed, falling back to mock generators')
+      } catch (error) {
+        console.warn('[AgentDebate] LLM round failed:', error instanceof Error ? error.message : error)
+      }
+    }
+
+    // Fallback: use mock generators
+    console.log('[AgentDebate] Using mock agent generators')
+    this.llmAvailable = false
+    const analyses: AgentAnalysis[] = roles.map(role => {
+      const generator = ANALYST_GENERATORS[role]
+      const analysis = generator({
+        role,
+        context,
+        supervisorInstruction,
+        previousRoundAnalyses,
+      })
+      debateLog.push(`  ⚡ ${AGENT_ROLES[role].label}: ${analysis.recommendation} (${(analysis.confidence * 100).toFixed(0)}%, mock)`)
+      return analysis
+    })
+    return analyses
+  }
+
+  /** Run a single mock agent (used as fallback for individual LLM failures) */
+  private runMockAgent(
+    role: AgentTradingRole,
+    context: MarketDebateContext,
+    supervisorInstruction: string,
+  ): AgentAnalysis {
+    const generator = ANALYST_GENERATORS[role]
+    return generator({ role, context, supervisorInstruction })
+  }
+
+  /** Force refresh of LLM availability check */
+  resetLLMState(): void {
+    this.llmAvailable = null
+    tradingLLM.resetCircuitBreakers()
+  }
+
+  /** Get LLM and circuit breaker status for monitoring */
+  getLLMStatus(): { available: boolean | null; circuitBreakers: Record<string, { state: string; failureCount: number }> } {
+    return {
+      available: this.llmAvailable,
+      circuitBreakers: tradingLLM.getCircuitBreakerStatuses(),
+    }
+  }
+
   async buildContext(symbol: string, assetType: import('@/types/trading').AssetType): Promise<MarketDebateContext> {
     const quote = await marketDataService.getQuote(symbol, assetType)
     const bars = await marketDataService.getHistoricalBars(symbol, assetType, '1d', 50)
@@ -396,18 +492,12 @@ export class AgentDebateOrchestrator {
       debateState.supervisorInstruction = generateSupervisorInstruction(round, debateState.agentAnalyses)
       debateState.debateLog.push(`[Round ${round}] Supervisor: ${debateState.supervisorInstruction}`)
 
-      // All agents analyze in parallel
-      const roundAnalyses: AgentAnalysis[] = roles.map(role => {
-        const generator = ANALYST_GENERATORS[role]
-        const analysis = generator({
-          role,
-          context,
-          supervisorInstruction: debateState.supervisorInstruction,
-          previousRoundAnalyses: round > 1 ? debateState.agentAnalyses : undefined,
-        })
-        debateState.debateLog.push(`  ${AGENT_ROLES[role].label}: ${analysis.recommendation} (${(analysis.confidence * 100).toFixed(0)}%)`)
-        return analysis
-      })
+      // Try LLM-powered analysis, fall back to mock generators
+      const roundAnalyses = await this.runAgentRound(
+        roles, context, debateState.supervisorInstruction,
+        round > 1 ? debateState.agentAnalyses : undefined,
+        debateState.debateLog,
+      )
 
       debateState.agentAnalyses = roundAnalyses
 
