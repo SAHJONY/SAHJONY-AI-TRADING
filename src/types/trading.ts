@@ -806,6 +806,123 @@ export const DEFAULT_POD_RISK_LIMITS: PodRiskLimits = {
   hardStopLossPct: 0.08,
 }
 
+// ============================================================
+// Layer 3: Regime Geometry Detector (Information Geometry)
+// ============================================================
+
+/** Market regime classification from Fisher geodesic analysis */
+export type MarketRegime = 'calm' | 'trending' | 'volatile' | 'transitioning' | 'crisis'
+
+/** Historical record of a detected regime shift */
+export interface RegimeShiftEvent {
+  id: string
+  from: MarketRegime
+  to: MarketRegime
+  severity: number
+  timestamp: string
+  geodesicDistance: number
+  fisherDeterminant: number
+}
+
+/** The Fisher Information Metric tensor at a point in distribution space */
+export interface FisherMetric {
+  /** First parameter (mu) Fisher information */
+  iMu: number
+  /** Second parameter (sigma2) Fisher information */
+  iSigma2: number
+  /** Determinant of the Fisher metric (volume element) */
+  determinant: number
+  /** Estimated mean return from the window */
+  mu: number
+  /** Estimated variance from the window */
+  sigma2: number
+  /** Window size used for estimation */
+  windowSize: number
+  /** Timestamp of this metric snapshot */
+  computedAt: string
+}
+
+/** A point along the geodesic path through distribution space */
+export interface GeodesicPathPoint {
+  /** Index in the geodesic sequence */
+  index: number
+  /** Fisher metric at this point */
+  metric: FisherMetric
+  /** KL divergence from the previous point (local distance) */
+  klDistance: number
+  /** Cumulative geodesic distance from the anchor point */
+  cumulativeDistance: number
+  /** Geodesic velocity (rate of change, smoothed) */
+  velocity: number
+  /** Detected regime at this point */
+  regime: MarketRegime
+  /** Timestamp */
+  timestamp: string
+}
+
+/** Complete regime geometry analysis result */
+export interface RegimeGeometryResult {
+  symbol: string
+  assetType: AssetType
+  /** Current regime classification */
+  regime: MarketRegime
+  /** Confidence in the regime classification (0-1) */
+  regimeConfidence: number
+  /** Current Fisher metric snapshot */
+  currentMetric: FisherMetric
+  /** Recent geodesic path (last N points) */
+  geodesicPath: GeodesicPathPoint[]
+  /** Latest geodesic distance from the anchor point */
+  totalGeodesicDistance: number
+  /** Current geodesic velocity (smoothed) */
+  currentVelocity: number
+  /** Velocity threshold for regime detection */
+  velocityThreshold: number
+  /** Whether a regime shift has been detected recently */
+  regimeShiftDetected: boolean
+  /** Regime shift severity (0-1, higher = more severe) */
+  shiftSeverity: number
+  /** Time since last regime shift in milliseconds */
+  timeSinceLastShift: number
+  /** Recent regime shift events (last 10) */
+  recentShifts: RegimeShiftEvent[]
+  /** Human-readable summary for debate agents */
+  summary: string
+  /** Number of observations in the tracking window */
+  observationCount: number
+  /** When this result was computed */
+  computedAt: string
+}
+
+/** Configuration for the Regime Geometry Detector */
+export interface RegimeGeometryConfig {
+  /** Window size for return estimation */
+  windowSize: number
+  /** Number of historical geodesic points to retain */
+  historyLength: number
+  /** Smoothing factor for velocity (EMA alpha) */
+  velocitySmoothing: number
+  /** Number of standard deviations for shift detection threshold */
+  shiftThresholdSigma: number
+  /** Minimum observations before regime detection activates */
+  minObservations: number
+  /** KL divergence smoothing window for stable velocity estimation */
+  klSmoothingWindow: number
+}
+
+export const DEFAULT_REGIME_GEOMETRY_CONFIG: RegimeGeometryConfig = {
+  windowSize: 50,
+  historyLength: 500,
+  velocitySmoothing: 0.1,
+  shiftThresholdSigma: 3.0,
+  minObservations: 30,
+  klSmoothingWindow: 10,
+}
+
+// ============================================================
+// Pod & CIO Defaults
+// ============================================================
+
 export const DEFAULT_CIO_CONFIG = {
   maxPods: 5,
   minPodAllocationPct: 0.10,
