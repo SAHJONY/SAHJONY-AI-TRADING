@@ -241,14 +241,20 @@ export class TradingWorkforce extends EventEmitter {
     let debateState: DebateState
     try {
       const debatePromise = this.graph.invoke(initialState)
-      debateState = debateTimeout
-        ? await Promise.race([
-            debatePromise,
-            new Promise<never>((_, reject) =>
-              setTimeout(() => reject(new Error(`Debate timed out after ${debateTimeout}ms`)), debateTimeout)
-            ),
-          ])
-        : await debatePromise
+
+      if (debateTimeout) {
+        let timer: NodeJS.Timeout | undefined
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          timer = setTimeout(() => reject(new Error(`Debate timed out after ${debateTimeout}ms`)), debateTimeout)
+        })
+        try {
+          debateState = await Promise.race([debatePromise, timeoutPromise])
+        } finally {
+          if (timer) clearTimeout(timer)
+        }
+      } else {
+        debateState = await debatePromise
+      }
 
       if (debateState.error) {
         return {

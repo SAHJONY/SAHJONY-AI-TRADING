@@ -269,6 +269,7 @@ export class HermesAgent extends BaseAgent {
         const entry = this.pendingRequests.get(requestId)
         if (entry) entry.timer = timer
       } else {
+        this.pendingRequests.delete(requestId)
         reject(new Error('Hermes stdin not available'))
       }
     })
