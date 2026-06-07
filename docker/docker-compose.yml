@@ -1,0 +1,34 @@
+version: '3.8'
+services:
+  director:
+    build: ./docker
+    container_name: sahjony-director
+    env_file:
+      - config/.env
+    volumes:
+      - ./config:/app/config
+      - ./data:/app/data
+      - ./logs:/app/logs
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+  redis:
+    image: redis:7-alpine
+    container_name: sahjony-redis
+    volumes:
+      - ./data/redis:/data
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+  postgres:
+    image: postgres:16-alpine
+    container_name: sahjony-postgres
+    environment:
+      POSTGRES_DB: trading
+      POSTGRES_USER: trader
+      POSTGRES_PASSWORD: securepass123
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped

@@ -1,0 +1,1 @@
+class Config:\n    def __init__(self):\n        self.config = {}\n\n    def get(self, key, default=None):\n        return self.config.get(key, default)\n\n    def get_required(self, key):\n        value = self.config.get(key)\n        if value is None:\n            raise ValueError(f"Required config key '{key}' not set")\n        return value

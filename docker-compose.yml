@@ -1,0 +1,100 @@
+version: '3.8'
+
+services:
+  director:
+    build:
+      context: ./services/director
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONPATH=/app
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      - redis
+      - postgres
+    command: python main.py
+
+  risk:
+    build:
+      context: ./services/risk
+    ports:
+      - "8001:8001"
+    environment:
+      - PYTHONPATH=/app
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      - redis
+      - postgres
+    command: python main.py
+
+  quant:
+    build:
+      context: ./services/quant
+    ports:
+      - "8002:8002"
+    environment:
+      - PYTHONPATH=/app
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      - redis
+      - postgres
+    command: python main.py
+
+  sentiment:
+    build:
+      context: ./services/sentiment
+    ports:
+      - "8003:8003"
+    environment:
+      - PYTHONPATH=/app
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      - redis
+      - postgres
+    command: python main.py
+
+  executor:
+    build:
+      context: ./services/executor
+    ports:
+      - "8004:8004"
+    environment:
+      - PYTHONPATH=/app
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      - redis
+      - postgres
+    command: python main.py
+
+  compliance:
+    build:
+      context: ./services/compliance
+    ports:
+      - "8005:8005"
+    environment:
+      - PYTHONPATH=/app
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      - redis
+      - postgres
+    command: python main.py
+
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+
+  postgres:
+    image: postgres:latest
+    environment:
+      POSTGRES_PASSWORD: example
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./data:/var/lib/postgresql/data
