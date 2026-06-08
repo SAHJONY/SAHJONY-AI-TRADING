@@ -46,6 +46,19 @@ PROVIDERS = {
     },
 }
 
+# Public-facing aliases — never expose internal provider/model names
+PROVIDER_ALIAS = {"nvidia": "alpha", "openai": "beta", "anthropic": "gamma"}
+MODEL_ALIAS = {
+    "mistralai/mistral-nemotron": "SA-1",
+    "meta/llama-3.1-70b-instruct": "SA-2",
+    "deepseek-ai/deepseek-v4-flash": "SA-3",
+    "gpt-4": "SB-1",
+    "gpt-4-turbo": "SB-2",
+    "o3-mini": "SB-3",
+    "claude-3-sonnet": "SC-1",
+    "claude-3-opus": "SC-2",
+}
+
 
 def is_configured(name: str) -> bool:
     p = PROVIDERS.get(name, {})
@@ -54,6 +67,16 @@ def is_configured(name: str) -> bool:
 
 def get_provider(name: str) -> dict:
     return PROVIDERS.get(name, {})
+
+
+def mask_result(result: dict) -> dict:
+    """Strip internal provider/model names from API responses."""
+    masked = dict(result)
+    if "provider" in masked:
+        masked["provider"] = PROVIDER_ALIAS.get(masked["provider"], masked["provider"])
+    if "model" in masked:
+        masked["model"] = MODEL_ALIAS.get(masked["model"], masked["model"])
+    return masked
 
 
 # ─── Flask App ────────────────────────────────────────────────────────────────
@@ -80,8 +103,8 @@ def health():
         "firm": FIRM_NAME,
         "owner": OWNER,
         "status": "operational",
-        "providers": {
-            k: {"configured": is_configured(k), "models": v["models"]}
+        "architectures": {
+            PROVIDER_ALIAS.get(k, k): {"configured": is_configured(k), "models": [MODEL_ALIAS.get(m, m) for m in v["models"]]}
             for k, v in PROVIDERS.items()
         },
     })
@@ -105,7 +128,7 @@ def trading_analyze():
 
     provider = get_provider(provider_name)
     if not is_configured(provider_name):
-        return jsonify({"error": f"Provider '{provider_name}' not configured"}), 400
+        return jsonify({"error": f"Architecture '{PROVIDER_ALIAS.get(provider_name, provider_name)}' not configured"}), 400
 
     try:
         result = call_ai_provider(provider_name, provider, model, query)
@@ -115,11 +138,11 @@ def trading_analyze():
                     result = call_ai_provider(provider_name, provider, alt_model, query)
                     if "error" not in result:
                         break
-            if "error" in result and is_configured("openai"):
-                result = call_ai_provider("openai", get_provider("openai"), "gpt-4", query)
-        return jsonify(result)
+        if "error" in result and is_configured("openai"):
+            result = call_ai_provider("openai", get_provider("openai"), "gpt-4", query)
+        return jsonify(mask_result(result))
     except Exception as e:
-        return jsonify({"error": str(e), "provider": provider_name, "model": model})
+        return jsonify({"error": "Analysis unavailable", "architecture": PROVIDER_ALIAS.get(provider_name, provider_name)})
 
 
 def call_ai_provider(provider_name: str, provider: dict, model: str, query: str) -> dict:

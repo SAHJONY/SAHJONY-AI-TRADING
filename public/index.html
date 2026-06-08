@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sahjony Capital LLC — Private AI Trading Intelligence</title>
+<meta name="description" content="Sahjony Capital LLC — Private AI trading intelligence. Institutional-grade quantitative analysis and market signal generation.">
+<meta name="theme-color" content="#0a0a0a">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ===== RESET & BASE ===== */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility; }
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #0a0a0a;
+  color: #ffffff;
+  overflow-x: hidden;
+  line-height: 1.6;
+}
+h1, h2, h3, h4, h5, h6 { font-family: 'Playfair Display', Georgia, serif; }
+
+/* ===== SCROLL REVEAL ===== */
+.reveal {
+  opacity: 0;
+  transform: translateY(40px);
+  transition: opacity 0.9s cubic-bezier(0.16, 1, 0.3, 1), transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+.reveal-delay-1 { transition-delay: 0.1s; }
+.reveal-delay-2 { transition-delay: 0.2s; }
+.reveal-delay-3 { transition-delay: 0.3s; }
+.reveal-delay-4 { transition-delay: 0.4s; }
+
+/* ===== HERO SECTION ===== */
+.hero {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  min-height: 700px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: radial-gradient(ellipse 80% 60% at 50% 40%, rgba(201,168,76,0.04) 0%, transparent 60%),
+              radial-gradient(ellipse 60% 80% at 20% 80%, rgba(201,168,76,0.02) 0%, transparent 50%),
+              #0a0a0a;
+}
+
+/* Particle Grid Background */
+.hero-grid {
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  z-index: 0;
+  overflow: hidden;
+}
+.hero-grid::before {
+  content: '';
+  position: absolute;
+  top: -50%; left: -50%;
+  width: 200%; height: 200%;
+  background-image:
+    radial-gradient(circle 1px, rgba(201,168,76,0.12) 1px, transparent 1px),
+    radial-gradient(circle 1px, rgba(255,255,255,0.04) 1px, transparent 1px);
+  background-size: 80px 80px, 40px 40px;
+  background-position: 0 0, 20px 20px;
+  animation: gridDrift 25s linear infinite;
+}
+.hero-grid::after {
+  content: '';
+  position: absolute;
+  top: -50%; left: -50%;
+  width: 200%; height: 200%;
+  background-image:
+    radial-gradient(circle 1px, rgba(201,168,76,0.08) 1px, transparent 1px);
+  background-size: 120px 120px;
+  background-position: 40px 40px;
+  animation: gridDrift2 35s linear infinite;
+}
+@keyframes gridDrift {
+  0% { transform: translate(0, 0); }
+  100% { transform: translate(80px, 80px); }
+}
+@keyframes gridDrift2 {
+  0% { transform: translate(0, 0); }
+  100% { transform: translate(-120px, 60px); }
+}
+
+/* Horizontal accent lines in hero */
+.hero-lines {
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  z-index: 0;
+  overflow: hidden;
+  opacity: 0.3;
+}
+.hero-lines span {
+  position: absolute;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, rgba(201,168,76,0.15) 30%, rgba(201,168,76,0.25) 50%, rgba(201,168,76,0.15) 70%, transparent 100%);
+  animation: linePulse 6s ease-in-out infinite;
+}
+.hero-lines span:nth-child(1) { top: 25%; left: 5%; width: 90%; animation-delay: 0s; }
+.hero-lines span:nth-child(2) { top: 50%; left: 10%; width: 80%; animation-delay: 2s; }
+.hero-lines span:nth-child(3) { top: 75%; left: 0%; width: 100%; animation-delay: 4s; }
+@keyframes linePulse {
+  0%, 100% { opacity: 0; }
+  50% { opacity: 1; }
+}
+
+.hero-content {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  padding: 0 24px;
+  max-width: 960px;
+}
+
+.hero-title {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: clamp(2.8rem, 7vw, 5.5rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  margin-bottom: 20px;
+  opacity: 0;
+  transform: translateY(30px);
+  animation: heroReveal 1.2s cubic-bezier(0.16, 1, 0.3, 1) 0.3s forwards;
+}
+.hero-title .gold {
+  background: linear-gradient(135deg, #c9a84c 0%, #f0d78c 40%, #c9a84c 60%, #f0d78c 100%);
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: goldShimmer 4s ease-in-out infinite;
+}
+@keyframes goldShimmer {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+.hero-sub {
+  font-family: 'Inter', sans-serif;
+  font-size: clamp(1rem, 2.5vw, 1.35rem);
+  font-weight: 300;
+  color: rgba(255,255,255,0.6);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin-bottom: 40px;
+  opacity: 0;
+  transform: translateY(20px);
+  animation: heroReveal 1.2s cubic-bezier(0.16, 1, 0.3, 1) 0.6s forwards;
+}
+
+/* Gradient Accent Line */
+.accent-line {
+  width: 120px;
+  height: 2px;
+  margin: 0 auto;
+  background: linear-gradient(90deg, #c9a84c, #f0d78c, #c9a84c);
+  background-size: 200% 100%;
+  border-radius: 2px;
+  opacity: 0;
+  animation: heroReveal 1.2s cubic-bezier(0.16, 1, 0.3, 1) 0.9s forwards, accentPulse 3s ease-in-out 2.1s infinite;
+  box-shadow: 0 0 20px rgba(201,168,76,0.3), 0 0 60px rgba(201,168,76,0.1);
+}
+@keyframes accentPulse {
+  0%, 100% { background-position: 0% 50%; box-shadow: 0 0 20px rgba(201,168,76,0.3), 0 0 60px rgba(201,168,76,0.1); }
+  50% { background-position: 100% 50%; box-shadow: 0 0 30px rgba(201,168,76,0.5), 0 0 80px rgba(201,168,76,0.2); }
+}
+
+@keyframes heroReveal {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Scroll Indicator */
+.scroll-indicator {
+  position: absolute;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+  opacity: 0;
+  animation: heroReveal 1s cubic-bezier(0.16, 1, 0.3, 1) 1.4s forwards;
+}
+.scroll-indicator svg {
+  display: block;
+  width: 28px;
+  height: 28px;
+  stroke: rgba(201,168,76,0.5);
+  stroke-width: 1.5;
+  fill: none;
+  animation: scrollBounce 2.5s ease-in-out infinite;
+}
+@keyframes scrollBounce {
+  0%, 100% { transform: translateY(0); opacity: 0.5; }
+  50% { transform: translateY(10px); opacity: 1; }
+}
+
+/* ===== SECTION COMMON ===== */
+section {
+  padding: 120px 24px;
+  position: relative;
+}
+.section-container {
+  max-width: 1120px;
+  margin: 0 auto;
+}
+.section-label {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #c9a84c;
+  margin-bottom: 16px;
+  display: block;
+}
+.section-title {
+  font-size: clamp(2rem, 4vw, 3.2rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  margin-bottom: 24px;
+}
+.section-desc {
+  font-size: clamp(1rem, 1.8vw, 1.15rem);
+  color: rgba(255,255,255,0.6);
+  max-width: 640px;
+  line-height: 1.75;
+  font-weight: 300;
+}
+
+/* Subtle section dividers */
+.section-divider {
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(201,168,76,0.1) 50%, transparent);
+}
+
+/* ===== ABOUT SECTION ===== */
+.about {
+  background: radial-gradient(ellipse 60% 50% at 50% 0%, rgba(201,168,76,0.02) 0%, transparent 70%), #0a0a0a;
+}
+.about-text {
+  max-width: 720px;
+}
+.about-text p {
+  font-size: clamp(1rem, 1.8vw, 1.15rem);
+  color: rgba(255,255,255,0.6);
+  line-height: 1.85;
+  font-weight: 300;
+  margin-top: 16px;
+}
+.about-text p strong {
+  color: rgba(255,255,255,0.85);
+  font-weight: 500;
+}
+.about-highlights {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 32px;
+  margin-top: 56px;
+}
+.about-highlight-item {
+  padding: 32px 28px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 16px;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.about-highlight-item:hover {
+  background: rgba(255,255,255,0.04);
+  border-color: rgba(201,168,76,0.15);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 40px rgba(201,168,76,0.06);
+}
+.about-highlight-item .icon {
+  font-size: 1.5rem;
+  margin-bottom: 16px;
+  display: block;
+  width: 44px;
+  height: 44px;
+  line-height: 44px;
+  text-align: center;
+  background: rgba(201,168,76,0.08);
+  border-radius: 12px;
+  color: #c9a84c;
+}
+.about-highlight-item h4 {
+  font-family: 'Inter', sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #ffffff;
+}
+.about-highlight-item p {
+  font-size: 0.875rem;
+  color: rgba(255,255,255,0.45);
+  line-height: 1.6;
+  margin-top: 0;
+}
+
+/* ===== PLATFORM SECTION ===== */
+.platform {
+  background: radial-gradient(ellipse 60% 50% at 70% 50%, rgba(201,168,76,0.015) 0%, transparent 60%), #0a0a0a;
+}
+.platform-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  margin-top: 56px;
+}
+@media (max-width: 768px) {
+  .platform-grid { grid-template-columns: 1fr; gap: 20px; }
+}
+.platform-card {
+  position: relative;
+  padding: 44px 36px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 20px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+.platform-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(201,168,76,0.2), transparent);
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+.platform-card:hover {
+  transform: scale(1.02);
+  background: rgba(255,255,255,0.045);
+  border-color: rgba(201,168,76,0.2);
+  box-shadow: 0 0 40px rgba(201,168,76,0.08), 0 20px 60px rgba(0,0,0,0.3);
+}
+.platform-card:hover::before { opacity: 1; }
+
+.platform-card .card-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: rgba(201,168,76,0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 28px;
+  transition: all 0.5s ease;
+}
+.platform-card:hover .card-icon {
+  background: rgba(201,168,76,0.14);
+  box-shadow: 0 0 30px rgba(201,168,76,0.12);
+}
+.platform-card .card-icon svg {
+  width: 26px;
+  height: 26px;
+  stroke: #c9a84c;
+  stroke-width: 1.8;
+  fill: none;
+}
+.platform-card h3 {
+  font-family: 'Inter', sans-serif;
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-bottom: 14px;
+  color: #ffffff;
+}
+.platform-card p {
+  font-size: 0.925rem;
+  color: rgba(255,255,255,0.5);
+  line-height: 1.7;
+  font-weight: 300;
+}
+
+/* ===== METRICS SECTION ===== */
+.metrics {
+  background: linear-gradient(180deg, #0a0a0a 0%, rgba(201,168,76,0.015) 50%, #0a0a0a 100%);
+}
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+  margin-top: 56px;
+}
+@media (max-width: 900px) {
+  .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 500px) {
+  .metrics-grid { grid-template-columns: 1fr; }
+}
+.metric-item {
+  text-align: center;
+  padding: 48px 24px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.04);
+  border-radius: 20px;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.metric-item:hover {
+  background: rgba(255,255,255,0.035);
+  border-color: rgba(201,168,76,0.12);
+  box-shadow: 0 0 40px rgba(201,168,76,0.04);
+}
+.metric-value {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: clamp(2.2rem, 4vw, 3rem);
+  font-weight: 600;
+  background: linear-gradient(135deg, #c9a84c, #f0d78c);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1.2;
+  margin-bottom: 10px;
+}
+.metric-label {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 400;
+  color: rgba(255,255,255,0.45);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* ===== TECHNOLOGY SECTION ===== */
+.technology {
+  background: radial-gradient(ellipse 50% 50% at 50% 50%, rgba(201,168,76,0.02) 0%, transparent 70%), #0a0a0a;
+}
+.tech-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 28px;
+  margin-top: 56px;
+}
+.tech-badge {
+  position: relative;
+  width: 220px;
+  padding: 36px 24px;
+  background: rgba(255,255,255,0.025);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 20px;
+  text-align: center;
+  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+.tech-badge::before {
+  content: '';
+  position: absolute;
+  top: -1px; left: -1px; right: -1px; bottom: -1px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, rgba(201,168,76,0.15), transparent 40%, transparent 60%, rgba(201,168,76,0.1));
+  opacity: 0;
+  transition: opacity 0.5s ease;
+  z-index: -1;
+}
+.tech-badge:hover {
+  transform: translateY(-4px);
+  border-color: rgba(201,168,76,0.25);
+  box-shadow: 0 0 50px rgba(201,168,76,0.1), 0 20px 60px rgba(0,0,0,0.3);
+}
+.tech-badge:hover::before { opacity: 1; }
+
+.tech-badge .badge-icon {
+  width: 60px;
+  height: 60px;
+  margin: 0 auto 20px;
+  border-radius: 16px;
+  background: rgba(201,168,76,0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6rem;
+  color: #c9a84c;
+  transition: all 0.5s ease;
+}
+.tech-badge:hover .badge-icon {
+  background: rgba(201,168,76,0.12);
+  box-shadow: 0 0 30px rgba(201,168,76,0.15);
+}
+.tech-badge h4 {
+  font-family: 'Inter', sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #ffffff;
+  margin-bottom: 8px;
+}
+.tech-badge p {
+  font-size: 0.8rem;
+  color: rgba(255,255,255,0.4);
+  line-height: 1.5;
+  font-weight: 300;
+}
+
+/* Hex decorative ring on tech badges */
+.tech-badge .hex-ring {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 24px;
+  height: 24px;
+  opacity: 0.15;
+  transition: opacity 0.5s ease;
+}
+.tech-badge:hover .hex-ring { opacity: 0.4; }
+.tech-badge .hex-ring svg {
+  width: 100%;
+  height: 100%;
+  stroke: #c9a84c;
+  stroke-width: 1;
+  fill: none;
+}
+
+/* ===== CONTACT SECTION ===== */
+.contact {
+  background: radial-gradient(ellipse 60% 50% at 50% 80%, rgba(201,168,76,0.02) 0%, transparent 60%), #0a0a0a;
+}
+.contact-wrapper {
+  max-width: 600px;
+  margin: 0 auto;
+  text-align: center;
+}
+.contact-card {
+  margin-top: 48px;
+  padding: 48px 40px;
+  background: rgba(255,255,255,0.025);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 24px;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.5s ease;
+}
+.contact-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(201,168,76,0.25), transparent);
+}
+.contact-card:hover {
+  border-color: rgba(201,168,76,0.15);
+  box-shadow: 0 0 60px rgba(201,168,76,0.06);
+}
+.contact-card .contact-label {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.35);
+  margin-bottom: 16px;
+}
+.contact-card .contact-email {
+  font-family: 'Inter', sans-serif;
+  font-size: clamp(1.1rem, 2.5vw, 1.4rem);
+  font-weight: 500;
+  color: #f0d78c;
+  text-decoration: none;
+  letter-spacing: 0.02em;
+  transition: color 0.3s ease;
+}
+.contact-card .contact-email:hover {
+  color: #ffffff;
+}
+.contact-card .contact-note {
+  margin-top: 24px;
+  font-size: 0.85rem;
+  color: rgba(255,255,255,0.35);
+  line-height: 1.6;
+  font-weight: 300;
+}
+.contact-card .contact-icon-wrap {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 24px;
+  border-radius: 16px;
+  background: rgba(201,168,76,0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.contact-card .contact-icon-wrap svg {
+  width: 26px;
+  height: 26px;
+  stroke: #c9a84c;
+  stroke-width: 1.8;
+  fill: none;
+}
+
+/* ===== FOOTER ===== */
+.footer {
+  padding: 40px 24px;
+  text-align: center;
+  border-top: 1px solid rgba(255,255,255,0.04);
+}
+.footer p {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.8rem;
+  color: rgba(255,255,255,0.25);
+  letter-spacing: 0.04em;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+  section { padding: 80px 20px; }
+  .platform-card { padding: 32px 28px; }
+  .tech-badge { width: 160px; padding: 28px 16px; }
+  .metric-item { padding: 36px 16px; }
+  .contact-card { padding: 36px 24px; }
+}
+@media (max-width: 480px) {
+  section { padding: 64px 16px; }
+  .tech-grid { gap: 16px; }
+  .tech-badge { width: 100%; max-width: 280px; }
+  .about-highlights { grid-template-columns: 1fr; }
+}
+
+/* ===== CUSTOM SCROLLBAR ===== */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #0a0a0a; }
+::-webkit-scrollbar-thumb { background: rgba(201,168,76,0.2); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(201,168,76,0.35); }
+
+/* ===== SELECTION ===== */
+::selection { background: rgba(201,168,76,0.25); color: #ffffff; }
+</style>
+</head>
+<body>
+
+<!-- ==================== HERO ==================== -->
+<section class="hero" id="hero">
+  <div class="hero-grid"></div>
+  <div class="hero-lines">
+    <span></span><span></span><span></span>
+  </div>
+  <div class="hero-content">
+    <h1 class="hero-title">
+      <span class="gold">Sahjony Capital</span> LLC
+    </h1>
+    <p class="hero-sub">Private AI Trading Intelligence</p>
+    <div class="accent-line"></div>
+  </div>
+  <div class="scroll-indicator">
+    <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+  </div>
+</section>
+
+<!-- ==================== ABOUT ==================== -->
+<div class="section-divider"></div>
+<section class="about" id="about">
+  <div class="section-container">
+    <span class="section-label reveal">About the Firm</span>
+    <h2 class="section-title reveal reveal-delay-1">Institutional-Grade AI</h2>
+    <div class="about-text reveal reveal-delay-2">
+      <p>
+        Sahjony Capital LLC operates at the intersection of <strong>artificial intelligence</strong> and <strong>quantitative finance</strong>. Our proprietary platform leverages multi-layer AI architectures to synthesize real-time market intelligence, delivering institutional-caliber trading signals with unprecedented speed and precision."
+      </p>
+      <p>
+        Built on proprietary GPU-accelerated infrastructure and powered by a convergence of frontier AI models, our system continuously analyzes global market dynamics — identifying alpha opportunities across equities, derivatives, and digital assets with sub-100ms response latency.
+      </p>
+    </div>
+    <div class="about-highlights">
+      <div class="about-highlight-item reveal reveal-delay-1">
+        <span class="icon">&#9670;</span>
+        <h4>Proprietary AI</h4>
+        <p>Custom-built models trained on institutional data pipelines with multi-layer validation frameworks.</p>
+      </div>
+      <div class="about-highlight-item reveal reveal-delay-2">
+        <span class="icon">&#9733;</span>
+        <h4>Quantitative Analysis</h4>
+        <p>Advanced statistical models and signal processing across thousands of real-time data streams.</p>
+      </div>
+      <div class="about-highlight-item reveal reveal-delay-3">
+        <span class="icon">&#9672;</span>
+        <h4>Multi-Layer Intelligence</h4>
+        <p>Ensemble architecture combining proprietary model orchestration for superior signal quality.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== PLATFORM ==================== -->
+<div class="section-divider"></div>
+<section class="platform" id="platform">
+  <div class="section-container">
+    <span class="section-label reveal">Platform</span>
+    <h2 class="section-title reveal reveal-delay-1">Intelligence Infrastructure</h2>
+    <p class="section-desc reveal reveal-delay-2">A vertically integrated AI platform engineered for institutional-grade trading — from compute layer to signal delivery.</p>
+    <div class="platform-grid">
+      <div class="platform-card reveal reveal-delay-1">
+        <div class="card-icon">
+          <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+        </div>
+        <h3>GPU-Accelerated Compute</h3>
+        <p>Enterprise-grade AI compute infrastructure delivering sub-100ms inference at scale. Containerized microservices power our core analytics engine with GPU-accelerated throughput and enterprise deployment.</p>
+      </div>
+      <div class="platform-card reveal reveal-delay-2">
+        <div class="card-icon">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+        </div>
+        <h3>Multi-Layer Intelligence</h3>
+        <p>Ensemble architecture combining multiple frontier models through intelligent routing. Each model contributes unique analytical strengths — our orchestration layer selects and weights outputs in real-time.</p>
+      </div>
+      <div class="platform-card reveal reveal-delay-3">
+        <div class="card-icon">
+          <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        </div>
+        <h3>Real-Time Signals</h3>
+        <p>Continuous market surveillance generating actionable trading signals across global markets. Our AI pipeline processes pricing, sentiment, and flow data — delivering institutional-quality intelligence around the clock.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== METRICS ==================== -->
+<div class="section-divider"></div>
+<section class="metrics" id="metrics">
+  <div class="section-container">
+    <span class="section-label reveal" style="text-align:center;display:block;">Performance</span>
+    <h2 class="section-title reveal reveal-delay-1" style="text-align:center;">By the Numbers</h2>
+    <div class="metrics-grid">
+      <div class="metric-item reveal reveal-delay-1">
+        <div class="metric-value" data-target="2.4" data-prefix="$" data-suffix="B+" data-decimals="1">$0</div>
+        <div class="metric-label">Analyzed</div>
+      </div>
+      <div class="metric-item reveal reveal-delay-2">
+        <div class="metric-value" data-target="3" data-prefix="" data-suffix="" data-decimals="0">0</div>
+        <div class="metric-label">AI Architectures</div>
+      </div>
+      <div class="metric-item reveal reveal-delay-3">
+        <div class="metric-value" data-target="100" data-prefix="<" data-suffix="ms" data-decimals="0">0</div>
+        <div class="metric-label">Response</div>
+      </div>
+      <div class="metric-item reveal reveal-delay-4">
+        <div class="metric-value" data-target="24" data-prefix="" data-suffix="/7" data-decimals="0">0</div>
+        <div class="metric-label">Operational</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== TECHNOLOGY ==================== -->
+<div class="section-divider"></div>
+<section class="technology" id="technology">
+  <div class="section-container">
+    <span class="section-label reveal" style="text-align:center;display:block;">Technology Stack</span>
+    <h2 class="section-title reveal reveal-delay-1" style="text-align:center;">Powered by Leaders</h2>
+    <p class="section-desc reveal reveal-delay-2" style="text-align:center;margin:0 auto;">Our proprietary AI architecture harnesses the most advanced language models and inference platforms available today.</p>
+    <div class="tech-grid">
+      <div class="tech-badge reveal reveal-delay-1">
+        <div class="hex-ring"><svg viewBox="0 0 24 24"><polygon points="12,2 22,8.5 22,15.5 12,22 2,15.5 2,8.5"/></svg></div>
+        <div class="badge-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#c9a84c" stroke-width="1.5"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h6v6H9z"/><path d="M9 4V1M15 4V1M9 23v-3M15 23v-3M4 9H1M4 15H1M23 9h-3M23 15h-3"/></svg>
+        </div>
+        <h4>GPU Inference</h4>
+        <p>Enterprise-grade accelerated compute for sub-100ms inference at scale</p>
+      </div>
+      <div class="tech-badge reveal reveal-delay-2">
+        <div class="hex-ring"><svg viewBox="0 0 24 24"><polygon points="12,2 22,8.5 22,15.5 12,22 2,15.5 2,8.5"/></svg></div>
+        <div class="badge-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#c9a84c" stroke-width="1.5"><circle cx="12" cy="12" r="8"/><path d="M8 12a4 4 0 018 0"/><circle cx="12" cy="12" r="1.5"/></svg>
+        </div>
+        <h4>Frontier Models</h4>
+        <p>Advanced language models for deep analytical reasoning and synthesis</p>
+      </div>
+      <div class="tech-badge reveal reveal-delay-3">
+        <div class="hex-ring"><svg viewBox="0 0 24 24"><polygon points="12,2 22,8.5 22,15.5 12,22 2,15.5 2,8.5"/></svg></div>
+        <div class="badge-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#c9a84c" stroke-width="1.5"><polygon points="12,2 15,9 22,9 16.5,14 18.5,21 12,17 5.5,21 7.5,14 2,9 9,9"/></svg>
+        </div>
+        <h4>Efficient Models</h4>
+        <p>High-efficiency models optimized for financial data processing at scale</p>
+      </div>
+      <div class="tech-badge reveal reveal-delay-4">
+        <div class="hex-ring"><svg viewBox="0 0 24 24"><polygon points="12,2 22,8.5 22,15.5 12,22 2,15.5 2,8.5"/></svg></div>
+        <div class="badge-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#c9a84c" stroke-width="1.5"><path d="M12 2l9 4.5v11L12 22l-9-4.5v-11L12 2z"/><circle cx="12" cy="12" r="3"/></svg>
+        </div>
+        <h4>Reasoning Models</h4>
+        <p>Advanced reasoning models for complex multi-factor market analysis</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== CONTACT ==================== -->
+<div class="section-divider"></div>
+<section class="contact" id="contact">
+  <div class="section-container">
+    <div class="contact-wrapper">
+      <span class="section-label reveal">Contact</span>
+      <h2 class="section-title reveal reveal-delay-1">Institutional Inquiries</h2>
+      <p class="section-desc reveal reveal-delay-2" style="margin:0 auto;">For partnership opportunities, institutional access, or strategic discussions, please reach out to our team directly.</p>
+      <div class="contact-card reveal reveal-delay-3">
+        <div class="contact-icon-wrap">
+          <svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+        </div>
+        <div class="contact-label">Email</div>
+        <a class="contact-email" href="mailto:sahjonycapitalllc@outlook.com">sahjonycapitalllc@outlook.com</a>
+        <p class="contact-note">We review all inquiries within 48 business hours. Institutional and strategic partners receive priority consideration.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== FOOTER ==================== -->
+<footer class="footer">
+  <p>&copy; 2026 Sahjony Capital LLC. All rights reserved.</p>
+</footer>
+
+<script>
+/* ===== Intersection Observer for Scroll Reveal ===== */
+(function() {
+  const revealElements = document.querySelectorAll('.reveal');
+  const observer = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+  revealElements.forEach(function(el) { observer.observe(el); });
+})();
+
+/* ===== Counter Animation ===== */
+(function() {
+  var counters = document.querySelectorAll('.metric-value[data-target]');
+  var animated = new Set();
+
+  function easeOutQuart(t) {
+    return 1 - Math.pow(1 - t, 4);
+  }
+
+  function animateCounter(el) {
+    var target = parseFloat(el.getAttribute('data-target'));
+    var prefix = el.getAttribute('data-prefix') || '';
+    var suffix = el.getAttribute('data-suffix') || '';
+    var decimals = parseInt(el.getAttribute('data-decimals') || '0', 10);
+    var duration = 2000;
+    var startTime = null;
+
+    function step(timestamp) {
+      if (!startTime) startTime = timestamp;
+      var progress = Math.min((timestamp - startTime) / duration, 1);
+      var easedProgress = easeOutQuart(progress);
+      var current = easedProgress * target;
+      var display = current.toFixed(decimals);
+      el.textContent = prefix + display + suffix;
+      if (progress < 1) {
+        requestAnimationFrame(step);
+      } else {
+        el.textContent = prefix + target.toFixed(decimals) + suffix;
+      }
+    }
+    requestAnimationFrame(step);
+  }
+
+  var counterObserver = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+      if (entry.isIntersecting && !animated.has(entry.target)) {
+        animated.add(entry.target);
+        animateCounter(entry.target);
+        counterObserver.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.3 });
+
+  counters.forEach(function(el) { counterObserver.observe(el); });
+})();
+
+/* ===== Smooth scroll for anchor links ===== */
+document.querySelectorAll('a[href^="#"]').forEach(function(anchor) {
+  anchor.addEventListener('click', function(e) {
+    e.preventDefault();
+    var target = document.querySelector(this.getAttribute('href'));
+    if (target) target.scrollIntoView({ behavior: 'smooth' });
+  });
+});
+</script>
+</body>
+</html>
