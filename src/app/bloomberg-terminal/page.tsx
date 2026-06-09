@@ -13,26 +13,11 @@ export default async function BloombergTerminalPage() {
   return (
     <div className="min-h-screen bg-background text-white p-4">
       <h1 className="text-3xl font-bold mb-4">AI Agentic Bloomberg Terminal</h1>
-      <RealTimeMarket />
-      <AgentChat />
+      <div className="grid grid-cols-3 gap-4 mt-4">
+        <div className="bg-gray-800 p-6 rounded text-center">Square 1</div>
+        <div className="bg-gray-800 p-6 rounded text-center">Square 2</div>
+        <div className="bg-gray-800 p-6 rounded text-center">Square 3</div>
+      </div>
     </div>
   );
-}
-
-// ---------------------------------------------------
-// Real‑time market component (client side)
-// ---------------------------------------------------
-import RealTimeMarketClient from './RealTimeMarketClient';
-import AgentChatClient from './AgentChatClient';
-
-function RealTimeMarket() {
-  // This component runs in the browser – use 'use client'
-  return <RealTimeMarketClient />;
-}
-
-// ---------------------------------------------------
-// Agent chat component (client side)
-// ---------------------------------------------------
-function AgentChat() {
-  return <AgentChatClient />;
 }
