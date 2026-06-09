@@ -22,7 +22,7 @@ export default async function BloombergTerminalPage() {
 
   return (
     <div className="min-h-screen bg-background text-white p-4">
-      <h1 className="text-3xl font-bold mb-4">AI Agentic Bloomberg Terminal</h1>
+      <h1 className="text-3xl font-bold mb-4">AI Agentic Trading Dashboard</h1>
       <h2 className="text-xl mb-2">Provider Status</h2>
       <div className="grid grid-cols-2 gap-4 mb-6">
         {Object.entries(providers).map(([name, status]) => (
