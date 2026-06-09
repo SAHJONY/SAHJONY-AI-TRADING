@@ -43,9 +43,12 @@ const stats = [
   { value: '$100K+', label: 'Starting Capital Managed' },
 ]
 
+const OWNER_EMAIL = 'sahjonycapitalllc@outlook.com'
+
 export default async function HomePage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+ const supabase = await createClient()
+ const { data: { user } } = await supabase.auth.getUser()
+ const isOwner = user?.email === OWNER_EMAIL
 
   if (!user) {
     return (
@@ -288,18 +291,29 @@ export default async function HomePage() {
       <main className="container-custom py-8">
         {/* Dashboard Header */}
         <div className="flex items-center justify-between mb-10 animate-slide-up">
-          <div>
-            <h1 className="text-3xl font-display font-bold text-white tracking-tighter">Dashboard</h1>
-            <p className="text-text-secondary mt-1.5 text-sm font-light">Welcome back. Your AI workforce is standing by.</p>
-          </div>
-          <Link
-            href="/agents/new"
-            className="group inline-flex items-center gap-2.5 px-6 py-3 bg-gradient-to-r from-primary-deep to-primary text-white rounded-full font-medium text-sm shadow-primary hover:from-primary hover:to-primary-hover hover:shadow-primary-lg transition-all duration-500"
-          >
-            <Plus className="h-4 w-4" />
-            Deploy Agent
-          </Link>
+        <div>
+        <h1 className="text-3xl font-display font-bold text-white tracking-tighter">Dashboard</h1>
+        <p className="text-text-secondary mt-1.5 text-sm font-light">Welcome back. Your AI workforce is standing by.</p>
         </div>
+        <Link
+        href="/agents/new"
+        className="group inline-flex items-center gap-2.5 px-6 py-3 bg-gradient-to-r from-primary-deep to-primary text-white rounded-full font-medium text-sm shadow-primary hover:from-primary hover:to-primary-hover hover:shadow-primary-lg transition-all duration-500"
+        >
+        <Plus className="h-4 w-4" />
+        Deploy Agent
+        </Link>
+        </div>
+
+        {/* Owner Banner */}
+        {isOwner && (
+        <div className="mb-8 rounded-xl border border-amber-500/30 bg-gradient-to-r from-amber-500/10 to-amber-500/5 p-4 flex items-center gap-3 animate-slide-up">
+        <Lock className="w-6 h-6 text-amber-400" />
+        <div>
+        <p className="font-bold text-amber-400">OWNER ACCESS — UNRESTRICTED</p>
+        <p className="text-sm text-amber-300/70">Full control. All agents unlocked. Live trading. All markets. Zero limits.</p>
+        </div>
+        </div>
+        )}
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-12">

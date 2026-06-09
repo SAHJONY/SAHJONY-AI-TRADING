@@ -1,13 +1,16 @@
 import Link from 'next/link'
-import { MessageSquare, Clock } from 'lucide-react'
+import { MessageSquare, Clock, Unlock } from 'lucide-react'
 import { TopNav } from '@/components/layout/top-nav'
 import { createClient } from '@/lib/supabase/server'
 
 export const dynamic = 'force-dynamic'
 
+const OWNER_EMAIL = 'sahjonycapitalllc@outlook.com'
+
 export default async function ConversationsPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+ const supabase = await createClient()
+ const { data: { user } } = await supabase.auth.getUser()
+ const isOwner = user?.email === OWNER_EMAIL
 
   if (!user) {
     return (
@@ -35,9 +38,20 @@ export default async function ConversationsPage() {
       <TopNav />
       <main className="container-custom py-8">
         <div className="mb-8 animate-slide-up">
-          <h1 className="text-3xl font-display font-bold text-white tracking-tighter">Conversations</h1>
-          <p className="text-text-secondary mt-1 text-sm font-light">Your chat history with AI agents</p>
+        <h1 className="text-3xl font-display font-bold text-white tracking-tighter">Conversations</h1>
+        <p className="text-text-secondary mt-1 text-sm font-light">Your chat history with AI agents</p>
         </div>
+
+        {/* Owner Banner */}
+        {isOwner && (
+        <div className="mb-6 rounded-xl border border-amber-500/30 bg-gradient-to-r from-amber-500/10 to-amber-500/5 p-4 flex items-center gap-3">
+        <Unlock className="w-6 h-6 text-amber-400" />
+        <div>
+        <p className="font-bold text-amber-400">OWNER ACCESS — ALL CONVERSATIONS VISIBLE</p>
+        <p className="text-sm text-amber-300/70">Unrestricted access to all agent communications and execution logs.</p>
+        </div>
+        </div>
+        )}
 
         {conversations && conversations.length > 0 ? (
           <div className="space-y-2">

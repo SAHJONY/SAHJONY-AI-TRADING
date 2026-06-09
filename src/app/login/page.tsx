@@ -1,41 +1,44 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useAuth } from '@/components/providers'
 import { createClient } from '@/lib/supabase/client'
 import { ArrowRight, Github, Mail } from 'lucide-react'
 
+// Re‑use a single Supabase client instance
+const supabase = createClient()
+
 export default function LoginPage() {
+  const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const { user } = useAuth()
 
-  if (user) {
-    if (typeof window !== 'undefined') window.location.href = '/'
-    return null
-  }
+  // Redirect authenticated users client‑side
+  useEffect(() => {
+    if (user) router.push('/')
+  }, [user, router])
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setLoading(true)
     setError('')
 
-    const supabase = createClient()
     const { error } = await supabase.auth.signInWithPassword({ email, password })
 
     if (error) {
       setError(error.message)
       setLoading(false)
     } else {
-      window.location.href = '/'
+      router.push('/')
     }
   }
 
   const handleGithubLogin = async () => {
-    const supabase = createClient()
     await supabase.auth.signInWithOAuth({
       provider: 'github',
       options: { redirectTo: `${window.location.origin}/` },
@@ -60,6 +63,7 @@ export default function LoginPage() {
         <div className="card-tesla p-8">
           <button
             onClick={handleGithubLogin}
+            aria-label="Continue with GitHub"
             className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-white/[0.04] border border-white/[0.08] rounded-xl text-white font-medium text-sm hover:bg-white/[0.06] hover:border-white/[0.12] transition-all duration-300 mb-6"
           >
             <Github className="h-5 w-5" />
@@ -81,7 +85,9 @@ export default function LoginPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 className="input"
                 placeholder="you@company.com"
+                autoComplete="email"
                 required
+                disabled={loading}
               />
             </div>
             <div>
@@ -92,7 +98,9 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 className="input"
                 placeholder="••••••••"
+                autoComplete="current-password"
                 required
+                disabled={loading}
               />
             </div>
 

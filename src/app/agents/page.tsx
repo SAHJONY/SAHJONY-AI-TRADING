@@ -26,13 +26,18 @@ const horizonLabels: Record<string, string> = {
 }
 
 export default function AgentsPage() {
-  const { user } = useAuth()
+  const { user, isOwner, unrestricted } = useAuth()
   const [search, setSearch] = useState('')
   const [filterProvider, setFilterProvider] = useState<string>('all')
   const [filterRisk, setFilterRisk] = useState<string>('all')
   const [filterHorizon, setFilterHorizon] = useState<string>('all')
   const [selectedAgent, setSelectedAgent] = useState<TradingAgent | null>(null)
-  const [addedAgents, setAddedAgents] = useState<Set<string>>(new Set(['agent-hermes-oracle', 'agent-anthropic-sentinel', 'agent-groq-flash', 'agent-freebuff-zero']))
+  // Owner gets all 15 agents active by default; regular users start with 4
+  const [addedAgents, setAddedAgents] = useState<Set<string>>(
+   () => isOwner
+    ? new Set(TRADING_AGENTS.map(a => a.id))
+    : new Set(['agent-hermes-oracle', 'agent-anthropic-sentinel', 'agent-groq-flash', 'agent-freebuff-zero'])
+  )
 
   const filteredAgents = TRADING_AGENTS.filter(agent => {
     if (search && !agent.name.toLowerCase().includes(search.toLowerCase()) && !agent.specialty.toLowerCase().includes(search.toLowerCase())) return false
