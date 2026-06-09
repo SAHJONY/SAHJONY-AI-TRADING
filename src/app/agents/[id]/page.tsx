@@ -19,7 +19,14 @@ export default function AgentDetailPage() {
   const { user } = useAuth()
   const params = useParams()
   const router = useRouter()
-  const agentId = params.id as string
+  const agentId = params?.id as string | undefined
+  if (!agentId) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-text-secondary">Invalid agent ID.</p>
+      </div>
+    )
+  }
 
   const [agent, setAgent] = useState<any>(null)
   const [messages, setMessages] = useState<Message[]>([])
