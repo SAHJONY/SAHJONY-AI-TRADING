@@ -6,8 +6,8 @@
 // Owner emails — full unrestricted access, no limits
 const OWNER_EMAILS: string[] = [
   'sahjonycapitalllc@outlook.com',
-  'juan@example.com',
-]
+  'juan@example.com', // added for full access
+];
 
 export function isOwnerEmail(email: string | null | undefined): boolean {
   if (!email) return false

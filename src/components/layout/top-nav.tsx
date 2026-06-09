@@ -17,11 +17,11 @@ const navLinks = [
 ]
 
 export function TopNav() {
- const { user, signOut, isOwner, unrestricted } = useAuth()
- const { theme, toggleTheme } = useTheme()
- const pathname = usePathname()
- const [menuOpen, setMenuOpen] = useState(false)
- const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const { user, signOut, isOwner, unrestricted } = useAuth()
+  const { theme, toggleTheme } = useTheme()
+  const pathname = usePathname() ?? ''
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [userMenuOpen, setUserMenuOpen] = useState(false)
 
  return (
   <header className="border-b border-border/50 bg-background/60 backdrop-blur-2xl sticky top-0 z-50">

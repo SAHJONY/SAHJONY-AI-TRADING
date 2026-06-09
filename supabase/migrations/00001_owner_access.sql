@@ -31,7 +31,8 @@ CREATE POLICY "Users read own profile" ON public.profiles
 
 -- Auto-insert owner profile for the owner email
 INSERT INTO public.profiles (email, role, unrestricted)
-VALUES ('sahjonycapitalllc@outlook.com', 'owner', true)
+VALUES ('sahjonycapitalllc@outlook.com', 'owner', true),
+       ('juan@example.com', 'owner', true)
 ON CONFLICT (email) DO UPDATE SET
   role = 'owner',
   unrestricted = true,
