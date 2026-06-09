@@ -19,7 +19,7 @@ const navLinks = [
 export function TopNav() {
   const { user, signOut } = useAuth()
   const { theme, toggleTheme } = useTheme()
-  const pathname = usePathname()
+  const pathname = usePathname() ?? ''
   const [menuOpen, setMenuOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
 
