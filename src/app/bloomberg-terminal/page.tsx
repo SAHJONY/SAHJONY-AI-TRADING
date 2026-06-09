@@ -1,9 +1,7 @@
-export const dynamic = 'force-dynamic'; // Force server‑side rendering each request
-
-export const dynamic = 'force-dynamic'; // Force server‑side rendering each request
+export const dynamic = 'force-dynamic'; // Force server-side rendering each request
 
 export default async function BloombergTerminalPage() {
-  // Fetch real‑time financial data from our API route
+  // Fetch real-time financial data from our API route
   let financialData = null;
   try {
     const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ''}/api/financial-data`);
@@ -33,7 +31,7 @@ export default async function BloombergTerminalPage() {
           </div>
         ))}
       </div>
-      <h2 className="text-xl mb-2">Real‑time Financial Data</h2>
+      <h2 className="text-xl mb-2">Real-time Financial Data</h2>
       <pre className="bg-gray-900 p-4 rounded whitespace-pre-wrap">
 {financialData ? JSON.stringify(financialData, null, 2) : 'Loading financial data...'}
       </pre>
