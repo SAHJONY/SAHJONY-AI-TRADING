@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useState } from 'react'
 import { useAuth } from '@/components/providers'
 import { TopNav } from '@/components/layout/top-nav'
@@ -153,46 +154,48 @@ export default function MarketsPage() {
         {/* ═══ MARKET GRID ═══ */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-12">
           {filteredMarkets.map((market, idx) => (
-            <div key={market.id} className="card-tesla p-5 animate-slide-up" style={{ animationDelay: `${120 + idx * 25}ms` }}>
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  <span className="text-xl">{market.icon}</span>
-                  <div>
-                    <h3 className="text-sm font-display font-semibold text-white tracking-tight">{market.exchange}</h3>
-                    <p className="text-[10px] text-text-dim">{market.country}</p>
-                  </div>
-                </div>
-                {market.is247 && (
-                  <span className="badge bg-accent/[0.06] border-accent/10 text-[9px] text-accent flex items-center gap-1">
-                    <Zap className="h-2.5 w-2.5" /> 24/7
-                  </span>
-                )}
-              </div>
+                        <Link key={market.id} href={`/markets/${market.id}`} className="block">
+                          <div className="card-tesla p-5 animate-slide-up" style={{ animationDelay: `${120 + idx * 25}ms` }}>
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center gap-3">
+                                <span className="text-xl">{market.icon}</span>
+                                <div>
+                                  <h3 className="text-sm font-display font-semibold text-white tracking-tight">{market.exchange}</h3>
+                                  <p className="text-[10px] text-text-dim">{market.country}</p>
+                                </div>
+                              </div>
+                              {market.is247 && (
+                                <span className="badge bg-accent/[0.06] border-accent/10 text-[9px] text-accent flex items-center gap-1">
+                                  <Zap className="h-2.5 w-2.5" /> 24/7
+                                </span>
+                              )}
+                            </div>
 
-              <div className="flex flex-wrap gap-1.5 mb-3">
-                {market.assetTypes.map(at => (
-                  <span key={at} className="badge bg-white/[0.03] border-white/[0.06] text-[8px] text-text-muted">
-                    {assetIcons[at] || '📊'} {at}
-                  </span>
-                ))}
-              </div>
+                            <div className="flex flex-wrap gap-1.5 mb-3">
+                              {market.assetTypes.map(at => (
+                                <span key={at} className="badge bg-white/[0.03] border-white/[0.06] text-[8px] text-text-muted">
+                                  {assetIcons[at] || '📊'} {at}
+                                </span>
+                              ))}
+                            </div>
 
-              <div className="grid grid-cols-3 gap-2 pt-3 border-t border-white/[0.04]">
-                <div>
-                  <p className="text-[9px] text-text-dim uppercase">Currency</p>
-                  <p className="text-[11px] font-medium text-text-secondary">{market.currency}</p>
-                </div>
-                <div>
-                  <p className="text-[9px] text-text-dim uppercase">Open</p>
-                  <p className="text-[11px] font-medium text-text-secondary">{market.open}</p>
-                </div>
-                <div>
-                  <p className="text-[9px] text-text-dim uppercase">Close</p>
-                  <p className="text-[11px] font-medium text-text-secondary">{market.close}</p>
-                </div>
-              </div>
-            </div>
-          ))}
+                            <div className="grid grid-cols-3 gap-2 pt-3 border-t border-white/[0.04]">
+                              <div>
+                                <p className="text-[9px] text-text-dim uppercase">Currency</p>
+                                <p className="text-[11px] font-medium text-text-secondary">{market.currency}</p>
+                              </div>
+                              <div>
+                                <p className="text-[9px] text-text-dim uppercase">Open</p>
+                                <p className="text-[11px] font-medium text-text-secondary">{market.open}</p>
+                              </div>
+                              <div>
+                                <p className="text-[9px] text-text-dim uppercase">Close</p>
+                                <p className="text-[11px] font-medium text-text-secondary">{market.close}</p>
+                              </div>
+                            </div>
+                          </div>
+                        </Link>
+                      ))}
         </div>
 
         {/* ═══ SHARE APP MODAL ═══ */}

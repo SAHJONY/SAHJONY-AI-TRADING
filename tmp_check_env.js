@@ -1,0 +1,1 @@
+console.log('SUPABASE_URL:', process.env.NEXT_PUBLIC_SUPABASE_URL||'undef'); console.log('SUPABASE_ANON:', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY||'undef');

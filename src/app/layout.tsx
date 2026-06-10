@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Providers } from '@/components/providers'
+import FloatingChatButton from '@/components/floating-chat-button'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -16,8 +17,9 @@ export default function RootLayout({
     <html lang="en" className="dark">
       <body>
         <Providers>
-          {children}
-        </Providers>
+                  {children}
+                </Providers>
+                <FloatingChatButton />
       </body>
     </html>
   )

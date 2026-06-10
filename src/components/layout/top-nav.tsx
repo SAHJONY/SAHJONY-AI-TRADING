@@ -7,13 +7,15 @@ import { Menu, LogOut, Settings, MessageSquare, Sun, Moon, TrendingUp, Activity,
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
 
-const navLinks = [
+export const navLinks = [
   { href: '/agents', label: 'Agents', icon: Activity },
   { href: '/providers', label: 'Providers', icon: Cpu },
   { href: '/trading', label: 'Trading', icon: TrendingUp },
   { href: '/markets', label: 'Markets', icon: Globe },
   { href: '/funding', label: 'Funding', icon: DollarSign },
   { href: '/conversations', label: 'Conversations', icon: MessageSquare },
+  { href: '/owner-login', label: 'Owner', icon: Settings },
+  { href: '/env', label: 'Env', icon: Settings },
 ]
 
 export function TopNav() {

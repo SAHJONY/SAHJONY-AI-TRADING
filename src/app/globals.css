@@ -160,10 +160,38 @@ pre code { background: none; padding: 0; border: none; }
   0% { background-position: 0% center; }
   100% { background-position: 100% center; }
 }
+/* Premium Tabs */
+.tab {
+  @apply flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-colors duration-300 bg-primary text-primary;
+}
+.tab-active {
+  @apply bg-primary text-white shadow-primary;
+}
+.tab:hover {
+  @apply bg-primary;
+}
 
-/* ═══════════════════════════════════════
-   GLASS MORPHOLOGY — Photorealistic Depth
-   ═══════════════════════════════════════ */
+.cinematic-bg {
+  background-image: url('/hero-8k.jpg');
+  background-position: center;
+  background-size: cover;
+  filter: brightness(0.6) contrast(1.2) saturate(1.3);
+}
+
+
+.universal-glass {
+  background: var(--surface-glass);
+  backdrop-filter: blur(24px) saturate(1.2) brightness(0.97);
+  -webkit-backdrop-filter: blur(24px) saturate(1.2) brightness(0.97);
+  border: 1px solid var(--border);
+}
+
+.glass {
+  background: var(--surface-glass);
+  backdrop-filter: blur(40px) saturate(1.4) brightness(0.95);
+  -webkit-backdrop-filter: blur(40px) saturate(1.4) brightness(0.95);
+}
+
 
 .glass {
   background: var(--surface-glass);

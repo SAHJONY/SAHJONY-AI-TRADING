@@ -23,7 +23,7 @@ export const TRADING_AGENTS: TradingAgent[] = [
   // ── HERMES (The Brain & Engine — Orchestrator) ──
   {
     id: 'agent-hermes-oracle',
-    name: 'Hermes Oracle',
+    name: 'Autonomous Trading Engine',
     providerId: 'hermes',
     modelId: 'hermes-brain-latest',
     specialty: 'Multi-Agent Orchestration',
