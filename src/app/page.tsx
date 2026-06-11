@@ -116,6 +116,16 @@ export default async function LandingPage() {
           © {new Date().getFullYear()} Sahjony Capital • All Rights Reserved
         </div>
       </footer>
+    <div className="mt-12 text-center">
+        <Image
+          src="https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&w=1920&q=80"
+          alt="Standard UI background"
+          width={1200}
+          height={800}
+          className="rounded-lg shadow-lg mx-auto"
+          priority={true}
+        />
+      </div>
     <FloatingChatBubble />
     </>
   );
