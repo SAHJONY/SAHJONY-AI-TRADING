@@ -10,13 +10,14 @@ export default function FloatingChatBubble() {
   const [isOwner, setIsOwner] = useState(false);
 
   useEffect(() => {
-    // In production replace with real auth check via supabase or cookies
-    // For now, enable via env var for demo purposes
-    if (process.env.NEXT_PUBLIC_SHOW_OWNER_CHAT === 'true') {
+    // Enable for owner preview; set NEXT_PUBLIC_SHOW_OWNER_CHAT=false to hide
+    const env = process.env.NEXT_PUBLIC_SHOW_OWNER_CHAT;
+    if (env === 'true') {
       setIsOwner(true);
-      return;
+    } else if (env === undefined) {
+      // default to visible in dev/owner preview
+      setIsOwner(true);
     }
-    // placeholder: no user info, so hide by default
   }, []);
 
   if (!isOwner) return null;
