@@ -4,6 +4,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import Head from 'next/head';
+import FloatingChatBubble from '@/components/FloatingChatBubble';
 
 export default async function LandingPage() {
   // Placeholder Supabase auth – real implementation to be added later
@@ -115,6 +116,7 @@ export default async function LandingPage() {
           © {new Date().getFullYear()} Sahjony Capital • All Rights Reserved
         </div>
       </footer>
+    <FloatingChatBubble />
     </>
   );
 }
