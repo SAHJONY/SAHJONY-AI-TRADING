@@ -14,10 +14,10 @@ export default function Dashboard() {
       {/* Main content */}
       <div className="relative z-10 flex flex-col items-center justify-center min-h-screen px-4 text-center">
         <h1 className="text-5xl md:text-7xl font-extrabold mb-6" style={{ fontFamily: "'Orbitron', sans-serif" }}>
-          SAHJONY AI Trading Dashboard
+          Sahjony Capital – Institutional AI Trading Dashboard
         </h1>
         <p className="text-xl md:text-2xl max-w-2xl mb-8">
-          Real‑time AI analytics, ultra‑low‑latency execution, and automated risk controls — all in a single, cinematic UI.
+          Institution‑grade AI‑driven market insights, ultra‑low‑latency multi‑exchange execution, and automated risk management, all within a sleek, cinematic interface.
         </p>
         <a
           href="/dashboard"
