@@ -26,12 +26,14 @@ spec:
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           livenessProbe:
-            exec:
-              command: ["python", "main.py", "--dry-run"]
+            httpGet:
+              path: /healthz
+              port: {{ .Values.service.port }}
             initialDelaySeconds: 30
             periodSeconds: 30
           readinessProbe:
-            exec:
-              command: ["python", "main.py", "--dry-run"]
+            httpGet:
+              path: /healthz
+              port: {{ .Values.service.port }}
             initialDelaySeconds: 10
             periodSeconds: 15

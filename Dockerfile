@@ -11,4 +11,4 @@ ENV PYTHONUNBUFFERED=1
 RUN useradd -u 1001 -m appuser
 USER appuser
 EXPOSE 8080
-CMD ["python", "main.py"]
+CMD ["uvicorn", "api.index:app", "--host", "0.0.0.0", "--port", "8080"]

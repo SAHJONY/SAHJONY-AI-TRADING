@@ -6,6 +6,11 @@ from pathlib import Path
 
 app = FastAPI()
 
+@app.get("/healthz")
+async def healthz():
+    """Simple health check – returns 200 if the container is running."""
+    return {"status": "ok"}
+
 @app.get("/")
 async def root(request: Request):
     """Execute the trading bot in dry‑run mode and return its output.
