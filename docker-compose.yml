@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  core-engine:
+    build:
+      context: ./core_engine
+    container_name: core-engine
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      redis:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+  orchestrator:
+    build:
+      context: ./orchestrator
+    container_name: orchestrator
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - core-engine
+      - redis
+    ports:
+      - "8001:8000"
+    restart: unless-stopped
+
+  # 12 agent placeholders – copy the template folder for each agent and rename accordingly
+  agent-citadel-systematic:
+    build:
+      context: ./agents/citadel_systematic
+    container_name: agent-citadel-systematic
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+  agent-two-sigma-backtest:
+    build:
+      context: ./agents/two_sigma_backtest
+    container_name: agent-two-sigma-backtest
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+  # ... repeat for the remaining agents (bridgewater, renaissance, goldman, jpmorgan, etc.)
+
+networks:
+  default:
+    name: trading_bot_net
