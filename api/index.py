@@ -73,9 +73,9 @@ async def owner_secrets(
     alpaca_api_secret: str = Form(...),
 ):
     """Persist Alpaca credentials to a ``.env`` file.
-    The function writes the received values to the project's root ``.env``
-    file using ``python-dotenv``'s ``set_key`` helper. Existing keys are
-    overwritten. The file is created if it does not exist.
++    The function writes the received values to the project's root ``.env``
++    file using ``python-dotenv``'s ``set_key`` helper. Existing keys are
++    overwritten. The file is created if it does not exist.
     """
     env_path = find_dotenv(use_path=Path(__file__).parent.parent, raise_error_if_not_found=False)
     if not env_path:
@@ -84,4 +84,19 @@ async def owner_secrets(
     set_key(env_path, "ALPACA_API_KEY", alpaca_api_key)
     set_key(env_path, "ALPACA_API_SECRET", alpaca_api_secret)
     return {"msg": "Secrets saved to .env"}
+
+@app.get("/owner/info", response_class=PlainTextResponse)
+async def owner_info():
+    """Return basic system information for the owner.
++    Includes OS, Python version, PID, uptime, and non‑secret environment variables.
++    """
+    import platform, time, os, sys
+    info = {
+        "os": platform.platform(),
+        "python_version": platform.python_version(),
+        "pid": os.getpid(),
+        "uptime_seconds": time.time() - getattr(sys, "_start_time", time.time()),
+        "env": {k: v for k, v in os.environ.items() if not k.startswith("ALPACA_")},
+    }
+    return json.dumps(info, indent=2)
 
