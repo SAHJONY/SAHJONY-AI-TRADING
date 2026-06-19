@@ -1,44 +1,46 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Owner Dashboard</title>
-  <link rel="stylesheet" href="/static/dashboard.css" />
-</head>
-<body>
-  <header>
-    <h1>Owner Dashboard</h1>
-  </header>
-  <section id="status">
-    <h2>System Status</h2>
-    <div id="health"></div>
-  </section>
-  <section id="logs">
-    <h2>Recent Logs</h2>
-    <pre id="log-output">Loading...</pre>
-  </section>
-  <section id="secrets">
-    <h2>Environment Secrets</h2>
-    <form id="secrets-form" method="post" action="/owner/secrets">
-      <label>Alpaca API Key: <input type="text" name="ALPACA_API_KEY"/></label><br/>
-      <label>Alpaca Secret: <input type="text" name="ALPACA_API_SECRET"/></label><br/>
-      <button type="submit">Update</button>
-    </form>
-  </section>
-  <script>
-    async function loadHealth(){
-      const resp = await fetch('/healthz');
-      const data = await resp.json();
-      document.getElementById('health').innerText = JSON.stringify(data);
-    }
-    async function loadLogs(){
-      const resp = await fetch('/owner/logs');
-      const txt = await resp.text();
-      document.getElementById('log-output').innerText = txt;
-    }
-    loadHealth();
-    loadLogs();
-  </script>
-</body>
-</html>
+{% extends "base.html" %}
+{% block content %}
+<header class="mb-6">
+  <h1 class="text-2xl font-bold">Owner Dashboard</h1>
+</header>
+<section id="status" class="mb-4">
+  <h2 class="text-xl font-semibold">System Status</h2>
+  <div id="health" class="text-sm"></div>
+</section>
+<section id="logs" class="mb-4">
+  <h2 class="text-xl font-semibold">Recent Logs</h2>
+  <pre id="log-output" class="bg-gray-200 p-2 rounded">Loading...</pre>
+</section>
+<section id="secrets" class="mb-4">
+  <h2 class="text-xl font-semibold">Environment Secrets</h2>
+  <form id="secrets-form" method="post" action="/owner/secrets" class="space-y-2">
+    <label class="block"><span>Alpaca API Key:</span> <input type="text" name="ALPACA_API_KEY" class="border rounded p-1 w-full"/></label>
+    <label class="block"><span>Alpaca Secret:</span> <input type="text" name="ALPACA_API_SECRET" class="border rounded p-1 w-full"/></label>
+    <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded">Update</button>
+  </form>
+</section>
+<section id="info" class="mb-4">
+  <h2 class="text-xl font-semibold">Owner Information</h2>
+  <pre id="info-output" class="bg-gray-200 p-2 rounded">Loading...</pre>
+</section>
+<script>
+  async function loadHealth(){
+    const resp = await fetch('/healthz');
+    const data = await resp.json();
+    document.getElementById('health').innerText = JSON.stringify(data);
+  }
+  async function loadLogs(){
+    const resp = await fetch('/owner/logs');
+    const txt = await resp.text();
+    document.getElementById('log-output').innerText = txt;
+  }
+  async function loadInfo(){
+    const resp = await fetch('/owner/info');
+    const data = await resp.json();
+    document.getElementById('info-output').innerText = JSON.stringify(data, null, 2);
+  }
+  loadHealth();
+  loadLogs();
+  loadInfo();
+</script>
+{% endblock %}

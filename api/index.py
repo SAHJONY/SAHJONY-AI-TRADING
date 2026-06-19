@@ -28,10 +28,16 @@ async def healthz():
 # Owner Dashboard Endpoints
 # ---------------------------------------------------------------------------
 
+@app.get("/", response_class=HTMLResponse)
+async def home(request: Request):
+    """Render the landing page with navigation."""
+    return templates.TemplateResponse("home.html", {"request": request, "title": "Home"})
+
 @app.get("/owner/dashboard", response_class=HTMLResponse)
 async def owner_dashboard(request: Request):
     """Render the simple owner dashboard HTML page."""
-    return templates.TemplateResponse("dashboard.html", {"request": request})
+    return templates.TemplateResponse("dashboard.html", {"request": request, "title": "Owner Dashboard"})
+
 
 @app.get("/owner/logs", response_class=PlainTextResponse)
 async def owner_logs():

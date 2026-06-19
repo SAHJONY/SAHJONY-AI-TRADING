@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>{{ title }}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 text-gray-900">
+  <nav class="bg-white shadow p-4 flex justify-between">
+    <div class="flex space-x-4">
+      <a href="/" class="font-bold">Home</a>
+      <a href="/owner/dashboard">Dashboard</a>
+    </div>
+    <div>
+      <a href="https://github.com/SAHJONY/SAHJONY-AI-TRADING" target="_blank" class="text-sm text-gray-500">GitHub</a>
+    </div>
+  </nav>
+  <main class="p-6">
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

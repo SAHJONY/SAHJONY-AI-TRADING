@@ -1,0 +1,76 @@
+name: CI/CD Production
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '**/*.py'
+      - '**/Dockerfile'
+      - 'helm/**'
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com
+  IMAGE_NAME: ai-trading-bot
+
+jobs:
+  build_and_deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install --no-cache-dir -r requirements.txt
+
+      - name: Log in to Amazon ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+        with:
+          mask-password: true
+
+      - name: Build Docker image
+        run: |
+          docker build -t $IMAGE_NAME:$GITHUB_SHA .
+          docker tag $IMAGE_NAME:$GITHUB_SHA $ECR_REGISTRY/$IMAGE_NAME:$GITHUB_SHA
+          docker tag $IMAGE_NAME:$GITHUB_SHA $ECR_REGISTRY/$IMAGE_NAME:latest
+
+      - name: Push Docker image
+        run: |
+          docker push $ECR_REGISTRY/$IMAGE_NAME:$GITHUB_SHA
+          docker push $ECR_REGISTRY/$IMAGE_NAME:latest
+
+      - name: Configure AWS credentials for EKS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_EKS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Install kubectl & helm
+        run: |
+          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+          chmod +x kubectl && sudo mv kubectl /usr/local/bin/
+          curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+      - name: Update kubeconfig
+        run: aws eks update-kubeconfig --name prod-cluster --region ${{ env.AWS_REGION }}
+
+      - name: Deploy with Helm (blue‑green)
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          helm upgrade --install ai-trading-bot ./helm/chart \
+            --namespace prod \
+            --set image.repository=$ECR_REGISTRY/$IMAGE_NAME \
+            --set image.tag=$IMAGE_TAG \
+            --set replicaCount=3 \
+            --wait
