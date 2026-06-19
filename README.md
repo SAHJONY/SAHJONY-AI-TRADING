@@ -1,7 +1,7 @@
 # SAHJONY‑AI‑TRADING – Autonomous Alpaca Trading Bot
 
 An end‑to‑end, self‑contained algorithmic trading engine built for **Alpaca Paper Trading**.
-The project is structured to be used by **Hermes Agent** (or any CI/CD pipeline) and includes:
+The project is structured for seamless CI/CD integration and includes:
 
 - **Modular Python code** (`utils/`, `strategies/`)  
 - **Persistent state** (`state.json`)  
