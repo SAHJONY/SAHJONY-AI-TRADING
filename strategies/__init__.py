@@ -1,1 +1,4 @@
-from .wheel_strategy import WheelStrategy\nfrom .trailing_ladder import TrailingLadderStrategy\n\n__all__ = ['WheelStrategy', 'TrailingLadderStrategy']
+from .wheel_strategy import WheelStrategy
+from .trailing_ladder import TrailingLadderStrategy
+
+__all__ = ['WheelStrategy', 'TrailingLadderStrategy']

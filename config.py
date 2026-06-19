@@ -1,1 +1,21 @@
-import os\nfrom dotenv import load_dotenv\nfrom pydantic import BaseSettings, Field, validator\n\nload_dotenv()  # loads .env if present\n\nclass Settings(BaseSettings):\n    alpaca_api_key: str = Field(..., env='ALPACA_API_KEY')\n    alpaca_api_secret: str = Field(..., env='ALPACA_API_SECRET')\n    max_capital_allocation: float = Field(0.20, description='Maximum % of account equity to allocate')\n    log_level: str = Field('INFO', env='LOG_LEVEL')\n\n    @validator('log_level')\n    def _validate_log_level(cls, v: str) -> str:\n        allowed = {'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'}\n        if v.upper() not in allowed:\n            raise ValueError(f'log_level must be one of {allowed}')\n        return v.upper()\n\nsettings = Settings()
+import os
+from dotenv import load_dotenv
+from pydantic import Field, validator
+from pydantic_settings import BaseSettings
+
+load_dotenv()  # loads .env if present
+
+class Settings(BaseSettings):
+    alpaca_api_key: str = Field(..., env='ALPACA_API_KEY')
+    alpaca_api_secret: str = Field(..., env='ALPACA_API_SECRET')
+    max_capital_allocation: float = Field(0.20, description='Maximum % of account equity to allocate')
+    log_level: str = Field('INFO', env='LOG_LEVEL')
+
+    @validator('log_level')
+    def _validate_log_level(cls, v: str) -> str:
+        allowed = {'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'}
+        if v.upper() not in allowed:
+            raise ValueError(f'log_level must be one of {allowed}')
+        return v.upper()
+
+settings = Settings()
