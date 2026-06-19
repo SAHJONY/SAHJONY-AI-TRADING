@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Owner Dashboard</title>
+  <link rel="stylesheet" href="/static/dashboard.css" />
+</head>
+<body>
+  <header>
+    <h1>Owner Dashboard</h1>
+  </header>
+  <section id="status">
+    <h2>System Status</h2>
+    <div id="health"></div>
+  </section>
+  <section id="logs">
+    <h2>Recent Logs</h2>
+    <pre id="log-output">Loading...</pre>
+  </section>
+  <section id="secrets">
+    <h2>Environment Secrets</h2>
+    <form id="secrets-form" method="post" action="/owner/secrets">
+      <label>Alpaca API Key: <input type="text" name="ALPACA_API_KEY"/></label><br/>
+      <label>Alpaca Secret: <input type="text" name="ALPACA_API_SECRET"/></label><br/>
+      <button type="submit">Update</button>
+    </form>
+  </section>
+  <script>
+    async function loadHealth(){
+      const resp = await fetch('/healthz');
+      const data = await resp.json();
+      document.getElementById('health').innerText = JSON.stringify(data);
+    }
+    async function loadLogs(){
+      const resp = await fetch('/owner/logs');
+      const txt = await resp.text();
+      document.getElementById('log-output').innerText = txt;
+    }
+    loadHealth();
+    loadLogs();
+  </script>
+</body>
+</html>
