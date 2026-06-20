@@ -33,12 +33,18 @@ def _seed(symbol: str) -> int:
     return int(hashlib.sha256(key.encode()).hexdigest(), 16) % (2 ** 32)
 
 
+def _is_crypto(symbol: str) -> bool:
+    """Alpaca crypto pairs are BASE/QUOTE (e.g. BTC/USD) and trade 24/7/365."""
+    return "/" in symbol
+
+
 class AlpacaClient:
     def __init__(self, cfg: Config):
         self.cfg = cfg
         self.mode = cfg.mode
         self._trading = None
         self._data = None
+        self._crypto = None
         self._sim_paths: Dict[str, np.ndarray] = {}
         self._sim_vols: Dict[str, np.ndarray] = {}
         self._sim_step = _SIM_HISTORY
@@ -54,10 +60,11 @@ class AlpacaClient:
     def _connect_live(self) -> None:
         try:
             from alpaca.trading.client import TradingClient
-            from alpaca.data.historical import StockHistoricalDataClient
+            from alpaca.data.historical import StockHistoricalDataClient, CryptoHistoricalDataClient
             self._trading = TradingClient(self.cfg.alpaca_api_key, self.cfg.alpaca_secret_key,
                                           paper=self.cfg.alpaca_paper)
             self._data = StockHistoricalDataClient(self.cfg.alpaca_api_key, self.cfg.alpaca_secret_key)
+            self._crypto = CryptoHistoricalDataClient(self.cfg.alpaca_api_key, self.cfg.alpaca_secret_key)
             log.info("Connected to Alpaca (%s).", self.mode)
         except Exception as exc:  # SDK missing / bad keys → degrade gracefully
             log.error("Alpaca connect failed (%s) → falling back to OFFLINE-SIM.", exc)
@@ -124,12 +131,17 @@ class AlpacaClient:
     def get_history(self, symbol: str, days: int = 120) -> Dict[str, np.ndarray]:
         if self.online:
             try:
-                from alpaca.data.requests import StockBarsRequest
                 from alpaca.data.timeframe import TimeFrame
                 from datetime import timedelta
-                req = StockBarsRequest(symbol_or_symbols=symbol, timeframe=TimeFrame.Day,
-                                       start=datetime.now(timezone.utc) - timedelta(days=days + 10))
-                bars = self._data.get_stock_bars(req).data.get(symbol, [])
+                start = datetime.now(timezone.utc) - timedelta(days=days + 10)
+                if _is_crypto(symbol):
+                    from alpaca.data.requests import CryptoBarsRequest
+                    req = CryptoBarsRequest(symbol_or_symbols=symbol, timeframe=TimeFrame.Day, start=start)
+                    bars = self._crypto.get_crypto_bars(req).data.get(symbol, [])
+                else:
+                    from alpaca.data.requests import StockBarsRequest
+                    req = StockBarsRequest(symbol_or_symbols=symbol, timeframe=TimeFrame.Day, start=start)
+                    bars = self._data.get_stock_bars(req).data.get(symbol, [])
                 closes = np.array([b.close for b in bars], dtype=float)
                 vols = np.array([float(b.volume) for b in bars], dtype=float)
                 return {"closes": closes[-days:], "volumes": vols[-days:]}
@@ -144,8 +156,14 @@ class AlpacaClient:
     def get_price(self, symbol: str) -> float:
         if self.online:
             try:
-                from alpaca.data.requests import StockLatestQuoteRequest
-                q = self._data.get_stock_latest_quote(StockLatestQuoteRequest(symbol_or_symbols=symbol))
+                if _is_crypto(symbol):
+                    from alpaca.data.requests import CryptoLatestQuoteRequest
+                    q = self._crypto.get_crypto_latest_quote(
+                        CryptoLatestQuoteRequest(symbol_or_symbols=symbol))
+                else:
+                    from alpaca.data.requests import StockLatestQuoteRequest
+                    q = self._data.get_stock_latest_quote(
+                        StockLatestQuoteRequest(symbol_or_symbols=symbol))
                 quote = q[symbol]
                 mid = (float(quote.ask_price) + float(quote.bid_price)) / 2.0
                 return mid if mid > 0 else float(quote.ask_price or quote.bid_price)
@@ -157,6 +175,8 @@ class AlpacaClient:
         return float(self._sim_paths[symbol][self._sim_step - 1])
 
     def is_market_open(self) -> bool:
+        if self.cfg.always_on:   # 24/7 desk (crypto) — never closed
+            return True
         if self.online:
             try:
                 return bool(self._trading.get_clock().is_open)
@@ -231,7 +251,7 @@ class AlpacaClient:
         return out
 
     # ── orders ─────────────────────────────────────────────────────────────────
-    def submit_equity_order(self, symbol: str, qty: int, side: str) -> Dict:
+    def submit_equity_order(self, symbol: str, qty: float, side: str) -> Dict:
         side = side.lower()
         if qty <= 0:
             return {"status": "rejected", "reason": "qty<=0"}
@@ -239,13 +259,18 @@ class AlpacaClient:
             try:
                 from alpaca.trading.requests import MarketOrderRequest
                 from alpaca.trading.enums import OrderSide, TimeInForce
+                crypto = _is_crypto(symbol)
+                # crypto requires GTC and supports fractional qty; equities use DAY + whole shares
+                order_qty = round(float(qty), 6) if crypto else int(qty)
+                if order_qty <= 0:
+                    return {"status": "rejected", "reason": "qty<=0"}
                 order = self._trading.submit_order(MarketOrderRequest(
-                    symbol=symbol, qty=qty,
+                    symbol=symbol, qty=order_qty,
                     side=OrderSide.BUY if side == "buy" else OrderSide.SELL,
-                    time_in_force=TimeInForce.DAY))
-                log.info("ORDER %s %s x%d submitted id=%s", side, symbol, qty, order.id)
+                    time_in_force=TimeInForce.GTC if crypto else TimeInForce.DAY))
+                log.info("ORDER %s %s x%s submitted id=%s", side, symbol, order_qty, order.id)
                 return {"status": "submitted", "id": str(order.id), "symbol": symbol,
-                        "qty": qty, "side": side, "simulated": False}
+                        "qty": order_qty, "side": side, "simulated": False}
             except Exception as exc:
                 log.error("submit_equity_order(%s) failed: %s", symbol, exc)
                 return {"status": "error", "reason": str(exc)}

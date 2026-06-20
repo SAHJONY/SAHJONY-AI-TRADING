@@ -38,9 +38,6 @@ from utils.state_store import record_event
 
 log = get_logger("workforce")
 
-_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-STATUS_PATH = os.path.join(_ROOT, "public", "status.json")
-
 
 # ── roles ─────────────────────────────────────────────────────────────────────
 class ResearchDesk:
@@ -62,7 +59,10 @@ class PortfolioManager:
         self.risk = risk
 
     def assign_strategy(self, symbol: str, idx: int) -> str:
-        # deterministic split: even index → wheel, odd → ladder
+        # crypto has no options on Alpaca → always the equity-style ladder.
+        # equities: deterministic split, even index → wheel, odd → ladder.
+        if "/" in symbol:
+            return "ladder"
         return "wheel" if idx % 2 == 0 else "ladder"
 
     def effective(self, council: CouncilVerdict, brain: BrainVerdict, equity: float):
@@ -173,8 +173,9 @@ class Firm:
         return total
 
     def _kill_switch(self) -> bool:
-        """Owner kill switch: TRADING_HALT env or a HALT file at the repo root."""
-        return self.cfg.trading_halt or os.path.exists(os.path.join(_ROOT, "HALT"))
+        """Owner kill switch: TRADING_HALT env or a HALT file in the desk home."""
+        from paths import halt_path
+        return self.cfg.trading_halt or os.path.exists(halt_path())
 
     def _halt_check(self, state: Dict[str, Any], equity: float) -> Dict[str, Any]:
         """Decide whether NEW risk is suspended this cycle. Tracks the day's opening

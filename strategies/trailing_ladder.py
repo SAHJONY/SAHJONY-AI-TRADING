@@ -18,7 +18,7 @@ from typing import Dict, List, Optional
 
 from config import Config
 from intelligence.agents import CouncilVerdict, MarketSnapshot
-from strategies.base import OrderIntent
+from strategies.base import OrderIntent, is_crypto, size_qty
 
 
 class TrailingLadder:
@@ -39,10 +39,10 @@ class TrailingLadder:
         price = snap.price
         if price <= 0 or budget <= 0:
             return []
-        qty = min(self.cfg.ladder_base_qty, int(budget // price))
-        if qty < 1:
+        qty = size_qty(symbol, budget, price, self.cfg.ladder_base_qty)
+        if qty <= 0:
             return [OrderIntent(symbol, "ladder", "state", "ladder_skip",
-                                reason=f"budget ${budget:,.0f} < 1 share @ {price:.2f}")]
+                                reason=f"budget ${budget:,.0f} too small @ {price:.2f}")]
         floor_pct = (self.cfg.ladder_catastrophic_pct if self.cfg.ladder_enable_averaging
                      else self.cfg.ladder_hard_floor_pct)
         return [OrderIntent(
@@ -57,7 +57,7 @@ class TrailingLadder:
     def _manage(self, symbol, snap, pos, budget) -> List[OrderIntent]:
         price = snap.price
         entry = float(pos.get("entry_price", price))
-        shares = int(pos.get("shares", 0))
+        shares = float(pos.get("shares", 0) or 0)   # fractional for crypto
         cost = float(pos.get("cost_basis", entry))
         peak = max(float(pos.get("peak_price", price)), price)
         ratcheted = bool(pos.get("ratcheted", False))
@@ -95,8 +95,8 @@ class TrailingLadder:
             adds = [(-0.20, 0, self.cfg.ladder_base_qty), (-0.30, 1, 2 * self.cfg.ladder_base_qty)]
             for threshold, idx, add_qty in adds:
                 if gain <= threshold and not rungs[idx] and price > 0:
-                    q = min(add_qty, int(budget // price))
-                    if q >= 1:
+                    q = size_qty(symbol, budget, price, add_qty)
+                    if q > 0:
                         new_cost = (new_cost * new_shares + price * q) / (new_shares + q)
                         new_shares += q
                         rungs[idx] = True

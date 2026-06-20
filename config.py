@@ -66,6 +66,9 @@ class Config:
     # universe
     tickers: List[str] = field(default_factory=lambda: ["AAPL", "MSFT", "SPY"])
     benchmark: str = "SPY"
+    # 'us' = US cash-session hours; '24_7' = always open (crypto). Auto-detects
+    # 24/7 when every ticker is a crypto pair (contains '/', e.g. BTC/USD).
+    market_hours: str = "us"
 
     # risk (post-clamp)
     max_allocation_pct: float = 0.10
@@ -120,6 +123,13 @@ class Config:
         return bool(self.alpaca_api_key and self.alpaca_secret_key)
 
     @property
+    def always_on(self) -> bool:
+        """True for a 24/7 desk: explicit MARKET_HOURS=24_7, or an all-crypto universe."""
+        if self.market_hours == "24_7":
+            return True
+        return bool(self.tickers) and all("/" in t for t in self.tickers)
+
+    @property
     def mode(self) -> str:
         if not self.has_credentials:
             return "offline-sim"
@@ -135,6 +145,7 @@ def load_config() -> Config:
         live_trading_ack=(os.getenv("LIVE_TRADING_ACK", "").strip() == "I_UNDERSTAND_REAL_MONEY"),
         tickers=_list("TICKERS", "AAPL,MSFT,SPY"),
         benchmark=(os.getenv("BENCHMARK", "SPY") or "SPY").strip().upper(),
+        market_hours=(os.getenv("MARKET_HOURS", "us") or "us").strip().lower(),
         max_allocation_pct=_clamp(_f("MAX_ALLOCATION_PCT", 0.10), 0.0, HARD_MAX_ALLOCATION_PCT),
         max_total_deployed_pct=_clamp(_f("MAX_TOTAL_DEPLOYED_PCT", 0.60), 0.0, HARD_MAX_TOTAL_DEPLOYED_PCT),
         min_council_conviction=_clamp(_f("MIN_COUNCIL_CONVICTION", 0.55), HARD_MIN_CONVICTION, 1.0),

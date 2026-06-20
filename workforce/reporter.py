@@ -54,8 +54,10 @@ ENV_CATALOG = [
     ("ALPACA_API_KEY", "Broker", True, "Alpaca paper API key"),
     ("ALPACA_SECRET_KEY", "Broker", True, "Alpaca paper secret"),
     ("ALPACA_PAPER", "Broker", False, "true = paper (keep true)"),
-    ("TICKERS", "Universe", False, "Comma-separated tickers"),
+    ("TICKERS", "Universe", False, "Tickers (AAPL… or BTC/USD…)"),
     ("BENCHMARK", "Universe", False, "Benchmark for beta-neutrality"),
+    ("MARKET_HOURS", "Universe", False, "us | 24_7 (crypto auto-24/7)"),
+    ("SAHJONY_HOME", "Ops", False, "per-account data home (isolation)"),
     ("ANTHROPIC_API_KEY", "AI Brain", True, "Claude — PRIMARY brain"),
     ("ANTHROPIC_MODEL", "AI Brain", False, "default claude-opus-4-8"),
     ("OPENAI_API_KEY", "AI Counsellor", True, "OpenAI (GPT) counsellor"),
@@ -213,9 +215,12 @@ def build_investor_view(status: Dict[str, Any], investor: Dict[str, Any],
     }
 
 
-def write_investor_views(db, status: Dict[str, Any], out_dir: str = INVESTORS_DIR) -> int:
+def write_investor_views(db, status: Dict[str, Any], out_dir: str = None) -> int:
     """Write a token-keyed snapshot for every investor with a share link. Returns
     the count written. Each file is the capability target of /investor?t=<token>."""
+    if out_dir is None:
+        from paths import investors_dir
+        out_dir = investors_dir()
     shared = db.shared_investors()
     if not shared:
         return 0

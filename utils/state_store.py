@@ -12,7 +12,8 @@ import tempfile
 from datetime import datetime, timezone
 from typing import Any, Dict
 
-DEFAULT_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "state.json")
+from paths import state_path
+
 _MAX_HISTORY = 200
 
 
@@ -36,7 +37,8 @@ def default_state() -> Dict[str, Any]:
     }
 
 
-def load_state(path: str = DEFAULT_PATH) -> Dict[str, Any]:
+def load_state(path: str = None) -> Dict[str, Any]:
+    path = path or state_path()
     if not os.path.exists(path):
         return default_state()
     try:
@@ -51,7 +53,8 @@ def load_state(path: str = DEFAULT_PATH) -> Dict[str, Any]:
         return default_state()
 
 
-def save_state(state: Dict[str, Any], path: str = DEFAULT_PATH) -> None:
+def save_state(state: Dict[str, Any], path: str = None) -> None:
+    path = path or state_path()
     state["updated_at"] = _now_iso()
     if len(state.get("history", [])) > _MAX_HISTORY:
         state["history"] = state["history"][-_MAX_HISTORY:]

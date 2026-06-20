@@ -24,8 +24,8 @@ from utils.alpaca_client import AlpacaClient
 from utils.logger import get_logger
 from utils.state_store import load_state, save_state
 from workforce import Firm
+from paths import halt_path, status_path
 from workforce.reporter import build_status, console_board, write_investor_views, write_status
-from workforce.workforce import STATUS_PATH
 
 log = get_logger("main")
 
@@ -78,7 +78,7 @@ def preflight(cfg, client) -> int:
           f"min conviction {cfg.min_council_conviction:.0%}")
     print(f"  Daily circuit breaker: halt new risk if down {cfg.max_daily_drawdown_pct:.0%} in a day")
     import os as _os
-    if cfg.trading_halt or _os.path.exists(_os.path.join(_os.path.dirname(__file__), "HALT")):
+    if cfg.trading_halt or _os.path.exists(halt_path()):
         print("  ⛔ KILL SWITCH ACTIVE — new risk is suspended (TRADING_HALT / HALT file).")
 
     # live arming status
@@ -135,7 +135,7 @@ def run_once(firm: Firm, state, force: bool) -> dict:
         log.info("Market closed — research/report only (use --force to override).")
     result = firm.run_cycle(state, trade=trade)
     status = build_status(firm, firm.cfg, state, result)
-    write_status(status, STATUS_PATH)
+    write_status(status, status_path())
     shared = write_investor_views(firm.db, status)  # token-keyed read-only investor snapshots
     if shared:
         log.info("Refreshed %d investor share view(s).", shared)

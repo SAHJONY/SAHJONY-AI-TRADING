@@ -115,7 +115,10 @@ def _now() -> str:
 
 
 class Database:
-    def __init__(self, path: str = DEFAULT_DB_PATH):
+    def __init__(self, path: str = None):
+        if path is None:
+            from paths import db_path
+            path = db_path()
         self.path = path
         os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
         self.conn = sqlite3.connect(path)
