@@ -11,5 +11,5 @@
 window.SAHJONY_CONFIG = {
   SUPABASE_URL: "https://awzczbaarskqjgdatefv.supabase.co",
   SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF3emN6YmFhcnNrcWpnZGF0ZWZ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI5ODMyMTAsImV4cCI6MjA3ODU1OTIxMH0._4DdIuu9qP82pbwzgVPHol8SWmS6ZBPNowwrPHLt5Fs",
-  OWNER_EMAIL: ""
+  OWNER_EMAIL: "sahjonycapitalllc@outlook.com"
 };
