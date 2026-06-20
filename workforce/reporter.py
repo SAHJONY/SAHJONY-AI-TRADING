@@ -70,6 +70,8 @@ ENV_CATALOG = [
     ("MAX_ALLOCATION_PCT", "Risk", False, "per-position cap (≤0.15)"),
     ("MAX_TOTAL_DEPLOYED_PCT", "Risk", False, "total deployed cap (≤0.80)"),
     ("MIN_COUNCIL_CONVICTION", "Risk", False, "min conviction to trade"),
+    ("MAX_DAILY_DRAWDOWN_PCT", "Risk", False, "daily-loss halt (≤0.25)"),
+    ("TRADING_HALT", "Risk", False, "true = kill switch (suspend new risk)"),
     ("CYCLE_MINUTES", "Ops", False, "run cadence"),
     ("LOG_LEVEL", "Ops", False, "INFO / DEBUG"),
 ]
@@ -150,7 +152,9 @@ def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[st
             "market_open": client.is_market_open(),
             "risk_caps": {"per_position_pct": cfg.max_allocation_pct,
                           "total_deployed_pct": cfg.max_total_deployed_pct,
-                          "min_conviction": cfg.min_council_conviction},
+                          "min_conviction": cfg.min_council_conviction,
+                          "daily_drawdown_pct": cfg.max_daily_drawdown_pct},
+            "circuit_breaker": cycle_result.get("halt", {"halted": False, "reason": ""}),
             "ai_brain": firm.brain.status,
             "voice": firm.notifier.status,
         },
@@ -249,9 +253,11 @@ def console_board(status: Dict[str, Any]) -> str:
         f"Realized ${p['realized']:,.2f}  ·  Premium ${p['premium_collected']:,.2f}",
         f" Market open: {status['health']['market_open']}  ·  Broker online: "
         f"{status['health']['broker_online']}  ·  AI brain: {status['health']['ai_brain']['enabled']}",
-        "─" * 64,
-        " Council:",
     ]
+    cb = status["health"].get("circuit_breaker", {})
+    if cb.get("halted"):
+        lines.append(f" ⛔ NEW RISK HALTED — {cb.get('reason', '')}")
+    lines += ["─" * 64, " Council:"]
     for c in status["council"]:
         lines.append(f"   {c['symbol']:<6} conv {c['conviction']:.0%} {c['direction']:<5} "
                      f"score {c['composite']:+.2f} risk×{c['risk_multiplier']:.2f}")

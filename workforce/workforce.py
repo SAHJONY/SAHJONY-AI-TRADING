@@ -94,15 +94,25 @@ class ExecutionTrader:
         state["realized_pnl"] = state.get("realized_pnl", 0.0) + intent.realized_delta
 
     def execute(self, intents: List[OrderIntent], state: Dict[str, Any], cycle: int,
-                equity: float, deployed: float, conviction: float) -> tuple[List[Dict], float]:
+                equity: float, deployed: float, conviction: float,
+                allow_new_risk: bool = True) -> tuple[List[Dict], float]:
         """Returns (executed, deployed) — the running deployed value is threaded back
-        so the total-deployed cap accounts for positions opened earlier this cycle."""
+        so the total-deployed cap accounts for positions opened earlier this cycle.
+
+        When allow_new_risk is False (circuit breaker / kill switch), risk-ADDING
+        intents are blocked but exits and state updates still flow, so the desk can
+        always reduce exposure."""
         done = []
         for intent in intents:
             try:
                 if intent.kind == "state":
                     self._apply(intent, state)
                     record_event(state, intent.purpose, {"symbol": intent.symbol, "reason": intent.reason})
+                    continue
+                if intent.risk_check and not allow_new_risk:
+                    log.info("HALT BLOCK %s %s — new risk suspended", intent.symbol, intent.purpose)
+                    record_event(state, "halt_block",
+                                 {"symbol": intent.symbol, "purpose": intent.purpose})
                     continue
                 if intent.risk_check:
                     dec = self.risk.approve(equity, deployed, intent.est_notional, conviction, intent.symbol)
@@ -162,6 +172,38 @@ class Firm:
                 total += shares * self.client.get_price(sym)
         return total
 
+    def _kill_switch(self) -> bool:
+        """Owner kill switch: TRADING_HALT env or a HALT file at the repo root."""
+        return self.cfg.trading_halt or os.path.exists(os.path.join(_ROOT, "HALT"))
+
+    def _halt_check(self, state: Dict[str, Any], equity: float) -> Dict[str, Any]:
+        """Decide whether NEW risk is suspended this cycle. Tracks the day's opening
+        equity and latches a daily-drawdown halt for the rest of the calendar day so
+        a small intraday bounce can't un-trip the breaker."""
+        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        if state.get("equity_day") != today:
+            state["equity_day"] = today
+            state["equity_day_start"] = equity
+            state["breaker_latched"] = False
+        day_start = state.get("equity_day_start") or equity or 1.0
+        day_return = (equity / day_start - 1.0) if day_start else 0.0
+
+        if day_return <= -abs(self.cfg.max_daily_drawdown_pct):
+            state["breaker_latched"] = True
+
+        if self._kill_switch():
+            reason = "kill switch (TRADING_HALT / HALT file)"
+        elif state.get("breaker_latched"):
+            reason = (f"daily circuit breaker — down {day_return:.1%} "
+                      f"(limit {self.cfg.max_daily_drawdown_pct:.0%})")
+        else:
+            reason = ""
+        halted = bool(reason)
+        if halted:
+            log.warning("NEW RISK HALTED: %s", reason)
+        return {"halted": halted, "reason": reason, "day_return": round(day_return, 4),
+                "day_start": round(day_start, 2), "limit_pct": self.cfg.max_daily_drawdown_pct}
+
     def run_cycle(self, state: Dict[str, Any], trade: bool = True) -> Dict[str, Any]:
         state["cycle"] = state.get("cycle", 0) + 1
         cycle = state["cycle"]
@@ -171,6 +213,10 @@ class Firm:
         if state.get("equity_start") is None:
             state["equity_start"] = equity
         state["equity_last"] = equity
+
+        # Circuit breaker / kill switch — suspends NEW risk this cycle if tripped.
+        halt = self._halt_check(state, equity)
+        allow_new_risk = trade and not halt["halted"]
 
         bench = self.client.get_history(self.cfg.benchmark, 250)["closes"]
 
@@ -214,7 +260,7 @@ class Firm:
                     intents = self.ladder.decide(sym, snap, pos, verdict, budget)
                 if trade:
                     done, deployed = self.execution.execute(intents, state, cycle, equity,
-                                                            deployed, conviction)
+                                                            deployed, conviction, allow_new_risk)
                     executed += done
                 # log council + snapshot
                 self.db.log_council(cycle, sym, verdict.conviction, verdict.direction,
@@ -234,4 +280,4 @@ class Firm:
 
         return {"cycle": cycle, "equity": acct["equity"], "cash": acct["cash"],
                 "research": research, "brain": brain, "executed": executed,
-                "deployed": self._position_value(state)}
+                "deployed": self._position_value(state), "halt": halt}

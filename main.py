@@ -76,6 +76,10 @@ def preflight(cfg, client) -> int:
     print(f"  Caps: per-position {cfg.max_allocation_pct:.0%} (hard {HARD_MAX_ALLOCATION_PCT:.0%}) | "
           f"total-deployed {cfg.max_total_deployed_pct:.0%} (hard {HARD_MAX_TOTAL_DEPLOYED_PCT:.0%}) | "
           f"min conviction {cfg.min_council_conviction:.0%}")
+    print(f"  Daily circuit breaker: halt new risk if down {cfg.max_daily_drawdown_pct:.0%} in a day")
+    import os as _os
+    if cfg.trading_halt or _os.path.exists(_os.path.join(_os.path.dirname(__file__), "HALT")):
+        print("  ⛔ KILL SWITCH ACTIVE — new risk is suspended (TRADING_HALT / HALT file).")
 
     # live arming status
     if cfg.has_credentials and not cfg.alpaca_paper:

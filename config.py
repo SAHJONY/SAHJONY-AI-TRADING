@@ -20,6 +20,7 @@ except Exception:  # pragma: no cover - dotenv is optional at runtime
 HARD_MAX_ALLOCATION_PCT = 0.15        # no single position may risk >15% equity
 HARD_MAX_TOTAL_DEPLOYED_PCT = 0.80    # no more than 80% of equity deployed
 HARD_MIN_CONVICTION = 0.50            # never trade below 50% council conviction
+HARD_MAX_DAILY_DRAWDOWN_PCT = 0.25    # daily-loss circuit breaker can be no looser than 25%
 
 
 def _f(name: str, default: float) -> float:
@@ -70,6 +71,11 @@ class Config:
     max_allocation_pct: float = 0.10
     max_total_deployed_pct: float = 0.60
     min_council_conviction: float = 0.55
+    # Circuit breaker: halt NEW risk for the rest of the day if equity falls this
+    # far below the day's opening equity. Exits/risk-reducing orders still flow.
+    max_daily_drawdown_pct: float = 0.06
+    # Kill switch: hard-stop all new risk regardless of P&L (env or a HALT file).
+    trading_halt: bool = False
 
     # wheel
     wheel_put_otm_pct: float = 0.10
@@ -132,6 +138,8 @@ def load_config() -> Config:
         max_allocation_pct=_clamp(_f("MAX_ALLOCATION_PCT", 0.10), 0.0, HARD_MAX_ALLOCATION_PCT),
         max_total_deployed_pct=_clamp(_f("MAX_TOTAL_DEPLOYED_PCT", 0.60), 0.0, HARD_MAX_TOTAL_DEPLOYED_PCT),
         min_council_conviction=_clamp(_f("MIN_COUNCIL_CONVICTION", 0.55), HARD_MIN_CONVICTION, 1.0),
+        max_daily_drawdown_pct=_clamp(_f("MAX_DAILY_DRAWDOWN_PCT", 0.06), 0.01, HARD_MAX_DAILY_DRAWDOWN_PCT),
+        trading_halt=_b("TRADING_HALT", False),
         wheel_put_otm_pct=_clamp(_f("WHEEL_PUT_OTM_PCT", 0.10), 0.01, 0.40),
         wheel_call_otm_pct=_clamp(_f("WHEEL_CALL_OTM_PCT", 0.10), 0.01, 0.40),
         wheel_dte_min=max(1, _i("WHEEL_DTE_MIN", 14)),
