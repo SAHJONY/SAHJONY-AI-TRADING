@@ -134,7 +134,9 @@ class AIBrain:
         }
         resp = client.messages.create(
             model=self.cfg.anthropic_model,
-            max_tokens=2000,
+            # headroom for adaptive thinking: thinking tokens count toward max_tokens,
+            # so a tight cap can truncate the JSON overlay and degrade the brain to neutral.
+            max_tokens=8000,
             thinking={"type": "adaptive"},
             output_config={"effort": "medium", "format": {"type": "json_schema", "schema": schema}},
             system=_SYSTEM.format(firm=self.cfg.firm_name),

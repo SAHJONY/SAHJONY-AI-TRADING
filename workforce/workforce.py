@@ -94,7 +94,9 @@ class ExecutionTrader:
         state["realized_pnl"] = state.get("realized_pnl", 0.0) + intent.realized_delta
 
     def execute(self, intents: List[OrderIntent], state: Dict[str, Any], cycle: int,
-                equity: float, deployed: float, conviction: float) -> List[Dict]:
+                equity: float, deployed: float, conviction: float) -> tuple[List[Dict], float]:
+        """Returns (executed, deployed) — the running deployed value is threaded back
+        so the total-deployed cap accounts for positions opened earlier this cycle."""
         done = []
         for intent in intents:
             try:
@@ -133,7 +135,7 @@ class ExecutionTrader:
                 log.info("EXEC %s %s — %s", intent.symbol, intent.purpose, intent.reason)
             except Exception as exc:  # one bad intent never sinks the cycle
                 log.error("execute intent failed (%s %s): %s", intent.symbol, intent.purpose, exc)
-        return done
+        return done, deployed
 
 
 # ── the firm ────────────────────────────────────────────────────────────────
@@ -211,7 +213,9 @@ class Firm:
                 else:
                     intents = self.ladder.decide(sym, snap, pos, verdict, budget)
                 if trade:
-                    executed += self.execution.execute(intents, state, cycle, equity, deployed, conviction)
+                    done, deployed = self.execution.execute(intents, state, cycle, equity,
+                                                            deployed, conviction)
+                    executed += done
                 # log council + snapshot
                 self.db.log_council(cycle, sym, verdict.conviction, verdict.direction,
                                     verdict.composite_score, verdict.risk_multiplier, verdict.metrics)
