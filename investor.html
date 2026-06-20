@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex,nofollow" />
+<title>Investor Statement — SAHJONY CAPITAL LLC</title>
+<style>
+  :root{
+    --bg:#0a0e17; --panel:#111726; --panel2:#0e1420; --line:#1e2940;
+    --txt:#e6edf7; --mut:#8294b4; --acc:#22d3ee; --acc2:#34d399;
+    --bad:#f87171; --good:#34d399; --chip:#16203a;
+    --mono:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(1200px 600px at 70% -10%,#13203a 0%,var(--bg) 55%);
+    color:var(--txt);font-family:var(--sans);line-height:1.45;min-height:100vh}
+  header{display:flex;align-items:center;justify-content:space-between;gap:16px;
+    padding:18px 26px;border-bottom:1px solid var(--line)}
+  .brand{display:flex;align-items:center;gap:14px}
+  .logo{width:40px;height:40px;border-radius:11px;display:grid;place-items:center;font-weight:800;
+    background:linear-gradient(135deg,var(--acc),var(--acc2));color:#04121a;font-size:18px}
+  .brand h1{font-size:16px;margin:0;letter-spacing:.4px}
+  .brand .sub{font-size:11.5px;color:var(--mut);letter-spacing:.5px;text-transform:uppercase}
+  .mode{font-family:var(--mono);font-size:12px;padding:5px 11px;border-radius:999px;
+    border:1px solid var(--line);background:var(--chip);color:var(--acc)}
+  main{padding:22px 26px;max-width:880px;margin:0 auto}
+  .grid{display:grid;gap:16px}
+  .g3{grid-template-columns:repeat(3,1fr)} .g2{grid-template-columns:repeat(2,1fr)}
+  @media(max-width:680px){.g3,.g2{grid-template-columns:1fr}}
+  .card{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);
+    border-radius:15px;padding:17px 18px}
+  .card h3{margin:0 0 12px;font-size:12px;letter-spacing:.6px;text-transform:uppercase;color:var(--mut);font-weight:700}
+  .kpi .v{font-family:var(--mono);font-size:25px;font-weight:700}
+  .kpi .l{color:var(--mut);font-size:12px;margin-top:3px}
+  .pos{color:var(--good)} .neg{color:var(--bad)} .mut{color:var(--mut)}
+  .row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}
+  .row:last-child{border-bottom:0}
+  .tag{font-family:var(--mono);font-size:11px;padding:2px 8px;border-radius:6px;background:var(--chip);color:var(--mut)}
+  .note{color:var(--mut);font-size:12px;margin:6px 0 0}
+  .warn{border:1px solid #3a2f12;background:#1c1606;color:#fbbf24;border-radius:12px;padding:12px 14px;font-size:12.5px;margin-top:16px}
+  footer{color:var(--mut);font-size:11.5px;text-align:center;padding:24px}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <div class="logo">S</div>
+    <div><h1 id="firm">SAHJONY CAPITAL LLC</h1><div class="sub">Investor statement · read-only</div></div>
+  </div>
+  <span class="mode" id="mode">—</span>
+</header>
+
+<main id="view"><div class="card">Loading your statement…</div></main>
+<footer id="foot"></footer>
+
+<script>
+const $ = (h)=>{const d=document.createElement('div');d.innerHTML=h.trim();return d.firstChild;};
+const money = (n)=> "$"+Number(n||0).toLocaleString(undefined,{maximumFractionDigits:2});
+const pct = (n)=> (Number(n||0)>=0?"+":"")+Number(n||0).toFixed(2)+"%";
+const esc = (s)=> String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+function getToken(){
+  const u = new URL(window.location.href);
+  return (u.searchParams.get('t')||"").trim();
+}
+
+function sparkline(curve){
+  if(!curve||curve.length<2) return '<div class="note">No fund history yet.</div>';
+  const ys = curve.map(p=>p.equity); const min=Math.min(...ys),max=Math.max(...ys);
+  const W=560,H=90,pad=4; const span=(max-min)||1;
+  const pts = ys.map((y,i)=>{const x=pad+i*(W-2*pad)/(ys.length-1);
+    const yy=H-pad-((y-min)/span)*(H-2*pad);return `${x.toFixed(1)},${yy.toFixed(1)}`;}).join(' ');
+  const up = ys[ys.length-1]>=ys[0];
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" preserveAspectRatio="none">
+    <polyline fill="none" stroke="${up?'#34d399':'#f87171'}" stroke-width="2" points="${pts}"/></svg>`;
+}
+
+function fail(msg){
+  document.getElementById('view').innerHTML =
+    `<div class="card"><h3>Statement unavailable</h3><div class="note">${esc(msg)}</div>
+     <div class="note">If you believe this is an error, contact your fund administrator for a new link.</div></div>`;
+  document.getElementById('foot').textContent = "SAHJONY CAPITAL LLC · paper-trading simulation";
+}
+
+async function load(){
+  const t = getToken();
+  if(!t){ fail("This page needs a personal access link (no token provided)."); return; }
+  // token is restricted to URL-safe chars; reject anything else before fetching
+  if(!/^[A-Za-z0-9_-]{16,128}$/.test(t)){ fail("Invalid link token."); return; }
+  let d;
+  try{
+    const r = await fetch('./investors/'+encodeURIComponent(t)+'.json?_='+Date.now());
+    if(!r.ok){ fail("This link is not active (it may have been revoked or not yet generated)."); return; }
+    d = await r.json();
+  }catch(e){ fail("Could not load your statement ("+e+")."); return; }
+
+  const inv=d.investor||{}, fund=d.fund||{};
+  document.getElementById('firm').textContent = d.firm||'SAHJONY CAPITAL LLC';
+  document.getElementById('mode').textContent = d.mode||'—';
+  const v=document.getElementById('view'); v.innerHTML="";
+
+  v.appendChild($(`<div class="card"><h3>${esc(inv.name||'Investor')} — your position</h3>
+    <div class="grid g3" style="margin-top:4px">
+      <div class="card kpi"><div class="v">${money(inv.current_value)}</div><div class="l">Current value</div></div>
+      <div class="card kpi"><div class="v ${(inv.return_pct||0)>=0?'pos':'neg'}">${pct(inv.return_pct)}</div><div class="l">Your return</div></div>
+      <div class="card kpi"><div class="v ${(inv.unrealized_pnl||0)>=0?'pos':'neg'}">${money(inv.unrealized_pnl)}</div><div class="l">Unrealized P&L</div></div>
+    </div></div>`));
+
+  const detail=$(`<div class="card" style="margin-top:16px"><h3>Account detail</h3></div>`);
+  [['Contributed', money(inv.contributed)],
+   ['Units held', Number(inv.units||0).toLocaleString(undefined,{maximumFractionDigits:4})],
+   ['Ownership of fund', (Number(inv.ownership_pct||0)).toFixed(3)+'%'],
+   ['NAV per unit', money(inv.nav_per_unit)],
+  ].forEach(([k,val])=>detail.appendChild($(`<div class="row"><span>${k}</span><span class="tag">${esc(val)}</span></div>`)));
+  v.appendChild(detail);
+
+  v.appendChild($(`<div class="card" style="margin-top:16px"><h3>Fund performance</h3>${sparkline(d.equity_curve)}
+    <div class="row" style="margin-top:8px"><span>Fund equity (NAV)</span><span class="tag">${money(fund.equity)}</span></div>
+    <div class="row"><span>Fund total return</span><span class="tag ${(fund.total_return_pct||0)>=0?'pos':'neg'}">${pct(fund.total_return_pct)}</span></div>
+    <div class="row"><span>Assets under management</span><span class="tag">${money(fund.aum)}</span></div>
+  </div>`));
+
+  v.appendChild($(`<div class="warn">${esc(d.disclaimer||'Paper-trading simulation — illustrative only, not investment advice.')}</div>`));
+
+  document.getElementById('foot').textContent =
+    d.ts ? `Cycle ${d.cycle} · as of ${new Date(d.ts).toLocaleString()} · auto-refresh 60s`
+         : "SAHJONY CAPITAL LLC";
+}
+
+load();
+setInterval(load, 60000);
+</script>
+</body>
+</html>
