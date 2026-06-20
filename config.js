@@ -11,5 +11,8 @@
 window.SAHJONY_CONFIG = {
   SUPABASE_URL: "https://awzczbaarskqjgdatefv.supabase.co",
   SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF3emN6YmFhcnNrcWpnZGF0ZWZ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI5ODMyMTAsImV4cCI6MjA3ODU1OTIxMH0._4DdIuu9qP82pbwzgVPHol8SWmS6ZBPNowwrPHLt5Fs",
-  OWNER_EMAIL: "sahjonycapitalllc@outlook.com"
+  OWNER_EMAIL: "sahjonycapitalllc@outlook.com",
+  // Optional FREE key from finnhub.io → live stock quotes + financial news.
+  // Crypto (CoinGecko) and fallback news (GDELT) need NO key.
+  FINNHUB_API_KEY: ""
 };
