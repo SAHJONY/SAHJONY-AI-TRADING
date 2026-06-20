@@ -20,7 +20,7 @@ import time
 
 from config import HARD_MAX_ALLOCATION_PCT, HARD_MAX_TOTAL_DEPLOYED_PCT, load_config
 from database import Database
-from utils.alpaca_client import AlpacaClient
+from utils.broker import get_broker
 from utils.logger import get_logger
 from utils.state_store import load_state, save_state
 from workforce import Firm
@@ -160,7 +160,7 @@ def main(argv=None) -> int:
     cfg = load_config()
     log.info("Booting %s — mode=%s, tickers=%s", cfg.firm_name, cfg.mode, ",".join(cfg.tickers))
     db = Database()
-    client = AlpacaClient(cfg)
+    client = get_broker(cfg)
     firm = Firm(cfg, client, db)
     state = load_state()
 

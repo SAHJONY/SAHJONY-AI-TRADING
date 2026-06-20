@@ -44,7 +44,19 @@ kill switch, the live opt-in gate, and `--preflight` all apply per desk.
 - ✅ **US equities + US options** (Alpaca) — market hours.
 - ✅ **Crypto** (Alpaca) — true 24/7/365.
 - ❌ **Non-US equities (Tokyo/London/…), forex, futures, other brokers (IBKR…)**
-  — NOT wired. These need new broker/data adapters; the broker layer
-  (`utils/alpaca_client.py`) is the seam where they'd plug in. This is a
-  deliberate, separate project — ask and we'll scope it (FX/futures via a second
-  broker is the usual next step).
+  — NOT wired, but the seam is in place.
+
+## Adding a venue (the broker adapter seam)
+The Firm talks to brokers only through `BrokerAdapter` (`utils/broker.py`), and
+`get_broker(cfg)` picks one from `BROKER=<venue>`. To add Interactive Brokers
+(FX/futures/non-US equities) or a CCXT exchange (worldwide crypto):
+
+1. Copy `utils/brokers/template_adapter.py` to `utils/brokers/<venue>.py`.
+2. Implement every method against the venue's SDK (wrap each external call so a
+   failure logs and degrades — never crashes the loop). Mirror `utils/alpaca_client.py`.
+3. Register it in `get_broker()`:  `if name == "<venue>": return _verify(MyBroker(cfg))`.
+4. Select it per desk with `BROKER=<venue>` in that desk's `.env`.
+
+The factory verifies an adapter implements the whole contract, so a half-built
+venue fails fast instead of breaking mid-cycle. Everything else — risk caps,
+circuit breaker, kill switch, dashboard — works unchanged across venues.

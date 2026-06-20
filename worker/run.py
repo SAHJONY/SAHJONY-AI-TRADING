@@ -20,7 +20,7 @@ from typing import Any, Dict
 
 from config import load_config
 from database import Database
-from utils.alpaca_client import AlpacaClient
+from utils.broker import get_broker
 from utils.logger import get_logger
 from utils.state_store import default_state
 from workforce import Firm
@@ -103,7 +103,7 @@ def run_desk(conn, desk: Dict[str, Any]) -> None:
 
     db = Database(":memory:")
     try:
-        client = AlpacaClient(cfg)
+        client = get_broker(cfg)
         firm = Firm(cfg, client, db)
         trade = (not client.online) or client.is_market_open()
         result = firm.run_cycle(state, trade=trade)

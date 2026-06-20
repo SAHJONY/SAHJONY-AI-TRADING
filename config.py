@@ -55,6 +55,8 @@ def _clamp(value: float, lo: float, hi: float) -> float:
 
 @dataclass(frozen=True)
 class Config:
+    # broker venue (see utils/broker.py). Default 'alpaca'.
+    broker: str = "alpaca"
     # credentials
     alpaca_api_key: str = ""
     alpaca_secret_key: str = ""
@@ -139,6 +141,7 @@ class Config:
 def load_config() -> Config:
     """Build a Config from the environment, clamping all risk knobs to ceilings."""
     return Config(
+        broker=(os.getenv("BROKER", "alpaca") or "alpaca").strip().lower(),
         alpaca_api_key=os.getenv("ALPACA_API_KEY", "").strip(),
         alpaca_secret_key=os.getenv("ALPACA_SECRET_KEY", "").strip(),
         alpaca_paper=_b("ALPACA_PAPER", True),
