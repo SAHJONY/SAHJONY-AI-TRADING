@@ -125,7 +125,7 @@ const SB = LIVE_OK ? window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE
 let DESK = null;            // the owner's current desk row (when logged in)
 let SESSION = null;
 
-const $ = (h)=>{const d=document.createElement('div');d.innerHTML=h.trim();return d.firstChild;};
+const $ = (h)=>{const t=document.createElement('template');t.innerHTML=String(h).trim();return t.content.firstElementChild;};
 const money = (n)=> "$"+Number(n||0).toLocaleString(undefined,{maximumFractionDigits:2});
 const pct = (n)=> (Number(n||0)>=0?"+":"")+Number(n||0).toFixed(2)+"%";
 const esc = (s)=> String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
