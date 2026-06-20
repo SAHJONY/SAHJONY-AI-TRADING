@@ -7,6 +7,7 @@ walks the offline simulator for a verifiable dry run; `--loop` runs an internal
 loop.
 
 Examples:
+  python main.py --preflight          # read-only readiness check (no orders)
   python main.py --once               # one cycle (cron entry point)
   python main.py --cycles 12          # dry-run: 12 sim cycles, walks the market
   python main.py --loop               # internal loop every CYCLE_MINUTES
@@ -27,6 +28,66 @@ from workforce.reporter import build_status, console_board, write_investor_views
 from workforce.workforce import STATUS_PATH
 
 log = get_logger("main")
+
+
+def preflight(cfg, client) -> int:
+    """Read-only readiness report — places NO orders. Returns 0 when ready.
+
+    Run this before adding funds / arming live: it confirms the broker connects,
+    the account is reachable (and funded, for live), market data flows, and shows
+    exactly which mode and risk caps are active."""
+    ok = True
+    bar = "=" * 64
+    print(bar)
+    print(f"  SAHJONY PREFLIGHT — mode={cfg.mode}")
+    print(bar)
+
+    # connection
+    if not cfg.has_credentials:
+        print("  • No Alpaca keys → OFFLINE-SIM (no real orders). Add keys for paper/live.")
+    elif not client.online:
+        print("  ✗ Alpaca keys set but the connection failed (see logs above).")
+        ok = False
+    else:
+        print(f"  ✓ Connected to Alpaca ({'paper' if cfg.alpaca_paper else 'LIVE'}).")
+
+    # account
+    acct = client.get_account()
+    print(f"  Equity ${acct['equity']:,.2f} | Cash ${acct['cash']:,.2f} | "
+          f"Buying power ${acct['buying_power']:,.2f}")
+    if cfg.mode == "LIVE" and acct["equity"] <= 0:
+        print("  ✗ LIVE account shows $0 equity — fund your Alpaca account first.")
+        ok = False
+
+    # market clock + data feed
+    try:
+        print(f"  Market open: {client.is_market_open()}")
+    except Exception:
+        pass
+    for sym in cfg.tickers:
+        px = client.get_price(sym)
+        if px and px > 0:
+            print(f"  ✓ data {sym}: ${px:,.2f}")
+        else:
+            print(f"  ✗ data {sym}: no price")
+            ok = False
+
+    # risk envelope
+    print(f"  Caps: per-position {cfg.max_allocation_pct:.0%} (hard {HARD_MAX_ALLOCATION_PCT:.0%}) | "
+          f"total-deployed {cfg.max_total_deployed_pct:.0%} (hard {HARD_MAX_TOTAL_DEPLOYED_PCT:.0%}) | "
+          f"min conviction {cfg.min_council_conviction:.0%}")
+
+    # live arming status
+    if cfg.has_credentials and not cfg.alpaca_paper:
+        if cfg.live_trading_ack:
+            print("  ⚠ LIVE ARMED (LIVE_TRADING_ACK set) — real orders WILL be placed when you run.")
+        else:
+            print("  • LIVE keys present but NOT armed — set LIVE_TRADING_ACK to trade real money.")
+
+    print(bar)
+    print("  READY ✓ — safe to run." if ok else "  NOT READY ✗ — resolve the ✗ items above.")
+    print(bar)
+    return 0 if ok else 1
 
 
 def confirm_live(cfg, client) -> bool:
@@ -88,6 +149,8 @@ def main(argv=None) -> int:
     ap.add_argument("--cycles", type=int, default=0, help="run N cycles (advances the sim each cycle)")
     ap.add_argument("--loop", action="store_true", help="loop every CYCLE_MINUTES")
     ap.add_argument("--force", action="store_true", help="trade even if market clock says closed")
+    ap.add_argument("--preflight", action="store_true",
+                    help="read-only readiness check (connection/funding/data); places NO orders")
     args = ap.parse_args(argv)
 
     cfg = load_config()
@@ -96,6 +159,11 @@ def main(argv=None) -> int:
     client = AlpacaClient(cfg)
     firm = Firm(cfg, client, db)
     state = load_state()
+
+    if args.preflight:
+        rc = preflight(cfg, client)
+        db.close()
+        return rc
 
     if cfg.mode == "LIVE" and not confirm_live(cfg, client):
         db.close()

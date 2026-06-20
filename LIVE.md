@@ -35,10 +35,14 @@ ANTHROPIC_API_KEY=<your Anthropic key>
 
 Run it and watch:
 ```bash
+python main.py --preflight    # read-only: confirms keys/account/data, NO orders
 python main.py --cycles 8     # offline-style dry run
 python main.py --once         # one real paper cycle (market hours)
 python main.py --loop         # every CYCLE_MINUTES during market hours
 ```
+Always run `--preflight` first after changing keys or mode — it confirms the
+broker connects, the account is reachable/funded, and market data flows, without
+placing a single order.
 
 ## 3. Going LIVE (real money) — deliberate two-step
 Live is refused unless you do **both**:
@@ -50,9 +54,11 @@ LIVE_TRADING_ACK=I_UNDERSTAND_REAL_MONEY
 ```
 Then:
 ```bash
+python main.py --preflight    # must report READY ✓ and "LIVE ARMED" before you trade
 python main.py --once
 ```
-On boot you'll see a **LIVE REAL-MONEY TRADING ARMED** banner showing your
+The preflight must show your real account equity and `LIVE ARMED`. On the trading
+run you'll then see a **LIVE REAL-MONEY TRADING ARMED** banner showing your
 account equity and the active risk caps, with a 5-second window to Ctrl-C and
 abort. If `LIVE_TRADING_ACK` is missing, the desk refuses to place live orders
 and tells you how to enable it. (`ALPACA_PAPER=true` always keeps you on paper,
