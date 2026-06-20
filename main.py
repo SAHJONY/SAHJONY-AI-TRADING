@@ -37,26 +37,28 @@ def preflight(cfg, client) -> int:
     the account is reachable (and funded, for live), market data flows, and shows
     exactly which mode and risk caps are active."""
     ok = True
+    mode = getattr(client, "mode", cfg.mode)
     bar = "=" * 64
     print(bar)
-    print(f"  SAHJONY PREFLIGHT — mode={cfg.mode}")
+    print(f"  SAHJONY PREFLIGHT — broker={cfg.broker} mode={mode}")
     print(bar)
 
     # connection
-    if not cfg.has_credentials:
-        print("  • No Alpaca keys → OFFLINE-SIM (no real orders). Add keys for paper/live.")
-    elif not client.online:
-        print("  ✗ Alpaca keys set but the connection failed (see logs above).")
-        ok = False
+    if mode == "offline-sim":
+        print(f"  • {cfg.broker}: OFFLINE-SIM (no real orders). Add credentials/connection "
+              f"for paper/live.")
+        if cfg.has_credentials or cfg.broker != "alpaca":
+            print("  ✗ credentials/connection configured but broker did not connect (see logs).")
+            ok = False
     else:
-        print(f"  ✓ Connected to Alpaca ({'paper' if cfg.alpaca_paper else 'LIVE'}).")
+        print(f"  ✓ Connected to {cfg.broker} ({mode}).")
 
     # account
     acct = client.get_account()
     print(f"  Equity ${acct['equity']:,.2f} | Cash ${acct['cash']:,.2f} | "
           f"Buying power ${acct['buying_power']:,.2f}")
-    if cfg.mode == "LIVE" and acct["equity"] <= 0:
-        print("  ✗ LIVE account shows $0 equity — fund your Alpaca account first.")
+    if mode == "LIVE" and acct["equity"] <= 0:
+        print("  ✗ LIVE account shows $0 equity — fund the account first.")
         ok = False
 
     # market clock + data feed
@@ -82,11 +84,11 @@ def preflight(cfg, client) -> int:
         print("  ⛔ KILL SWITCH ACTIVE — new risk is suspended (TRADING_HALT / HALT file).")
 
     # live arming status
-    if cfg.has_credentials and not cfg.alpaca_paper:
+    if mode == "LIVE":
         if cfg.live_trading_ack:
             print("  ⚠ LIVE ARMED (LIVE_TRADING_ACK set) — real orders WILL be placed when you run.")
         else:
-            print("  • LIVE keys present but NOT armed — set LIVE_TRADING_ACK to trade real money.")
+            print("  • LIVE venue connected but NOT armed — set LIVE_TRADING_ACK to trade real money.")
 
     print(bar)
     print("  READY ✓ — safe to run." if ok else "  NOT READY ✗ — resolve the ✗ items above.")
@@ -99,11 +101,11 @@ def confirm_live(cfg, client) -> bool:
     operator has deliberately armed them (keys + ALPACA_PAPER=false + an explicit
     LIVE_TRADING_ACK). Returns False to abort, True to proceed (armed)."""
     if not cfg.live_trading_ack:
-        log.error("LIVE mode requested (ALPACA_PAPER=false) but LIVE_TRADING_ACK is not set.")
+        log.error("LIVE venue connected but LIVE_TRADING_ACK is not set.")
         log.error("Refusing to place REAL-MONEY orders.")
         log.error('To deliberately enable live trading, set '
                   'LIVE_TRADING_ACK="I_UNDERSTAND_REAL_MONEY" in your .env —')
-        log.error("or set ALPACA_PAPER=true to keep trading on the Alpaca paper account.")
+        log.error("or connect a paper venue instead.")
         return False
     acct = client.get_account()
     bar = "=" * 64
@@ -169,7 +171,7 @@ def main(argv=None) -> int:
         db.close()
         return rc
 
-    if cfg.mode == "LIVE" and not confirm_live(cfg, client):
+    if getattr(client, "mode", cfg.mode) == "LIVE" and not confirm_live(cfg, client):
         db.close()
         return 2
 

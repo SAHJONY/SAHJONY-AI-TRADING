@@ -64,6 +64,9 @@ def get_broker(cfg: Config):
     if name == "alpaca":
         from utils.alpaca_client import AlpacaClient
         return _verify(AlpacaClient(cfg))
-    raise ValueError(f"Unknown BROKER '{name}'. Registered: alpaca. "
+    if name == "ibkr":
+        from utils.brokers.ibkr import IBKRBroker
+        return _verify(IBKRBroker(cfg))
+    raise ValueError(f"Unknown BROKER '{name}'. Registered: alpaca, ibkr. "
                      f"Implement an adapter (see utils/brokers/template_adapter.py) "
                      f"and register it in utils/broker.py.")

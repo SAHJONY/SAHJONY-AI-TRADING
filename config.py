@@ -61,6 +61,12 @@ class Config:
     alpaca_api_key: str = ""
     alpaca_secret_key: str = ""
     alpaca_paper: bool = True
+    # Interactive Brokers (BROKER=ibkr) — connects to a running TWS / IB Gateway.
+    # Paper ports: TWS 7497, Gateway 4002.  Live ports: TWS 7496, Gateway 4001.
+    ibkr_host: str = "127.0.0.1"
+    ibkr_port: int = 7497
+    ibkr_client_id: int = 1
+    ibkr_account: str = ""
     # Real-money safety: live orders are refused unless this is explicitly set.
     # Set LIVE_TRADING_ACK="I_UNDERSTAND_REAL_MONEY" to arm live (with ALPACA_PAPER=false).
     live_trading_ack: bool = False
@@ -145,6 +151,10 @@ def load_config() -> Config:
         alpaca_api_key=os.getenv("ALPACA_API_KEY", "").strip(),
         alpaca_secret_key=os.getenv("ALPACA_SECRET_KEY", "").strip(),
         alpaca_paper=_b("ALPACA_PAPER", True),
+        ibkr_host=(os.getenv("IBKR_HOST", "127.0.0.1") or "127.0.0.1").strip(),
+        ibkr_port=_i("IBKR_PORT", 7497),
+        ibkr_client_id=_i("IBKR_CLIENT_ID", 1),
+        ibkr_account=(os.getenv("IBKR_ACCOUNT", "") or "").strip(),
         live_trading_ack=(os.getenv("LIVE_TRADING_ACK", "").strip() == "I_UNDERSTAND_REAL_MONEY"),
         tickers=_list("TICKERS", "AAPL,MSFT,SPY"),
         benchmark=(os.getenv("BENCHMARK", "SPY") or "SPY").strip().upper(),

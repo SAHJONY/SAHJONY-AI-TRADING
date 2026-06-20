@@ -94,6 +94,7 @@ def _now() -> str:
 def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[str, Any]) -> Dict[str, Any]:
     db = firm.db
     client = firm.client
+    mode = getattr(client, "mode", cfg.mode)   # broker-accurate (Alpaca/IBKR/sim)
     eq = cycle_result.get("equity", state.get("equity_last") or 0.0)
     eq0 = state.get("equity_start") or eq or 1.0
     realized = state.get("realized_pnl", 0.0)
@@ -136,7 +137,7 @@ def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[st
     return {
         "firm": cfg.firm_name,
         "tagline": "Autonomous multi-agent quant trading — PAPER",
-        "mode": cfg.mode,
+        "mode": mode,
         "ts": _now(),
         "cycle": state.get("cycle", 0),
         "account": {
@@ -149,7 +150,7 @@ def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[st
             "total_return_pct": round((eq / eq0 - 1.0) * 100, 3) if eq0 else 0.0,
         },
         "health": {
-            "mode": cfg.mode,
+            "mode": mode,
             "broker_online": client.online,
             "market_open": client.is_market_open(),
             "risk_caps": {"per_position_pct": cfg.max_allocation_pct,

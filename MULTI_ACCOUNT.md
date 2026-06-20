@@ -40,23 +40,37 @@ Crypto markets never close, so a crypto desk trades around the clock.
 Everything else is identical: the same risk caps, the daily circuit breaker, the
 kill switch, the live opt-in gate, and `--preflight` all apply per desk.
 
-## Scope — what "worldwide markets" means today
-- ✅ **US equities + US options** (Alpaca) — market hours.
-- ✅ **Crypto** (Alpaca) — true 24/7/365.
-- ❌ **Non-US equities (Tokyo/London/…), forex, futures, other brokers (IBKR…)**
-  — NOT wired, but the seam is in place.
+## Choosing a venue — `BROKER`
+The Firm talks to brokers only through `BrokerAdapter` (`utils/broker.py`);
+`get_broker(cfg)` picks one from `BROKER=<venue>`. Registered venues:
 
-## Adding a venue (the broker adapter seam)
-The Firm talks to brokers only through `BrokerAdapter` (`utils/broker.py`), and
-`get_broker(cfg)` picks one from `BROKER=<venue>`. To add Interactive Brokers
-(FX/futures/non-US equities) or a CCXT exchange (worldwide crypto):
+- ✅ **`alpaca`** (default) — US equities + US options (market hours) and crypto (24/7).
+- ⚠️ **`ibkr`** — Interactive Brokers: worldwide equities, FX, futures via a
+  running TWS / IB Gateway. **Wired but not yet validated against a live IBKR
+  connection** — test on PAPER first (see below).
 
-1. Copy `utils/brokers/template_adapter.py` to `utils/brokers/<venue>.py`.
-2. Implement every method against the venue's SDK (wrap each external call so a
-   failure logs and degrades — never crashes the loop). Mirror `utils/alpaca_client.py`.
-3. Register it in `get_broker()`:  `if name == "<venue>": return _verify(MyBroker(cfg))`.
-4. Select it per desk with `BROKER=<venue>` in that desk's `.env`.
+### Interactive Brokers (`BROKER=ibkr`)
+1. `pip install -r requirements-ibkr.txt` and start **TWS or IB Gateway**, with
+   the API enabled. Paper ports: TWS 7497 / Gateway 4002. Live: 7496 / 4001.
+2. Set `BROKER=ibkr`, `IBKR_PORT=<port>`, and your `TICKERS` using the symbol
+   convention: `AAPL` · `LSE:VOD:GBP` · `FX:EUR/USD` · `CRYPTO:BTC/USD` · `FUT:ES@CME`.
+3. For FX/futures/non-US, set `MARKET_HOURS=24_7` so the desk runs continuously
+   (IBKR rejects genuinely-closed orders, which are caught + logged).
+4. `python main.py --preflight` — must report connected + READY before you trade.
+   Live still requires the `LIVE_TRADING_ACK` opt-in; a live IBKR port resolves to
+   mode `LIVE` and triggers the same real-money gate as Alpaca.
+
+If ib_insync isn't installed or TWS isn't running, the adapter falls back to
+offline-sim (zero real orders) — never a real order by surprise.
+
+### Still not wired
+Other brokers (CCXT exchanges for worldwide crypto, etc.) — add them via the seam:
+1. Copy `utils/brokers/template_adapter.py` → `utils/brokers/<venue>.py`.
+2. Implement every method against the venue's SDK; wrap each external call so a
+   failure logs and degrades to sim — never crashes the loop.
+3. Register in `get_broker()`:  `if name == "<venue>": return _verify(MyBroker(cfg))`.
+4. Select per desk with `BROKER=<venue>`.
 
 The factory verifies an adapter implements the whole contract, so a half-built
-venue fails fast instead of breaking mid-cycle. Everything else — risk caps,
-circuit breaker, kill switch, dashboard — works unchanged across venues.
+venue fails fast. Risk caps, circuit breaker, kill switch, and the dashboard work
+unchanged across venues.

@@ -137,7 +137,8 @@ class ExecutionTrader:
                     "cycle": cycle, "symbol": intent.symbol, "strategy": intent.strategy,
                     "kind": intent.kind, "side": intent.side, "qty": intent.qty,
                     "price": price, "premium": intent.premium, "notional": intent.est_notional,
-                    "purpose": intent.purpose, "reason": intent.reason, "mode": self.cfg.mode,
+                    "purpose": intent.purpose, "reason": intent.reason,
+                    "mode": getattr(self.client, "mode", self.cfg.mode),
                     "simulated": res.get("simulated", True),
                 })
                 record_event(state, intent.purpose, {"symbol": intent.symbol, "reason": intent.reason})
@@ -208,7 +209,8 @@ class Firm:
     def run_cycle(self, state: Dict[str, Any], trade: bool = True) -> Dict[str, Any]:
         state["cycle"] = state.get("cycle", 0) + 1
         cycle = state["cycle"]
-        state["mode"] = self.cfg.mode
+        mode = getattr(self.client, "mode", self.cfg.mode)   # broker-accurate
+        state["mode"] = mode
         acct = self.client.get_account()
         equity = acct["equity"]
         if state.get("equity_start") is None:
@@ -277,7 +279,7 @@ class Firm:
         # 7) Treasurer — equity curve
         acct = self.client.get_account()
         self.db.log_equity(cycle, acct["equity"], acct["cash"], self._position_value(state),
-                           state.get("realized_pnl", 0.0), state.get("premium_collected", 0.0), self.cfg.mode)
+                           state.get("realized_pnl", 0.0), state.get("premium_collected", 0.0), mode)
 
         return {"cycle": cycle, "equity": acct["equity"], "cash": acct["cash"],
                 "research": research, "brain": brain, "executed": executed,
