@@ -67,6 +67,13 @@ class Config:
     ibkr_port: int = 7497
     ibkr_client_id: int = 1
     ibkr_account: str = ""
+    # CCXT (BROKER=ccxt) — worldwide crypto exchanges (Binance, Kraken, …).
+    ccxt_exchange: str = "binance"
+    ccxt_api_key: str = ""
+    ccxt_secret: str = ""
+    ccxt_password: str = ""        # some exchanges require an API passphrase
+    ccxt_sandbox: bool = True      # testnet/paper by default
+    ccxt_quote: str = "USDT"       # quote currency for equity valuation
     # Real-money safety: live orders are refused unless this is explicitly set.
     # Set LIVE_TRADING_ACK="I_UNDERSTAND_REAL_MONEY" to arm live (with ALPACA_PAPER=false).
     live_trading_ack: bool = False
@@ -155,6 +162,12 @@ def load_config() -> Config:
         ibkr_port=_i("IBKR_PORT", 7497),
         ibkr_client_id=_i("IBKR_CLIENT_ID", 1),
         ibkr_account=(os.getenv("IBKR_ACCOUNT", "") or "").strip(),
+        ccxt_exchange=(os.getenv("CCXT_EXCHANGE", "binance") or "binance").strip().lower(),
+        ccxt_api_key=os.getenv("CCXT_API_KEY", "").strip(),
+        ccxt_secret=os.getenv("CCXT_SECRET", "").strip(),
+        ccxt_password=os.getenv("CCXT_PASSWORD", "").strip(),
+        ccxt_sandbox=_b("CCXT_SANDBOX", True),
+        ccxt_quote=(os.getenv("CCXT_QUOTE", "USDT") or "USDT").strip().upper(),
         live_trading_ack=(os.getenv("LIVE_TRADING_ACK", "").strip() == "I_UNDERSTAND_REAL_MONEY"),
         tickers=_list("TICKERS", "AAPL,MSFT,SPY"),
         benchmark=(os.getenv("BENCHMARK", "SPY") or "SPY").strip().upper(),

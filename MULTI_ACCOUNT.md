@@ -48,6 +48,9 @@ The Firm talks to brokers only through `BrokerAdapter` (`utils/broker.py`);
 - ⚠️ **`ibkr`** — Interactive Brokers: worldwide equities, FX, futures via a
   running TWS / IB Gateway. **Wired but not yet validated against a live IBKR
   connection** — test on PAPER first (see below).
+- ⚠️ **`ccxt`** — worldwide crypto via ~100 exchanges (Binance, Kraken, Coinbase,
+  OKX, …). **Wired but not yet validated against a live exchange** — test on an
+  exchange testnet first (see below).
 
 ### Interactive Brokers (`BROKER=ibkr`)
 1. `pip install -r requirements-ibkr.txt` and start **TWS or IB Gateway**, with
@@ -63,8 +66,20 @@ The Firm talks to brokers only through `BrokerAdapter` (`utils/broker.py`);
 If ib_insync isn't installed or TWS isn't running, the adapter falls back to
 offline-sim (zero real orders) — never a real order by surprise.
 
+### CCXT crypto exchanges (`BROKER=ccxt`)
+1. `pip install -r requirements-ccxt.txt`.
+2. Set `BROKER=ccxt`, `CCXT_EXCHANGE=<binance|kraken|coinbase|…>`, your
+   `CCXT_API_KEY`/`CCXT_SECRET` (and `CCXT_PASSWORD` if the exchange needs one),
+   and `TICKERS` in unified form (`BTC/USDT,ETH/USDT`). `CCXT_QUOTE` (default
+   USDT) is the currency equity is valued in.
+3. Keep `CCXT_SANDBOX=true` (testnet, mode → `paper`) until you've validated;
+   `false` connects to the live exchange (mode → `LIVE`, requires `LIVE_TRADING_ACK`).
+4. `python main.py --preflight` — must report connected + READY before trading.
+
+Without ccxt installed or valid keys it falls back to offline-sim (zero real orders).
+
 ### Still not wired
-Other brokers (CCXT exchanges for worldwide crypto, etc.) — add them via the seam:
+Other venues — add them via the seam:
 1. Copy `utils/brokers/template_adapter.py` → `utils/brokers/<venue>.py`.
 2. Implement every method against the venue's SDK; wrap each external call so a
    failure logs and degrades to sim — never crashes the loop.
