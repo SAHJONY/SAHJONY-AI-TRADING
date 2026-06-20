@@ -104,6 +104,7 @@
   </div>
   <div style="display:flex;gap:10px;align-items:center">
     <span class="mode" id="mode">—</span>
+    <a id="account" class="ghost" href="./login.html" style="text-decoration:none">Sign in</a>
     <button class="ghost" onclick="load()">↻ Refresh</button>
   </div>
 </header>
@@ -193,6 +194,11 @@ function render(){
   const modeEl=document.getElementById('mode'); modeEl.textContent=DATA.mode||'—';
   modeEl.style.color = DATA.mode==='LIVE'?'var(--bad)':(DATA.mode==='paper'?'var(--acc2)':'var(--mut)');
   modeEl.style.borderColor = DATA.mode==='LIVE'?'var(--bad)':'var(--line)';
+  const acc=document.getElementById('account');
+  if(acc){
+    if(SESSION&&SESSION.user){ acc.textContent='⏻ '+String(SESSION.user.email).split('@')[0]; acc.removeAttribute('href'); acc.onclick=()=>sbLogout(); }
+    else { acc.textContent='Sign in'; acc.setAttribute('href','./login.html'); acc.onclick=null; }
+  }
   v.innerHTML="";
   ({Overview,Council,"AI Brain":Brain,Book,Controls,Environment:EnvPage,Workforce}[TAB]||Overview)(v);
 }
