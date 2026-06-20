@@ -43,6 +43,11 @@
   .stat b{color:var(--txt);font-weight:600}
   .dot{width:7px;height:7px;border-radius:50%;background:var(--dim);box-shadow:0 0 0 0 rgba(0,0,0,0)}
   .dot.g{background:var(--up);box-shadow:0 0 8px var(--up)} .dot.r{background:var(--down)} .dot.a{background:var(--amber);box-shadow:0 0 8px var(--amber)}
+  .dot.live{background:var(--up);animation:pulse 1.4s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(55,224,166,.55)}70%{box-shadow:0 0 0 7px rgba(55,224,166,0)}100%{box-shadow:0 0 0 0 rgba(55,224,166,0)}}
+  .flash-u{animation:fu .6s} .flash-d{animation:fd .6s}
+  @keyframes fu{0%{background:rgba(55,224,166,.22)}100%{background:transparent}}
+  @keyframes fd{0%{background:rgba(255,92,108,.22)}100%{background:transparent}}
   .mpill{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:1px;padding:5px 11px;border-radius:7px;
     border:1px solid var(--line2);text-transform:uppercase}
   .btn{font-family:var(--mono);font-size:11px;background:rgba(255,255,255,.02);border:1px solid var(--line2);color:var(--txt);
@@ -151,6 +156,7 @@
   <span class="stat"><span class="dot" id="dBroker"></span><span id="brokerTxt">—</span></span>
   <span class="stat"><span class="dot" id="dMkt"></span>MKT <b id="mktTxt">—</b></span>
   <span class="stat">CYC <b id="cycTxt">—</b></span>
+  <span class="stat"><span class="dot" id="dStream"></span>STREAM</span>
   <span class="stat mono" id="clock">--:--:-- UTC</span>
   <span class="mpill" id="mode">—</span>
   <a class="btn" id="account" href="./login.html">SIGN IN</a>
@@ -162,16 +168,20 @@
 <main id="view"></main>
 <footer>
   <div id="foot">booting…</div>
-  <div class="keys"><span>1</span>–<span>7</span> panels · <span>R</span> refresh</div>
+  <div class="keys"><span>1</span>–<span>9</span> panels · <span>R</span> refresh</div>
 </footer>
 
 <script src="./config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const TABS = ["Terminal","Council","Book","Brain","Controls","Workforce","Env"];
+const TABS = ["Terminal","Markets","News","Council","Book","Brain","Controls","Workforce","Env"];
 let DATA=null, TAB="Terminal", SESSION=null, DESK=null;
+let MARKETS={list:[],err:null,ts:0};            // CoinGecko crypto (no key)
+let NEWS={list:[],err:null,ts:0,src:''};        // Finnhub (key) or GDELT (no key)
+const STREAM={connected:false,live:{},tries:0,started:false,chanFor:null,cryptoWS:null,stockWS:null};
 
 const CFG=(window.SAHJONY_CONFIG||{});
+const FINNHUB=(CFG.FINNHUB_API_KEY||"").trim();
 const LIVE_OK=!!(CFG.SUPABASE_URL && CFG.SUPABASE_ANON_KEY && window.supabase);
 const SB=LIVE_OK ? window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY) : null;
 
@@ -203,6 +213,146 @@ async function load(){
     try{const r=await fetch('./status.json?_='+Date.now());DATA=await r.json();}catch(_){DATA={_error:String(e)};}
   }
   buildNav(); render();
+  fetchMarkets(); fetchNews();   // free REST snapshots (self-cached)
+  startStreams(); subscribeRealtime();   // realtime: Binance/Finnhub WS + Supabase
+}
+
+// ── free live market & news feeds (run in the browser) ──────────────────────
+const COINGECKO="https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=20&page=1&price_change_percentage=24h";
+function fmtTs(ms){const d=new Date(ms);return isNaN(d)?'':d.toLocaleString();}
+function fmtGdelt(s){if(!s)return'';const d=new Date(String(s).replace(/(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z/,'$1-$2-$3T$4:$5:$6Z'));return isNaN(d)?'':d.toLocaleString();}
+
+async function fetchMarkets(force){
+  if(!force && Date.now()-MARKETS.ts<60000 && MARKETS.list.length) return;
+  try{ const r=await fetch(COINGECKO); if(!r.ok) throw new Error('HTTP '+r.status);
+    MARKETS={list:await r.json(), err:null, ts:Date.now()}; }
+  catch(e){ MARKETS={list:MARKETS.list, err:String(e&&e.message||e), ts:Date.now()}; }
+  buildTape(); if(TAB==='Markets')render();
+}
+
+async function fetchNews(force){
+  if(!force && Date.now()-NEWS.ts<300000 && NEWS.list.length) return;
+  try{
+    let list=[], src='';
+    if(FINNHUB){
+      const r=await fetch(`https://finnhub.io/api/v1/news?category=general&token=${encodeURIComponent(FINNHUB)}`);
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      list=((await r.json())||[]).slice(0,40).map(a=>({title:a.headline,url:a.url,source:a.source,time:fmtTs(a.datetime*1000)})); src='Finnhub';
+    }else{
+      const q=encodeURIComponent('(markets OR finance OR stocks OR economy OR earnings OR "Federal Reserve") sourcelang:english');
+      const r=await fetch(`https://api.gdeltproject.org/api/v2/doc/doc?query=${q}&mode=ArtList&maxrecords=40&sort=DateDesc&format=json`);
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      list=(((await r.json())||{}).articles||[]).map(a=>({title:a.title,url:a.url,source:a.domain,time:fmtGdelt(a.seendate)})); src='GDELT';
+    }
+    NEWS={list,err:null,ts:Date.now(),src};
+  }catch(e){ NEWS={list:NEWS.list, err:String(e&&e.message||e), ts:Date.now(), src:NEWS.src}; }
+  if(TAB==='News')render();
+}
+
+async function fetchStockQuotes(syms){
+  const out=[]; for(const s of syms.slice(0,12)){
+    try{ const r=await fetch(`https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(s)}&token=${encodeURIComponent(FINNHUB)}`);
+      const q=await r.json(); out.push(Object.assign({sym:s}, q)); }catch(e){}
+  } return out;
+}
+
+// ── realtime streaming over WebSocket ───────────────────────────────────────
+const BINANCE_SYMS=['btc','eth','sol','bnb','xrp','ada','doge','avax','link','dot','ltc','trx'];
+function setStreamDot(){const d=document.getElementById('dStream'); if(d)d.className='dot '+(STREAM.connected?'live':'');}
+function cryptoRows(){
+  if((MARKETS.list||[]).length) return MARKETS.list.map(m=>({sym:(m.symbol||'').toUpperCase(),price:m.current_price,pct:m.price_change_percentage_24h}));
+  return Object.entries(STREAM.live).filter(([k,v])=>v.pct!=null).map(([k,v])=>({sym:k,price:v.price,pct:v.pct}));
+}
+let _tick=null;
+function scheduleTick(){ if(_tick)return; _tick=setTimeout(()=>{ _tick=null;
+  (MARKETS.list||[]).forEach(m=>{const l=STREAM.live[(m.symbol||'').toUpperCase()]; if(l){m.current_price=l.price; if(l.pct!=null)m.price_change_percentage_24h=l.pct;}});
+  buildTape(); if(TAB==='Markets')render(); }, 900); }
+function connectCrypto(){
+  if(!('WebSocket' in window)) return;
+  try{
+    const ws=new WebSocket('wss://stream.binance.com:9443/stream?streams='+BINANCE_SYMS.map(s=>s+'usdt@ticker').join('/'));
+    STREAM.cryptoWS=ws;
+    ws.onopen=()=>{STREAM.connected=true;STREAM.tries=0;setStreamDot();};
+    ws.onmessage=(ev)=>{try{const m=JSON.parse(ev.data);const d=m.data||m;if(!d||!d.s)return;
+      STREAM.live[d.s.replace('USDT','')]={price:+d.c,pct:+d.P,t:Date.now()};scheduleTick();}catch(e){}};
+    ws.onclose=()=>{STREAM.connected=!!(STREAM.stockWS&&STREAM.stockWS.readyState===1);setStreamDot();
+      STREAM.tries++;setTimeout(connectCrypto,Math.min(30000,1000*Math.pow(2,STREAM.tries)));};
+    ws.onerror=()=>{try{ws.close();}catch(e){}};
+  }catch(e){}
+}
+function connectStocks(){
+  if(!FINNHUB||!('WebSocket' in window)) return;
+  const syms=((DATA&&DATA.council)||[]).map(c=>c.symbol).filter(s=>!String(s).includes('/'));
+  if(!syms.length) return;
+  try{
+    const ws=new WebSocket('wss://ws.finnhub.io?token='+encodeURIComponent(FINNHUB)); STREAM.stockWS=ws;
+    ws.onopen=()=>{syms.forEach(s=>ws.send(JSON.stringify({type:'subscribe',symbol:s})));STREAM.connected=true;setStreamDot();};
+    ws.onmessage=(ev)=>{try{const m=JSON.parse(ev.data);if(m.type==='trade'&&m.data)m.data.forEach(t=>{STREAM.live[t.s]={price:t.p,t:Date.now()};});scheduleTick();}catch(e){}};
+    ws.onclose=()=>{setTimeout(connectStocks,5000);};
+    ws.onerror=()=>{try{ws.close();}catch(e){}};
+  }catch(e){}
+}
+function subscribeRealtime(){          // Supabase Realtime: worker writes → instant UI
+  if(!LIVE_OK || !DESK || STREAM.chanFor===DESK.id) return;
+  try{
+    if(STREAM.chan) SB.removeChannel(STREAM.chan);
+    STREAM.chanFor=DESK.id;
+    STREAM.chan=SB.channel('desk-'+DESK.id)
+      .on('postgres_changes',{event:'UPDATE',schema:'public',table:'desks',filter:'id=eq.'+DESK.id},
+        (payload)=>{ DESK=payload.new||DESK; if(DESK.last_status)DATA=DESK.last_status; setStatus(); buildTape(); render(); })
+      .subscribe();
+  }catch(e){}
+}
+function startStreams(){ if(STREAM.started)return; STREAM.started=true; connectCrypto(); connectStocks(); }
+
+function Markets(v){
+  const g=$(`<div class="grid c12"></div>`);
+  let cbody;
+  if(MARKETS.err && !(MARKETS.list||[]).length) cbody=`<div class="empty">crypto feed unavailable (${esc(MARKETS.err)}) — loads live from CoinGecko in your browser.</div>`;
+  else if(!(MARKETS.list||[]).length) cbody='<div class="empty">loading live crypto…</div>';
+  else{
+    const w=$(`<div class="scroll"></div>`);
+    const t=$(`<table><thead><tr><th>#</th><th>COIN</th><th class="n">PRICE</th><th class="n">24H</th><th class="n">MKT CAP</th><th class="n">VOL 24H</th></tr></thead><tbody></tbody></table>`);
+    MARKETS.list.forEach((m,i)=>{const up=(m.price_change_percentage_24h||0)>=0;
+      t.querySelector('tbody').appendChild($(`<tr><td class="mut">${i+1}</td><td><b class="amber">${esc((m.symbol||'').toUpperCase())}</b> <span class="mut">${esc(m.name)}</span></td>
+        <td class="n">${money(m.current_price)}</td><td class="n ${up?'up':'down'}">${pct(m.price_change_percentage_24h)}</td>
+        <td class="n">$${num(m.market_cap,0)}</td><td class="n">$${num(m.total_volume,0)}</td></tr>`));});
+    w.appendChild(t); cbody=w;
+  }
+  g.appendChild(panel('Crypto · Live (CoinGecko, no key)', cbody, (MARKETS.list||[]).length+' assets', 'span12'));
+
+  const syms=((DATA&&DATA.council)||[]).map(c=>c.symbol).filter(s=>!String(s).includes('/'));
+  if(FINNHUB && syms.length){
+    const sb=$(`<div class="empty">loading live quotes…</div>`);
+    g.appendChild(panel('Equities · Live (Finnhub)', sb, syms.length+' symbols', 'span12'));
+    fetchStockQuotes(syms).then(rows=>{
+      const w=$(`<div class="scroll"></div>`);
+      const t=$(`<table><thead><tr><th>SYM</th><th class="n">PRICE</th><th class="n">CHG</th><th class="n">%</th><th class="n">HIGH</th><th class="n">LOW</th></tr></thead><tbody></tbody></table>`);
+      rows.forEach(q=>{const up=(q.dp||0)>=0; t.querySelector('tbody').appendChild($(`<tr><td class="amber">${esc(q.sym)}</td><td class="n">${money(q.c)}</td>
+        <td class="n ${up?'up':'down'}">${(q.d>=0?'+':'')}${num(q.d)}</td><td class="n ${up?'up':'down'}">${pct(q.dp)}</td><td class="n">${money(q.h)}</td><td class="n">${money(q.l)}</td></tr>`));});
+      sb.replaceWith(w); g.querySelector('.panel:last-child .pb').appendChild(w);
+    }).catch(()=>{ sb.textContent='live quotes unavailable'; });
+  } else {
+    g.appendChild(panel('Equities · Live',
+      `<div class="empty">Add a free <a class="amber" href="https://finnhub.io" target="_blank" rel="noopener">Finnhub</a> key as FINNHUB_API_KEY in config.js to stream live stock quotes (crypto above needs no key).</div>`,'', 'span12'));
+  }
+  v.appendChild(g);
+}
+
+function News(v){
+  const g=$(`<div class="grid c12"></div>`);
+  let body;
+  if(NEWS.err && !(NEWS.list||[]).length) body=`<div class="empty">news feed unavailable (${esc(NEWS.err)}). Some sources block cross-origin; add a free Finnhub key for a reliable wire.</div>`;
+  else if(!(NEWS.list||[]).length) body='<div class="empty">loading financial wire…</div>';
+  else{
+    const box=$(`<div></div>`);
+    NEWS.list.forEach(a=>box.appendChild($(`<a href="${esc(a.url)}" target="_blank" rel="noopener" style="display:block;text-decoration:none;color:inherit;padding:9px 0;border-bottom:1px solid var(--line)">
+      <div style="font-size:13px;font-weight:600;line-height:1.4">${esc(a.title)}</div>
+      <div class="mono mut" style="font-size:10px;margin-top:3px">${esc(a.source||'')} · ${esc(a.time||'')}</div></a>`)));
+    body=box;
+  }
+  g.appendChild(panel('Financial Wire · Live', body, NEWS.src||'free feed', 'span12'));
+  v.appendChild(g);
 }
 async function sbUpdate(fields){ if(!DESK)return; const {error}=await SB.from('desks').update(fields).eq('id',DESK.id);
   if(error){alert('Update failed: '+error.message);}else{await load();} }
@@ -219,7 +369,7 @@ function buildNav(){
 }
 document.addEventListener('keydown',e=>{
   if(/input|select|textarea/i.test((e.target.tagName||""))) return;
-  if(e.key>="1"&&e.key<="7"){const t=TABS[+e.key-1];if(t){TAB=t;render();buildNav();}}
+  if(e.key>="1"&&e.key<="9"){const t=TABS[+e.key-1];if(t){TAB=t;render();buildNav();}}
   if(e.key==="r"||e.key==="R")load();
 });
 
@@ -261,15 +411,18 @@ function setStatus(){
   const acc=document.getElementById('account');
   if(SESSION&&SESSION.user){acc.textContent='⏻ '+String(SESSION.user.email).split('@')[0];acc.removeAttribute('href');acc.onclick=()=>sbLogout();}
   else{acc.textContent='SIGN IN';acc.setAttribute('href','./login.html');acc.onclick=null;}
+  setStreamDot();
 }
 function buildTape(){
-  const t=document.getElementById('tape');
-  const items=(DATA&&DATA.council)||[];
-  if(!items.length){t.innerHTML='<span class="tk mut">no market data</span>';return;}
-  const one=items.map(c=>{const upd=c.direction==='long';const col=upd?'var(--up)':(c.direction==='short'?'var(--down)':'var(--mut)');
+  const t=document.getElementById('tape'); if(!t)return;
+  const parts=[];
+  ((DATA&&DATA.council)||[]).forEach(c=>{const upd=c.direction==='long';const col=upd?'var(--up)':(c.direction==='short'?'var(--down)':'var(--mut)');
     const arr=upd?'▲':(c.direction==='short'?'▼':'■');
-    return `<span class="tk"><b>${esc(c.symbol)}</b> ${money(c.price)} <span style="color:${col}">${arr} ${(c.conviction*100).toFixed(0)}%</span></span>`;}).join('');
-  t.innerHTML=one+one;   // duplicate for seamless loop
+    parts.push(`<span class="tk"><b>${esc(c.symbol)}</b> ${money(c.price)} <span style="color:${col}">${arr} ${(c.conviction*100).toFixed(0)}%</span></span>`);});
+  cryptoRows().slice(0,14).forEach(m=>{const up=(m.pct||0)>=0;const col=up?'var(--up)':'var(--down)';
+    parts.push(`<span class="tk"><b>${esc(m.sym)}</b> ${money(m.price)} <span style="color:${col}">${up?'▲':'▼'} ${(m.pct||0).toFixed(2)}%</span></span>`);});
+  if(!parts.length){t.innerHTML='<span class="tk mut">awaiting market data…</span>';return;}
+  const one=parts.join(''); t.innerHTML=one+one;   // duplicate for seamless loop
 }
 
 function render(){
@@ -281,7 +434,7 @@ function render(){
   document.getElementById('foot').textContent =
     `cycle ${DATA.cycle} · ${new Date(DATA.ts).toLocaleString()} · ${DESK?'LIVE via Supabase':'static snapshot'} · auto-refresh 30s`;
   v.innerHTML="";
-  ({Terminal,Council,Book,Brain,Controls,Workforce,Env}[TAB]||Terminal)(v);
+  ({Terminal,Markets,News,Council,Book,Brain,Controls,Workforce,Env}[TAB]||Terminal)(v);
 }
 
 // ── panels helper ──

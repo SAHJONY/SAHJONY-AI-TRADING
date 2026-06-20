@@ -21,8 +21,13 @@ function makeClient(state) {
       getSession: async () => ({ data: { session: state.session } }),
       signInWithPassword: async ({ email }) => { state.session = { user: { email } }; return { error: null }; },
       signOut: async () => { state.session = null; return { error: null }; },
-    }, from: () => q() };
+    }, from: () => q(),
+    channel: () => { const ch = { _cbs: [], on: (_e, _o, cb) => { ch._cbs.push(cb); return ch; }, subscribe: () => { state.channel = ch; return ch; } }; return ch; },
+    removeChannel: () => {},
+  };
 }
+const sockets = [];
+class FakeWS { constructor(url){ this.url=url; this.readyState=0; sockets.push(this); setTimeout(()=>{ this.readyState=1; this.onopen && this.onopen(); },0); } send(){} close(){ this.readyState=3; this.onclose && this.onclose(); } }
 
 function navClick(win, label) {
   const want = label.toUpperCase();
@@ -41,14 +46,24 @@ async function main() {
   const win = dom.window;
   win.SAHJONY_CONFIG = { SUPABASE_URL: 'https://x.supabase.co', SUPABASE_ANON_KEY: 'anon' };
   win.supabase = { createClient: () => makeClient(state) };
-  win.fetch = async () => ({ json: async () => statusJson });
+  win.WebSocket = FakeWS;
+  const CRYPTO = [{ symbol: 'btc', name: 'Bitcoin', current_price: 61000, price_change_percentage_24h: 2.4, market_cap: 1.2e12, total_volume: 3e10 }];
+  const ARTS = [{ title: 'Markets rally on cooling inflation', url: 'https://news.test/a', domain: 'reuters.com', seendate: '20260620T210000Z' }];
+  win.fetch = async (url) => {
+    if (/coingecko/.test(url)) return { ok: true, json: async () => CRYPTO };
+    if (/gdelt/.test(url)) return { ok: true, json: async () => ({ articles: ARTS }) };
+    return { ok: true, json: async () => statusJson };
+  };
   win.eval(appScript);
   await new Promise(r => setTimeout(r, 60));
 
-  check(win.document.querySelectorAll('#nav button').length === 7, 'all 7 function tabs present');
+  check(win.document.querySelectorAll('#nav button').length === 9, 'all 9 function tabs present');
   check(win.document.getElementById('tape').textContent.length > 0, 'ticker tape populated');
   check(viewText(win).includes('Equity'), 'Terminal cockpit renders (Equity/NAV)');
   check(viewText(win).includes('Council Heatmap') || viewText(win).includes('Heatmap'), 'Terminal shows council heatmap');
+  await win.fetchMarkets(true); await win.fetchNews(true);
+  navClick(win, 'Markets'); check(viewText(win).includes('BTC'), 'Markets tab renders live crypto (CoinGecko)');
+  navClick(win, 'News'); check(/cooling inflation/.test(viewText(win)), 'News tab renders live wire (GDELT)');
   navClick(win, 'Council'); check(viewText(win).includes('Intelligence Council'), 'Council tab renders');
   navClick(win, 'Brain'); check(viewText(win).includes('Chief Strategist'), 'Brain tab renders');
   navClick(win, 'Book'); check(viewText(win).toLowerCase().includes('positions'), 'Book tab renders');
@@ -78,6 +93,19 @@ async function main() {
   const flat = [...win.document.querySelectorAll('#view button')].find(b => /flatten/i.test(b.textContent));
   flat.onclick(); await new Promise(r => setTimeout(r, 20));
   check(state.updates.some(u => u.command === 'flatten'), 'Flatten click writes command=flatten');
+
+  // ── realtime streaming ──
+  check(win.document.getElementById('dStream').className.includes('live'), 'crypto WebSocket connects (STREAM dot live)');
+  const bws = sockets.find(s => /binance/.test(s.url));
+  check(!!bws, 'Binance crypto stream opened');
+  bws.onmessage({ data: JSON.stringify({ data: { s: 'BTCUSDT', c: '70000', P: '5.0' } }) });
+  await new Promise(r => setTimeout(r, 1000));
+  check(win.document.getElementById('tape').textContent.includes('70,000'), 'live crypto tick streams into the ticker tape');
+  check(!!state.channel, 'Supabase Realtime channel subscribed for the desk');
+  state.channel._cbs[0]({ new: { ...state.desks[0], last_status: { ...statusJson, account: { ...statusJson.account, equity: 987654 } } } });
+  await new Promise(r => setTimeout(r, 20));
+  navClick(win, 'Terminal');
+  check(viewText(win).includes('987,654'), 'Supabase Realtime push updates the dashboard instantly');
 
   console.log(`\nTERMINAL UI TEST PASSED ✓ (${passed} checks)`);
 }
