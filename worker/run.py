@@ -27,6 +27,7 @@ from workforce import Firm
 from workforce.reporter import build_status
 
 from worker import db_pg
+from worker.controls import flatten_positions, resolve_command
 from worker.crypto import decrypt
 
 log = get_logger("worker")
@@ -36,7 +37,7 @@ _MANAGED_ENV = [
     "ALPACA_API_KEY", "ALPACA_SECRET_KEY", "ALPACA_PAPER", "TICKERS", "BENCHMARK",
     "MAX_ALLOCATION_PCT", "MAX_TOTAL_DEPLOYED_PCT", "MIN_COUNCIL_CONVICTION",
     "AI_BRAIN_ENABLED", "ANTHROPIC_API_KEY", "OPENAI_API_KEY", "XAI_API_KEY",
-    "VOICE_API_KEY", "VOICE_ALERTS", "OWNER_PHONE", "FIRM_NAME",
+    "VOICE_API_KEY", "VOICE_ALERTS", "OWNER_PHONE", "FIRM_NAME", "TRADING_HALT",
 ]
 
 
@@ -62,8 +63,9 @@ def _resolve_mode(desk: Dict[str, Any], creds: Dict[str, str]) -> str:
     return "sim"
 
 
-def _apply_env(desk: Dict[str, Any], creds: Dict[str, str], mode: str) -> None:
+def _apply_env(desk: Dict[str, Any], creds: Dict[str, str], mode: str, halt: bool) -> None:
     _clear_env()
+    os.environ["TRADING_HALT"] = "true" if halt else "false"   # remote kill switch
     os.environ["TICKERS"] = ",".join(desk.get("tickers") or ["AAPL", "MSFT", "SPY"])
     os.environ["BENCHMARK"] = desk.get("benchmark") or "SPY"
     os.environ["MAX_ALLOCATION_PCT"] = str(desk.get("max_allocation_pct", 0.10))
@@ -94,7 +96,8 @@ def run_desk(conn, desk: Dict[str, Any]) -> None:
             log.error("desk %s: failed to decrypt %s: %s", desk_id, name, exc)
 
     mode = _resolve_mode(desk, creds)
-    _apply_env(desk, creds, mode)
+    effective_halt, action = resolve_command(desk.get("command"), desk.get("halt"))
+    _apply_env(desk, creds, mode, effective_halt)
     cfg = load_config()
 
     state = desk.get("state") or default_state()
@@ -105,6 +108,11 @@ def run_desk(conn, desk: Dict[str, Any]) -> None:
     try:
         client = get_broker(cfg)
         firm = Firm(cfg, client, db)
+        # one-shot command (flatten) runs before the cycle; halt then blocks re-entry
+        flattened = []
+        if action == "flatten":
+            flattened = flatten_positions(client, db, state, state.get("cycle", 0) + 1, cfg.mode)
+            log.info("desk %s FLATTEN command — closed %d position(s)", desk_id, len(flattened))
         trade = (not client.online) or client.is_market_open()
         result = firm.run_cycle(state, trade=trade)
         status = build_status(firm, cfg, state, result)
@@ -119,6 +127,9 @@ def run_desk(conn, desk: Dict[str, Any]) -> None:
         status["equity_curve"] = db_pg.equity_curve(conn, desk_id)
         status["recent_trades"] = db_pg.recent_trades(conn, desk_id)
         db_pg.save_desk_result(conn, desk_id, state, status, cfg.mode)
+        if desk.get("command"):   # acknowledge a one-shot command so it runs once
+            db_pg.clear_command(conn, desk_id,
+                                f"{desk['command']}: flattened {len(flattened)}" if action else "noop")
         conn.commit()
         log.info("desk %s ok — cycle %s mode=%s equity=%.2f",
                  desk_id, result["cycle"], cfg.mode, result["equity"])

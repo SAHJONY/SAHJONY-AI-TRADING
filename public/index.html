@@ -112,9 +112,18 @@
 <main id="view"></main>
 <footer id="foot">Loading…</footer>
 
+<script src="./config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const TABS = ["Overview","Council","AI Brain","Book","Environment","Workforce"];
+const TABS = ["Overview","Council","AI Brain","Book","Controls","Workforce","Environment"];
 let DATA = null, TAB = "Overview", ENV_ROWS = [];
+
+// ── Supabase live-control plane (optional; configured in config.js) ──────────
+const CFG = (window.SAHJONY_CONFIG||{});
+const LIVE_OK = !!(CFG.SUPABASE_URL && CFG.SUPABASE_ANON_KEY && window.supabase);
+const SB = LIVE_OK ? window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY) : null;
+let DESK = null;            // the owner's current desk row (when logged in)
+let SESSION = null;
 
 const $ = (h)=>{const d=document.createElement('div');d.innerHTML=h.trim();return d.firstChild;};
 const money = (n)=> "$"+Number(n||0).toLocaleString(undefined,{maximumFractionDigits:2});
@@ -127,13 +136,40 @@ function buildNav(){
     b.onclick=()=>{TAB=t;render();buildNav();};nav.appendChild(b);});
 }
 
+async function refreshDesk(){
+  if(!LIVE_OK){ return; }
+  try{
+    const { data:{ session } } = await SB.auth.getSession();
+    SESSION = session;
+    if(!session){ DESK=null; return; }
+    const { data } = await SB.from('desks').select('*').order('created_at').limit(1);
+    DESK = (data && data[0]) || null;
+  }catch(e){ DESK=null; }
+}
 async function load(){
   try{
-    const r = await fetch('./status.json?_='+Date.now());
-    DATA = await r.json();
-  }catch(e){ DATA={_error:String(e)}; }
+    await refreshDesk();
+    if(DESK && DESK.last_status){ DATA = DESK.last_status; }   // 100% live from the worker
+    else { const r = await fetch('./status.json?_='+Date.now()); DATA = await r.json(); }
+  }catch(e){
+    try{ const r=await fetch('./status.json?_='+Date.now()); DATA=await r.json(); }
+    catch(_){ DATA={_error:String(e)}; }
+  }
   buildNav(); render();
 }
+
+// ── live-control actions (RLS-protected: only the owner's own desks) ─────────
+async function sbUpdate(fields){
+  if(!DESK) return;
+  const { error } = await SB.from('desks').update(fields).eq('id', DESK.id);
+  if(error){ alert('Update failed: '+error.message); } else { await load(); }
+}
+async function sbCommand(command){ await sbUpdate({ command }); }
+async function sbLogin(email, password){
+  const { error } = await SB.auth.signInWithPassword({ email, password });
+  if(error){ alert('Login failed: '+error.message); } else { await load(); }
+}
+async function sbLogout(){ await SB.auth.signOut(); DESK=null; SESSION=null; await load(); }
 
 function sparkline(curve){
   if(!curve||curve.length<2) return '<div class="note">No equity history yet.</div>';
@@ -158,7 +194,7 @@ function render(){
   modeEl.style.color = DATA.mode==='LIVE'?'var(--bad)':(DATA.mode==='paper'?'var(--acc2)':'var(--mut)');
   modeEl.style.borderColor = DATA.mode==='LIVE'?'var(--bad)':'var(--line)';
   v.innerHTML="";
-  ({Overview,Council,"AI Brain":Brain,Book,Environment:EnvPage,Workforce}[TAB]||Overview)(v);
+  ({Overview,Council,"AI Brain":Brain,Book,Controls,Environment:EnvPage,Workforce}[TAB]||Overview)(v);
 }
 
 function Overview(v){
@@ -334,6 +370,90 @@ function EnvPage(v){
   out.querySelector('#dlenv').onclick=()=>{const b=new Blob([document.getElementById('envout').textContent],{type:'text/plain'});
     const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='.env';a.click();};
   vc.querySelector('#copyvc').onclick=()=>navigator.clipboard.writeText(document.getElementById('vcout').textContent);
+}
+
+function Controls(v){
+  // 1) Not configured → setup instructions (dashboard still works read-only)
+  if(!LIVE_OK){
+    v.appendChild($(`<div class="card"><h3>Live controls — setup required</h3>
+      <div class="note">The dashboard is currently a read-only snapshot. To control the desk live
+      (kill switch, start/stop, flatten, edit config) from here:
+      <ol style="margin:8px 0 0 18px;line-height:1.7">
+        <li>Create a Supabase project and run <code>supabase/migrations/*.sql</code>.</li>
+        <li>Put your <code>SUPABASE_URL</code> + anon key in <code>public/config.js</code> and redeploy.</li>
+        <li>Run the worker (<code>python -m worker.run</code>) on a host/cron so it obeys your controls.</li>
+      </ol>
+      The anon key is public-safe — Row-Level Security means you only ever see your own desks.</div></div>`));
+    return;
+  }
+  // 2) Configured but not signed in → owner login
+  if(!SESSION){
+    const c=$(`<div class="card" style="max-width:420px"><h3>Owner sign-in</h3>
+      <div class="note" style="margin-bottom:12px">Sign in to control your desk. Accounts are managed in Supabase Auth.</div>
+      <input class="f" id="lemail" type="email" placeholder="email" style="margin-bottom:8px">
+      <input class="f" id="lpw" type="password" placeholder="password" style="margin-bottom:12px">
+      <button class="act" id="lbtn">Sign in</button></div>`);
+    v.appendChild(c);
+    c.querySelector('#lbtn').onclick=()=>sbLogin(c.querySelector('#lemail').value.trim(), c.querySelector('#lpw').value);
+    return;
+  }
+  // 3) Signed in → live control panel for the owner's desk
+  const d=DESK||{};
+  const hd=$(`<div class="card"><div class="row" style="border:0">
+      <span><b>${esc(d.name||'My Desk')}</b> <span class="tag">${esc(d.mode||'sim')}</span>
+        ${d.active?'<span class="tag on">active</span>':'<span class="tag off">stopped</span>'}
+        ${d.halt?'<span class="tag off">HALTED</span>':'<span class="tag on">trading</span>'}</span>
+      <span class="mut" style="font-size:12px">${SESSION.user?esc(SESSION.user.email):''} ·
+        <a href="#" id="logout" style="color:var(--acc)">sign out</a></span>
+    </div>
+    <div class="note">Last worker run: ${d.last_run_at?new Date(d.last_run_at).toLocaleString():'never — start the worker'}</div></div>`);
+  v.appendChild(hd);
+  hd.querySelector('#logout').onclick=(e)=>{e.preventDefault();sbLogout();};
+
+  // kill switch + lifecycle
+  const act=$(`<div class="card" style="margin-top:16px"><h3>Desk controls</h3>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"></div></div>`);
+  const bar=act.querySelector('div');
+  const mkBtn=(label,cls,fn)=>{const b=$(`<button class="${cls}">${label}</button>`);b.onclick=fn;return b;};
+  if(d.halt) bar.appendChild(mkBtn('▶ Resume trading','act',()=>sbUpdate({halt:false})));
+  else bar.appendChild(mkBtn('⛔ HALT new risk','del',()=>sbUpdate({halt:true})));
+  if(d.active) bar.appendChild(mkBtn('⏸ Stop desk','ghost',()=>{if(confirm('Pause this desk? The worker will skip it.'))sbUpdate({active:false});}));
+  else bar.appendChild(mkBtn('▶ Start desk','act',()=>sbUpdate({active:true})));
+  bar.appendChild(mkBtn('✕ Flatten all positions','del',()=>{if(confirm('Sell ALL open positions on the next worker cycle?'))sbCommand('flatten');}));
+  act.appendChild($(`<div class="note">Halt & flatten suspend NEW risk but always allow exits. A halted desk keeps reporting.</div>`));
+  if(d.command) act.appendChild($(`<div class="note">⏳ pending command: <b>${esc(d.command)}</b> (applies next cycle)</div>`));
+  v.appendChild(act);
+
+  // config: tickers + risk caps
+  const cfgc=$(`<div class="card" style="margin-top:16px"><h3>Configuration</h3>
+    <div class="row"><span>Tickers</span><input class="f" id="ctk" style="max-width:280px" value="${esc((d.tickers||[]).join(','))}"></div>
+    <div class="row"><span>Per-position cap (≤0.15)</span><input class="f" id="cmax" style="max-width:120px" value="${d.max_allocation_pct??0.1}"></div>
+    <div class="row"><span>Total-deployed cap (≤0.80)</span><input class="f" id="ctot" style="max-width:120px" value="${d.max_total_deployed_pct??0.6}"></div>
+    <div class="row"><span>Min conviction</span><input class="f" id="cmin" style="max-width:120px" value="${d.min_conviction??0.55}"></div>
+    <div style="margin-top:12px"><button class="act" id="csave">Save configuration</button></div></div>`);
+  v.appendChild(cfgc);
+  cfgc.querySelector('#csave').onclick=()=>sbUpdate({
+    tickers: cfgc.querySelector('#ctk').value.split(',').map(s=>s.trim().toUpperCase()).filter(Boolean),
+    max_allocation_pct: parseFloat(cfgc.querySelector('#cmax').value)||0.1,
+    max_total_deployed_pct: parseFloat(cfgc.querySelector('#ctot').value)||0.6,
+    min_conviction: parseFloat(cfgc.querySelector('#cmin').value)||0.55,
+  });
+
+  // mode + live arming (guarded)
+  const md=$(`<div class="card" style="margin-top:16px"><h3>Trading mode</h3>
+    <div class="row"><span>Mode</span><select class="f" id="cmode" style="max-width:160px">
+      <option value="sim">sim (offline)</option><option value="paper">paper</option><option value="live">LIVE (real money)</option>
+    </select></div>
+    <div class="note">LIVE also requires broker keys on the desk and the deliberate live opt-in.
+    Switching to LIVE will ask for confirmation.</div>
+    <div style="margin-top:12px"><button class="act" id="msave">Apply mode</button></div></div>`);
+  v.appendChild(md);
+  md.querySelector('#cmode').value = d.mode||'sim';
+  md.querySelector('#msave').onclick=()=>{
+    const m=md.querySelector('#cmode').value;
+    if(m==='live' && !confirm('Arm LIVE real-money trading for this desk? Real orders may be placed.')) return;
+    sbUpdate({ mode:m, live_ack: m==='live' });
+  };
 }
 
 function Workforce(v){

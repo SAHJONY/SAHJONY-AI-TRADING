@@ -83,6 +83,16 @@ def recent_trades(conn: psycopg.Connection, desk_id: str, limit: int = 15) -> Li
         return cur.fetchall()
 
 
+def clear_command(conn: psycopg.Connection, desk_id: str, result: str) -> None:
+    """Mark a one-shot command handled so it runs exactly once."""
+    with conn.cursor() as cur:
+        cur.execute(
+            """UPDATE public.desks
+               SET command = NULL, command_done_at = now(), command_result = %s
+               WHERE id = %s""",
+            (result[:500], desk_id))
+
+
 def save_desk_result(conn: psycopg.Connection, desk_id: str, state: Dict[str, Any],
                      status: Dict[str, Any], mode: str) -> None:
     with conn.cursor() as cur:
