@@ -23,7 +23,7 @@ from database import Database
 from utils.alpaca_client import AlpacaClient
 from utils.state_store import default_state, save_state, load_state
 from workforce import Firm
-from workforce.reporter import build_status, write_status
+from workforce.reporter import build_status, write_status, write_investor_views
 
 
 def _check(cond, msg):
@@ -72,6 +72,23 @@ def main() -> int:
     # no fabricated 000/0000 wheel pricks should appear as real numbers — sanity on positions
     for pos in st["positions"]:
         _check(pos["shares"] >= 0, f"position {pos['symbol']} has sane share count")
+
+    # ── investor read-only share links ──
+    inv_id = db.upsert_investor("Test Investor", "test@example.com", kind="investor")
+    db.record_contribution(inv_id, 50000.0, 1.0)
+    token = "tok_test_0123456789abcdef"
+    db.set_share_token(inv_id, token)
+    _check(db.get_investor_by_token(token)["id"] == inv_id, "investor resolvable by share token")
+    inv_status = build_status(firm, cfg, state, result)  # rebuild with the new investor in CRM
+    inv_dir = os.path.join(_TMP, "investors")
+    n = write_investor_views(db, inv_status, out_dir=inv_dir)
+    _check(n == 1, "one investor share view written")
+    iv = json.load(open(os.path.join(inv_dir, token + ".json")))
+    _check(iv["investor"]["name"] == "Test Investor", "share view carries the investor's name")
+    _check(iv["investor"]["contributed"] == 50000.0, "share view shows contribution")
+    _check("disclaimer" in iv, "share view carries the paper-trading disclaimer")
+    blob = json.dumps(iv)
+    _check(token not in blob and "test@example.com" not in blob, "share view leaks no token or email")
 
     db.close()
     print("\nALL DRY-RUN CHECKS PASSED ✓")

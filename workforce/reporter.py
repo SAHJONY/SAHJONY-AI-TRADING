@@ -14,6 +14,11 @@ from typing import Any, Dict
 
 from config import Config
 
+_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# Per-investor snapshots are generated at report time and are NOT committed
+# (they carry an investor's own name + stake). public/investors/ is gitignored.
+INVESTORS_DIR = os.path.join(_ROOT, "public", "investors")
+
 # The 12-agent roster + operational workforce, surfaced to the dashboard.
 AGENT_ROSTER = [
     ("Citadel Systematic", "Trend / systematic execution"),
@@ -161,6 +166,66 @@ def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[st
         "executed_this_cycle": cycle_result.get("executed", []),
         "env_catalog": _env_catalog(),
     }
+
+
+def build_investor_view(status: Dict[str, Any], investor: Dict[str, Any],
+                        total_units: float) -> Dict[str, Any]:
+    """A read-only statement for ONE investor: their stake + fund-level aggregates.
+
+    Contains no other investor's data and no secrets. The fund's current NAV per
+    unit is marked from trading equity, so an investor's value tracks the fund
+    proportionally to their units (standard pooled-fund accounting)."""
+    equity = float(status.get("account", {}).get("equity", 0.0) or 0.0)
+    units = float(investor.get("units", 0.0) or 0.0)
+    contributed = float(investor.get("contributed", 0.0) or 0.0)
+    nav_per_unit = (equity / total_units) if total_units > 0 else 1.0
+    current_value = units * nav_per_unit
+    ownership = (units / total_units) if total_units > 0 else 0.0
+    return {
+        "firm": status.get("firm"),
+        "mode": status.get("mode"),
+        "ts": status.get("ts"),
+        "cycle": status.get("cycle"),
+        "disclaimer": "Paper-trading simulation — illustrative only, not investment "
+                      "advice, and not an offer or solicitation. No real money is at risk.",
+        "investor": {
+            "name": investor.get("name"),
+            "kind": investor.get("kind"),
+            "units": round(units, 4),
+            "ownership_pct": round(ownership * 100, 3),
+            "contributed": round(contributed, 2),
+            "nav_per_unit": round(nav_per_unit, 4),
+            "current_value": round(current_value, 2),
+            "unrealized_pnl": round(current_value - contributed, 2),
+            "return_pct": round((current_value / contributed - 1.0) * 100, 3) if contributed > 0 else 0.0,
+        },
+        "fund": {
+            "equity": round(equity, 2),
+            "total_return_pct": status.get("pnl", {}).get("total_return_pct", 0.0),
+            "aum": status.get("crm", {}).get("aum", 0.0),
+            "investors": status.get("crm", {}).get("investors", 0),
+        },
+        "equity_curve": status.get("equity_curve", []),
+    }
+
+
+def write_investor_views(db, status: Dict[str, Any], out_dir: str = INVESTORS_DIR) -> int:
+    """Write a token-keyed snapshot for every investor with a share link. Returns
+    the count written. Each file is the capability target of /investor?t=<token>."""
+    shared = db.shared_investors()
+    if not shared:
+        return 0
+    total_units = float(db.fund_summary().get("units", 0.0) or 0.0)
+    os.makedirs(out_dir, exist_ok=True)
+    written = 0
+    for inv in shared:
+        token = (inv.get("share_token") or "").strip()
+        if not token:
+            continue
+        view = build_investor_view(status, inv, total_units)
+        write_status(view, os.path.join(out_dir, token + ".json"))  # reuse atomic writer
+        written += 1
+    return written
 
 
 def write_status(status: Dict[str, Any], path: str) -> None:

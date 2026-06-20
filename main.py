@@ -23,7 +23,7 @@ from utils.alpaca_client import AlpacaClient
 from utils.logger import get_logger
 from utils.state_store import load_state, save_state
 from workforce import Firm
-from workforce.reporter import build_status, console_board, write_status
+from workforce.reporter import build_status, console_board, write_investor_views, write_status
 from workforce.workforce import STATUS_PATH
 
 log = get_logger("main")
@@ -37,6 +37,9 @@ def run_once(firm: Firm, state, force: bool) -> dict:
     result = firm.run_cycle(state, trade=trade)
     status = build_status(firm, firm.cfg, state, result)
     write_status(status, STATUS_PATH)
+    shared = write_investor_views(firm.db, status)  # token-keyed read-only investor snapshots
+    if shared:
+        log.info("Refreshed %d investor share view(s).", shared)
     save_state(state)
     alert = firm.notifier.maybe_alert(status)
     if alert:

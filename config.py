@@ -87,6 +87,9 @@ class Config:
 
     # firm / branding
     firm_name: str = "SAHJONY CAPITAL LLC"
+    # public base URL of the deployed dashboard, used to build investor share links
+    # (e.g. https://your-app.vercel.app). No trailing slash needed.
+    public_base_url: str = ""
 
     # voice comms (Bland.ai) — owner/investor phone alerts
     voice_alerts: bool = False
@@ -136,6 +139,7 @@ def load_config() -> Config:
         ladder_enable_averaging=_b("LADDER_ENABLE_AVERAGING", True),
         ladder_catastrophic_pct=_clamp(_f("LADDER_CATASTROPHIC_PCT", 0.40), 0.15, 0.90),
         firm_name=(os.getenv("FIRM_NAME", "SAHJONY CAPITAL LLC") or "SAHJONY CAPITAL LLC").strip(),
+        public_base_url=(os.getenv("PUBLIC_BASE_URL", "") or "").strip().rstrip("/"),
         voice_alerts=_b("VOICE_ALERTS", False),
         voice_language=(os.getenv("VOICE_LANGUAGE", "en") or "en").strip(),
         voice_name=(os.getenv("VOICE_NAME", "june") or "june").strip(),

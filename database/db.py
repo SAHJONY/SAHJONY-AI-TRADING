@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS investors (
     contributed   REAL NOT NULL DEFAULT 0,
     units         REAL NOT NULL DEFAULT 0,
     notes         TEXT,
+    share_token   TEXT,                              -- read-only investor link capability
     created_at    TEXT NOT NULL,
     updated_at    TEXT NOT NULL,
     UNIQUE(email)
@@ -121,7 +122,14 @@ class Database:
         self.conn.row_factory = sqlite3.Row
         self.conn.execute("PRAGMA journal_mode=WAL;")
         self.conn.executescript(_SCHEMA)
+        self._migrate()
         self.conn.commit()
+
+    def _migrate(self) -> None:
+        """Backfill columns added after a DB was first created (additive only)."""
+        cols = {r["name"] for r in self.conn.execute("PRAGMA table_info(investors)").fetchall()}
+        if "share_token" not in cols:
+            self.conn.execute("ALTER TABLE investors ADD COLUMN share_token TEXT")
 
     def close(self) -> None:
         try:
@@ -201,6 +209,28 @@ class Database:
 
     def list_investors(self) -> List[Dict[str, Any]]:
         rows = self.conn.execute("SELECT * FROM investors ORDER BY contributed DESC").fetchall()
+        return [dict(r) for r in rows]
+
+    # ── investor read-only share links ───────────────────────────────────────
+    def set_share_token(self, investor_id: int, token: str) -> None:
+        self.conn.execute("UPDATE investors SET share_token=?, updated_at=? WHERE id=?",
+                          (token, _now(), investor_id))
+        self.conn.commit()
+
+    def clear_share_token(self, investor_id: int) -> None:
+        self.conn.execute("UPDATE investors SET share_token=NULL, updated_at=? WHERE id=?",
+                          (_now(), investor_id))
+        self.conn.commit()
+
+    def get_investor_by_token(self, token: str) -> Optional[Dict[str, Any]]:
+        if not token:
+            return None
+        r = self.conn.execute("SELECT * FROM investors WHERE share_token=?", (token,)).fetchone()
+        return dict(r) if r else None
+
+    def shared_investors(self) -> List[Dict[str, Any]]:
+        rows = self.conn.execute(
+            "SELECT * FROM investors WHERE share_token IS NOT NULL AND share_token != ''").fetchall()
         return [dict(r) for r in rows]
 
     def get_investor(self, investor_id: int) -> Optional[Dict[str, Any]]:

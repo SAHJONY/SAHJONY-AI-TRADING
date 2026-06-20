@@ -15,12 +15,20 @@ CLI:
 from __future__ import annotations
 
 import argparse
+import secrets
 from typing import Any, Dict, List, Optional
 
+from config import load_config
 from database import Database
 from utils.logger import get_logger
 
 log = get_logger("crm")
+
+
+def _build_url(base_url: str, token: str) -> str:
+    base = (base_url or "").strip().rstrip("/")
+    path = f"/investor?t={token}"
+    return (base + path) if base else path
 
 
 class CRM:
@@ -60,6 +68,32 @@ class CRM:
     def fund_summary(self) -> Dict[str, Any]:
         return self.db.fund_summary()
 
+    # ── read-only share links ─────────────────────────────────────────────────
+    def share_link(self, investor_id: int, base_url: str = "") -> Dict[str, Any]:
+        """Get (or mint) an investor's unguessable read-only link token."""
+        inv = self.db.get_investor(investor_id)
+        if not inv:
+            return {"error": f"investor #{investor_id} not found"}
+        token = (inv.get("share_token") or "").strip()
+        if not token:
+            token = secrets.token_urlsafe(24)
+            self.db.set_share_token(investor_id, token)
+            log.info("CRM share link issued for investor #%s", investor_id)
+        return {"id": inv["id"], "name": inv["name"], "token": token,
+                "url": _build_url(base_url, token)}
+
+    def revoke_share(self, investor_id: int) -> Dict[str, Any]:
+        inv = self.db.get_investor(investor_id)
+        if not inv:
+            return {"error": f"investor #{investor_id} not found"}
+        self.db.clear_share_token(investor_id)
+        log.info("CRM share link revoked for investor #%s", investor_id)
+        return {"id": inv["id"], "name": inv["name"], "revoked": True}
+
+    def list_links(self, base_url: str = "") -> List[Dict[str, Any]]:
+        return [{"id": i["id"], "name": i["name"], "url": _build_url(base_url, i["share_token"])}
+                for i in self.db.shared_investors()]
+
 
 # ── CLI ───────────────────────────────────────────────────────────────────────
 def _main(argv=None) -> int:
@@ -86,8 +120,17 @@ def _main(argv=None) -> int:
     s.add_argument("--nav", type=float, default=1.0)
     sub.add_parser("summary", help="fund-level CRM summary")
 
+    sh = sub.add_parser("share", help="issue/print an investor's read-only link")
+    sh.add_argument("--id", type=int, required=True)
+    sh.add_argument("--base-url", help="override PUBLIC_BASE_URL for the printed link")
+    un = sub.add_parser("unshare", help="revoke an investor's read-only link")
+    un.add_argument("--id", type=int, required=True)
+    lk = sub.add_parser("links", help="list all active investor share links")
+    lk.add_argument("--base-url", help="override PUBLIC_BASE_URL for the printed links")
+
     args = p.parse_args(argv)
     crm = CRM()
+    base_url = getattr(args, "base_url", None) or load_config().public_base_url
 
     if args.cmd == "add":
         cid = crm.add_client(args.name, args.email, args.phone, args.kind, args.notes)
@@ -110,6 +153,23 @@ def _main(argv=None) -> int:
     elif args.cmd == "summary":
         import json
         print(json.dumps(crm.fund_summary(), indent=2))
+    elif args.cmd == "share":
+        res = crm.share_link(args.id, base_url)
+        if res.get("error"):
+            print("✗", res["error"])
+        else:
+            print(f"✓ read-only link for #{res['id']} {res['name']}:\n  {res['url']}")
+            if not base_url:
+                print("  (set PUBLIC_BASE_URL or pass --base-url for a full shareable URL)")
+    elif args.cmd == "unshare":
+        res = crm.revoke_share(args.id)
+        print("✗ " + res["error"] if res.get("error") else f"✓ revoked link for #{res['id']} {res['name']}")
+    elif args.cmd == "links":
+        rows = crm.list_links(base_url)
+        if not rows:
+            print("(no active share links — issue one with: crm share --id N)")
+        for r in rows:
+            print(f"#{r['id']:<3} {r['name']:<24} {r['url']}")
     return 0
 
 
