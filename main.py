@@ -1,94 +1,85 @@
-#!/usr/bin/env python
+"""SAHJONY CAPITAL LLC — autonomous trading desk runtime.
+
+Loads persistent state, runs the agentic workforce for one or more cycles,
+persists state + the dashboard snapshot, and prints a health board. Designed to
+be driven by cron/launchd at `--once` per tick during market hours; `--cycles N`
+walks the offline simulator for a verifiable dry run; `--loop` runs an internal
+loop.
+
+Examples:
+  python main.py --once               # one cycle (cron entry point)
+  python main.py --cycles 12          # dry-run: 12 sim cycles, walks the market
+  python main.py --loop               # internal loop every CYCLE_MINUTES
+  python main.py --once --force       # trade even if the market clock says closed
+"""
+from __future__ import annotations
+
 import argparse
-import json
-import logging
-import sys
-from datetime import datetime
-from pathlib import Path
+import time
 
-from config import settings
+from config import load_config
+from database import Database
 from utils.alpaca_client import AlpacaClient
-from strategies import WheelStrategy, TrailingLadderStrategy
+from utils.logger import get_logger
+from utils.state_store import load_state, save_state
+from workforce import Firm
+from workforce.reporter import build_status, console_board, write_status
+from workforce.workforce import STATUS_PATH
 
-# ----------------------------------------------------------------------
-# Logging configuration
-# ----------------------------------------------------------------------
-log_level = getattr(logging, settings.log_level, logging.INFO)
-logging.basicConfig(
-    level=log_level,
-    format='%(asctime)s %(levelname)s %(name)s | %(message)s',
-    handlers=[
-        logging.FileHandler('logs/bot.log'),
-        logging.StreamHandler(sys.stdout),
-    ],
-)
-log = logging.getLogger('ai-trading-bot')
+log = get_logger("main")
 
-# ----------------------------------------------------------------------
-# Helper: load / persist state
-# ----------------------------------------------------------------------
-STATE_PATH = Path(__file__).parent / 'state.json'
 
-def load_state() -> dict:
-    if STATE_PATH.is_file():
-        try:
-            with open(STATE_PATH, 'r') as f:
-                return json.load(f)
-        except json.JSONDecodeError as exc:
-            log.error('Corrupt state.json – resetting: %s', exc)
-    return {}
+def run_once(firm: Firm, state, force: bool) -> dict:
+    market_open = (not firm.client.online) or firm.client.is_market_open()
+    trade = market_open or force
+    if not trade:
+        log.info("Market closed — research/report only (use --force to override).")
+    result = firm.run_cycle(state, trade=trade)
+    status = build_status(firm, firm.cfg, state, result)
+    write_status(status, STATUS_PATH)
+    save_state(state)
+    alert = firm.notifier.maybe_alert(status)
+    if alert:
+        log.info("Voice alert: %s", alert)
+    print(console_board(status))
+    return result
 
-def save_state(state: dict) -> None:
-    with open(STATE_PATH, 'w') as f:
-        json.dump(state, f, indent=2)
 
-# ----------------------------------------------------------------------
-# Core execution loop
-# ----------------------------------------------------------------------
-def run_bot(dry_run: bool = False) -> None:
-    log.info('=== Bot start (%s) ===', datetime.utcnow().isoformat())
+def main(argv=None) -> int:
+    ap = argparse.ArgumentParser(description="SAHJONY CAPITAL LLC trading desk")
+    ap.add_argument("--once", action="store_true", help="run a single cycle (default)")
+    ap.add_argument("--cycles", type=int, default=0, help="run N cycles (advances the sim each cycle)")
+    ap.add_argument("--loop", action="store_true", help="loop every CYCLE_MINUTES")
+    ap.add_argument("--force", action="store_true", help="trade even if market clock says closed")
+    args = ap.parse_args(argv)
+
+    cfg = load_config()
+    log.info("Booting %s — mode=%s, tickers=%s", cfg.firm_name, cfg.mode, ",".join(cfg.tickers))
+    db = Database()
+    client = AlpacaClient(cfg)
+    firm = Firm(cfg, client, db)
     state = load_state()
 
-    client = AlpacaClient()
-
-    # Instantiate strategies (configurable later)
-    wheel = WheelStrategy(client, ticker='AAPL', allocation=0.10)
-    ladder = TrailingLadderStrategy(client, ticker='AAPL', allocation=0.20)
-
-    # Run strategies sequentially (could be parallelised later)
-    state = wheel.run(state)
-    state = ladder.run(state)
-
-    if dry_run:
-        log.info('Dry‑run mode – state not persisted')
-    else:
-        save_state(state)
-        log.info('State persisted to %s', STATE_PATH)
-
-    # Simple console dashboard
-    recent_wheel = state.get('wheel', [])[-1:] if state.get('wheel') else []
-    recent_ladder = state.get('ladder', [])[-1:] if state.get('ladder') else []
-    print('\n=== Bot Dashboard ===')
-    print(f'Timestamp: {datetime.utcnow().isoformat()} UTC')
-    account = client.get_account()
-    print(f"Equity (from Alpaca): ${account.get('equity') if account else 'N/A'}")
-    print(f"Wheel cycles executed: {len(state.get('wheel', []))}")
-    print(f"Ladder cycles executed: {len(state.get('ladder', []))}")
-    if recent_wheel:
-        print(' Last wheel action:', recent_wheel[0])
-    if recent_ladder:
-        print(' Last ladder action:', recent_ladder[0])
-    print('=====================\n')
-
-# ----------------------------------------------------------------------
-# CLI entry point
-# ----------------------------------------------------------------------
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Autonomous Alpaca trading bot')
-    parser.add_argument('--dry-run', action='store_true', help='Execute strategies but do not write state.json')
-    args = parser.parse_args()
     try:
-        run_bot(dry_run=args.dry_run)
-    except Exception as exc:
-        log.exception('Unhandled exception in bot: %s', exc)
-        sys.exit(1)
+        if args.cycles and args.cycles > 0:
+            for i in range(args.cycles):
+                run_once(firm, state, force=True)
+                client.advance_sim(1)  # walk the offline simulator
+            return 0
+        if args.loop:
+            log.info("Entering loop (every %d min). Ctrl-C to stop.", cfg.cycle_minutes)
+            while True:
+                run_once(firm, state, force=args.force)
+                client.advance_sim(1)
+                time.sleep(cfg.cycle_minutes * 60)
+        run_once(firm, state, force=args.force)  # default: one cycle
+        return 0
+    except KeyboardInterrupt:
+        log.info("Stopped by user.")
+        return 0
+    finally:
+        db.close()
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

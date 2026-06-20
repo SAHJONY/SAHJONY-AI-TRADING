@@ -1,7 +1,27 @@
-node_modules/
-.next/
-coverage/
-.DS_Store
-npm-debug.log
+# secrets & local env — NEVER commit
 .env
-.next/
+.env.*
+!.env.template
+
+# runtime state, database, logs
+state.json
+data/
+logs/
+*.log
+*.db
+*.db-wal
+*.db-shm
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+
+# os / editor
+.DS_Store
+.vscode/
+.idea/
+
+# NOTE: public/status.json IS committed — it is the dashboard's (secret-free) data snapshot.

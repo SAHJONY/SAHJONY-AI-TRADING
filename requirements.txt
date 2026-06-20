@@ -1,6 +1,14 @@
-alpaca-py>=0.7.0
-pydantic>=2.0
-python-dotenv>=1.0
+# Core engine
+numpy>=1.24
+pandas>=2.0
+python-dotenv>=1.0.0
 requests>=2.31
-fastapi
-uvicorn
+
+# Broker (paper trading)
+alpaca-py>=0.20.0
+
+# AI brain (primary engine) — Claude via the official Anthropic SDK
+anthropic>=0.40.0
+
+# The system also runs offline-sim with only numpy + pandas + python-dotenv:
+# no broker keys, no LLM keys, zero real orders. Install the rest to go live.

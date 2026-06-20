@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SAHJONY CAPITAL LLC — Agentic Trading Desk</title>
+<style>
+  :root{
+    --bg:#0a0e17; --panel:#111726; --panel2:#0e1420; --line:#1e2940;
+    --txt:#e6edf7; --mut:#8294b4; --acc:#22d3ee; --acc2:#34d399; --warn:#fbbf24;
+    --bad:#f87171; --good:#34d399; --chip:#16203a;
+    --mono:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(1200px 600px at 70% -10%,#13203a 0%,var(--bg) 55%);
+    color:var(--txt);font-family:var(--sans);line-height:1.45;min-height:100vh}
+  header{display:flex;align-items:center;justify-content:space-between;gap:16px;
+    padding:18px 26px;border-bottom:1px solid var(--line);position:sticky;top:0;
+    background:rgba(10,14,23,.82);backdrop-filter:blur(10px);z-index:10}
+  .brand{display:flex;align-items:center;gap:14px}
+  .logo{width:40px;height:40px;border-radius:11px;display:grid;place-items:center;font-weight:800;
+    background:linear-gradient(135deg,var(--acc),var(--acc2));color:#04121a;font-size:18px}
+  .brand h1{font-size:17px;margin:0;letter-spacing:.4px}
+  .brand .sub{font-size:11.5px;color:var(--mut);letter-spacing:.5px;text-transform:uppercase}
+  .mode{font-family:var(--mono);font-size:12px;padding:5px 11px;border-radius:999px;
+    border:1px solid var(--line);background:var(--chip);color:var(--acc)}
+  nav{display:flex;gap:6px;padding:12px 26px;flex-wrap:wrap;border-bottom:1px solid var(--line)}
+  nav button{background:transparent;border:1px solid transparent;color:var(--mut);cursor:pointer;
+    padding:8px 15px;border-radius:9px;font-size:13.5px;font-weight:600;font-family:var(--sans)}
+  nav button:hover{color:var(--txt);background:var(--panel)}
+  nav button.active{color:var(--acc);background:var(--panel);border-color:var(--line)}
+  main{padding:22px 26px;max-width:1240px;margin:0 auto}
+  .grid{display:grid;gap:16px}
+  .g4{grid-template-columns:repeat(4,1fr)} .g3{grid-template-columns:repeat(3,1fr)}
+  .g2{grid-template-columns:repeat(2,1fr)}
+  @media(max-width:900px){.g4,.g3,.g2{grid-template-columns:1fr 1fr}}
+  @media(max-width:620px){.g4,.g3,.g2{grid-template-columns:1fr}}
+  .card{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);
+    border-radius:15px;padding:17px 18px}
+  .card h3{margin:0 0 12px;font-size:12px;letter-spacing:.6px;text-transform:uppercase;color:var(--mut);font-weight:700}
+  .kpi .v{font-family:var(--mono);font-size:25px;font-weight:700}
+  .kpi .l{color:var(--mut);font-size:12px;margin-top:3px}
+  .pos{color:var(--good)} .neg{color:var(--bad)} .mut{color:var(--mut)}
+  .row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid var(--line)}
+  .row:last-child{border-bottom:0}
+  .tag{font-family:var(--mono);font-size:11px;padding:2px 8px;border-radius:6px;background:var(--chip);color:var(--mut)}
+  .tag.on{color:var(--good)} .tag.off{color:var(--bad)} .tag.long{color:var(--acc2)} .tag.flat{color:var(--mut)}
+  .bar{height:7px;background:var(--line);border-radius:5px;overflow:hidden}
+  .bar>i{display:block;height:100%;background:linear-gradient(90deg,var(--acc),var(--acc2))}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{text-align:left;padding:8px 9px;border-bottom:1px solid var(--line)}
+  th{color:var(--mut);font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+  td.num,th.num{text-align:right;font-family:var(--mono)}
+  .agent{padding:9px 0;border-bottom:1px solid var(--line)}
+  .agent:last-child{border-bottom:0}
+  .agent .top{display:flex;justify-content:space-between;gap:8px;font-size:13px}
+  .agent .rat{color:var(--mut);font-size:11.5px;margin-top:2px;font-family:var(--mono)}
+  .sbar{height:5px;border-radius:4px;background:var(--line);margin-top:5px;position:relative;overflow:hidden}
+  .sbar>i{position:absolute;top:0;bottom:0}
+  details{border:1px solid var(--line);border-radius:12px;padding:0 14px;margin-bottom:12px;background:var(--panel2)}
+  summary{cursor:pointer;padding:14px 0;list-style:none;display:flex;justify-content:space-between;align-items:center}
+  summary::-webkit-details-marker{display:none}
+  button.act{background:var(--acc);color:#04121a;border:0;border-radius:9px;padding:9px 14px;font-weight:700;cursor:pointer;font-size:13px}
+  button.ghost{background:transparent;border:1px solid var(--line);color:var(--txt);border-radius:9px;padding:8px 13px;cursor:pointer;font-size:13px}
+  button.del{background:transparent;border:1px solid var(--line);color:var(--bad);border-radius:8px;padding:5px 10px;cursor:pointer;font-size:12px}
+  input.f{background:var(--panel2);border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:7px 9px;font-family:var(--mono);font-size:12.5px;width:100%}
+  pre{background:#060a12;border:1px solid var(--line);border-radius:10px;padding:13px;overflow:auto;
+    font-family:var(--mono);font-size:12px;color:#bfe9f5;white-space:pre-wrap}
+  .pill{display:inline-block;font-size:11px;color:var(--mut);border:1px solid var(--line);border-radius:999px;padding:3px 9px;margin:2px}
+  .hide{display:none}
+  .note{color:var(--mut);font-size:12px;margin:6px 0 0}
+  .commentary{font-size:13.5px;line-height:1.55}
+  .counsel{border-left:3px solid var(--acc);padding:4px 0 4px 12px;margin:10px 0;color:var(--txt);font-size:13px}
+  .counsel.gpt{border-color:#a0f0c0} .counsel.grok{border-color:#f0c0a0}
+  footer{color:var(--mut);font-size:11.5px;text-align:center;padding:24px}
+  .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <div class="logo">S</div>
+    <div><h1 id="firm">SAHJONY CAPITAL LLC</h1><div class="sub" id="tagline">Autonomous multi-agent quant desk</div></div>
+  </div>
+  <div style="display:flex;gap:10px;align-items:center">
+    <span class="mode" id="mode">—</span>
+    <button class="ghost" onclick="load()">↻ Refresh</button>
+  </div>
+</header>
+
+<nav id="nav"></nav>
+<main id="view"></main>
+<footer id="foot">Loading…</footer>
+
+<script>
+const TABS = ["Overview","Council","AI Brain","Book","Environment","Workforce"];
+let DATA = null, TAB = "Overview", ENV_ROWS = [];
+
+const $ = (h)=>{const d=document.createElement('div');d.innerHTML=h.trim();return d.firstChild;};
+const money = (n)=> "$"+Number(n||0).toLocaleString(undefined,{maximumFractionDigits:2});
+const pct = (n)=> (Number(n||0)>=0?"+":"")+Number(n||0).toFixed(2)+"%";
+const esc = (s)=> String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+function buildNav(){
+  const nav=document.getElementById('nav'); nav.innerHTML="";
+  TABS.forEach(t=>{const b=$(`<button>${t}</button>`);if(t===TAB)b.className="active";
+    b.onclick=()=>{TAB=t;render();buildNav();};nav.appendChild(b);});
+}
+
+async function load(){
+  try{
+    const r = await fetch('./status.json?_='+Date.now());
+    DATA = await r.json();
+  }catch(e){ DATA={_error:String(e)}; }
+  buildNav(); render();
+}
+
+function sparkline(curve){
+  if(!curve||curve.length<2) return '<div class="note">No equity history yet.</div>';
+  const ys = curve.map(p=>p.equity); const min=Math.min(...ys),max=Math.max(...ys);
+  const W=560,H=90,pad=4; const span=(max-min)||1;
+  const pts = ys.map((y,i)=>{const x=pad+i*(W-2*pad)/(ys.length-1);
+    const yy=H-pad-((y-min)/span)*(H-2*pad);return `${x.toFixed(1)},${yy.toFixed(1)}`;}).join(' ');
+  const up = ys[ys.length-1]>=ys[0];
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" preserveAspectRatio="none">
+    <polyline fill="none" stroke="${up?'#34d399':'#f87171'}" stroke-width="2" points="${pts}"/></svg>`;
+}
+
+function render(){
+  const v=document.getElementById('view');
+  document.getElementById('foot').textContent =
+    DATA&&DATA.ts ? `Last cycle ${DATA.cycle} · ${new Date(DATA.ts).toLocaleString()} · auto-refresh 30s`
+    : "Run the desk (python main.py --cycles 8) to generate live data.";
+  if(!DATA||DATA._error){v.innerHTML=`<div class="card">No <code>status.json</code> yet (${esc(DATA&&DATA._error||'')}). Run <code>python main.py --cycles 8</code> and redeploy.</div>`;return;}
+  document.getElementById('firm').textContent=DATA.firm||'SAHJONY CAPITAL LLC';
+  document.getElementById('tagline').textContent=DATA.tagline||'';
+  document.getElementById('mode').textContent=DATA.mode||'—';
+  v.innerHTML="";
+  ({Overview,Council,"AI Brain":Brain,Book,Environment:EnvPage,Workforce}[TAB]||Overview)(v);
+}
+
+function Overview(v){
+  const a=DATA.account,p=DATA.pnl,h=DATA.health;
+  const ret=p.total_return_pct;
+  v.appendChild($(`<div class="grid g4">
+    <div class="card kpi"><div class="v">${money(a.equity)}</div><div class="l">Equity (NAV)</div></div>
+    <div class="card kpi"><div class="v ${ret>=0?'pos':'neg'}">${pct(ret)}</div><div class="l">Total return</div></div>
+    <div class="card kpi"><div class="v">${money(a.deployed)}</div><div class="l">Capital deployed</div></div>
+    <div class="card kpi"><div class="v">${money(p.premium_collected)}</div><div class="l">Option premium</div></div>
+  </div>`));
+  v.appendChild($(`<div class="card" style="margin-top:16px"><h3>Equity curve</h3>${sparkline(DATA.equity_curve)}
+    <div class="note">Cash ${money(a.cash)} · Realized P&L ${money(p.realized)} · Start ${money(a.equity_start)}</div></div>`));
+  const aib=h.ai_brain||{};
+  const chips=[
+    ['Broker', h.broker_online?'online':'offline-sim', h.broker_online],
+    ['Market', h.market_open?'open':'closed', h.market_open],
+    ['AI Brain (Claude)', aib.brain_claude?'key set':'no key', aib.brain_claude],
+    ['OpenAI counsellor', aib.counsellor_openai?'key set':'no key', aib.counsellor_openai],
+    ['Grok counsellor', aib.counsellor_grok?'key set':'no key', aib.counsellor_grok],
+  ];
+  const hc=$(`<div class="card" style="margin-top:16px"><h3>System health & risk gatekeeper</h3></div>`);
+  chips.forEach(([k,s,ok])=>hc.appendChild($(`<div class="row"><span>${k}</span><span class="tag ${ok?'on':'off'}">${s}</span></div>`)));
+  const rc=h.risk_caps||{};
+  hc.appendChild($(`<div class="row"><span>Per-position cap</span><span class="tag">${(rc.per_position_pct*100||0).toFixed(0)}% equity</span></div>`));
+  hc.appendChild($(`<div class="row"><span>Total deployed cap</span><span class="tag">${(rc.total_deployed_pct*100||0).toFixed(0)}% equity</span></div>`));
+  hc.appendChild($(`<div class="row"><span>Min conviction to trade</span><span class="tag">${(rc.min_conviction*100||0).toFixed(0)}%</span></div>`));
+  v.appendChild(hc);
+  const ex=DATA.executed_this_cycle||[];
+  const exc=$(`<div class="card" style="margin-top:16px"><h3>Actions this cycle</h3></div>`);
+  if(!ex.length) exc.appendChild($(`<div class="note">No orders this cycle.</div>`));
+  ex.forEach(e=>exc.appendChild($(`<div class="row"><span><b>${esc(e.symbol)}</b> · ${esc(e.purpose)}</span><span class="mut" style="font-size:12px">${esc(e.reason)}</span></div>`)));
+  v.appendChild(exc);
+}
+
+function Council(v){
+  v.appendChild($(`<div class="card"><h3>12-Agent Intelligence Council</h3>
+    <div class="note">Each agent emits a directional score (−1…+1) and confidence; the council weights them into conviction + a risk multiplier.</div></div>`));
+  (DATA.council||[]).forEach(c=>{
+    const d=$(`<details><summary>
+      <span><b style="font-size:15px">${esc(c.symbol)}</b> <span class="mut">@ ${money(c.price)}</span>
+        <span class="tag ${c.direction}">${esc(c.direction)}</span></span>
+      <span style="display:flex;align-items:center;gap:10px;min-width:240px">
+        <span class="mut" style="font-size:12px">conv ${(c.conviction*100).toFixed(0)}%</span>
+        <span class="bar" style="width:140px"><i style="width:${(c.conviction*100).toFixed(0)}%"></i></span></span>
+    </summary></details>`);
+  (c.agents||[]).forEach(a=>{
+      const s=a.score, w=Math.min(100,Math.abs(s)*100), col=s>=0?'#34d399':'#f87171', left=s>=0?'50%':(50-w/2)+'%';
+      d.appendChild($(`<div class="agent">
+        <div class="top"><span><b>${esc(a.name)}</b> <span class="mut">· ${esc(a.persona)}</span></span>
+          <span class="mut" style="font-family:var(--mono)">${s>=0?'+':''}${s.toFixed(2)} · ${(a.confidence*100).toFixed(0)}%</span></div>
+        <div class="rat">${esc(a.rationale)}</div>
+        <div class="sbar"><i style="left:${left};width:${(w/2).toFixed(0)}%;background:${col}"></i></div>
+      </div>`));
+    });
+    v.appendChild(d);
+  });
+}
+
+function Brain(v){
+  const b=DATA.brain||{};
+  v.appendChild($(`<div class="card"><h3>Chief Strategist — AI Brain</h3>
+    <div class="row"><span>Primary brain</span><span class="tag on">Claude · ${esc(b.brain_model||'claude-opus-4-8')}</span></div>
+    <div class="row"><span>Status</span><span class="tag ${b.used?'on':'off'}">${b.used?'active this cycle':(b.enabled?'enabled (idle)':'disabled')}</span></div>
+    <div class="row"><span>Posture</span><span class="tag ${b.posture==='risk_off'?'off':(b.posture==='risk_on'?'on':'')}">${esc(b.posture||'neutral')}</span></div>
+    <div class="row"><span>Global risk multiplier</span><span class="tag">×${(b.global_risk_multiplier||1).toFixed(2)}</span></div>
+  </div>`));
+  v.appendChild($(`<div class="card" style="margin-top:16px"><h3>Brain commentary</h3>
+    <div class="commentary">${b.commentary?esc(b.commentary):'<span class="note">The AI brain is an advisory overlay. Set <code>AI_BRAIN_ENABLED=true</code> and an <code>ANTHROPIC_API_KEY</code> to activate it.</span>'}</div></div>`));
+  const cs=b.counsellors||{};
+  const cc=$(`<div class="card" style="margin-top:16px"><h3>Counsellors (secondary engines)</h3></div>`);
+  if(cs.openai) cc.appendChild($(`<div class="counsel gpt"><b>OpenAI (GPT)</b> — ${esc(cs.openai)}</div>`));
+  if(cs.grok) cc.appendChild($(`<div class="counsel grok"><b>Grok (xAI)</b> — ${esc(cs.grok)}</div>`));
+  if(!cs.openai && !cs.grok) cc.appendChild($(`<div class="note">Add <code>OPENAI_API_KEY</code> and/or <code>XAI_API_KEY</code> to enlist the counsellors.</div>`));
+  v.appendChild(cc);
+}
+
+function Book(v){
+  const pos=DATA.positions||[];
+  const pc=$(`<div class="card"><h3>Open positions</h3></div>`);
+  if(!pos.length) pc.appendChild($(`<div class="note">Flat — no open positions.</div>`));
+  else{
+    const t=$(`<table><thead><tr><th>Symbol</th><th>Desk</th><th>State</th><th class="num">Shares</th>
+      <th class="num">Cost</th><th class="num">Price</th><th class="num">uPnL</th></tr></thead><tbody></tbody></table>`);
+    pos.forEach(p=>t.querySelector('tbody').appendChild($(`<tr><td><b>${esc(p.symbol)}</b></td><td>${esc(p.strategy)}</td>
+      <td>${esc(p.state)}</td><td class="num">${p.shares}</td><td class="num">${money(p.cost_basis)}</td>
+      <td class="num">${money(p.price)}</td><td class="num ${p.unrealized>=0?'pos':'neg'}">${money(p.unrealized)}</td></tr>`)));
+    pc.appendChild(t);
+  }
+  v.appendChild(pc);
+  const crm=DATA.crm||{};
+  v.appendChild($(`<div class="grid g3" style="margin-top:16px">
+    <div class="card kpi"><div class="v">${money(crm.aum)}</div><div class="l">Assets under management</div></div>
+    <div class="card kpi"><div class="v">${crm.investors||0}</div><div class="l">Investors</div></div>
+    <div class="card kpi"><div class="v">${crm.contacts||0}</div><div class="l">CRM contacts</div></div>
+  </div>`));
+  const tr=DATA.recent_trades||[];
+  const trc=$(`<div class="card" style="margin-top:16px"><h3>Recent trades</h3></div>`);
+  if(!tr.length) trc.appendChild($(`<div class="note">No trades yet.</div>`));
+  else{
+    const t=$(`<table><thead><tr><th>Symbol</th><th>Side</th><th>Purpose</th><th class="num">Qty</th><th class="num">Px</th></tr></thead><tbody></tbody></table>`);
+    tr.forEach(x=>t.querySelector('tbody').appendChild($(`<tr><td>${esc(x.symbol)}</td><td>${esc(x.side)}</td>
+      <td>${esc(x.purpose)}</td><td class="num">${x.qty}</td><td class="num">${money(x.price)}</td></tr>`)));
+    trc.appendChild(t);
+  }
+  v.appendChild(trc);
+}
+
+function EnvPage(v){
+  if(!ENV_ROWS.length && DATA.env_catalog){
+    ENV_ROWS = DATA.env_catalog.map(e=>({name:e.name,value:"",category:e.category,
+      desc:e.description,set:e.set,secret:e.secret,remove:false,custom:false}));
+  }
+  v.appendChild($(`<div class="card"><h3>Environment — add &amp; delete variables</h3>
+    <div class="note">This static dashboard never sees secret values (it only knows which are <b>set</b>). Edit below, then
+    copy the generated <code>.env</code> for local use, or run the <code>vercel env</code> commands to apply on the deployment.
+    Mark a row 🗑 to generate its delete command.</div></div>`));
+  const tbl=$(`<div class="card" style="margin-top:14px"></div>`);
+  const t=$(`<table><thead><tr><th>Variable</th><th>Category</th><th>Status</th><th>Value (local only)</th><th></th></tr></thead><tbody></tbody></table>`);
+  const tb=t.querySelector('tbody');
+  function drawRows(){
+    tb.innerHTML="";
+    ENV_ROWS.forEach((row,i)=>{
+      const tr=$(`<tr style="${row.remove?'opacity:.45':''}"></tr>`);
+      tr.appendChild($(`<td>${row.custom?`<input class="f" value="${esc(row.name)}" placeholder="NAME">`:`<b style="font-family:var(--mono);font-size:12.5px">${esc(row.name)}</b><div class="note">${esc(row.desc||'')}</div>`}</td>`));
+      tr.appendChild($(`<td><span class="tag">${esc(row.category||'Custom')}</span></td>`));
+      tr.appendChild($(`<td><span class="tag ${row.set?'on':'off'}">${row.set?'set':'missing'}</span></td>`));
+      const td=$(`<td></td>`); const inp=$(`<input class="f" type="${row.secret?'password':'text'}" placeholder="${row.secret?'•••• secret':'value'}" value="${esc(row.value)}">`);
+      inp.oninput=e=>{row.value=e.target.value;};
+      if(row.custom){const nameInp=tr.children[0].querySelector('input'); if(nameInp)nameInp.oninput=e=>{row.name=e.target.value.toUpperCase();};}
+      td.appendChild(inp); tr.appendChild(td);
+      const db=$(`<td><button class="del">${row.remove?'undo':'🗑'}</button></td>`);
+      db.querySelector('button').onclick=()=>{ if(row.custom&&!row.value){ENV_ROWS.splice(i,1);} else {row.remove=!row.remove;} drawRows();gen();};
+      tr.appendChild(db);
+      tb.appendChild(tr);
+    });
+  }
+  tbl.appendChild(t);
+  const addBtn=$(`<button class="ghost" style="margin-top:12px">+ Add variable</button>`);
+  addBtn.onclick=()=>{ENV_ROWS.push({name:"",value:"",category:"Custom",desc:"",set:false,secret:true,remove:false,custom:true});drawRows();gen();};
+  tbl.appendChild(addBtn);
+  v.appendChild(tbl);
+
+  const out=$(`<div class="card" style="margin-top:16px"><h3>Generated .env (local)</h3><pre id="envout"></pre>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button class="act" id="copyenv">Copy .env</button>
+      <button class="ghost" id="dlenv">Download .env</button></div></div>`);
+  v.appendChild(out);
+  const vc=$(`<div class="card" style="margin-top:16px"><h3>Vercel CLI commands (apply to deployment)</h3><pre id="vcout"></pre>
+    <button class="act" id="copyvc" style="margin-top:10px">Copy commands</button>
+    <div class="note">Run these in the repo (one-time <code>vercel link</code> first). Add sets a var; rm deletes it.</div></div>`);
+  v.appendChild(vc);
+
+  function gen(){
+    const envLines=ENV_ROWS.filter(r=>r.name&&r.value&&!r.remove).map(r=>`${r.name}=${r.value}`);
+    document.getElementById('envout').textContent = envLines.length?envLines.join("\n"):"# enter values above to generate your .env";
+    const cmds=[];
+    ENV_ROWS.forEach(r=>{ if(!r.name)return;
+      if(r.remove){cmds.push(`vercel env rm ${r.name} production -y`);}
+      else if(r.value){cmds.push(`printf %s "${r.value}" | vercel env add ${r.name} production`);}
+    });
+    document.getElementById('vcout').textContent = cmds.length?cmds.join("\n"):"# add a value or mark a row 🗑 to generate commands";
+  }
+  drawRows(); gen();
+  out.querySelector('#copyenv').onclick=()=>navigator.clipboard.writeText(document.getElementById('envout').textContent);
+  out.querySelector('#dlenv').onclick=()=>{const b=new Blob([document.getElementById('envout').textContent],{type:'text/plain'});
+    const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='.env';a.click();};
+  vc.querySelector('#copyvc').onclick=()=>navigator.clipboard.writeText(document.getElementById('vcout').textContent);
+}
+
+function Workforce(v){
+  v.appendChild($(`<div class="card"><h3>Agentic workforce</h3>
+    <div class="note">SAHJONY CAPITAL LLC runs as a desk of cooperating agents. The AI brain (Claude) oversees a 12-persona quant council.</div></div>`));
+  const wf=$(`<div class="card" style="margin-top:14px"></div>`);
+  (DATA.workforce||[]).forEach(w=>wf.appendChild($(`<div class="row"><span><b>${esc(w.role)}</b></span><span class="mut" style="font-size:12.5px">${esc(w.mandate)}</span></div>`)));
+  v.appendChild(wf);
+  const rc=$(`<div class="card" style="margin-top:16px"><h3>Intelligence Council — 12 personas</h3><div></div></div>`);
+  const box=rc.querySelector('div');
+  (DATA.agents_roster||[]).forEach(a=>box.appendChild($(`<span class="pill">${esc(a.name)} · ${esc(a.role)}</span>`)));
+  v.appendChild(rc);
+  const dc=$(`<div class="card" style="margin-top:16px"><h3>Memory — recent decisions</h3></div>`);
+  const dec=DATA.decisions||[];
+  if(!dec.length) dc.appendChild($(`<div class="note">No decisions recorded yet.</div>`));
+  dec.forEach(d=>dc.appendChild($(`<div class="row"><span><span class="dot" style="background:var(--acc)"></span>${esc(d.kind)} ${d.symbol?('· '+esc(d.symbol)):''}</span>
+    <span class="mut" style="font-size:12px">${esc(d.reason||'')}</span></div>`)));
+  v.appendChild(dc);
+}
+
+load();
+setInterval(load, 30000);
+</script>
+</body>
+</html>
