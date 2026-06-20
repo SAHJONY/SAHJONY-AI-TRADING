@@ -58,6 +58,9 @@ class Config:
     alpaca_api_key: str = ""
     alpaca_secret_key: str = ""
     alpaca_paper: bool = True
+    # Real-money safety: live orders are refused unless this is explicitly set.
+    # Set LIVE_TRADING_ACK="I_UNDERSTAND_REAL_MONEY" to arm live (with ALPACA_PAPER=false).
+    live_trading_ack: bool = False
 
     # universe
     tickers: List[str] = field(default_factory=lambda: ["AAPL", "MSFT", "SPY"])
@@ -123,6 +126,7 @@ def load_config() -> Config:
         alpaca_api_key=os.getenv("ALPACA_API_KEY", "").strip(),
         alpaca_secret_key=os.getenv("ALPACA_SECRET_KEY", "").strip(),
         alpaca_paper=_b("ALPACA_PAPER", True),
+        live_trading_ack=(os.getenv("LIVE_TRADING_ACK", "").strip() == "I_UNDERSTAND_REAL_MONEY"),
         tickers=_list("TICKERS", "AAPL,MSFT,SPY"),
         benchmark=(os.getenv("BENCHMARK", "SPY") or "SPY").strip().upper(),
         max_allocation_pct=_clamp(_f("MAX_ALLOCATION_PCT", 0.10), 0.0, HARD_MAX_ALLOCATION_PCT),

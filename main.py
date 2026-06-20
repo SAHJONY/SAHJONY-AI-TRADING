@@ -17,7 +17,7 @@ from __future__ import annotations
 import argparse
 import time
 
-from config import load_config
+from config import HARD_MAX_ALLOCATION_PCT, HARD_MAX_TOTAL_DEPLOYED_PCT, load_config
 from database import Database
 from utils.alpaca_client import AlpacaClient
 from utils.logger import get_logger
@@ -27,6 +27,40 @@ from workforce.reporter import build_status, console_board, write_investor_views
 from workforce.workforce import STATUS_PATH
 
 log = get_logger("main")
+
+
+def confirm_live(cfg, client) -> bool:
+    """Gatekeeper for REAL-MONEY trading. Live orders are refused unless the
+    operator has deliberately armed them (keys + ALPACA_PAPER=false + an explicit
+    LIVE_TRADING_ACK). Returns False to abort, True to proceed (armed)."""
+    if not cfg.live_trading_ack:
+        log.error("LIVE mode requested (ALPACA_PAPER=false) but LIVE_TRADING_ACK is not set.")
+        log.error("Refusing to place REAL-MONEY orders.")
+        log.error('To deliberately enable live trading, set '
+                  'LIVE_TRADING_ACK="I_UNDERSTAND_REAL_MONEY" in your .env —')
+        log.error("or set ALPACA_PAPER=true to keep trading on the Alpaca paper account.")
+        return False
+    acct = client.get_account()
+    bar = "=" * 64
+    print("\n".join([
+        bar,
+        " ⚠  LIVE REAL-MONEY TRADING ARMED — orders will use real funds",
+        bar,
+        f"  Broker equity          : ${acct.get('equity', 0):,.2f}",
+        f"  Per-position cap        : {cfg.max_allocation_pct:.0%} "
+        f"(hard ceiling {HARD_MAX_ALLOCATION_PCT:.0%})",
+        f"  Total-deployed cap      : {cfg.max_total_deployed_pct:.0%} "
+        f"(hard ceiling {HARD_MAX_TOTAL_DEPLOYED_PCT:.0%})",
+        f"  Min conviction to trade : {cfg.min_council_conviction:.0%}",
+        "  Ctrl-C within 5s to abort.",
+        bar,
+    ]))
+    try:
+        time.sleep(5)
+    except KeyboardInterrupt:
+        log.info("Live trading aborted by operator.")
+        return False
+    return True
 
 
 def run_once(firm: Firm, state, force: bool) -> dict:
@@ -62,6 +96,10 @@ def main(argv=None) -> int:
     client = AlpacaClient(cfg)
     firm = Firm(cfg, client, db)
     state = load_state()
+
+    if cfg.mode == "LIVE" and not confirm_live(cfg, client):
+        db.close()
+        return 2
 
     try:
         if args.cycles and args.cycles > 0:
