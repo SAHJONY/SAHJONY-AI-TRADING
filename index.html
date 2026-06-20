@@ -36,6 +36,25 @@
   .g2{grid-template-columns:repeat(2,1fr)}
   @media(max-width:900px){.g4,.g3,.g2{grid-template-columns:1fr 1fr}}
   @media(max-width:620px){.g4,.g3,.g2{grid-template-columns:1fr}}
+  .scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .scroll>table{min-width:540px}
+  .cb{margin-top:16px;border-radius:15px;padding:13px 16px;border:1px solid var(--line);
+    background:linear-gradient(180deg,var(--panel),var(--panel2));display:flex;
+    align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:13.5px}
+  .cb b{letter-spacing:.4px}
+  .cb.halted{border-color:var(--bad);background:linear-gradient(180deg,#2a1414,#160d0d);color:#fecaca}
+  .cb.armed .s{color:var(--good)}
+  summary{flex-wrap:wrap}
+  @media(max-width:680px){
+    header{padding:14px 16px} nav{padding:10px 14px} main{padding:16px 14px}
+    .kpi .v{font-size:21px} .brand h1{font-size:15px}
+    th,td{padding:7px 7px}
+  }
+  @media(max-width:420px){
+    header{padding:12px;gap:8px} main{padding:12px 10px}
+    .brand .sub{display:none} .brand .logo{width:34px;height:34px;font-size:16px}
+    nav button{padding:7px 10px;font-size:12.5px} .kpi .v{font-size:19px}
+  }
   .card{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);
     border-radius:15px;padding:17px 18px}
   .card h3{margin:0 0 12px;font-size:12px;letter-spacing:.6px;text-transform:uppercase;color:var(--mut);font-weight:700}
@@ -135,7 +154,9 @@ function render(){
   if(!DATA||DATA._error){v.innerHTML=`<div class="card">No <code>status.json</code> yet (${esc(DATA&&DATA._error||'')}). Run <code>python main.py --cycles 8</code> and redeploy.</div>`;return;}
   document.getElementById('firm').textContent=DATA.firm||'SAHJONY CAPITAL LLC';
   document.getElementById('tagline').textContent=DATA.tagline||'';
-  document.getElementById('mode').textContent=DATA.mode||'—';
+  const modeEl=document.getElementById('mode'); modeEl.textContent=DATA.mode||'—';
+  modeEl.style.color = DATA.mode==='LIVE'?'var(--bad)':(DATA.mode==='paper'?'var(--acc2)':'var(--mut)');
+  modeEl.style.borderColor = DATA.mode==='LIVE'?'var(--bad)':'var(--line)';
   v.innerHTML="";
   ({Overview,Council,"AI Brain":Brain,Book,Environment:EnvPage,Workforce}[TAB]||Overview)(v);
 }
@@ -149,6 +170,11 @@ function Overview(v){
     <div class="card kpi"><div class="v">${money(a.deployed)}</div><div class="l">Capital deployed</div></div>
     <div class="card kpi"><div class="v">${money(p.premium_collected)}</div><div class="l">Option premium</div></div>
   </div>`));
+  const cb=h.circuit_breaker||{};
+  const cbMsg = cb.halted
+    ? `⛔ NEW RISK HALTED — ${esc(cb.reason||'')}`
+    : `<span class="s">✓ Trading active</span> · day P&L ${pct((cb.day_return||0)*100)} · auto-halt at −${((cb.limit_pct||0)*100).toFixed(0)}%`;
+  v.appendChild($(`<div class="cb ${cb.halted?'halted':'armed'}"><span><b>Circuit breaker</b></span><span>${cbMsg}</span></div>`));
   v.appendChild($(`<div class="card" style="margin-top:16px"><h3>Equity curve</h3>${sparkline(DATA.equity_curve)}
     <div class="note">Cash ${money(a.cash)} · Realized P&L ${money(p.realized)} · Start ${money(a.equity_start)}</div></div>`));
   const aib=h.ai_brain||{};
@@ -165,6 +191,7 @@ function Overview(v){
   hc.appendChild($(`<div class="row"><span>Per-position cap</span><span class="tag">${(rc.per_position_pct*100||0).toFixed(0)}% equity</span></div>`));
   hc.appendChild($(`<div class="row"><span>Total deployed cap</span><span class="tag">${(rc.total_deployed_pct*100||0).toFixed(0)}% equity</span></div>`));
   hc.appendChild($(`<div class="row"><span>Min conviction to trade</span><span class="tag">${(rc.min_conviction*100||0).toFixed(0)}%</span></div>`));
+  hc.appendChild($(`<div class="row"><span>Daily-loss circuit breaker</span><span class="tag">${(rc.daily_drawdown_pct*100||0).toFixed(0)}% halt</span></div>`));
   v.appendChild(hc);
   const ex=DATA.executed_this_cycle||[];
   const exc=$(`<div class="card" style="margin-top:16px"><h3>Actions this cycle</h3></div>`);
@@ -180,7 +207,7 @@ function Council(v){
     const d=$(`<details><summary>
       <span><b style="font-size:15px">${esc(c.symbol)}</b> <span class="mut">@ ${money(c.price)}</span>
         <span class="tag ${c.direction}">${esc(c.direction)}</span></span>
-      <span style="display:flex;align-items:center;gap:10px;min-width:240px">
+      <span style="display:flex;align-items:center;gap:10px;min-width:0">
         <span class="mut" style="font-size:12px">conv ${(c.conviction*100).toFixed(0)}%</span>
         <span class="bar" style="width:140px"><i style="width:${(c.conviction*100).toFixed(0)}%"></i></span></span>
     </summary></details>`);
@@ -225,7 +252,7 @@ function Book(v){
     pos.forEach(p=>t.querySelector('tbody').appendChild($(`<tr><td><b>${esc(p.symbol)}</b></td><td>${esc(p.strategy)}</td>
       <td>${esc(p.state)}</td><td class="num">${p.shares}</td><td class="num">${money(p.cost_basis)}</td>
       <td class="num">${money(p.price)}</td><td class="num ${p.unrealized>=0?'pos':'neg'}">${money(p.unrealized)}</td></tr>`)));
-    pc.appendChild(t);
+    const sc=$(`<div class="scroll"></div>`); sc.appendChild(t); pc.appendChild(sc);
   }
   v.appendChild(pc);
   const crm=DATA.crm||{};
@@ -241,7 +268,7 @@ function Book(v){
     const t=$(`<table><thead><tr><th>Symbol</th><th>Side</th><th>Purpose</th><th class="num">Qty</th><th class="num">Px</th></tr></thead><tbody></tbody></table>`);
     tr.forEach(x=>t.querySelector('tbody').appendChild($(`<tr><td>${esc(x.symbol)}</td><td>${esc(x.side)}</td>
       <td>${esc(x.purpose)}</td><td class="num">${x.qty}</td><td class="num">${money(x.price)}</td></tr>`)));
-    trc.appendChild(t);
+    const sc=$(`<div class="scroll"></div>`); sc.appendChild(t); trc.appendChild(sc);
   }
   v.appendChild(trc);
 }
@@ -258,6 +285,7 @@ function EnvPage(v){
   const tbl=$(`<div class="card" style="margin-top:14px"></div>`);
   const t=$(`<table><thead><tr><th>Variable</th><th>Category</th><th>Status</th><th>Value (local only)</th><th></th></tr></thead><tbody></tbody></table>`);
   const tb=t.querySelector('tbody');
+  const tscroll=$(`<div class="scroll"></div>`); tscroll.appendChild(t);
   function drawRows(){
     tb.innerHTML="";
     ENV_ROWS.forEach((row,i)=>{
@@ -275,7 +303,7 @@ function EnvPage(v){
       tb.appendChild(tr);
     });
   }
-  tbl.appendChild(t);
+  tbl.appendChild(tscroll);
   const addBtn=$(`<button class="ghost" style="margin-top:12px">+ Add variable</button>`);
   addBtn.onclick=()=>{ENV_ROWS.push({name:"",value:"",category:"Custom",desc:"",set:false,secret:true,remove:false,custom:true});drawRows();gen();};
   tbl.appendChild(addBtn);
