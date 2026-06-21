@@ -174,11 +174,12 @@
 <script src="./config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const TABS = ["Terminal","Markets","News","Council","Book","Brain","Controls","Workforce","Env"];
+const TABS = ["Terminal","Markets","Macro","News","Council","Book","Brain","Controls","Workforce","Env"];
 let DATA=null, TAB="Terminal", SESSION=null, DESK=null;
 let MARKETS={list:[],err:null,ts:0};            // CoinGecko crypto (no key)
 let NEWS={list:[],err:null,ts:0,src:''};        // Finnhub (key) or GDELT (no key)
 const STREAM={connected:false,live:{},tries:0,started:false,chanFor:null,cryptoWS:null,stockWS:null};
+let INTEL={fng:null,global:null,trending:null,fx:null,ts:0,err:{}};   // free macro intelligence
 
 const CFG=(window.SAHJONY_CONFIG||{});
 const FINNHUB=(CFG.FINNHUB_API_KEY||"").trim();
@@ -213,8 +214,8 @@ async function load(){
     try{const r=await fetch('./status.json?_='+Date.now());DATA=await r.json();}catch(_){DATA={_error:String(e)};}
   }
   buildNav(); render();
-  fetchMarkets(); fetchNews();   // free REST snapshots (self-cached)
-  startStreams(); subscribeRealtime();   // realtime: Binance/Finnhub WS + Supabase
+  fetchMarkets(); fetchNews(); fetchIntel();   // free REST snapshots (self-cached)
+  startStreams(); subscribeRealtime();         // realtime: Binance/Finnhub WS + Supabase
 }
 
 // ── free live market & news feeds (run in the browser) ──────────────────────
@@ -304,6 +305,81 @@ function subscribeRealtime(){          // Supabase Realtime: worker writes → i
   }catch(e){}
 }
 function startStreams(){ if(STREAM.started)return; STREAM.started=true; connectCrypto(); connectStocks(); }
+
+// ── free macro intelligence (no key) ────────────────────────────────────────
+async function getJSON(u){const r=await fetch(u);if(!r.ok)throw new Error('HTTP '+r.status);return r.json();}
+async function fetchIntel(force){
+  if(!force && Date.now()-INTEL.ts<300000 && INTEL.global) return;
+  const nx={fng:INTEL.fng,global:INTEL.global,trending:INTEL.trending,fx:INTEL.fx,ts:Date.now(),err:{}};
+  await Promise.all([
+    getJSON('https://api.alternative.me/fng/?limit=1').then(j=>{nx.fng=(j.data||[])[0]||null;}).catch(e=>{nx.err.fng=String(e.message||e);}),
+    getJSON('https://api.coingecko.com/api/v3/global').then(j=>{nx.global=j.data||null;}).catch(e=>{nx.err.global=String(e.message||e);}),
+    getJSON('https://api.coingecko.com/api/v3/search/trending').then(j=>{nx.trending=j.coins||[];}).catch(e=>{nx.err.trending=String(e.message||e);}),
+    getJSON('https://api.frankfurter.app/latest?from=USD&to=EUR,GBP,JPY,CAD,AUD,CHF,CNY').then(j=>{nx.fx=j.rates||null;}).catch(e=>{nx.err.fx=String(e.message||e);}),
+  ]);
+  INTEL=nx; if(TAB==='Macro'||TAB==='Terminal')render();
+}
+
+function marketRead(){
+  const c=DATA.council||[], n=c.length||1;
+  const avgConv=c.reduce((s,x)=>s+(+x.conviction||0),0)/n;
+  const longs=c.filter(x=>x.direction==='long').length, shorts=c.filter(x=>x.direction==='short').length;
+  const brain=DATA.brain||{}, fng=INTEL.fng?+INTEL.fng.value:null;
+  const gch=INTEL.global?+INTEL.global.market_cap_change_percentage_24h_usd:null;
+  let score=(avgConv-0.5)*2 + (longs-shorts)/n;
+  if(fng!=null) score+=(fng-50)/50;
+  if(gch!=null) score+=Math.max(-1,Math.min(1,gch/5));
+  if(brain.posture==='risk_on') score+=0.5; else if(brain.posture==='risk_off') score-=0.5;
+  const posture = score>0.6?'RISK-ON' : score<-0.6?'RISK-OFF' : 'NEUTRAL';
+  const cls = posture==='RISK-ON'?'on' : posture==='RISK-OFF'?'off' : 'amber';
+  const bits=[`council ${longs}L / ${shorts}S · avg conviction ${(avgConv*100).toFixed(0)}%`];
+  if(fng!=null) bits.push(`Fear&Greed ${fng} (${esc(INTEL.fng.value_classification||'')})`);
+  if(gch!=null) bits.push(`crypto mkt ${pct(gch)} 24h`);
+  if(brain.posture) bits.push(`AI posture ${esc(brain.posture)}`);
+  return {posture,cls,text:bits.join(' · ')};
+}
+
+function Macro(v){
+  const g=$(`<div class="grid c12"></div>`);
+  // sentiment
+  let sb;
+  if(INTEL.fng){const val=+INTEL.fng.value;const col=val<25?'var(--down)':val<45?'var(--amber)':val<55?'var(--mut)':'var(--up)';
+    sb=`<div style="font-family:var(--mono);font-size:36px;font-weight:700;color:${col};line-height:1">${val}</div>
+      <div class="mut" style="text-transform:uppercase;letter-spacing:1.4px;font-size:11px;margin-top:4px">${esc(INTEL.fng.value_classification||'')}</div>
+      <div class="gauge" style="margin-top:11px"><i style="width:${val}%;background:${col}"></i></div>
+      <div class="mut mono" style="font-size:10px;margin-top:7px">Crypto Fear &amp; Greed Index</div>`;}
+  else sb=`<div class="empty">sentiment unavailable${INTEL.err.fng?` (${esc(INTEL.err.fng)})`:''}</div>`;
+  g.appendChild(panel('Market Sentiment', sb, 'alternative.me', 'span4'));
+  // global crypto
+  let gb;
+  if(INTEL.global){const G=INTEL.global;gb=$(`<div></div>`);
+    [['Total market cap','$'+num((G.total_market_cap||{}).usd,0)],
+     ['24h change',pct(G.market_cap_change_percentage_24h_usd)],
+     ['BTC dominance',((G.market_cap_percentage||{}).btc||0).toFixed(1)+'%'],
+     ['ETH dominance',((G.market_cap_percentage||{}).eth||0).toFixed(1)+'%'],
+     ['Active assets',num(G.active_cryptocurrencies,0)]].forEach(([k,val])=>gb.appendChild($(`<div class="row"><span class="mut">${k}</span><span class="mono">${val}</span></div>`)));}
+  else gb=`<div class="empty">global stats unavailable</div>`;
+  g.appendChild(panel('Global Crypto', gb, 'CoinGecko', 'span4'));
+  // FX majors
+  let fb;
+  if(INTEL.fx){fb=$(`<div></div>`);Object.entries(INTEL.fx).forEach(([k,val])=>fb.appendChild($(`<div class="row"><span class="mut">USD / ${esc(k)}</span><span class="mono">${num(val,4)}</span></div>`)));}
+  else fb=`<div class="empty">FX unavailable</div>`;
+  g.appendChild(panel('FX Majors', fb, 'frankfurter', 'span4'));
+  // top movers
+  let mv;
+  if((MARKETS.list||[]).length){const s=[...MARKETS.list].sort((a,b)=>(b.price_change_percentage_24h||0)-(a.price_change_percentage_24h||0));
+    const mk=(arr)=>arr.map(m=>`<div class="row"><span><b class="amber">${esc((m.symbol||'').toUpperCase())}</b> <span class="mut">${money(m.current_price)}</span></span><span class="mono ${(m.price_change_percentage_24h||0)>=0?'up':'down'}">${pct(m.price_change_percentage_24h)}</span></div>`).join('');
+    mv=`<div class="mut mono" style="font-size:10px;margin-bottom:4px">▲ TOP GAINERS</div>${mk(s.slice(0,5))}<div class="mut mono" style="font-size:10px;margin:11px 0 4px">▼ TOP LOSERS</div>${mk(s.slice(-5).reverse())}`;}
+  else mv=`<div class="empty">loading movers…</div>`;
+  g.appendChild(panel('Top Movers · 24h', mv, 'live', 'span6'));
+  // trending
+  let tb;
+  if(INTEL.trending&&INTEL.trending.length){tb=$(`<div></div>`);INTEL.trending.slice(0,10).forEach((c,i)=>{const it=c.item||c;
+    tb.appendChild($(`<div class="row"><span><span class="mut">${i+1}</span> <b class="amber">${esc(it.symbol)}</b> <span class="mut">${esc(it.name)}</span></span><span class="tag">rank ${it.market_cap_rank||'—'}</span></div>`));});}
+  else tb=`<div class="empty">trending unavailable</div>`;
+  g.appendChild(panel('Trending', tb, 'CoinGecko', 'span6'));
+  v.appendChild(g);
+}
 
 function Markets(v){
   const g=$(`<div class="grid c12"></div>`);
@@ -434,7 +510,7 @@ function render(){
   document.getElementById('foot').textContent =
     `cycle ${DATA.cycle} · ${new Date(DATA.ts).toLocaleString()} · ${DESK?'LIVE via Supabase':'static snapshot'} · auto-refresh 30s`;
   v.innerHTML="";
-  ({Terminal,Markets,News,Council,Book,Brain,Controls,Workforce,Env}[TAB]||Terminal)(v);
+  ({Terminal,Markets,Macro,News,Council,Book,Brain,Controls,Workforce,Env}[TAB]||Terminal)(v);
 }
 
 // ── panels helper ──
@@ -468,6 +544,13 @@ function Terminal(v){
   const root=$(`<div></div>`);
   root.appendChild(kpis());
   const g=$(`<div class="grid c12" style="margin-top:12px"></div>`);
+
+  // AI market read (synthesis of council + brain + macro intelligence)
+  const mr=marketRead();
+  g.appendChild(panel('AI Market Read',
+    `<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <span class="tag ${mr.cls}" style="font-size:13px;padding:6px 13px;letter-spacing:1px">${mr.posture}</span>
+      <span class="commentary">${mr.text}</span></div>`, 'synthesized', 'span12'));
 
   // equity chart
   const eq=DATA.account||{},p=DATA.pnl||{};
