@@ -1,4 +1,4 @@
-// Headless test for public/login.html (jsdom).
+// Headless test for public/login.html passcode screen (jsdom).
 //   node tests/login_test.js
 const fs = require('fs');
 const path = require('path');
@@ -11,25 +11,23 @@ let passed = 0;
 const check = (c, m) => { if (!c) { console.log('✗ FAIL:', m); process.exit(1); } console.log('✓', m); passed++; };
 
 function client(state) {
-  return {
-    auth: {
-      getSession: async () => ({ data: { session: state.session } }),
-      signInWithPassword: async ({ email, password }) => {
-        state.attempts.push({ email, password });
-        if (password !== 'correct') return { error: { message: 'Invalid login credentials' } };
-        state.session = { user: { email } };
-        return { data: { session: state.session }, error: null };
-      },
-      signOut: async () => { state.signOut = true; state.session = null; return { error: null }; },
-      resetPasswordForEmail: async (email) => { state.reset = email; return { error: null }; },
+  return { auth: {
+    getSession: async () => ({ data: { session: state.session } }),
+    signInWithPassword: async ({ email, password }) => {
+      state.attempts.push({ email, password });
+      if (password !== 'correct') return { error: { message: 'Invalid login credentials' } };
+      state.session = { user: { email } };
+      return { data: { session: state.session }, error: null };
     },
-  };
+    signOut: async () => { state.session = null; return { error: null }; },
+    resetPasswordForEmail: async (email) => { state.reset = email; return { error: null }; },
+  } };
 }
 
 function mount(cfg, state) {
   const vc = new VirtualConsole();
   let nav = false;
-  vc.on('jsdomError', e => { if (/navigation/i.test(e.message)) nav = true; });   // location.href set
+  vc.on('jsdomError', e => { if (/navigation/i.test(e.message)) nav = true; });
   const dom = new JSDOM(html.replace(/<script src=[^>]*><\/script>/g, ''),
     { runScripts: 'outside-only', url: 'https://desk.test/login.html', virtualConsole: vc });
   const win = dom.window;
@@ -38,52 +36,46 @@ function mount(cfg, state) {
   win.eval(appScript);
   return { win, redirected: () => nav };
 }
-const txt = (win) => win.document.getElementById('msg').textContent;
 const wait = () => new Promise(r => setTimeout(r, 30));
+const txt = (win) => win.document.getElementById('msg').textContent;
 
 async function main() {
-  const CFG = { SUPABASE_URL: 'https://x.supabase.co', SUPABASE_ANON_KEY: 'anon', OWNER_EMAIL: 'owner@sahjony.test' };
+  const OWNER = 'sahjonycapitalllc@outlook.com';
+  const CFG = { SUPABASE_URL: 'https://x.supabase.co', SUPABASE_ANON_KEY: 'anon', OWNER_EMAIL: OWNER };
 
-  // wrong password → error, no redirect
+  // passcode mode hides the email field, shows the access code
   let st = { session: null, attempts: [] };
   let m = mount(CFG, st);
-  m.win.document.getElementById('email').value = 'owner@sahjony.test';
-  m.win.document.getElementById('pw').value = 'wrong';
-  m.win.document.getElementById('go').onclick(); await wait();
-  check(st.attempts.length === 1, 'sign-in calls Supabase');
-  check(/Invalid login/.test(txt(m.win)), 'wrong password shows error');
-  check(m.redirected() === false, 'no redirect on failed login');
+  check(m.win.document.getElementById('email').style.display === 'none', 'passcode mode hides the email field');
+  check(m.win.document.getElementById('who').textContent === OWNER, 'shows the owner identity');
 
-  // non-owner email → refused before hitting Supabase
-  st = { session: null, attempts: [] };
-  m = mount(CFG, st);
-  m.win.document.getElementById('email').value = 'stranger@evil.com';
-  m.win.document.getElementById('pw').value = 'correct';
+  // wrong code → error, no redirect, and it used the configured owner email
+  m.win.document.getElementById('code').value = 'nope';
   m.win.document.getElementById('go').onclick(); await wait();
-  check(st.attempts.length === 0, 'non-owner refused without calling Supabase');
-  check(/private to the owner/.test(txt(m.win)), 'non-owner sees owner-only message');
+  check(st.attempts.length === 1 && st.attempts[0].email === OWNER, 'signs in with the configured owner email automatically');
+  check(/Invalid login/.test(txt(m.win)) && m.redirected() === false, 'wrong code is rejected');
 
-  // correct owner login → redirects to dashboard
-  st = { session: null, attempts: [] };
-  m = mount(CFG, st);
-  m.win.document.getElementById('email').value = 'owner@sahjony.test';
-  m.win.document.getElementById('pw').value = 'correct';
+  // correct code → redirect to dashboard
+  st = { session: null, attempts: [] }; m = mount(CFG, st);
+  m.win.document.getElementById('code').value = 'correct';
   m.win.document.getElementById('go').onclick(); await wait();
-  check(st.attempts.length === 1, 'owner login calls Supabase');
-  check(m.redirected() === true, 'successful owner login redirects to dashboard');
+  check(m.redirected() === true, 'correct access code opens the terminal');
 
-  // forgot password → sends reset
-  st = { session: null, attempts: [] };
-  m = mount(CFG, st);
-  m.win.document.getElementById('email').value = 'owner@sahjony.test';
+  // forgot code → reset email to the owner
+  st = { session: null, attempts: [] }; m = mount(CFG, st);
   m.win.document.getElementById('forgot').onclick(); await wait();
-  check(st.reset === 'owner@sahjony.test', 'forgot-password sends reset email');
+  check(st.reset === OWNER, 'forgot-code sends a reset to the owner email');
 
-  // already-signed-in owner → auto-redirect on load
-  st = { session: { user: { email: 'owner@sahjony.test' } }, attempts: [] };
+  // already signed in → auto redirect
+  st = { session: { user: { email: OWNER } }, attempts: [] };
   m = mount(CFG, st); await wait();
-  check(m.redirected() === true, 'existing owner session auto-redirects to dashboard');
+  check(m.redirected() === true, 'existing session auto-opens the terminal');
 
-  console.log(`\nLOGIN TEST PASSED ✓ (${passed} checks)`);
+  // no OWNER configured → email field revealed (fallback)
+  st = { session: null, attempts: [] };
+  m = mount({ SUPABASE_URL: 'https://x', SUPABASE_ANON_KEY: 'a', OWNER_EMAIL: '' }, st);
+  check(m.win.document.getElementById('email').style.display === 'block', 'no owner email → email field shown (fallback)');
+
+  console.log(`\nLOGIN (PASSCODE) TEST PASSED ✓ (${passed} checks)`);
 }
 main().catch(e => { console.log('✗ ERROR:', e.stack); process.exit(1); });
