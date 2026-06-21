@@ -197,7 +197,7 @@ let DATA=null, TAB="Parquet", SESSION=null, DESK=null;
 let MARKETS={list:[],err:null,ts:0};            // CoinGecko crypto (no key)
 let NEWS={list:[],err:null,ts:0,src:''};        // Finnhub (key) or GDELT (no key)
 const STREAM={connected:false,live:{},tries:0,started:false,chanFor:null,cryptoWS:null,stockWS:null};
-let INTEL={fng:null,global:null,trending:null,fx:null,ts:0,err:{}};   // free macro intelligence
+let INTEL={fng:null,global:null,trending:null,fx:null,indices:null,earnings:null,symNews:{},ts:0,err:{}};   // free macro intelligence
 
 const CFG=(window.SAHJONY_CONFIG||{});
 const FINNHUB=(CFG.FINNHUB_API_KEY||"").trim();
@@ -274,6 +274,23 @@ async function fetchStockQuotes(syms){
       const q=await r.json(); out.push(Object.assign({sym:s}, q)); }catch(e){}
   } return out;
 }
+async function fetchSymbolNews(sym){    // per-ticker headlines (Finnhub key, else GDELT)
+  if(INTEL.symNews[sym]) return;
+  INTEL.symNews[sym]={loading:true,items:[]};
+  try{
+    let items=[];
+    if(FINNHUB && !sym.includes('/')){
+      const to=new Date().toISOString().slice(0,10), from=new Date(Date.now()-10*864e5).toISOString().slice(0,10);
+      const j=await getJSON(`https://finnhub.io/api/v1/company-news?symbol=${encodeURIComponent(sym)}&from=${from}&to=${to}&token=${encodeURIComponent(FINNHUB)}`);
+      items=(j||[]).slice(0,5).map(a=>({title:a.headline,url:a.url,source:a.source,time:fmtTs(a.datetime*1000)}));
+    }else{
+      const j=await getJSON(`https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent('"'+sym+'" (stock OR shares OR earnings)')}&mode=ArtList&maxrecords=5&sort=DateDesc&format=json`);
+      items=((j||{}).articles||[]).map(a=>({title:a.title,url:a.url,source:a.domain,time:fmtGdelt(a.seendate)}));
+    }
+    INTEL.symNews[sym]={loading:false,items};
+  }catch(e){ INTEL.symNews[sym]={loading:false,items:[],err:String(e.message||e)}; }
+  if(TAB==='Council')render();
+}
 
 // ── realtime streaming over WebSocket ───────────────────────────────────────
 const BINANCE_SYMS=['btc','eth','sol','bnb','xrp','ada','doge','avax','link','dot','ltc','trx'];
@@ -326,15 +343,27 @@ function startStreams(){ if(STREAM.started)return; STREAM.started=true; connectC
 
 // ── free macro intelligence (no key) ────────────────────────────────────────
 async function getJSON(u){const r=await fetch(u);if(!r.ok)throw new Error('HTTP '+r.status);return r.json();}
+const INDEX_PROXIES=[['SPY','S&P 500'],['QQQ','Nasdaq 100'],['DIA','Dow 30'],['IWM','Russell 2000']];
 async function fetchIntel(force){
   if(!force && Date.now()-INTEL.ts<300000 && INTEL.global) return;
-  const nx={fng:INTEL.fng,global:INTEL.global,trending:INTEL.trending,fx:INTEL.fx,ts:Date.now(),err:{}};
-  await Promise.all([
+  const nx={...INTEL, ts:Date.now(), err:{}};
+  const jobs=[
     getJSON('https://api.alternative.me/fng/?limit=1').then(j=>{nx.fng=(j.data||[])[0]||null;}).catch(e=>{nx.err.fng=String(e.message||e);}),
     getJSON('https://api.coingecko.com/api/v3/global').then(j=>{nx.global=j.data||null;}).catch(e=>{nx.err.global=String(e.message||e);}),
     getJSON('https://api.coingecko.com/api/v3/search/trending').then(j=>{nx.trending=j.coins||[];}).catch(e=>{nx.err.trending=String(e.message||e);}),
     getJSON('https://api.frankfurter.app/latest?from=USD&to=EUR,GBP,JPY,CAD,AUD,CHF,CNY').then(j=>{nx.fx=j.rates||null;}).catch(e=>{nx.err.fx=String(e.message||e);}),
-  ]);
+  ];
+  if(FINNHUB){   // indices (via liquid ETF proxies) + this week's earnings — free tier
+    jobs.push(Promise.all(INDEX_PROXIES.map(([s,label])=>
+      getJSON(`https://finnhub.io/api/v1/quote?symbol=${s}&token=${encodeURIComponent(FINNHUB)}`)
+        .then(q=>({sym:s,label,...q})).catch(()=>null)))
+      .then(rows=>{nx.indices=rows.filter(Boolean);}).catch(e=>{nx.err.indices=String(e.message||e);}));
+    const today=new Date().toISOString().slice(0,10);
+    const wk=new Date(Date.now()+7*864e5).toISOString().slice(0,10);
+    jobs.push(getJSON(`https://finnhub.io/api/v1/calendar/earnings?from=${today}&to=${wk}&token=${encodeURIComponent(FINNHUB)}`)
+      .then(j=>{nx.earnings=(j.earningsCalendar||[]).slice(0,25);}).catch(e=>{nx.err.earnings=String(e.message||e);}));
+  }
+  await Promise.all(jobs);
   INTEL=nx; if(TAB==='Macro'||TAB==='Parquet')render();
 }
 
@@ -383,6 +412,23 @@ function Macro(v){
   if(INTEL.fx){fb=$(`<div></div>`);Object.entries(INTEL.fx).forEach(([k,val])=>fb.appendChild($(`<div class="row"><span class="mut">USD / ${esc(k)}</span><span class="mono">${num(val,4)}</span></div>`)));}
   else fb=`<div class="empty">FX unavailable</div>`;
   g.appendChild(panel('FX Majors', fb, 'frankfurter', 'span4'));
+  // equity indices (ETF proxies)
+  let ib;
+  if(INTEL.indices && INTEL.indices.length){ ib=$(`<div></div>`);
+    INTEL.indices.forEach(q=>{const up=(q.dp||0)>=0;
+      ib.appendChild($(`<div class="row"><span class="mut">${esc(q.label)} <span class="mono" style="font-size:9px">${esc(q.sym)}</span></span>
+        <span><span class="mono">${money(q.c)}</span> <span class="tag ${up?'on':'off'}">${pct(q.dp)}</span></span></div>`));});}
+  else ib = FINNHUB ? `<div class="empty">loading indices…</div>` : `<div class="empty">add FINNHUB_API_KEY for live indices</div>`;
+  g.appendChild(panel('Equity Indices', ib, 'Finnhub', 'span4'));
+  // earnings this week
+  let eb;
+  if(INTEL.earnings && INTEL.earnings.length){ const w=$(`<div class="scroll"></div>`);
+    const t=$(`<table><thead><tr><th>SYM</th><th>DATE</th><th>HOUR</th><th class="n">EPS EST</th></tr></thead><tbody></tbody></table>`);
+    INTEL.earnings.forEach(e=>t.querySelector('tbody').appendChild($(`<tr><td class="amber">${esc(e.symbol)}</td><td>${esc(e.date)}</td>
+      <td class="mut">${esc(e.hour||'')}</td><td class="n">${e.epsEstimate!=null?num(e.epsEstimate):'—'}</td></tr>`)));
+    w.appendChild(t); eb=w; }
+  else eb = FINNHUB ? `<div class="empty">no earnings in the next 7 days</div>` : `<div class="empty">add FINNHUB_API_KEY for the earnings calendar</div>`;
+  g.appendChild(panel('Earnings · Next 7 Days', eb, 'Finnhub', 'span8'));
   // top movers
   let mv;
   if((MARKETS.list||[]).length){const s=[...MARKETS.list].sort((a,b)=>(b.price_change_percentage_24h||0)-(a.price_change_percentage_24h||0));
@@ -662,6 +708,15 @@ function Council(v){
         <div style="display:flex;justify-content:space-between;font-size:12px"><span><b>${esc(a.name)}</b> <span class="mut">${esc(a.persona)}</span></span>
           <span class="mono ${a.score>=0?'up':'down'}">${a.score>=0?'+':''}${a.score.toFixed(2)} · ${(a.confidence*100).toFixed(0)}%</span></div>
         <div class="mut mono" style="font-size:10.5px;margin-top:2px">${esc(a.rationale)}</div></div>`));});
+    // per-ticker headlines
+    const news=INTEL.symNews[c.symbol];
+    const nb=$(`<div style="margin-top:10px;border-top:1px solid var(--line2);padding-top:8px"></div>`);
+    nb.appendChild($(`<div class="mut mono" style="font-size:9.5px;letter-spacing:1px;margin-bottom:5px">HEADLINES</div>`));
+    if(!news){ fetchSymbolNews(c.symbol); nb.appendChild($(`<div class="empty">loading…</div>`)); }
+    else if(news.loading) nb.appendChild($(`<div class="empty">loading…</div>`));
+    else if(!news.items.length) nb.appendChild($(`<div class="empty">no recent headlines</div>`));
+    else news.items.forEach(a=>nb.appendChild($(`<a href="${esc(a.url)}" target="_blank" rel="noopener" style="display:block;color:#cdd8ee;text-decoration:none;font-size:11.5px;padding:3px 0">• ${esc(a.title)} <span class="mut" style="font-size:9px">${esc(a.source||'')}</span></a>`)));
+    body.appendChild(nb);
     g.appendChild(panel(`${esc(c.symbol)} · ${esc(c.direction)} · conv ${(c.conviction*100).toFixed(0)}%`, body,
       money(c.price), 'span6'));
   });
