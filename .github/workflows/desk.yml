@@ -37,10 +37,17 @@ jobs:
       ALPACA_API_KEY: ${{ secrets.ALPACA_API_KEY }}
       ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
       ALPACA_PAPER: 'true'                 # PAPER only — never live from CI
-      # Optional AI overlay (advisory). Safe to leave unset.
-      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-      AI_BRAIN_ENABLED: ${{ secrets.ANTHROPIC_API_KEY != '' && 'true' || 'false' }}
-      AUTO_UPDATE_MODELS: 'true'
+      # AI brain + counsellors (advisory overlay). Add only the keys you want as
+      # repo secrets — each provider activates automatically when its key exists.
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}   # Claude — primary brain
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}         # GPT (OpenAI) — counsellor
+      XAI_API_KEY: ${{ secrets.XAI_API_KEY }}               # Grok (xAI) — counsellor
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}         # Gemini (Google) — counsellor
+      # Master switch — keys can sit loaded without spending. Defaults ON once a
+      # Claude key exists; set repo Variable AI_BRAIN_ENABLED=false to keep the
+      # brain OFF (no LLM calls / no cost) until you're ready to "go and pay".
+      AI_BRAIN_ENABLED: ${{ vars.AI_BRAIN_ENABLED || (secrets.ANTHROPIC_API_KEY != '' && 'true' || 'false') }}
+      AUTO_UPDATE_MODELS: 'true'           # always resolve each provider's latest model
       # Optional desk config overrides.
       TICKERS: ${{ vars.TICKERS || 'AAPL,MSFT,SPY' }}
     steps:
