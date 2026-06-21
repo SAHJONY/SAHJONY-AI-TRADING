@@ -50,6 +50,10 @@ async function main() {
   const CRYPTO = [{ symbol: 'btc', name: 'Bitcoin', current_price: 61000, price_change_percentage_24h: 2.4, market_cap: 1.2e12, total_volume: 3e10 }];
   const ARTS = [{ title: 'Markets rally on cooling inflation', url: 'https://news.test/a', domain: 'reuters.com', seendate: '20260620T210000Z' }];
   win.fetch = async (url) => {
+    if (/alternative\.me/.test(url)) return { ok: true, json: async () => ({ data: [{ value: '72', value_classification: 'Greed', timestamp: '1' }] }) };
+    if (/search\/trending/.test(url)) return { ok: true, json: async () => ({ coins: [{ item: { name: 'Solana', symbol: 'SOL', market_cap_rank: 5 } }] }) };
+    if (/api\/v3\/global/.test(url)) return { ok: true, json: async () => ({ data: { total_market_cap: { usd: 2.4e12 }, market_cap_change_percentage_24h_usd: 1.5, market_cap_percentage: { btc: 52.3, eth: 17.1 }, active_cryptocurrencies: 12000 } }) };
+    if (/frankfurter/.test(url)) return { ok: true, json: async () => ({ rates: { EUR: 0.92, GBP: 0.79, JPY: 150.2, CAD: 1.36, AUD: 1.52, CHF: 0.88, CNY: 7.1 } }) };
     if (/coingecko/.test(url)) return { ok: true, json: async () => CRYPTO };
     if (/gdelt/.test(url)) return { ok: true, json: async () => ({ articles: ARTS }) };
     return { ok: true, json: async () => statusJson };
@@ -57,12 +61,15 @@ async function main() {
   win.eval(appScript);
   await new Promise(r => setTimeout(r, 60));
 
-  check(win.document.querySelectorAll('#nav button').length === 9, 'all 9 function tabs present');
+  check(win.document.querySelectorAll('#nav button').length === 10, 'all 10 function tabs present');
   check(win.document.getElementById('tape').textContent.length > 0, 'ticker tape populated');
   check(viewText(win).includes('Equity'), 'Terminal cockpit renders (Equity/NAV)');
   check(viewText(win).includes('Council Heatmap') || viewText(win).includes('Heatmap'), 'Terminal shows council heatmap');
-  await win.fetchMarkets(true); await win.fetchNews(true);
+  await win.fetchMarkets(true); await win.fetchNews(true); await win.fetchIntel(true);
   navClick(win, 'Markets'); check(viewText(win).includes('BTC'), 'Markets tab renders live crypto (CoinGecko)');
+  navClick(win, 'Macro'); check(/Fear & Greed/.test(viewText(win)) && viewText(win).includes('72'), 'Macro tab renders sentiment + intel');
+  check(viewText(win).includes('BTC dominance'), 'Macro shows global crypto stats');
+  navClick(win, 'Terminal'); check(/AI Market Read/.test(viewText(win)) && /(RISK-|NEUTRAL)/.test(viewText(win)), 'Terminal shows synthesized AI Market Read');
   navClick(win, 'News'); check(/cooling inflation/.test(viewText(win)), 'News tab renders live wire (GDELT)');
   navClick(win, 'Council'); check(viewText(win).includes('Intelligence Council'), 'Council tab renders');
   navClick(win, 'Brain'); check(viewText(win).includes('Chief Strategist'), 'Brain tab renders');
