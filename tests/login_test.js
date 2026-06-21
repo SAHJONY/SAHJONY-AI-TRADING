@@ -78,4 +78,6 @@ async function main() {
 
   console.log(`\nLOGIN (PASSCODE) TEST PASSED ✓ (${passed} checks)`);
 }
-main().catch(e => { console.log('✗ ERROR:', e.stack); process.exit(1); });
+// jsdom leaves timers running (the page's setInterval clock) which keeps Node's
+// event loop alive — exit explicitly so CI / readiness.sh don't hang.
+main().then(() => process.exit(0)).catch(e => { console.log('✗ ERROR:', e.stack); process.exit(1); });

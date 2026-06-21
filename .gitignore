@@ -2,6 +2,10 @@
 .env
 .env.*
 !.env.template
+# keep committed templates/examples (they hold NO secrets, only blank keys)
+!.env.example
+!**/.env.example
+!**/.env.template
 
 # runtime state, database, logs
 state.json

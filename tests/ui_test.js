@@ -158,4 +158,7 @@ async function main() {
 
   console.log(`\nTERMINAL UI TEST PASSED ✓ (${passed} checks)`);
 }
-main().catch(e => { console.log('✗ ERROR:', e.stack); process.exit(1); });
+// jsdom keeps timers/WebSockets alive (the dashboard's setInterval(load,30000) +
+// clock), which would keep Node's event loop running forever — exit explicitly so
+// CI / readiness.sh don't hang after a green run.
+main().then(() => process.exit(0)).catch(e => { console.log('✗ ERROR:', e.stack); process.exit(1); });
