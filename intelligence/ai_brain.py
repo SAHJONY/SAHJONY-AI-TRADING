@@ -68,6 +68,13 @@ class AIBrain:
         self.xai_key = os.getenv("XAI_API_KEY", "").strip()
         # Gemini accepts either GEMINI_API_KEY or Google's GOOGLE_API_KEY.
         self.gemini_key = (os.getenv("GEMINI_API_KEY", "") or os.getenv("GOOGLE_API_KEY", "")).strip()
+        # NVIDIA NIM — free, OpenAI-compatible. Doubles as a counsellor AND the
+        # last-resort fallback brain when Claude is absent or fails.
+        self.nvidia_key = (os.getenv("NVIDIA_API_KEY", "") or os.getenv("NVIDIA_NIM_API_KEY", "")).strip()
+        self.nvidia_base = (os.getenv("NVIDIA_BASE_URL", "https://integrate.api.nvidia.com/v1")
+                            or "https://integrate.api.nvidia.com/v1").strip().rstrip("/")
+        self.nvidia_model = (os.getenv("NVIDIA_MODEL", "meta/llama-3.3-70b-instruct")
+                             or "meta/llama-3.3-70b-instruct").strip()
         # Autonomously resolve each provider's latest model (cached ~daily). Falls
         # back to the configured defaults whenever the lookup can't run.
         self.brain_model = cfg.anthropic_model
@@ -92,7 +99,9 @@ class AIBrain:
 
     @property
     def enabled(self) -> bool:
-        return self.cfg.ai_brain_enabled and bool(self.anthropic_key)
+        # NVIDIA NIM can serve as the brain on its own (free testing / fallback),
+        # so the overlay is live with either a Claude key or an NVIDIA key.
+        return self.cfg.ai_brain_enabled and (bool(self.anthropic_key) or bool(self.nvidia_key))
 
     @property
     def status(self) -> Dict[str, object]:
@@ -102,9 +111,12 @@ class AIBrain:
             "counsellor_openai": bool(self.openai_key),
             "counsellor_grok": bool(self.xai_key),
             "counsellor_gemini": bool(self.gemini_key),
+            "counsellor_nvidia": bool(self.nvidia_key),
+            "nvidia_fallback": bool(self.nvidia_key),
             "auto_update_models": self.cfg.auto_update_models,
             "models": {"brain": self.brain_model, "openai": self.openai_model,
-                       "grok": self.grok_model, "gemini": self.gemini_model},
+                       "grok": self.grok_model, "gemini": self.gemini_model,
+                       "nvidia": (self.nvidia_model if self.nvidia_key else "")},
         }
 
     # ── public entry point ────────────────────────────────────────────────────
@@ -114,6 +126,7 @@ class AIBrain:
         if not self.enabled or not portfolio:
             return BrainVerdict(used=False, commentary="AI brain disabled or no data")
         question = self._build_question(portfolio)
+        symbols = [p["symbol"] for p in portfolio]
         counsellors = {}
         if self.openai_key:
             counsellors["openai"] = self._ask_openai(question)
@@ -121,14 +134,36 @@ class AIBrain:
             counsellors["grok"] = self._ask_grok(question)
         if self.gemini_key:
             counsellors["gemini"] = self._ask_gemini(question)
-        try:
-            verdict = self._ask_claude(question, counsellors, [p["symbol"] for p in portfolio])
-            verdict.counsellors = {k: (v or "")[:280] for k, v in counsellors.items()}
-            return verdict
-        except Exception as exc:  # brain failure → neutral overlay, never crash
-            log.error("AI brain (Claude) failed: %s", exc)
-            return BrainVerdict(used=False, commentary=f"brain error: {exc}",
-                                counsellors={k: (v or "")[:280] for k, v in counsellors.items()})
+        if self.nvidia_key:
+            counsellors["nvidia"] = self._ask_nvidia(question)
+
+        def _wrap(v: BrainVerdict) -> BrainVerdict:
+            v.counsellors = {k: (val or "")[:280] for k, val in counsellors.items()}
+            return v
+
+        # PRIMARY brain: Claude. LAST-RESORT FALLBACK: NVIDIA NIM (free, OpenAI-
+        # compatible). Either failure degrades to neutral — never crashes the loop.
+        if self.anthropic_key:
+            try:
+                return _wrap(self._ask_claude(question, counsellors, symbols))
+            except Exception as exc:
+                log.error("AI brain (Claude) failed: %s", exc)
+                if self.nvidia_key:
+                    try:
+                        log.warning("falling back to NVIDIA NIM brain")
+                        return _wrap(self._ask_nim_brain(question, counsellors, symbols))
+                    except Exception as exc2:
+                        log.error("NVIDIA NIM fallback failed: %s", exc2)
+                        return _wrap(BrainVerdict(used=False, commentary=f"brain error: {exc2}"))
+                return _wrap(BrainVerdict(used=False, commentary=f"brain error: {exc}"))
+        # No Claude key → NVIDIA NIM is the brain (free testing / last resort).
+        if self.nvidia_key:
+            try:
+                return _wrap(self._ask_nim_brain(question, counsellors, symbols))
+            except Exception as exc:
+                log.error("NVIDIA NIM brain failed: %s", exc)
+                return _wrap(BrainVerdict(used=False, commentary=f"brain error: {exc}"))
+        return _wrap(BrainVerdict(used=False, commentary="no brain provider configured"))
 
     def _build_question(self, portfolio: List[Dict]) -> str:
         rows = [{k: (round(v, 4) if isinstance(v, float) else v) for k, v in p.items()}
@@ -203,6 +238,66 @@ class AIBrain:
         return self._chat_completions(
             "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
             self.gemini_key, self.gemini_model, question, label="gemini")
+
+    # ── SECONDARY: NVIDIA NIM counsellor (free, OpenAI-compatible) ─────────────
+    def _ask_nvidia(self, question: str) -> Optional[str]:
+        return self._chat_completions(
+            self.nvidia_base + "/chat/completions", self.nvidia_key,
+            self.nvidia_model, question, label="nvidia")
+
+    # ── FALLBACK BRAIN: NVIDIA NIM produces the structured overlay itself ──────
+    # Used when Claude is absent or fails. OpenAI-compatible JSON-mode request.
+    def _ask_nim_brain(self, question: str, counsellors: Dict[str, str],
+                       symbols: List[str]) -> BrainVerdict:
+        return self._oai_brain(self.nvidia_base + "/chat/completions", self.nvidia_key,
+                               self.nvidia_model, question, counsellors, symbols, label="nvidia")
+
+    @staticmethod
+    def _extract_json(text: str) -> dict:
+        text = (text or "").strip()
+        try:
+            return json.loads(text)
+        except Exception:
+            i, j = text.find("{"), text.rfind("}")
+            if i != -1 and j != -1 and j > i:
+                return json.loads(text[i:j + 1])
+            raise ValueError("no JSON object in response")
+
+    def _oai_brain(self, url, key, model, question, counsellors, symbols, label) -> BrainVerdict:
+        """Brain verdict via any OpenAI-compatible chat endpoint (e.g. NVIDIA NIM)."""
+        import requests
+        counsel_text = "\n".join(f"- {n.upper()} counsellor says: {op}"
+                                 for n, op in counsellors.items() if op) or "(no counsellors)"
+        instr = (question + "\n\nCounsellor opinions:\n" + counsel_text +
+                 "\n\nRespond ONLY with a JSON object with keys: "
+                 '"posture" (one of "risk_on","neutral","risk_off"), '
+                 '"global_risk_multiplier" (number 0.5-1.2), "commentary" (string), '
+                 '"per_symbol_adjust" (object mapping each symbol to a number in [-0.15,0.15]). '
+                 "Symbols: " + ", ".join(symbols) + ".")
+        payload = {"model": model, "max_tokens": 1500, "temperature": 0.2,
+                   "response_format": {"type": "json_object"},
+                   "messages": [{"role": "system", "content": _SYSTEM.format(firm=self.cfg.firm_name)},
+                                {"role": "user", "content": instr}]}
+        headers = {"Authorization": "Bearer " + key, "Content-Type": "application/json"}
+        r = requests.post(url, timeout=45, headers=headers, json=payload)
+        if not r.ok and r.status_code in (400, 404, 415, 422):
+            # some NIM models reject json_object response_format → retry plain
+            payload.pop("response_format", None)
+            r = requests.post(url, timeout=45, headers=headers, json=payload)
+        if not r.ok:
+            raise RuntimeError(f"{label} HTTP {r.status_code}: {r.text[:200]}")
+        text = r.json()["choices"][0]["message"]["content"]
+        data = self._extract_json(text)
+        adj = {s: _clamp(data.get("per_symbol_adjust", {}).get(s, 0.0), -_MAX_ADJ, _MAX_ADJ)
+               for s in symbols}
+        return BrainVerdict(
+            used=True,
+            posture=str(data.get("posture", "neutral")),
+            global_risk_multiplier=_clamp(data.get("global_risk_multiplier", 1.0), 0.5, 1.2),
+            per_symbol_adjust=adj,
+            commentary=str(data.get("commentary", ""))[:600],
+            brain_model=f"{label}:{model}",
+        )
 
     def _chat_completions(self, url, key, model, question, label) -> Optional[str]:
         """OpenAI-compatible chat endpoint (both OpenAI and xAI speak it)."""
