@@ -193,7 +193,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const TABS = ["Parquet","Markets","Macro","News","Council","Book","Brain","Controls","Workforce","Env"];
-let DATA=null, TAB="Parquet", SESSION=null, DESK=null;
+let DATA=null, TAB="Parquet", SESSION=null, DESK=null, CREDS=[];
 let MARKETS={list:[],err:null,ts:0};            // CoinGecko crypto (no key)
 let NEWS={list:[],err:null,ts:0,src:''};        // Finnhub (key) or GDELT (no key)
 const STREAM={connected:false,live:{},tries:0,started:false,chanFor:null,cryptoWS:null,stockWS:null};
@@ -221,7 +221,13 @@ async function refreshDesk(){
     if(!session){DESK=null;return;}
     const {data}=await SB.from('desks').select('*').order('created_at').limit(1);
     DESK=(data&&data[0])||null;
+    await refreshCreds();
   }catch(e){DESK=null;}
+}
+async function refreshCreds(){
+  CREDS=[]; if(!LIVE_OK||!SESSION||!DESK)return;
+  try{ const {data}=await SB.from('broker_credentials').select('name').eq('desk_id',DESK.id);
+    CREDS=(data||[]).map(r=>r.name); }catch(e){ CREDS=[]; }
 }
 async function load(){
   try{
@@ -499,7 +505,23 @@ async function sbUpdate(fields){ if(!DESK)return; const {error}=await SB.from('d
 async function sbCommand(c){ await sbUpdate({command:c}); }
 async function sbLogin(email,password){ const {error}=await SB.auth.signInWithPassword({email,password});
   if(error){alert('Login failed: '+error.message);}else{await load();} }
-async function sbLogout(){ await SB.auth.signOut(); DESK=null;SESSION=null; await load(); }
+async function sbLogout(){ await SB.auth.signOut(); DESK=null;SESSION=null;CREDS=[]; await load(); }
+// Self-service broker keys: encrypted server-side by the set-credential Edge Function
+// (AES-256-GCM). The browser never holds the encryption key — the value only travels
+// over TLS to the function, which stores the ciphertext per-desk under RLS.
+async function saveCredentials(creds){
+  if(!DESK||!SESSION){alert('Sign in first.');return false;}
+  try{
+    const r=await fetch(`${CFG.SUPABASE_URL}/functions/v1/set-credential`,{method:'POST',
+      headers:{'Content-Type':'application/json','apikey':CFG.SUPABASE_ANON_KEY,
+        'Authorization':'Bearer '+(SESSION.access_token||'')},
+      body:JSON.stringify({desk_id:DESK.id,credentials:creds})});
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok||j.error){alert('Save failed: '+(j.error||('HTTP '+r.status)));return false;}
+    alert('Saved & encrypted: '+((j.saved||[]).join(', ')||'nothing'));
+    await refreshCreds(); render(); return true;
+  }catch(e){ alert('Save failed: '+(e&&e.message||e)); return false; }
+}
 
 // ── nav ──
 function buildNav(){
@@ -855,6 +877,23 @@ function Controls(v){
   md.appendChild(ms); md.querySelector('#cmode').value=d.mode||'sim';
   ms.onclick=()=>{const m=md.querySelector('#cmode').value;
     if(m==='live'&&!confirm('Arm LIVE real-money trading for this desk?'))return; sbUpdate({mode:m,live_ack:m==='live'});};
+
+  // broker keys — self-service onboarding (encrypted server-side, never shown back)
+  const bk=$(`<div></div>`);
+  const flag=(n)=>CREDS.includes(n)?'<span class="tag on">set</span>':'<span class="tag off">missing</span>';
+  bk.innerHTML=`<div class="row"><span class="mut">Alpaca API key ${flag('ALPACA_API_KEY')}</span><input class="f" id="kak" type="password" autocomplete="off" placeholder="PK… (leave blank to keep)" style="max-width:280px"></div>
+    <div class="row"><span class="mut">Alpaca secret ${flag('ALPACA_SECRET_KEY')}</span><input class="f" id="kas" type="password" autocomplete="off" placeholder="secret (leave blank to keep)" style="max-width:280px"></div>
+    <div class="row"><span class="mut">Anthropic key ${flag('ANTHROPIC_API_KEY')}</span><input class="f" id="kan" type="password" autocomplete="off" placeholder="sk-ant-… (optional)" style="max-width:280px"></div>`;
+  const bs=$(`<button class="act" style="margin-top:11px">SAVE KEYS (ENCRYPTED)</button>`);
+  bs.onclick=()=>{const c={};
+    const ak=bk.querySelector('#kak').value.trim(); if(ak)c.ALPACA_API_KEY=ak;
+    const as=bk.querySelector('#kas').value.trim(); if(as)c.ALPACA_SECRET_KEY=as;
+    const an=bk.querySelector('#kan').value.trim(); if(an)c.ANTHROPIC_API_KEY=an;
+    if(!Object.keys(c).length){alert('Enter at least one key to save.');return;}
+    saveCredentials(c);};
+  bk.appendChild(bs);
+  bk.appendChild($(`<div class="empty" style="margin-top:9px">Keys are encrypted server-side (AES-256-GCM) and stored per-desk — the dashboard only shows <b>set / missing</b>, never the value. Start with Alpaca <b>paper</b> keys; LIVE needs the deliberate opt-in above.</div>`));
+  g.appendChild(panel('Broker Keys · Self-service onboarding', bk, 'encrypted', 'span12'));
 
   v.appendChild(g);
 }
