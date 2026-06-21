@@ -56,6 +56,10 @@ async function main() {
     if (/frankfurter/.test(url)) return { ok: true, json: async () => ({ rates: { EUR: 0.92, GBP: 0.79, JPY: 150.2, CAD: 1.36, AUD: 1.52, CHF: 0.88, CNY: 7.1 } }) };
     if (/coingecko/.test(url)) return { ok: true, json: async () => CRYPTO };
     if (/gdelt/.test(url)) return { ok: true, json: async () => ({ articles: ARTS }) };
+    if (/finnhub.*calendar\/earnings/.test(url)) return { ok: true, json: async () => ({ earningsCalendar: [{ symbol: 'AAPL', date: '2026-06-25', hour: 'amc', epsEstimate: 1.21 }] }) };
+    if (/finnhub.*company-news/.test(url)) return { ok: true, json: async () => ([{ headline: 'AAPL unveils new chip', url: 'https://x', source: 'CNBC', datetime: 1782000000 }]) };
+    if (/finnhub.*\/news/.test(url)) return { ok: true, json: async () => ([{ headline: 'Fed holds rates steady', url: 'https://x', source: 'Reuters', datetime: 1782000000 }]) };
+    if (/finnhub.*\/quote/.test(url)) return { ok: true, json: async () => ({ c: 540.2, d: 3.1, dp: 0.58, h: 541, l: 537 }) };
     return { ok: true, json: async () => statusJson };
   };
   win.eval(appScript);
@@ -72,6 +76,8 @@ async function main() {
   navClick(win, 'Parquet'); check(/AI Market Read/.test(viewText(win)) && /(RISK-|NEUTRAL)/.test(viewText(win)), 'Parquet shows synthesized AI Market Read');
   navClick(win, 'News'); check(/cooling inflation/.test(viewText(win)), 'News tab renders live wire (GDELT)');
   navClick(win, 'Council'); check(viewText(win).includes('Intelligence Council'), 'Council tab renders');
+  await new Promise(r => setTimeout(r, 150));
+  check(/HEADLINES/.test(viewText(win)) && /cooling inflation/.test(viewText(win)), 'Council shows per-ticker headlines');
   navClick(win, 'Brain'); check(viewText(win).includes('Chief Strategist'), 'Brain tab renders');
   navClick(win, 'Book'); check(viewText(win).toLowerCase().includes('positions'), 'Book tab renders');
   navClick(win, 'Workforce'); check(viewText(win).toLowerCase().includes('workforce'), 'Workforce tab renders');
@@ -113,6 +119,22 @@ async function main() {
   await new Promise(r => setTimeout(r, 20));
   navClick(win, 'Parquet');
   check(viewText(win).includes('987,654'), 'Supabase Realtime push updates the dashboard instantly');
+
+  // ── Finnhub-powered panels (indices + earnings) via a second mount ──
+  const st2 = { session: null, desks: [], updates: [] };
+  const dom2 = new JSDOM(html.replace(/<script src=[^>]*><\/script>/g, ''),
+    { runScripts: 'outside-only', url: 'https://desk.test/', virtualConsole: new VirtualConsole() });
+  const w2 = dom2.window;
+  w2.SAHJONY_CONFIG = { SUPABASE_URL: 'https://x.supabase.co', SUPABASE_ANON_KEY: 'anon', FINNHUB_API_KEY: 'testkey' };
+  w2.supabase = { createClient: () => makeClient(st2) };
+  w2.WebSocket = FakeWS;
+  w2.fetch = win.fetch;
+  w2.eval(appScript);
+  await new Promise(r => setTimeout(r, 60));
+  await w2.fetchIntel(true);
+  navClick(w2, 'Macro');
+  check(/Equity Indices/.test(viewText(w2)) && /S&P 500/.test(viewText(w2)), 'Macro renders live equity indices (Finnhub)');
+  check(/Earnings/.test(viewText(w2)) && /AAPL/.test(viewText(w2)), 'Macro renders earnings calendar (Finnhub)');
 
   console.log(`\nTERMINAL UI TEST PASSED ✓ (${passed} checks)`);
 }

@@ -95,6 +95,15 @@ def run_desk(conn, desk: Dict[str, Any]) -> None:
         except Exception as exc:  # a bad/rotated key never sinks the desk
             log.error("desk %s: failed to decrypt %s: %s", desk_id, name, exc)
 
+    # Single-owner fallback: when a desk has no stored credentials, use keys from
+    # the worker host's own env (WORKER_*). Lets you run the live dashboard path
+    # without the encrypted key-entry UI. (Multi-tenant keeps per-desk creds.)
+    for cred_name, env_name in (("ALPACA_API_KEY", "WORKER_ALPACA_API_KEY"),
+                                ("ALPACA_SECRET_KEY", "WORKER_ALPACA_SECRET_KEY"),
+                                ("ANTHROPIC_API_KEY", "WORKER_ANTHROPIC_API_KEY")):
+        if not creds.get(cred_name) and os.environ.get(env_name):
+            creds[cred_name] = os.environ[env_name]
+
     mode = _resolve_mode(desk, creds)
     effective_halt, action = resolve_command(desk.get("command"), desk.get("halt"))
     _apply_env(desk, creds, mode, effective_halt)
