@@ -112,6 +112,12 @@ class Config:
     ladder_enable_averaging: bool = True
     ladder_catastrophic_pct: float = 0.40
 
+    # copy trading (mirror an external disclosure/signal feed)
+    copy_trading_enabled: bool = False
+    copy_trading_source_url: str = ""
+    copy_trading_api_key: str = ""
+    copy_trading_max_symbols: int = 10
+
     # firm / branding
     firm_name: str = "SAHJONY CAPITAL LLC"
     # public base URL of the deployed dashboard, used to build investor share links
@@ -187,6 +193,10 @@ def load_config() -> Config:
         ladder_base_qty=max(1, _i("LADDER_BASE_QTY", 10)),
         ladder_enable_averaging=_b("LADDER_ENABLE_AVERAGING", True),
         ladder_catastrophic_pct=_clamp(_f("LADDER_CATASTROPHIC_PCT", 0.40), 0.15, 0.90),
+        copy_trading_enabled=_b("COPY_TRADING_ENABLED", False),
+        copy_trading_source_url=(os.getenv("COPY_TRADING_SOURCE_URL", "") or "").strip(),
+        copy_trading_api_key=os.getenv("COPY_TRADING_API_KEY", "").strip(),
+        copy_trading_max_symbols=max(1, _i("COPY_TRADING_MAX_SYMBOLS", 10)),
         firm_name=(os.getenv("FIRM_NAME", "SAHJONY CAPITAL LLC") or "SAHJONY CAPITAL LLC").strip(),
         public_base_url=(os.getenv("PUBLIC_BASE_URL", "") or "").strip().rstrip("/"),
         voice_alerts=_b("VOICE_ALERTS", False),

@@ -30,6 +30,7 @@ from intelligence.agents import Council, CouncilVerdict, MarketSnapshot
 from intelligence.ai_brain import AIBrain, BrainVerdict
 from risk.risk_engine import RiskEngine
 from strategies.base import OrderIntent
+from strategies.copy_trading import CopyTrader
 from strategies.trailing_ladder import TrailingLadder
 from strategies.wheel_strategy import WheelStrategy
 from utils.logger import get_logger
@@ -164,6 +165,7 @@ class Firm:
         self.execution = ExecutionTrader(client, self.risk, db, cfg)
         self.wheel = WheelStrategy(cfg)
         self.ladder = TrailingLadder(cfg)
+        self.copy = CopyTrader(cfg)
 
     def _position_value(self, state: Dict[str, Any]) -> float:
         total = 0.0
@@ -275,6 +277,21 @@ class Firm:
                                      shares * snap.price, 0.0)
             except Exception as exc:
                 log.error("cycle step failed %s: %s", sym, exc)
+
+        # 6b) Copy-trading desk — mirror external disclosure feed (risk-gated)
+        if trade and self.cfg.copy_trading_enabled:
+            try:
+                signals = self.copy.fetch_signals()
+                if signals:
+                    c_intents = self.copy.decide(signals, state, equity, self.client.get_price)
+                    conv = max(self.cfg.min_council_conviction, 0.6)
+                    done, deployed = self.execution.execute(c_intents, state, cycle, equity,
+                                                            deployed, conv, allow_new_risk)
+                    executed += done
+                    if done:
+                        log.info("COPY desk mirrored %d trade(s)", len(done))
+            except Exception as exc:
+                log.error("copy-trading step failed: %s", exc)
 
         # 7) Treasurer — equity curve
         acct = self.client.get_account()
