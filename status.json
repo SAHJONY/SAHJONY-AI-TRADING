@@ -2,12 +2,12 @@
   "firm": "SAHJONY CAPITAL LLC",
   "tagline": "Autonomous multi-agent quant trading \u2014 PAPER",
   "mode": "offline-sim",
-  "ts": "2026-06-21T19:22:22.136468+00:00",
-  "cycle": 1,
+  "ts": "2026-06-21T20:01:02.514065+00:00",
+  "cycle": 2,
   "account": {
     "equity": 100000.0,
     "equity_start": 100000.0,
-    "cash": 97305.13,
+    "cash": 100000.0,
     "deployed": 2694.87
   },
   "pnl": {
@@ -353,13 +353,13 @@
     "used": true,
     "posture": "neutral",
     "global_risk_multiplier": 0.9,
-    "commentary": "Quant council verdicts indicate a mixed outlook. The counsellor's cautious stance is noted, particularly regarding high beta and vol values. Adjustments reflect a balance between conviction and risk considerations.",
+    "commentary": "Moderate risk posture with a cautious stance due to moderate beta and volatility across the portfolio. SPY's quant signal appears fragile.",
     "brain_model": "nvidia:meta/llama-3.3-70b-instruct",
     "counsellors": {
       "openai": "",
       "grok": "",
       "gemini": "",
-      "nvidia": "I advise a cautious stance due to high beta and vol values. Suggested conviction adjustments: AAPL (+0.05), MSFT (+0.10), SPY (-0.10). The SPY signal appears fragile due to its low conviction and negative composite score."
+      "nvidia": "I advise a cautious stance due to moderate beta and volatility across the portfolio. Suggested conviction adjustments: AAPL (+0.05), MSFT (+0.10), SPY (-0.10). The quant signal for SPY appears fragile due to its low conviction and negative composite score, warranting closer monit"
     }
   },
   "positions": [
@@ -408,9 +408,23 @@
       "cash": 97305.13144071105,
       "realized_pnl": 0.0,
       "premium": 0.0
+    },
+    {
+      "ts": "2026-06-21T20:01:02.513502+00:00",
+      "cycle": 2,
+      "equity": 100000.0,
+      "cash": 100000.0,
+      "realized_pnl": 0.0,
+      "premium": 0.0
     }
   ],
   "decisions": [
+    {
+      "ts": "2026-06-21T20:01:02.511378+00:00",
+      "kind": "ladder_update",
+      "symbol": "MSFT",
+      "reason": "px 299.43 peak 299.43 gain +0%"
+    },
     {
       "ts": "2026-06-21T19:22:22.131844+00:00",
       "kind": "ladder_entry",
@@ -510,13 +524,7 @@
       "mandate": "This dashboard"
     }
   ],
-  "executed_this_cycle": [
-    {
-      "symbol": "MSFT",
-      "purpose": "ladder_entry",
-      "reason": "open 9.0 sh @ 299.43, floor 40%"
-    }
-  ],
+  "executed_this_cycle": [],
   "env_catalog": [
     {
       "name": "ALPACA_API_KEY",
