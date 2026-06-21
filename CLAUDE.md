@@ -45,4 +45,10 @@ native SQLite CRM/database and a static owner dashboard deployed on Vercel.
 
 ## AI brain hierarchy (owner's directive)
 - **Primary engine / brain:** Claude (`anthropic` SDK).
-- **Secondary engines / counsellors:** OpenAI (GPT) + Grok (xAI), advisory only.
+- **Secondary engines / counsellors:** OpenAI (GPT) + Grok (xAI) + Gemini
+  (Google), advisory only. Gemini uses its OpenAI-compatible endpoint and the
+  `GEMINI_API_KEY` (or `GOOGLE_API_KEY`).
+- **Always latest model (autonomous):** with `AUTO_UPDATE_MODELS=true` (default),
+  `utils/model_registry.py` resolves each provider's newest model at run time
+  (latest **Opus** for Claude; latest flagship GPT/Grok/Gemini), cached ~daily,
+  and falls back to the configured `*_MODEL` default whenever the lookup can't run.

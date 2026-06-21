@@ -41,3 +41,8 @@ def investors_dir() -> str:
 
 def halt_path() -> str:
     return os.path.join(home(), "HALT")
+
+
+def model_cache_path() -> str:
+    """Where the autonomous model-updater caches each provider's resolved latest model."""
+    return os.path.join(home(), "model_cache.json")

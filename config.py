@@ -131,9 +131,16 @@ class Config:
 
     # AI brain & counsellors (advisory overlay on the quant council)
     ai_brain_enabled: bool = False
+    # These are FALLBACK defaults. With auto_update_models on (default), the brain
+    # autonomously resolves each provider's latest model at run time (latest Opus
+    # for Claude, latest flagship GPT / Grok for the counsellors) and only falls
+    # back to these IDs when the lookup can't run (no key / offline / API error).
     anthropic_model: str = "claude-opus-4-8"   # PRIMARY brain (Claude)
-    openai_model: str = "gpt-4o"               # counsellor
+    openai_model: str = "gpt-4o"               # counsellor (OpenAI / GPT)
     xai_model: str = "grok-2-latest"           # counsellor (Grok / xAI)
+    gemini_model: str = "gemini-2.5-pro"       # counsellor (Gemini / Google)
+    # Autonomously keep every provider on its newest model (owner directive).
+    auto_update_models: bool = True
 
     # scheduler / ops
     cycle_minutes: int = 15
@@ -206,6 +213,8 @@ def load_config() -> Config:
         anthropic_model=(os.getenv("ANTHROPIC_MODEL", "claude-opus-4-8") or "claude-opus-4-8").strip(),
         openai_model=(os.getenv("OPENAI_MODEL", "gpt-4o") or "gpt-4o").strip(),
         xai_model=(os.getenv("XAI_MODEL", "grok-2-latest") or "grok-2-latest").strip(),
+        gemini_model=(os.getenv("GEMINI_MODEL", "gemini-2.5-pro") or "gemini-2.5-pro").strip(),
+        auto_update_models=_b("AUTO_UPDATE_MODELS", True),
         cycle_minutes=max(1, _i("CYCLE_MINUTES", 15)),
         log_level=(os.getenv("LOG_LEVEL", "INFO") or "INFO").strip().upper(),
     )

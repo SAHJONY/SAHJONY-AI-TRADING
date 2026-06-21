@@ -37,7 +37,8 @@ _MANAGED_ENV = [
     "ALPACA_API_KEY", "ALPACA_SECRET_KEY", "ALPACA_PAPER", "TICKERS", "BENCHMARK",
     "MAX_ALLOCATION_PCT", "MAX_TOTAL_DEPLOYED_PCT", "MIN_COUNCIL_CONVICTION",
     "AI_BRAIN_ENABLED", "ANTHROPIC_API_KEY", "OPENAI_API_KEY", "XAI_API_KEY",
-    "VOICE_API_KEY", "VOICE_ALERTS", "OWNER_PHONE", "FIRM_NAME", "TRADING_HALT",
+    "GEMINI_API_KEY", "VOICE_API_KEY", "VOICE_ALERTS", "OWNER_PHONE", "FIRM_NAME",
+    "TRADING_HALT",
 ]
 
 
@@ -75,7 +76,8 @@ def _apply_env(desk: Dict[str, Any], creds: Dict[str, str], mode: str, halt: boo
     # LLM brain
     if desk.get("ai_brain_enabled") and creds.get("ANTHROPIC_API_KEY"):
         os.environ["AI_BRAIN_ENABLED"] = "true"
-    for k in ("ANTHROPIC_API_KEY", "OPENAI_API_KEY", "XAI_API_KEY", "VOICE_API_KEY", "OWNER_PHONE"):
+    for k in ("ANTHROPIC_API_KEY", "OPENAI_API_KEY", "XAI_API_KEY", "GEMINI_API_KEY",
+              "VOICE_API_KEY", "OWNER_PHONE"):
         if creds.get(k):
             os.environ[k] = creds[k]
     # broker

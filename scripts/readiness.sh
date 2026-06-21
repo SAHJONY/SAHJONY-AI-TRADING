@@ -19,7 +19,8 @@ if "$PY" -m py_compile $(git ls-files '*.py'); then ok "all Python compiles"; el
 
 step "2/5  Python test suite"
 for t in test_dry_run test_circuit_breaker test_multi_market test_broker_factory \
-         test_ibkr_adapter test_broker_conformance test_controls test_copy_trading; do
+         test_ibkr_adapter test_broker_conformance test_controls test_copy_trading \
+         test_model_registry; do
   if "$PY" -m "tests.$t" >/tmp/sahjony_$t.log 2>&1; then ok "$t"; else bad "$t  (see /tmp/sahjony_$t.log)"; fi
 done
 

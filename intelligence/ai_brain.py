@@ -5,8 +5,9 @@ Hierarchy (as directed by the owner):
     official `anthropic` SDK. Acts as Chief Investment Strategist: it reads the
     quant council's per-symbol verdicts AND the two counsellors' opinions, then
     issues the authoritative advisory overlay.
-  • SECONDARY ENGINES / COUNSELLORS — OpenAI (GPT) and Grok (xAI), each queried
-    over its own REST API. Their views are inputs to the brain, not the final say.
+  • SECONDARY ENGINES / COUNSELLORS — OpenAI (GPT), Grok (xAI) and Gemini
+    (Google), each queried over its (OpenAI-compatible) REST API. Their views are
+    inputs to the brain, not the final say.
 
 This layer is an ADVISORY OVERLAY on the deterministic quant council — it nudges
 conviction and a global risk posture; it never invents trades. It is fully
@@ -65,18 +66,45 @@ class AIBrain:
         self.anthropic_key = os.getenv("ANTHROPIC_API_KEY", "").strip()
         self.openai_key = os.getenv("OPENAI_API_KEY", "").strip()
         self.xai_key = os.getenv("XAI_API_KEY", "").strip()
+        # Gemini accepts either GEMINI_API_KEY or Google's GOOGLE_API_KEY.
+        self.gemini_key = (os.getenv("GEMINI_API_KEY", "") or os.getenv("GOOGLE_API_KEY", "")).strip()
+        # Autonomously resolve each provider's latest model (cached ~daily). Falls
+        # back to the configured defaults whenever the lookup can't run.
+        self.brain_model = cfg.anthropic_model
+        self.openai_model = cfg.openai_model
+        self.grok_model = cfg.xai_model
+        self.gemini_model = cfg.gemini_model
+        if cfg.auto_update_models:
+            try:
+                from utils.model_registry import resolve_all
+                latest = resolve_all(
+                    {"anthropic": self.anthropic_key, "openai": self.openai_key,
+                     "xai": self.xai_key, "gemini": self.gemini_key},
+                    {"anthropic": cfg.anthropic_model, "openai": cfg.openai_model,
+                     "xai": cfg.xai_model, "gemini": cfg.gemini_model},
+                )
+                self.brain_model = latest["anthropic"] or self.brain_model
+                self.openai_model = latest["openai"] or self.openai_model
+                self.grok_model = latest["xai"] or self.grok_model
+                self.gemini_model = latest["gemini"] or self.gemini_model
+            except Exception as exc:  # never let model discovery break the brain
+                log.warning("auto model update skipped: %s", exc)
 
     @property
     def enabled(self) -> bool:
         return self.cfg.ai_brain_enabled and bool(self.anthropic_key)
 
     @property
-    def status(self) -> Dict[str, bool]:
+    def status(self) -> Dict[str, object]:
         return {
             "enabled": self.cfg.ai_brain_enabled,
             "brain_claude": bool(self.anthropic_key),
             "counsellor_openai": bool(self.openai_key),
             "counsellor_grok": bool(self.xai_key),
+            "counsellor_gemini": bool(self.gemini_key),
+            "auto_update_models": self.cfg.auto_update_models,
+            "models": {"brain": self.brain_model, "openai": self.openai_model,
+                       "grok": self.grok_model, "gemini": self.gemini_model},
         }
 
     # ── public entry point ────────────────────────────────────────────────────
@@ -91,6 +119,8 @@ class AIBrain:
             counsellors["openai"] = self._ask_openai(question)
         if self.xai_key:
             counsellors["grok"] = self._ask_grok(question)
+        if self.gemini_key:
+            counsellors["gemini"] = self._ask_gemini(question)
         try:
             verdict = self._ask_claude(question, counsellors, [p["symbol"] for p in portfolio])
             verdict.counsellors = {k: (v or "")[:280] for k, v in counsellors.items()}
@@ -133,7 +163,7 @@ class AIBrain:
             "additionalProperties": False,
         }
         resp = client.messages.create(
-            model=self.cfg.anthropic_model,
+            model=self.brain_model,
             # headroom for adaptive thinking: thinking tokens count toward max_tokens,
             # so a tight cap can truncate the JSON overlay and degrade the brain to neutral.
             max_tokens=8000,
@@ -152,20 +182,27 @@ class AIBrain:
             global_risk_multiplier=_clamp(data.get("global_risk_multiplier", 1.0), 0.5, 1.2),
             per_symbol_adjust=adj,
             commentary=str(data.get("commentary", ""))[:600],
-            brain_model=self.cfg.anthropic_model,
+            brain_model=self.brain_model,
         )
 
     # ── SECONDARY: OpenAI (GPT) counsellor ────────────────────────────────────
     def _ask_openai(self, question: str) -> Optional[str]:
         return self._chat_completions(
             "https://api.openai.com/v1/chat/completions", self.openai_key,
-            self.cfg.openai_model, question, label="openai")
+            self.openai_model, question, label="openai")
 
     # ── SECONDARY: Grok (xAI) counsellor ──────────────────────────────────────
     def _ask_grok(self, question: str) -> Optional[str]:
         return self._chat_completions(
             "https://api.x.ai/v1/chat/completions", self.xai_key,
-            self.cfg.xai_model, question, label="grok")
+            self.grok_model, question, label="grok")
+
+    # ── SECONDARY: Gemini (Google) counsellor ─────────────────────────────────
+    # Google exposes an OpenAI-compatible endpoint, so it speaks the same protocol.
+    def _ask_gemini(self, question: str) -> Optional[str]:
+        return self._chat_completions(
+            "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            self.gemini_key, self.gemini_model, question, label="gemini")
 
     def _chat_completions(self, url, key, model, question, label) -> Optional[str]:
         """OpenAI-compatible chat endpoint (both OpenAI and xAI speak it)."""
