@@ -93,7 +93,7 @@ jobs:
           git config user.email "noreply@anthropic.com"
           if ! git diff --quiet -- public/status.json; then
             git add public/status.json
-            git commit -m "Desk snapshot: cycle update [skip ci]"
+            git commit -m "Desk snapshot: cycle ${{ github.run_number }} update"
             for i in 1 2 3 4; do git push && break || sleep $((2**i)); done
           else
             echo "No change in public/status.json — nothing to commit."
