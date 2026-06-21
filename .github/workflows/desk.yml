@@ -49,7 +49,7 @@ jobs:
       # Claude OR NVIDIA key exists; set repo Variable AI_BRAIN_ENABLED=false to keep
       # the brain OFF (no LLM calls / no cost) until you're ready to "go and pay".
       # (NVIDIA NIM is free, so it's safe to test with even while OFF for paid models.)
-      AI_BRAIN_ENABLED: ${{ vars.AI_BRAIN_ENABLED || ((secrets.ANTHROPIC_API_KEY != '' || secrets.NVIDIA_API_KEY != '') && 'true' || 'false') }}
+      AI_BRAIN_ENABLED: ${{ vars.AI_BRAIN_ENABLED || secrets.AI_BRAIN_ENABLED || ((secrets.ANTHROPIC_API_KEY != '' || secrets.NVIDIA_API_KEY != '') && 'true' || 'false') }}
       AUTO_UPDATE_MODELS: 'true'           # always resolve each provider's latest model
       # Optional desk config overrides.
       TICKERS: ${{ vars.TICKERS || 'AAPL,MSFT,SPY' }}
