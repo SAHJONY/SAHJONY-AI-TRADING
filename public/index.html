@@ -4,6 +4,24 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>SAHJONY CAPITAL — Terminal</title>
+<meta name="theme-color" content="#05070b" />
+<meta name="description" content="Autonomous multi-agent quant trading terminal — live markets, council intelligence & risk controls." />
+<link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+<link rel="icon" href="./favicon-64.png" sizes="64x64" type="image/png" />
+<link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+<link rel="manifest" href="./manifest.webmanifest" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="SAHJONY" />
+<meta property="og:type" content="website" />
+<meta property="og:title" content="SAHJONY CAPITAL — AI Quant Terminal" />
+<meta property="og:description" content="Autonomous multi-agent quant trading — live markets, council intelligence & risk controls." />
+<meta property="og:image" content="https://sahjonycapital.com/og.png" />
+<meta property="og:url" content="https://sahjonycapital.com" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="SAHJONY CAPITAL — AI Quant Terminal" />
+<meta name="twitter:description" content="Autonomous multi-agent quant trading terminal." />
+<meta name="twitter:image" content="https://sahjonycapital.com/og.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -788,6 +806,7 @@ function Controls(v){
 
 load();
 setInterval(load,30000);
+if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));}
 </script>
 </body>
 </html>
