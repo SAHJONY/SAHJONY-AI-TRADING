@@ -1,4 +1,4 @@
-// Headless UI test for the SAHJONY terminal dashboard (jsdom).
+// Headless UI test for the SAHJONY parquet dashboard (jsdom).
 //   node tests/ui_test.js
 const fs = require('fs');
 const path = require('path');
@@ -63,13 +63,13 @@ async function main() {
 
   check(win.document.querySelectorAll('#nav button').length === 10, 'all 10 function tabs present');
   check(win.document.getElementById('tape').textContent.length > 0, 'ticker tape populated');
-  check(viewText(win).includes('Equity'), 'Terminal cockpit renders (Equity/NAV)');
-  check(viewText(win).includes('Council Heatmap') || viewText(win).includes('Heatmap'), 'Terminal shows council heatmap');
+  check(viewText(win).includes('Equity'), 'Parquet cockpit renders (Equity/NAV)');
+  check(viewText(win).includes('Council Heatmap') || viewText(win).includes('Heatmap'), 'Parquet shows council heatmap');
   await win.fetchMarkets(true); await win.fetchNews(true); await win.fetchIntel(true);
   navClick(win, 'Markets'); check(viewText(win).includes('BTC'), 'Markets tab renders live crypto (CoinGecko)');
   navClick(win, 'Macro'); check(/Fear & Greed/.test(viewText(win)) && viewText(win).includes('72'), 'Macro tab renders sentiment + intel');
   check(viewText(win).includes('BTC dominance'), 'Macro shows global crypto stats');
-  navClick(win, 'Terminal'); check(/AI Market Read/.test(viewText(win)) && /(RISK-|NEUTRAL)/.test(viewText(win)), 'Terminal shows synthesized AI Market Read');
+  navClick(win, 'Parquet'); check(/AI Market Read/.test(viewText(win)) && /(RISK-|NEUTRAL)/.test(viewText(win)), 'Parquet shows synthesized AI Market Read');
   navClick(win, 'News'); check(/cooling inflation/.test(viewText(win)), 'News tab renders live wire (GDELT)');
   navClick(win, 'Council'); check(viewText(win).includes('Intelligence Council'), 'Council tab renders');
   navClick(win, 'Brain'); check(viewText(win).includes('Chief Strategist'), 'Brain tab renders');
@@ -87,7 +87,7 @@ async function main() {
     last_run_at: new Date().toISOString(),
     last_status: { ...statusJson, account: { ...statusJson.account, equity: 123456 } } }];
   await win.load();
-  navClick(win, 'Terminal');
+  navClick(win, 'Parquet');
   check(viewText(win).includes('123,456'), 'dashboard switches to LIVE desk.last_status when signed in');
   navClick(win, 'Controls');
   check(/desk controls/i.test(viewText(win)), 'Controls renders the live panel when signed in');
@@ -111,7 +111,7 @@ async function main() {
   check(!!state.channel, 'Supabase Realtime channel subscribed for the desk');
   state.channel._cbs[0]({ new: { ...state.desks[0], last_status: { ...statusJson, account: { ...statusJson.account, equity: 987654 } } } });
   await new Promise(r => setTimeout(r, 20));
-  navClick(win, 'Terminal');
+  navClick(win, 'Parquet');
   check(viewText(win).includes('987,654'), 'Supabase Realtime push updates the dashboard instantly');
 
   console.log(`\nTERMINAL UI TEST PASSED ✓ (${passed} checks)`);

@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>SAHJONY CAPITAL — Terminal</title>
+<title>SAHJONY CAPITAL — Parquet</title>
 <meta name="theme-color" content="#05070b" />
-<meta name="description" content="Autonomous multi-agent quant trading terminal — live markets, council intelligence & risk controls." />
+<meta name="description" content="Autonomous multi-agent quant trading parquet — live markets, council intelligence & risk controls." />
 <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
 <link rel="icon" href="./favicon-64.png" sizes="64x64" type="image/png" />
 <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
@@ -14,13 +14,13 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="SAHJONY" />
 <meta property="og:type" content="website" />
-<meta property="og:title" content="SAHJONY CAPITAL — AI Quant Terminal" />
+<meta property="og:title" content="SAHJONY CAPITAL — AI Quant Parquet" />
 <meta property="og:description" content="Autonomous multi-agent quant trading — live markets, council intelligence & risk controls." />
 <meta property="og:image" content="https://sahjonycapital.com/og.png" />
 <meta property="og:url" content="https://sahjonycapital.com" />
 <meta name="twitter:card" content="summary_large_image" />
-<meta name="twitter:title" content="SAHJONY CAPITAL — AI Quant Terminal" />
-<meta name="twitter:description" content="Autonomous multi-agent quant trading terminal." />
+<meta name="twitter:title" content="SAHJONY CAPITAL — AI Quant Parquet" />
+<meta name="twitter:description" content="Autonomous multi-agent quant trading parquet." />
 <meta name="twitter:image" content="https://sahjonycapital.com/og.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -168,7 +168,7 @@
 <header>
   <div class="brand">
     <div class="logo">S</div>
-    <div><h1 id="firm">SAHJONY CAPITAL</h1><div class="sub">Terminal</div></div>
+    <div><h1 id="firm">SAHJONY CAPITAL</h1><div class="sub">Parquet</div></div>
   </div>
   <span class="spacer"></span>
   <span class="stat"><span class="dot" id="dBroker"></span><span id="brokerTxt">—</span></span>
@@ -192,8 +192,8 @@
 <script src="./config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const TABS = ["Terminal","Markets","Macro","News","Council","Book","Brain","Controls","Workforce","Env"];
-let DATA=null, TAB="Terminal", SESSION=null, DESK=null;
+const TABS = ["Parquet","Markets","Macro","News","Council","Book","Brain","Controls","Workforce","Env"];
+let DATA=null, TAB="Parquet", SESSION=null, DESK=null;
 let MARKETS={list:[],err:null,ts:0};            // CoinGecko crypto (no key)
 let NEWS={list:[],err:null,ts:0,src:''};        // Finnhub (key) or GDELT (no key)
 const STREAM={connected:false,live:{},tries:0,started:false,chanFor:null,cryptoWS:null,stockWS:null};
@@ -335,7 +335,7 @@ async function fetchIntel(force){
     getJSON('https://api.coingecko.com/api/v3/search/trending').then(j=>{nx.trending=j.coins||[];}).catch(e=>{nx.err.trending=String(e.message||e);}),
     getJSON('https://api.frankfurter.app/latest?from=USD&to=EUR,GBP,JPY,CAD,AUD,CHF,CNY').then(j=>{nx.fx=j.rates||null;}).catch(e=>{nx.err.fx=String(e.message||e);}),
   ]);
-  INTEL=nx; if(TAB==='Macro'||TAB==='Terminal')render();
+  INTEL=nx; if(TAB==='Macro'||TAB==='Parquet')render();
 }
 
 function marketRead(){
@@ -528,7 +528,7 @@ function render(){
   document.getElementById('foot').textContent =
     `cycle ${DATA.cycle} · ${new Date(DATA.ts).toLocaleString()} · ${DESK?'LIVE via Supabase':'static snapshot'} · auto-refresh 30s`;
   v.innerHTML="";
-  ({Terminal,Markets,Macro,News,Council,Book,Brain,Controls,Workforce,Env}[TAB]||Terminal)(v);
+  ({Parquet,Markets,Macro,News,Council,Book,Brain,Controls,Workforce,Env}[TAB]||Parquet)(v);
 }
 
 // ── panels helper ──
@@ -558,7 +558,7 @@ function cbBanner(){
   return `<div class="cb ok">● TRADING ACTIVE · day P&L ${pct((cb.day_return||0)*100)} · auto-halt at −${((cb.limit_pct||0)*100).toFixed(0)}%</div>`;
 }
 
-function Terminal(v){
+function Parquet(v){
   const root=$(`<div></div>`);
   root.appendChild(kpis());
   const g=$(`<div class="grid c12" style="margin-top:12px"></div>`);

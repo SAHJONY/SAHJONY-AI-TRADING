@@ -1,4 +1,4 @@
-// SAHJONY terminal — minimal service worker (enables install + offline shell).
+// SAHJONY parquet — minimal service worker (enables install + offline shell).
 // App shell is cached network-first; live data (status.json) and all cross-origin
 // APIs / Supabase / WebSockets are never cached.
 const C = 'sahjony-v2';

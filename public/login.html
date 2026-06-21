@@ -51,7 +51,7 @@
     <input id="code" type="password" inputmode="text" placeholder="Access code" autocomplete="current-password" />
     <button id="go" class="act">ENTER</button>
     <button id="forgot" class="link">Forgot code?</button>
-    <div class="note">Private terminal — owner only. <a href="./">View public snapshot →</a></div>
+    <div class="note">Private parquet — owner only. <a href="./">View public snapshot →</a></div>
   </div>
 
 <script src="./config.js"></script>
@@ -80,9 +80,9 @@ async function signIn(){
   el('go').disabled = false;
   if (error){ msg(error.message, true); return; }
   if (OWNER && data && data.session && data.session.user.email.toLowerCase() !== OWNER.toLowerCase()){
-    await SB.auth.signOut(); msg("This terminal is private to the owner.", true); return;
+    await SB.auth.signOut(); msg("This parquet is private to the owner.", true); return;
   }
-  msg("Welcome — opening terminal…"); toDashboard();
+  msg("Welcome — opening parquet…"); toDashboard();
 }
 async function forgot(){
   if (!READY){ msg("Supabase not configured.", true); return; }
