@@ -2,8 +2,8 @@
   "firm": "SAHJONY CAPITAL LLC",
   "tagline": "Autonomous multi-agent quant trading \u2014 PAPER",
   "mode": "offline-sim",
-  "ts": "2026-06-21T05:21:15.643312+00:00",
-  "cycle": 40,
+  "ts": "2026-06-21T09:31:12.986565+00:00",
+  "cycle": 44,
   "account": {
     "equity": 100000.0,
     "equity_start": 100000.0,
@@ -15,6 +15,15 @@
     "premium_collected": 0.0,
     "total_return_pct": 0.0
   },
+  "capital": {
+    "deposits": 0.0,
+    "withdrawals": 0.0,
+    "net_capital": 0.0,
+    "flows": 0,
+    "trading_pnl": 0.0,
+    "trading_return_pct": 0.0
+  },
+  "capital_flows": [],
   "health": {
     "mode": "offline-sim",
     "broker_online": false,
@@ -737,9 +746,71 @@
       "cash": 100000.0,
       "realized_pnl": -777.7989815173241,
       "premium": 0.0
+    },
+    {
+      "ts": "2026-06-21T09:31:12.856576+00:00",
+      "cycle": 41,
+      "equity": 100000.0,
+      "cash": 100000.0,
+      "realized_pnl": -777.7989815173241,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-06-21T09:31:12.898138+00:00",
+      "cycle": 42,
+      "equity": 100000.0,
+      "cash": 100000.0,
+      "realized_pnl": -777.7989815173241,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-06-21T09:31:12.941819+00:00",
+      "cycle": 43,
+      "equity": 100000.0,
+      "cash": 100000.0,
+      "realized_pnl": -777.7989815173241,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-06-21T09:31:12.985007+00:00",
+      "cycle": 44,
+      "equity": 100000.0,
+      "cash": 100000.0,
+      "realized_pnl": -777.7989815173241,
+      "premium": 0.0
     }
   ],
   "decisions": [
+    {
+      "ts": "2026-06-21T09:31:12.977984+00:00",
+      "kind": "ladder_update",
+      "symbol": "MSFT",
+      "reason": "px 299.07 peak 303.99 gain +2%"
+    },
+    {
+      "ts": "2026-06-21T09:31:12.973613+00:00",
+      "kind": "wheel_wait",
+      "symbol": "AAPL",
+      "reason": "IV-rank 26% too low to sell premium"
+    },
+    {
+      "ts": "2026-06-21T09:31:12.934669+00:00",
+      "kind": "ladder_update",
+      "symbol": "MSFT",
+      "reason": "px 294.75 peak 303.99 gain +0%"
+    },
+    {
+      "ts": "2026-06-21T09:31:12.893939+00:00",
+      "kind": "ladder_update",
+      "symbol": "MSFT",
+      "reason": "px 294.41 peak 303.99 gain +0%"
+    },
+    {
+      "ts": "2026-06-21T09:31:12.849326+00:00",
+      "kind": "ladder_update",
+      "symbol": "MSFT",
+      "reason": "px 299.43 peak 303.99 gain +2%"
+    },
     {
       "ts": "2026-06-21T05:21:15.639013+00:00",
       "kind": "ladder_update",
@@ -859,36 +930,6 @@
       "kind": "wheel_wait",
       "symbol": "AAPL",
       "reason": "IV-rank 26% too low to sell premium"
-    },
-    {
-      "ts": "2026-06-21T04:46:04.094986+00:00",
-      "kind": "ladder_update",
-      "symbol": "MSFT",
-      "reason": "px 294.75 peak 303.99 gain +0%"
-    },
-    {
-      "ts": "2026-06-21T04:46:04.065574+00:00",
-      "kind": "ladder_update",
-      "symbol": "MSFT",
-      "reason": "px 294.41 peak 303.99 gain +0%"
-    },
-    {
-      "ts": "2026-06-21T04:46:04.030823+00:00",
-      "kind": "ladder_update",
-      "symbol": "MSFT",
-      "reason": "px 299.43 peak 303.99 gain +2%"
-    },
-    {
-      "ts": "2026-06-21T04:45:30.677022+00:00",
-      "kind": "ladder_update",
-      "symbol": "MSFT",
-      "reason": "px 303.99 peak 303.99 gain +3%"
-    },
-    {
-      "ts": "2026-06-21T04:45:30.672356+00:00",
-      "kind": "wheel_wait",
-      "symbol": "AAPL",
-      "reason": "IV-rank 21% too low to sell premium"
     }
   ],
   "agents_roster": [
