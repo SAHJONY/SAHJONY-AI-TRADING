@@ -1,0 +1,90 @@
+name: SAHJONY desk (scheduled)
+
+# Runs the autonomous desk on a schedule in the cloud, so the public dashboard
+# (sahjonycapital.com) stays fresh without an always-on machine. Each run advances
+# one cycle and commits the secret-free public/status.json — Vercel then redeploys.
+#
+# Modes (safety first — see SCHEDULING.md):
+#   • No secrets        → offline-sim (zero orders); the dashboard simply stays alive.
+#   • Alpaca paper keys → trades the real market on Alpaca PAPER (fake money).
+#   • Real money is NEVER enabled here (LIVE_TRADING_ACK is intentionally unset).
+
+on:
+  schedule:
+    # Every 15 min during the US cash session (≈13:00–21:00 UTC), Mon–Fri.
+    - cron: '*/15 13-20 * * 1-5'
+  workflow_dispatch:        # manual "Run workflow" button
+    inputs:
+      force:
+        description: 'Run even if the market is closed'
+        type: boolean
+        default: true
+
+concurrency:
+  group: sahjony-desk
+  cancel-in-progress: false
+
+permissions:
+  contents: write           # to commit the refreshed public/status.json
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      # Paper-trading keys (optional). Add these as repo secrets to go from
+      # offline-sim to Alpaca PAPER. Leave unset to keep pure simulation.
+      ALPACA_API_KEY: ${{ secrets.ALPACA_API_KEY }}
+      ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
+      ALPACA_PAPER: 'true'                 # PAPER only — never live from CI
+      # Optional AI overlay (advisory). Safe to leave unset.
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      AI_BRAIN_ENABLED: ${{ secrets.ANTHROPIC_API_KEY != '' && 'true' || 'false' }}
+      AUTO_UPDATE_MODELS: 'true'
+      # Optional desk config overrides.
+      TICKERS: ${{ vars.TICKERS || 'AAPL,MSFT,SPY' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # Restore desk continuity (state + SQLite DB) from the previous run. These
+      # are gitignored runtime artifacts; the cache keeps the equity curve, ledger
+      # and positions consistent across scheduled runs (best-effort).
+      - name: Restore desk state
+        uses: actions/cache@v4
+        with:
+          path: |
+            state.json
+            model_cache.json
+            data
+          key: sahjony-state-${{ github.run_id }}
+          restore-keys: |
+            sahjony-state-
+
+      - name: Run one trading cycle
+        run: python main.py --once --force
+
+      - name: Preflight (read-only) summary
+        if: always()
+        run: python main.py --preflight || true
+
+      - name: Commit refreshed dashboard snapshot
+        run: |
+          git config user.name  "sahjony-desk[bot]"
+          git config user.email "noreply@anthropic.com"
+          if ! git diff --quiet -- public/status.json; then
+            git add public/status.json
+            git commit -m "Desk snapshot: cycle update [skip ci]"
+            for i in 1 2 3 4; do git push && break || sleep $((2**i)); done
+          else
+            echo "No change in public/status.json — nothing to commit."
+          fi
