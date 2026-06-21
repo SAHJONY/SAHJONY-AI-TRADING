@@ -220,6 +220,8 @@
 
   /* native voice control */
   #voiceBtn.listening{border-color:var(--up);color:var(--up);box-shadow:0 0 16px rgba(52,227,168,.45);animation:pulse 1.4s infinite}
+  #voiceWake.on{border-color:var(--cyan);color:var(--cyan);box-shadow:0 0 16px rgba(42,216,240,.4)}
+  .treemap div{box-sizing:border-box}
   .vpanel{position:fixed;right:14px;bottom:50px;z-index:60;width:290px;max-width:84vw;
     background:linear-gradient(180deg,rgba(12,17,26,.98),rgba(8,11,18,.98));border:1px solid var(--line2);border-radius:14px;
     padding:13px 15px;font-family:var(--mono);font-size:12px;box-shadow:0 18px 54px rgba(0,0,0,.7);backdrop-filter:blur(14px);display:none}
@@ -248,6 +250,7 @@
   <span class="mpill" id="mode">—</span>
   <a class="btn" id="account" href="./login.html">SIGN IN</a>
   <button class="btn" id="voiceLang" title="Voice language — English / Español">🌐 EN</button>
+  <button class="btn" id="voiceWake" title="Hands-free — say “Hey Sahjony …” to command">👂 WAKE</button>
   <button class="btn" id="voiceBtn" title="Voice control — click and speak (English / Español)" aria-label="Voice control">🎙️ VOICE</button>
   <button class="btn" onclick="load()">↻</button>
 </header>
@@ -800,6 +803,35 @@ function cellSpark(vals,color){if(!vals||vals.length<2)return'';
   const pts=vals.map((v,i)=>`${(i*W/(n-1)).toFixed(1)},${(H-2-((v-min)/span)*(H-4)).toFixed(1)}`).join(' ');
   return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="display:block"><polyline fill="none" stroke="${color}" stroke-width="1.5" stroke-linejoin="round" points="${pts}"/></svg>`;}
 
+// ── positions treemap (area = market value, color = unrealized P&L) ──
+function treemap(positions,H=300){
+  const items=(positions||[]).filter(p=>(+p.market_value||0)>0).map(p=>({...p,v:+p.market_value||0})).sort((a,b)=>b.v-a.v);
+  if(!items.length)return $(`<div class="empty">flat — no open positions to map</div>`);
+  const wrap=$(`<div class="treemap" style="position:relative;width:100%;height:${H}px"></div>`);
+  function add(p,x,y,w,h){
+    const cb=+p.cost_basis||0,r=cb>0?(+p.unrealized||0)/cb:0,col=heatColor(Math.max(-1,Math.min(1,r*8)));
+    const big=(w>0.14&&h>0.16);
+    const t=$(`<div title="${esc(p.symbol)} · ${money(p.market_value)} · uPnL ${money(p.unrealized)}"
+      style="position:absolute;left:${(x*100).toFixed(2)}%;top:${(y*100).toFixed(2)}%;width:${(w*100).toFixed(2)}%;height:${(h*100).toFixed(2)}%;
+      padding:6px 8px;border:2px solid var(--bg);border-radius:7px;background:${col};overflow:hidden;cursor:default;transition:filter .15s"
+      onmouseover="this.style.filter='brightness(1.15)'" onmouseout="this.style.filter=''">
+      <div style="font-weight:800;color:#04121a;font-size:${big?13:11}px;letter-spacing:.3px">${esc(p.symbol)}</div>
+      ${big?`<div style="color:rgba(4,18,26,.78);font-family:var(--mono);font-size:10px;margin-top:2px">${money(p.market_value)}</div>
+      <div style="color:rgba(4,18,26,.78);font-family:var(--mono);font-size:10px">${p.unrealized>=0?'+':''}${money(p.unrealized)}</div>`:''}</div>`);
+    wrap.appendChild(t);
+  }
+  (function lay(list,x,y,w,h,horiz){
+    if(list.length===1){add(list[0],x,y,w,h);return;}
+    const sum=list.reduce((s,i)=>s+i.v,0)||1;let acc=0,split=1;
+    for(let i=0;i<list.length;i++){acc+=list[i].v;if(acc>=sum/2){split=i+1;break;}}
+    split=Math.max(1,Math.min(list.length-1,split));
+    const a=list.slice(0,split),b=list.slice(split),frac=a.reduce((s,i)=>s+i.v,0)/sum;
+    if(horiz){lay(a,x,y,w*frac,h,!horiz);lay(b,x+w*frac,y,w*(1-frac),h,!horiz);}
+    else{lay(a,x,y,w,h*frac,!horiz);lay(b,x,y+h*frac,w,h*(1-frac),!horiz);}
+  })(items,0,0,1,1,true);
+  return wrap;
+}
+
 function kpis(){
   const a=DATA.account||{},p=DATA.pnl||{}; const ret=p.total_return_pct||0;
   const CY='#2ad8f0',VI='#9b8cff',AM='#ffb000',UP='#34e3a8',DN='#ff5c6c';
@@ -972,6 +1004,7 @@ function Council(v){
 
 function Book(v){
   const g=$(`<div class="grid c12"></div>`);
+  g.appendChild(panel('Positions Treemap · value × P&L', treemap(DATA.positions), (DATA.positions||[]).length+' holdings', 'span12'));
   g.appendChild(panel('Positions Blotter', positionsTable(), (DATA.positions||[]).length+' open', 'span12'));
   // recent trades
   const tr=DATA.recent_trades||[]; let tbl;
@@ -1160,8 +1193,9 @@ function Controls(v){
 // Navigation + spoken read-outs work for everyone (read-only family view included).
 // Desk controls (halt/start/stop/flatten) require owner sign-in; "flatten" needs a
 // spoken yes; LIVE money mode is intentionally NOT voice-actionable. English + Español.
-const VOICE={rec:null,on:false,pending:null,
+const VOICE={rec:null,mode:'off',awaiting:false,wakeTimer:null,pending:null,
   lang:(String(navigator.language||'en').toLowerCase().startsWith('es')?'es':'en')};
+const WAKE=['hey sahjony','hi sahjony','ok sahjony','okay sahjony','hey sajony','hey sancho','oye sahjony','hola sahjony','sahjony','sajony'];
 const _SR=window.SpeechRecognition||window.webkitSpeechRecognition;
 const VT={
   en:{listening:'Listening…',tap:'Tap VOICE, then speak',
@@ -1178,7 +1212,8 @@ const VT={
     posture:p=>`Market posture is ${p}.`,
     summary:(e,r,p,n)=>`Equity ${e}. Total return ${r}. Market posture ${p}, with ${n} open position${n===1?'':'s'}.`,
     help:'Try: go to markets, what is my equity, give me a summary, halt risk, start desk, stop desk, flatten all, or refresh.',
-    unknown:'Sorry, I didn’t catch that. Say "help" for what I can do.',langset:'Voice set to English.',hello:'I’m listening.'},
+    unknown:'Sorry, I didn’t catch that. Say "help" for what I can do.',langset:'Voice set to English.',hello:'I’m listening.',
+    yes:'Yes?',wakeon:'Hands-free on. Say “Hey Sahjony” and your command.',wakeoff:'Hands-free off.'},
   es:{listening:'Escuchando…',tap:'Toca VOZ y habla',
     unsupported:'La voz no funciona en este navegador. Usa Chrome, Edge o Safari.',
     micdenied:'Micrófono bloqueado. Permite el acceso al micrófono para usar la voz.',
@@ -1193,7 +1228,8 @@ const VT={
     posture:p=>`La postura del mercado es ${p}.`,
     summary:(e,r,p,n)=>`Capital ${e}. Rendimiento total ${r}. Postura del mercado ${p}, con ${n} posición${n===1?'':'es'} abierta${n===1?'':'s'}.`,
     help:'Prueba: ve a mercados, cuál es mi capital, dame un resumen, detén el riesgo, inicia el escritorio, pausa el escritorio, liquida todo, o actualiza.',
-    unknown:'Perdón, no entendí. Di "ayuda" para ver qué puedo hacer.',langset:'Voz configurada en español.',hello:'Te escucho.'}
+    unknown:'Perdón, no entendí. Di "ayuda" para ver qué puedo hacer.',langset:'Voz configurada en español.',hello:'Te escucho.',
+    yes:'¿Dime?',wakeon:'Manos libres activado. Di “Hey Sahjony” y tu comando.',wakeoff:'Manos libres desactivado.'}
 };
 const tr=()=>VT[VOICE.lang];
 function spokenMoney(n){n=Number(n||0);const neg=n<0?(VOICE.lang==='es'?'menos ':'minus '):'';const w=VOICE.lang==='es'?'dólares':'dollars';
@@ -1236,9 +1272,19 @@ function vHandle(transcript){
   const t=vNorm(transcript);
   if(VOICE.pending){const yes=vAny(t,['yes','yeah','yep','confirm','do it','si','claro','confirmar','dale','hazlo']);
     const act=VOICE.pending;VOICE.pending=null; if(yes)act(); else vReply('cancelled'); return;}
-  if(vAny(t,['speak english','english','in english','habla ingles','ingles'])){VOICE.lang='en';updateVoiceLangBtn();setVoiceBtn(VOICE.on);vReply('langset');return;}
-  if(vAny(t,['speak spanish','spanish','in spanish','habla espanol','espanol','en espanol'])){VOICE.lang='es';updateVoiceLangBtn();setVoiceBtn(VOICE.on);vReply('langset');return;}
+  if(vAny(t,['speak english','english','in english','habla ingles','ingles'])){VOICE.lang='en';updateVoiceLangBtn();syncVoiceBtns();vReply('langset');return;}
+  if(vAny(t,['speak spanish','spanish','in spanish','habla espanol','espanol','en espanol'])){VOICE.lang='es';updateVoiceLangBtn();syncVoiceBtns();vReply('langset');return;}
   if(vAny(t,['help','what can i say','options','ayuda','que puedo decir','opciones'])){vReply('help');return;}
+  // switch tab by number ("tab three" / "número 3")
+  const nm=t.match(/ (?:tab|panel|number|numero|pantalla|seccion) (one|two|three|four|five|six|seven|eight|nine|uno|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|[1-9]) /);
+  if(nm){const map={one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,uno:1,dos:2,tres:3,cuatro:4,cinco:5,seis:6,siete:7,ocho:8,nueve:9};
+    const idx=(map[nm[1]]||parseInt(nm[1],10))-1,vt=visibleTabs();
+    if(vt[idx]){TAB=vt[idx];render();buildNav();vReply('opening',TAB);return;}}
+  // scrolling
+  if(vAny(t,['scroll down','page down','baja','abajo','desplaza abajo'])){window.scrollBy({top:Math.round(innerHeight*.8),behavior:'smooth'});vShow(tr().listening,null,'↓');return;}
+  if(vAny(t,['scroll up','page up','sube','arriba','desplaza arriba'])){window.scrollBy({top:-Math.round(innerHeight*.8),behavior:'smooth'});vShow(tr().listening,null,'↑');return;}
+  if(vAny(t,['go to top','to the top','inicio de pagina','principio','hasta arriba'])){window.scrollTo({top:0,behavior:'smooth'});return;}
+  if(vAny(t,['go to bottom','to the bottom','hasta abajo','el final'])){window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'});return;}
   // navigation with explicit intent first (avoids "market" vs "markets" clashes)
   if(vAny(t,['go','open','show','take me','ir','ve','vamos','abre','abrir','muestra','muestrame'])&&vNav(t))return;
   // desk controls (owner only)
@@ -1256,6 +1302,8 @@ function vHandle(transcript){
   if(vAny(t,['go live','live mode','en vivo','modo real','dinero real'])){vReply('notlive');return;}
   if(vAny(t,['refresh','reload','update','actualiza','actualizar','recargar'])){load();vReply('refreshed');return;}
   // spoken read-outs (everyone)
+  if(vAny(t,['read positions','list positions','read my positions','what do i hold','lee posiciones','lee mis posiciones','que tengo'])){vReadPositions();return;}
+  if(vAny(t,['top movers','movers','biggest movers','top gainers','top gainer','mayores subidas','que sube','que esta subiendo'])){vReadMovers();return;}
   if(vAny(t,['summary','overview','status','resumen','estado','como vamos'])){
     vReply('summary',spokenMoney((DATA.account||{}).equity),spokenPct((DATA.pnl||{}).total_return_pct),spokenPosture(),(DATA.positions||[]).length);return;}
   if(vAny(t,['equity','net asset value','nav','capital','patrimonio'])){vReply('equity',spokenMoney((DATA.account||{}).equity));return;}
@@ -1270,29 +1318,60 @@ function vHandle(transcript){
 }
 function updateVoiceLangBtn(){const b=document.getElementById('voiceLang');if(b)b.textContent='🌐 '+(VOICE.lang==='es'?'ES':'EN');
   if(VOICE.rec)VOICE.rec.lang=VOICE.lang==='es'?'es-ES':'en-US';}
-function setVoiceBtn(on){const b=document.getElementById('voiceBtn');if(!b)return;b.classList.toggle('listening',!!on);
-  b.innerHTML='🎙️ '+(on?(VOICE.lang==='es'?'ESCUCHANDO':'LISTENING'):(VOICE.lang==='es'?'VOZ':'VOICE'));}
-function voiceStart(){
-  if(!_SR){vShow(tr().unsupported,'','');vSpeak(tr().unsupported);return;}
-  if(VOICE.on)return;
+function setVoiceBtn(){const b=document.getElementById('voiceBtn');if(!b)return;const on=VOICE.mode==='push';
+  b.classList.toggle('listening',on);b.innerHTML='🎙️ '+(on?(VOICE.lang==='es'?'ESCUCHANDO':'LISTENING'):(VOICE.lang==='es'?'VOZ':'VOICE'));}
+function setWakeBtn(){const b=document.getElementById('voiceWake');if(!b)return;const on=VOICE.mode==='wake';
+  b.classList.toggle('on',on);b.innerHTML='👂 '+(VOICE.lang==='es'?'MANOS LIBRES':'WAKE');}
+function syncVoiceBtns(){setVoiceBtn();setWakeBtn();}
+function vReadPositions(){const pos=DATA.positions||[];
+  if(!pos.length){vReply('positions',0);return;}
+  const top=pos.slice(0,5).map(p=>`${p.symbol}, ${spokenMoney(p.unrealized)}`).join('; ');
+  const msg=(VOICE.lang==='es'?`Tienes ${pos.length} posición${pos.length===1?'':'es'}. `:`You have ${pos.length} position${pos.length===1?'':'s'}. `)+top+'.';
+  vShow(tr().listening,null,msg);vSpeak(msg);}
+function vReadMovers(){const l=MARKETS.list||[];if(!l.length){vReply('unknown');return;}
+  const s=[...l].sort((a,b)=>(b.price_change_percentage_24h||0)-(a.price_change_percentage_24h||0)),g=s[0],b=s[s.length-1];
+  const msg=VOICE.lang==='es'
+    ?`Mayor subida: ${(g.symbol||'').toUpperCase()}, ${spokenPct(g.price_change_percentage_24h)}. Mayor bajada: ${(b.symbol||'').toUpperCase()}, ${spokenPct(b.price_change_percentage_24h)}.`
+    :`Top gainer: ${(g.symbol||'').toUpperCase()}, ${spokenPct(g.price_change_percentage_24h)}. Top loser: ${(b.symbol||'').toUpperCase()}, ${spokenPct(b.price_change_percentage_24h)}.`;
+  vShow(tr().listening,null,msg);vSpeak(msg);}
+function _ensureRec(){
+  if(VOICE.rec)return VOICE.rec;
   const rec=new _SR();VOICE.rec=rec;rec.continuous=true;rec.interimResults=false;rec.maxAlternatives=1;
   rec.lang=VOICE.lang==='es'?'es-ES':'en-US';
   rec.onresult=(e)=>{const r=e.results[e.results.length-1];if(!r||!r.isFinal)return;
-    const txt=((r[0]&&r[0].transcript)||'').trim();if(!txt)return;vShow(tr().listening,txt,null);
+    const txt=((r[0]&&r[0].transcript)||'').trim();if(!txt)return;
     const n=vNorm(txt);
     if(vAny(n,['stop listening','deja de escuchar','apaga el microfono','silencio','para de escuchar'])){voiceStop();return;}
+    if(VOICE.mode==='wake'){
+      let cmd=null;const hit=WAKE.find(w=>n.includes(' '+w+' '));
+      if(hit){cmd=n.slice(n.indexOf(' '+hit+' ')+hit.length+2).trim();}
+      else if(VOICE.awaiting){cmd=n.trim();}
+      if(cmd==null)return;                       // not addressed to the assistant — ignore
+      VOICE.awaiting=false;if(VOICE.wakeTimer){clearTimeout(VOICE.wakeTimer);VOICE.wakeTimer=null;}
+      vShow(tr().listening,txt,null);
+      if(!cmd){VOICE.awaiting=true;vReply('yes');VOICE.wakeTimer=setTimeout(()=>{VOICE.awaiting=false;},7000);return;}
+      try{vHandle(cmd);}catch(err){vReply('unknown');} return;
+    }
+    vShow(tr().listening,txt,null);
     try{vHandle(txt);}catch(err){vReply('unknown');}};
   rec.onerror=(e)=>{if(e&&(e.error==='not-allowed'||e.error==='service-not-allowed')){vShow(tr().micdenied,'','');vSpeak(tr().micdenied);voiceStop();}};
-  rec.onend=()=>{if(VOICE.on){try{rec.start();}catch(e){}}else{setVoiceBtn(false);}};
-  try{rec.start();VOICE.on=true;setVoiceBtn(true);vShow(tr().listening,'','');vSpeak(tr().hello);}catch(e){}
-}
-function voiceStop(){VOICE.on=false;try{VOICE.rec&&VOICE.rec.stop();}catch(e){}setVoiceBtn(false);
+  rec.onend=()=>{if(VOICE.mode!=='off'){try{rec.start();}catch(e){}}};
+  return rec;}
+function voiceRun(mode){
+  if(!_SR){vShow(tr().unsupported,'','');vSpeak(tr().unsupported);return;}
+  const rec=_ensureRec();rec.lang=VOICE.lang==='es'?'es-ES':'en-US';
+  const was=VOICE.mode;VOICE.mode=mode;syncVoiceBtns();
+  if(was==='off'){try{rec.start();}catch(e){}}
+  vShow(tr().listening,'','');vSpeak(mode==='wake'?tr().wakeon:tr().hello);}
+function voiceStop(){VOICE.mode='off';VOICE.awaiting=false;try{VOICE.rec&&VOICE.rec.stop();}catch(e){}syncVoiceBtns();
   const p=document.getElementById('vpanel');if(p)p.querySelector('#vstate').textContent=tr().tap;}
-function voiceToggle(){VOICE.on?voiceStop():voiceStart();}
+function voiceToggle(){VOICE.mode==='push'?voiceStop():voiceRun('push');}
+function voiceWakeToggle(){VOICE.mode==='wake'?voiceStop():voiceRun('wake');}
 (function initVoice(){
-  const vb=document.getElementById('voiceBtn'),lb=document.getElementById('voiceLang');
-  if(lb){updateVoiceLangBtn();lb.onclick=()=>{VOICE.lang=VOICE.lang==='es'?'en':'es';updateVoiceLangBtn();setVoiceBtn(VOICE.on);vReply('langset');};}
+  const vb=document.getElementById('voiceBtn'),lb=document.getElementById('voiceLang'),wb=document.getElementById('voiceWake');
+  if(lb){updateVoiceLangBtn();lb.onclick=()=>{VOICE.lang=VOICE.lang==='es'?'en':'es';updateVoiceLangBtn();syncVoiceBtns();vReply('langset');};}
   if(vb){vb.onclick=voiceToggle;if(!_SR)vb.title=tr().unsupported;}
+  if(wb){wb.onclick=voiceWakeToggle;if(!_SR)wb.title=tr().unsupported;}
 })();
 
 load();
