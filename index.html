@@ -47,6 +47,14 @@
     -webkit-font-smoothing:antialiased;letter-spacing:.1px}
   body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
     background:radial-gradient(900px 480px at 50% -10%,rgba(42,216,240,.05),transparent 60%)}
+  body::after{content:"";position:fixed;inset:-20%;pointer-events:none;z-index:0;opacity:.55;
+    background:
+      radial-gradient(40% 38% at 20% 22%,rgba(42,216,240,.10),transparent 60%),
+      radial-gradient(38% 40% at 80% 30%,rgba(155,140,255,.10),transparent 60%),
+      radial-gradient(45% 42% at 62% 86%,rgba(255,176,0,.07),transparent 60%);
+    animation:aurora 28s ease-in-out infinite}
+  @keyframes aurora{0%{transform:translate3d(-4%,-2%,0) scale(1)}50%{transform:translate3d(4%,3%,0) scale(1.14)}100%{transform:translate3d(-4%,-2%,0) scale(1)}}
+  @media(prefers-reduced-motion:reduce){body::after{animation:none}}
   main,header,nav,footer,.tape{position:relative;z-index:1}
   .mono{font-family:var(--mono)}
   .up{color:var(--up)} .down{color:var(--down)} .mut{color:var(--mut)} .amber{color:var(--amber)}
@@ -209,6 +217,19 @@
     padding:8px 16px;border-top:1px solid var(--line2);background:var(--bg2);color:var(--dim);
     font-family:var(--mono);font-size:10.5px;letter-spacing:.5px;position:sticky;bottom:0}
   footer .keys span{border:1px solid var(--line2);border-radius:4px;padding:1px 5px;margin-right:6px;color:var(--mut)}
+
+  /* native voice control */
+  #voiceBtn.listening{border-color:var(--up);color:var(--up);box-shadow:0 0 16px rgba(52,227,168,.45);animation:pulse 1.4s infinite}
+  .vpanel{position:fixed;right:14px;bottom:50px;z-index:60;width:290px;max-width:84vw;
+    background:linear-gradient(180deg,rgba(12,17,26,.98),rgba(8,11,18,.98));border:1px solid var(--line2);border-radius:14px;
+    padding:13px 15px;font-family:var(--mono);font-size:12px;box-shadow:0 18px 54px rgba(0,0,0,.7);backdrop-filter:blur(14px);display:none}
+  .vpanel .vh{display:flex;align-items:center;gap:8px;font-size:9px;letter-spacing:1.6px;text-transform:uppercase;color:var(--cyan);margin-bottom:8px}
+  .vpanel .vheard{color:var(--txt);min-height:16px;font-size:12.5px}
+  .vpanel .vreply{color:var(--mut);margin-top:7px;line-height:1.5}
+  .vpanel .vhint{color:var(--dim);margin-top:9px;font-size:10px;line-height:1.5;border-top:1px solid var(--line);padding-top:8px}
+  .vpanel #vdot{width:7px;height:7px;border-radius:50%;background:var(--up);box-shadow:0 0 8px var(--up);animation:pulse 1.4s infinite}
+  .vpanel #vclose{margin-left:auto;cursor:pointer;color:var(--dim);border:0;background:none;font-family:var(--mono);font-size:13px}
+  .vpanel #vclose:hover{color:var(--down)}
 </style>
 </head>
 <body>
@@ -226,6 +247,8 @@
   <span class="badge" id="viewerBadge" style="display:none" title="Shareable read-only view — no changes can be made from here">◇ VIEW ONLY</span>
   <span class="mpill" id="mode">—</span>
   <a class="btn" id="account" href="./login.html">SIGN IN</a>
+  <button class="btn" id="voiceLang" title="Voice language — English / Español">🌐 EN</button>
+  <button class="btn" id="voiceBtn" title="Voice control — click and speak (English / Español)" aria-label="Voice control">🎙️ VOICE</button>
   <button class="btn" onclick="load()">↻</button>
 </header>
 
@@ -291,7 +314,7 @@ async function load(){
 }
 
 // ── free live market & news feeds (run in the browser) ──────────────────────
-const COINGECKO="https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=20&page=1&price_change_percentage=24h";
+const COINGECKO="https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=20&page=1&price_change_percentage=24h&sparkline=true";
 function fmtTs(ms){const d=new Date(ms);return isNaN(d)?'':d.toLocaleString();}
 function fmtGdelt(s){if(!s)return'';const d=new Date(String(s).replace(/(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z/,'$1-$2-$3T$4:$5:$6Z'));return isNaN(d)?'':d.toLocaleString();}
 
@@ -506,11 +529,12 @@ function Markets(v){
   else if(!(MARKETS.list||[]).length) cbody='<div class="empty">loading live crypto…</div>';
   else{
     const w=$(`<div class="scroll"></div>`);
-    const t=$(`<table><thead><tr><th>#</th><th>COIN</th><th class="n">PRICE</th><th class="n">24H</th><th class="n">MKT CAP</th><th class="n">VOL 24H</th></tr></thead><tbody></tbody></table>`);
+    const t=$(`<table><thead><tr><th>#</th><th>COIN</th><th class="n">PRICE</th><th class="n">24H</th><th>7D TREND</th><th class="n">MKT CAP</th><th class="n">VOL 24H</th></tr></thead><tbody></tbody></table>`);
     MARKETS.list.forEach((m,i)=>{const up=(m.price_change_percentage_24h||0)>=0;
+      const spark=cellSpark((m.sparkline_in_7d||{}).price, up?'#34e3a8':'#ff5c6c');
       t.querySelector('tbody').appendChild($(`<tr><td class="mut">${i+1}</td><td><b class="amber">${esc((m.symbol||'').toUpperCase())}</b> <span class="mut">${esc(m.name)}</span></td>
         <td class="n">${money(m.current_price)}</td><td class="n ${up?'up':'down'}">${pct(m.price_change_percentage_24h)}</td>
-        <td class="n">$${num(m.market_cap,0)}</td><td class="n">$${num(m.total_volume,0)}</td></tr>`));});
+        <td>${spark}</td><td class="n">$${num(m.market_cap,0)}</td><td class="n">$${num(m.total_volume,0)}</td></tr>`));});
     w.appendChild(t); cbody=w;
   }
   g.appendChild(panel('Crypto · Live (CoinGecko, no key)', cbody, (MARKETS.list||[]).length+' assets', 'span12'));
@@ -741,6 +765,41 @@ function panel(title,bodyEl,extra="",span=""){
   const b=$(`<div class="pb"></div>`); if(typeof bodyEl==='string')b.innerHTML=bodyEl; else b.appendChild(bodyEl); p.appendChild(b); return p;
 }
 
+// ── drawdown (underwater) series + chart ──
+function ddSeries(curve){let peak=-Infinity;return (curve||[]).map(p=>{const e=+p.equity||0;peak=Math.max(peak,e);return peak>0?((e-peak)/peak*100):0;});}
+function drawdownChart(curve,H=150){
+  if(!curve||curve.length<2)return $(`<div class="empty">awaiting history…</div>`);
+  const ys=ddSeries(curve),n=ys.length,min=Math.min(...ys,-0.0001),max=0,span=(max-min)||1;
+  const W=1000,pT=10,pB=14,pL=2,pR=2;
+  const X=i=>pL+i*(W-pL-pR)/(n-1),Y=v=>pT+(1-(v-min)/span)*(H-pT-pB);
+  const pts=ys.map((v,i)=>`${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(' ');
+  const col='#ff5c6c';let grid='';
+  for(let g=0;g<=2;g++){const yy=pT+g*(H-pT-pB)/2,gv=max-(g/2)*span;
+    grid+=`<line x1="0" y1="${yy}" x2="${W}" y2="${yy}" stroke="rgba(120,150,200,.07)"/>`;
+    grid+=`<text x="7" y="${(yy-3).toFixed(1)}" fill="#5a6783" font-size="9" font-family="monospace">${gv.toFixed(1)}%</text>`;}
+  const svg=`<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" preserveAspectRatio="none" style="display:block">
+    <defs><linearGradient id="ddg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${col}" stop-opacity="0"/><stop offset="1" stop-color="${col}" stop-opacity=".34"/></linearGradient></defs>
+    ${grid}<polygon fill="url(#ddg)" points="${pL},${Y(0).toFixed(1)} ${pts} ${(W-pR)},${Y(0).toFixed(1)}"/>
+    <polyline fill="none" stroke="${col}" stroke-width="2" points="${pts}"/></svg>`;
+  return $(`<div class="chartwrap">${svg}</div>`);
+}
+function perfStats(curve){
+  const e=(curve||[]).map(p=>+p.equity||0);const box=$(`<div></div>`);
+  if(e.length<2){box.innerHTML='<div class="empty">awaiting history…</div>';return box;}
+  let peak=e[0],maxDD=0;for(const x of e){peak=Math.max(peak,x);maxDD=Math.min(maxDD,(x-peak)/peak*100);}
+  const top=Math.max(...e),curDD=(e[e.length-1]-top)/top*100;
+  let best=-1e9,worst=1e9;for(let i=1;i<e.length;i++){const d=(e[i]-e[i-1])/(e[i-1]||1)*100;best=Math.max(best,d);worst=Math.min(worst,d);}
+  [['Peak equity',money(top),''],['Current drawdown',curDD.toFixed(2)+'%',curDD<-0.005?'down':'up'],
+   ['Max drawdown',maxDD.toFixed(2)+'%','down'],['Best cycle',(best>=0?'+':'')+best.toFixed(2)+'%','up'],
+   ['Worst cycle',worst.toFixed(2)+'%','down'],['Cycles tracked',String(e.length),'']]
+   .forEach(([k,v,cls])=>box.appendChild($(`<div class="row"><span class="mut">${k}</span><span class="mono ${cls||''}">${v}</span></div>`)));
+  return box;
+}
+function cellSpark(vals,color){if(!vals||vals.length<2)return'';
+  const n=vals.length,min=Math.min(...vals),max=Math.max(...vals),span=(max-min)||1,W=72,H=22;
+  const pts=vals.map((v,i)=>`${(i*W/(n-1)).toFixed(1)},${(H-2-((v-min)/span)*(H-4)).toFixed(1)}`).join(' ');
+  return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="display:block"><polyline fill="none" stroke="${color}" stroke-width="1.5" stroke-linejoin="round" points="${pts}"/></svg>`;}
+
 function kpis(){
   const a=DATA.account||{},p=DATA.pnl||{}; const ret=p.total_return_pct||0;
   const CY='#2ad8f0',VI='#9b8cff',AM='#ffb000',UP='#34e3a8',DN='#ff5c6c';
@@ -792,6 +851,10 @@ function Parquet(v){
   g.appendChild(panel('Capital Allocation',
     donut([{label:'Cash',value:eq.cash,color:'#2ad8f0'},{label:'Deployed',value:eq.deployed,color:'#ffb000'}],
       compact(eq.equity),'NAV'), 'cash vs deployed', 'span4'));
+
+  // drawdown (underwater) + performance analytics
+  g.appendChild(panel('Drawdown · Underwater', drawdownChart(DATA.equity_curve), 'peak-to-trough', 'span8'));
+  g.appendChild(panel('Performance Analytics', perfStats(DATA.equity_curve), 'since inception', 'span4'));
 
   // market posture gauge
   const council=DATA.council||[];
@@ -1092,6 +1155,145 @@ function Controls(v){
 
   v.appendChild(g);
 }
+
+// ── Native bilingual voice control (Web Speech API — no keys, runs in-browser) ──
+// Navigation + spoken read-outs work for everyone (read-only family view included).
+// Desk controls (halt/start/stop/flatten) require owner sign-in; "flatten" needs a
+// spoken yes; LIVE money mode is intentionally NOT voice-actionable. English + Español.
+const VOICE={rec:null,on:false,pending:null,
+  lang:(String(navigator.language||'en').toLowerCase().startsWith('es')?'es':'en')};
+const _SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+const VT={
+  en:{listening:'Listening…',tap:'Tap VOICE, then speak',
+    unsupported:'Voice isn’t supported in this browser. Try Chrome, Edge, or Safari.',
+    micdenied:'Microphone blocked. Allow mic access to use voice.',
+    signin:'Please sign in to control the desk.',
+    opening:t=>`Opening ${t}.`,halted:'New risk halted. Exits still allowed.',resumed:'Trading resumed.',
+    started:'Desk started.',stopped:'Desk paused.',refreshed:'Refreshed.',
+    confirmFlat:'Flatten all positions next cycle? Say yes to confirm, or no to cancel.',
+    flattened:'Understood. Flattening all positions next cycle.',cancelled:'Cancelled.',
+    notlive:'For safety, live trading can’t be switched on by voice.',
+    equity:v=>`Equity is ${v}.`,ret:v=>`Total return is ${v}.`,cash:v=>`Cash is ${v}.`,
+    deployed:v=>`Deployed capital is ${v}.`,positions:n=>`There ${n===1?'is':'are'} ${n} open position${n===1?'':'s'}.`,
+    posture:p=>`Market posture is ${p}.`,
+    summary:(e,r,p,n)=>`Equity ${e}. Total return ${r}. Market posture ${p}, with ${n} open position${n===1?'':'s'}.`,
+    help:'Try: go to markets, what is my equity, give me a summary, halt risk, start desk, stop desk, flatten all, or refresh.',
+    unknown:'Sorry, I didn’t catch that. Say "help" for what I can do.',langset:'Voice set to English.',hello:'I’m listening.'},
+  es:{listening:'Escuchando…',tap:'Toca VOZ y habla',
+    unsupported:'La voz no funciona en este navegador. Usa Chrome, Edge o Safari.',
+    micdenied:'Micrófono bloqueado. Permite el acceso al micrófono para usar la voz.',
+    signin:'Por favor inicia sesión para controlar el escritorio.',
+    opening:t=>`Abriendo ${t}.`,halted:'Riesgo nuevo detenido. Las salidas siguen permitidas.',resumed:'Operación reanudada.',
+    started:'Escritorio iniciado.',stopped:'Escritorio en pausa.',refreshed:'Actualizado.',
+    confirmFlat:'¿Liquidar todas las posiciones el próximo ciclo? Di sí para confirmar o no para cancelar.',
+    flattened:'Entendido. Liquidando todas las posiciones el próximo ciclo.',cancelled:'Cancelado.',
+    notlive:'Por seguridad, la operación con dinero real no se puede activar por voz.',
+    equity:v=>`El capital es ${v}.`,ret:v=>`El rendimiento total es ${v}.`,cash:v=>`El efectivo es ${v}.`,
+    deployed:v=>`El capital desplegado es ${v}.`,positions:n=>`Hay ${n} posición${n===1?'':'es'} abierta${n===1?'':'s'}.`,
+    posture:p=>`La postura del mercado es ${p}.`,
+    summary:(e,r,p,n)=>`Capital ${e}. Rendimiento total ${r}. Postura del mercado ${p}, con ${n} posición${n===1?'':'es'} abierta${n===1?'':'s'}.`,
+    help:'Prueba: ve a mercados, cuál es mi capital, dame un resumen, detén el riesgo, inicia el escritorio, pausa el escritorio, liquida todo, o actualiza.',
+    unknown:'Perdón, no entendí. Di "ayuda" para ver qué puedo hacer.',langset:'Voz configurada en español.',hello:'Te escucho.'}
+};
+const tr=()=>VT[VOICE.lang];
+function spokenMoney(n){n=Number(n||0);const neg=n<0?(VOICE.lang==='es'?'menos ':'minus '):'';const w=VOICE.lang==='es'?'dólares':'dollars';
+  return neg+Math.abs(n).toLocaleString('en-US',{maximumFractionDigits:0})+' '+w;}
+function spokenPct(n){n=Number(n||0);const w=VOICE.lang==='es'?'por ciento':'percent';
+  return (n>=0?(VOICE.lang==='es'?'más ':'plus '):(VOICE.lang==='es'?'menos ':'minus '))+Math.abs(n).toFixed(2)+' '+w;}
+function spokenPosture(){const p=(marketRead().posture);
+  if(VOICE.lang==='es')return p==='RISK-ON'?'riesgo activo':p==='RISK-OFF'?'riesgo reducido':'neutral';
+  return p==='RISK-ON'?'risk on':p==='RISK-OFF'?'risk off':'neutral';}
+function vSpeak(text){try{if(!('speechSynthesis'in window))return;speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(text);u.lang=VOICE.lang==='es'?'es-ES':'en-US';u.rate=1.03;
+  const vs=(speechSynthesis.getVoices()||[]).filter(v=>v.lang&&v.lang.toLowerCase().startsWith(VOICE.lang));
+  if(vs[0])u.voice=vs[0];speechSynthesis.speak(u);}catch(e){}}
+function vPanelEl(){let p=document.getElementById('vpanel');
+  if(!p){p=document.createElement('div');p.id='vpanel';p.className='vpanel';
+    p.innerHTML=`<div class="vh"><span id="vdot"></span><span id="vstate">—</span><button id="vclose" title="close">✕</button></div>
+      <div class="vheard" id="vheard"></div><div class="vreply" id="vreply"></div>
+      <div class="vhint">“go to markets” · “what’s my equity” · “summary” · “halt risk”<br>“ve a mercados” · “dame un resumen” · “liquida todo”</div>`;
+    document.body.appendChild(p); p.querySelector('#vclose').onclick=voiceStop;}
+  return p;}
+function vShow(state,heard,reply){const p=vPanelEl();p.style.display='block';
+  if(state!=null)p.querySelector('#vstate').textContent=state;
+  if(heard!=null)p.querySelector('#vheard').textContent=heard?('“'+heard+'”'):'';
+  if(reply!=null)p.querySelector('#vreply').textContent=reply||'';}
+function vReply(key,...args){const f=tr()[key];const msg=typeof f==='function'?f(...args):f;vShow(tr().listening,null,msg);vSpeak(msg);return msg;}
+function vNorm(t){return ' '+String(t).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim()+' ';}
+function vAny(t,arr){return arr.some(w=>t.includes(' '+w+' '));}
+const NAVMAP=[['Parquet',['parquet','home','dashboard','inicio','tablero','principal','panel']],
+  ['Markets',['markets','market','mercados','mercado']],['Macro',['macro','macroeconomics','macroeconomia']],
+  ['News',['news','headlines','noticias','noticia']],['Council',['council','agents','consejo','agentes']],
+  ['Book',['book','blotter','portfolio','libro','cartera']],['Brain',['brain','ai brain','cerebro']],
+  ['Controls',['controls','control','controles']],['Workforce',['workforce','team','roster','equipo','plantilla']],
+  ['Env',['environment','settings','entorno','ajustes','variables']]];
+function vNav(t){const intent=vAny(t,['go','open','show','take me','go to','ir','ve','vamos','abre','abrir','muestra','muestrame','ir a']);
+  for(const[tab,kw]of NAVMAP){if(vAny(t,kw)){if(!intent&&['Markets','Macro'].includes(tab))continue; // bare "market" → query, needs intent
+      if(OWNER_TABS.includes(tab)&&!SESSION){vReply('signin');return true;}
+      TAB=tab;render();buildNav();vReply('opening',tab);return true;}}
+  return false;}
+function vHandle(transcript){
+  const t=vNorm(transcript);
+  if(VOICE.pending){const yes=vAny(t,['yes','yeah','yep','confirm','do it','si','claro','confirmar','dale','hazlo']);
+    const act=VOICE.pending;VOICE.pending=null; if(yes)act(); else vReply('cancelled'); return;}
+  if(vAny(t,['speak english','english','in english','habla ingles','ingles'])){VOICE.lang='en';updateVoiceLangBtn();setVoiceBtn(VOICE.on);vReply('langset');return;}
+  if(vAny(t,['speak spanish','spanish','in spanish','habla espanol','espanol','en espanol'])){VOICE.lang='es';updateVoiceLangBtn();setVoiceBtn(VOICE.on);vReply('langset');return;}
+  if(vAny(t,['help','what can i say','options','ayuda','que puedo decir','opciones'])){vReply('help');return;}
+  // navigation with explicit intent first (avoids "market" vs "markets" clashes)
+  if(vAny(t,['go','open','show','take me','ir','ve','vamos','abre','abrir','muestra','muestrame'])&&vNav(t))return;
+  // desk controls (owner only)
+  const ctl=(cmd)=>{if(!SESSION){vReply('signin');return;}
+    if(cmd==='halt'){sbUpdate({halt:true});vReply('halted');}
+    else if(cmd==='resume'){sbUpdate({halt:false});vReply('resumed');}
+    else if(cmd==='start'){sbUpdate({active:true});vReply('started');}
+    else if(cmd==='stop'){sbUpdate({active:false});vReply('stopped');}
+    else if(cmd==='flatten'){VOICE.pending=()=>{sbCommand('flatten');vReply('flattened');};vReply('confirmFlat');}};
+  if(vAny(t,['flatten','flatten all','sell everything','sell all','liquida','liquidar','liquida todo','vende todo','cierra todo'])){ctl('flatten');return;}
+  if(vAny(t,['halt','halt risk','stop risk','kill switch','deten','detener','deten el riesgo','para el riesgo','detener riesgo'])){ctl('halt');return;}
+  if(vAny(t,['resume','resume trading','reanudar','reanuda','continuar'])){ctl('resume');return;}
+  if(vAny(t,['start desk','start the desk','start trading','inicia','iniciar','arranca','enciende','inicia el escritorio'])){ctl('start');return;}
+  if(vAny(t,['stop desk','stop the desk','pause desk','pausa','pausar','para el escritorio','pausa el escritorio'])){ctl('stop');return;}
+  if(vAny(t,['go live','live mode','en vivo','modo real','dinero real'])){vReply('notlive');return;}
+  if(vAny(t,['refresh','reload','update','actualiza','actualizar','recargar'])){load();vReply('refreshed');return;}
+  // spoken read-outs (everyone)
+  if(vAny(t,['summary','overview','status','resumen','estado','como vamos'])){
+    vReply('summary',spokenMoney((DATA.account||{}).equity),spokenPct((DATA.pnl||{}).total_return_pct),spokenPosture(),(DATA.positions||[]).length);return;}
+  if(vAny(t,['equity','net asset value','nav','capital','patrimonio'])){vReply('equity',spokenMoney((DATA.account||{}).equity));return;}
+  if(vAny(t,['return','performance','rendimiento','ganancia total'])){vReply('ret',spokenPct((DATA.pnl||{}).total_return_pct));return;}
+  if(vAny(t,['cash','efectivo','liquidez'])){vReply('cash',spokenMoney((DATA.account||{}).cash));return;}
+  if(vAny(t,['deployed','invested','desplegado','invertido'])){vReply('deployed',spokenMoney((DATA.account||{}).deployed));return;}
+  if(vAny(t,['positions','position','posiciones','posicion'])){vReply('positions',(DATA.positions||[]).length);return;}
+  if(vAny(t,['posture','market read','market','mercado','postura'])){vReply('posture',spokenPosture());return;}
+  // bare navigation keyword (no intent word) as a final fallback
+  if(vNav(t))return;
+  vReply('unknown');
+}
+function updateVoiceLangBtn(){const b=document.getElementById('voiceLang');if(b)b.textContent='🌐 '+(VOICE.lang==='es'?'ES':'EN');
+  if(VOICE.rec)VOICE.rec.lang=VOICE.lang==='es'?'es-ES':'en-US';}
+function setVoiceBtn(on){const b=document.getElementById('voiceBtn');if(!b)return;b.classList.toggle('listening',!!on);
+  b.innerHTML='🎙️ '+(on?(VOICE.lang==='es'?'ESCUCHANDO':'LISTENING'):(VOICE.lang==='es'?'VOZ':'VOICE'));}
+function voiceStart(){
+  if(!_SR){vShow(tr().unsupported,'','');vSpeak(tr().unsupported);return;}
+  if(VOICE.on)return;
+  const rec=new _SR();VOICE.rec=rec;rec.continuous=true;rec.interimResults=false;rec.maxAlternatives=1;
+  rec.lang=VOICE.lang==='es'?'es-ES':'en-US';
+  rec.onresult=(e)=>{const r=e.results[e.results.length-1];if(!r||!r.isFinal)return;
+    const txt=((r[0]&&r[0].transcript)||'').trim();if(!txt)return;vShow(tr().listening,txt,null);
+    const n=vNorm(txt);
+    if(vAny(n,['stop listening','deja de escuchar','apaga el microfono','silencio','para de escuchar'])){voiceStop();return;}
+    try{vHandle(txt);}catch(err){vReply('unknown');}};
+  rec.onerror=(e)=>{if(e&&(e.error==='not-allowed'||e.error==='service-not-allowed')){vShow(tr().micdenied,'','');vSpeak(tr().micdenied);voiceStop();}};
+  rec.onend=()=>{if(VOICE.on){try{rec.start();}catch(e){}}else{setVoiceBtn(false);}};
+  try{rec.start();VOICE.on=true;setVoiceBtn(true);vShow(tr().listening,'','');vSpeak(tr().hello);}catch(e){}
+}
+function voiceStop(){VOICE.on=false;try{VOICE.rec&&VOICE.rec.stop();}catch(e){}setVoiceBtn(false);
+  const p=document.getElementById('vpanel');if(p)p.querySelector('#vstate').textContent=tr().tap;}
+function voiceToggle(){VOICE.on?voiceStop():voiceStart();}
+(function initVoice(){
+  const vb=document.getElementById('voiceBtn'),lb=document.getElementById('voiceLang');
+  if(lb){updateVoiceLangBtn();lb.onclick=()=>{VOICE.lang=VOICE.lang==='es'?'en':'es';updateVoiceLangBtn();setVoiceBtn(VOICE.on);vReply('langset');};}
+  if(vb){vb.onclick=voiceToggle;if(!_SR)vb.title=tr().unsupported;}
+})();
 
 load();
 setInterval(load,30000);
