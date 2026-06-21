@@ -107,6 +107,15 @@ CREATE TABLE IF NOT EXISTS events (
     kind          TEXT,
     detail        TEXT
 );
+CREATE TABLE IF NOT EXISTS capital_ledger (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts            TEXT NOT NULL,
+    amount        REAL NOT NULL,                       -- +deposit / -withdrawal (signed)
+    kind          TEXT NOT NULL DEFAULT 'deposit',     -- deposit | withdrawal
+    method        TEXT,                                -- ach | wire | alpaca | paper_reset | manual
+    equity_after  REAL,                                -- account equity right after the flow
+    note          TEXT
+);
 """
 
 
@@ -213,6 +222,33 @@ class Database:
     def list_investors(self) -> List[Dict[str, Any]]:
         rows = self.conn.execute("SELECT * FROM investors ORDER BY contributed DESC").fetchall()
         return [dict(r) for r in rows]
+
+    # ── owner capital ledger (deposits / withdrawals on YOUR trading account) ──
+    # This is the account-level cash ledger, separate from the investor CRM. Real
+    # money moves through your broker (Alpaca ACH); recording it here keeps return
+    # accounting honest — a deposit is capital, not a trading gain.
+    def record_capital(self, amount: float, kind: str = "deposit", method: str = "manual",
+                       equity_after: Optional[float] = None, note: str = None) -> float:
+        kind = "withdrawal" if kind.lower().startswith("w") else "deposit"
+        signed = -abs(amount) if kind == "withdrawal" else abs(amount)
+        self.conn.execute(
+            "INSERT INTO capital_ledger (ts,amount,kind,method,equity_after,note)"
+            " VALUES (?,?,?,?,?,?)", (_now(), signed, kind, method, equity_after, note))
+        self.conn.commit()
+        return signed
+
+    def capital_ledger(self, limit: int = 200) -> List[Dict[str, Any]]:
+        rows = self.conn.execute("SELECT * FROM capital_ledger ORDER BY id DESC LIMIT ?",
+                                 (limit,)).fetchall()
+        return [dict(r) for r in rows]
+
+    def capital_summary(self) -> Dict[str, Any]:
+        r = self.conn.execute(
+            "SELECT COALESCE(SUM(CASE WHEN amount>0 THEN amount END),0) deposits,"
+            " COALESCE(SUM(CASE WHEN amount<0 THEN -amount END),0) withdrawals,"
+            " COALESCE(SUM(amount),0) net, COUNT(*) n FROM capital_ledger").fetchone()
+        return {"deposits": float(r["deposits"]), "withdrawals": float(r["withdrawals"]),
+                "net_capital": float(r["net"]), "flows": int(r["n"])}
 
     # ── investor read-only share links ───────────────────────────────────────
     def set_share_token(self, investor_id: int, token: str) -> None:

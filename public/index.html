@@ -762,6 +762,29 @@ function Book(v){
   [['AUM',money(crm.aum)],['Investors',crm.investors||0],['Contacts',crm.contacts||0]]
     .forEach(([k,val])=>cb.appendChild($(`<div class="row"><span class="mut">${k}</span><span class="mono">${val}</span></div>`)));
   g.appendChild(panel('Fund / CRM', cb, '', 'span5'));
+
+  // Treasury — capital you ADDED vs money the strategy MADE
+  const cap=DATA.capital||{}; const tb2=$(`<div></div>`);
+  const pnlUp=(cap.trading_pnl||0)>=0;
+  [['Net capital (deposits − withdrawals)', money(cap.net_capital), 'mono'],
+   ['Total deposits', money(cap.deposits), 'mono'],
+   ['Total withdrawals', money(cap.withdrawals), 'mono'],
+   ['Trading P&L (equity − net capital)', money(cap.trading_pnl), pnlUp?'up':'down'],
+   ['Trading return', (cap.trading_return_pct>=0?'+':'')+num(cap.trading_return_pct)+'%', pnlUp?'up':'down']]
+    .forEach(([k,val,cls])=>tb2.appendChild($(`<div class="row"><span class="mut">${k}</span><span class="mono ${cls||''}">${val}</span></div>`)));
+  tb2.appendChild($(`<div class="empty" style="margin-top:9px">Record real funding with <span class="mono">python -m treasury.treasury deposit --amount …</span> (withdraw too). Real cash moves in Alpaca — see FUNDING.md.</div>`));
+  g.appendChild(panel('Treasury · Capital Ledger', tb2, (cap.flows||0)+' flow(s)', 'span7'));
+
+  // capital flow history
+  const flows=DATA.capital_flows||[]; let fb;
+  if(!flows.length) fb='<div class="empty">no deposits/withdrawals recorded yet</div>';
+  else{ const w=$(`<div class="scroll"></div>`);
+    const t=$(`<table><thead><tr><th>DATE</th><th>TYPE</th><th class="n">AMOUNT</th><th>METHOD</th></tr></thead><tbody></tbody></table>`);
+    flows.forEach(f=>t.querySelector('tbody').appendChild($(`<tr><td class="mut">${esc((f.ts||'').slice(0,10))}</td>
+      <td class="${f.amount>=0?'up':'down'}">${esc(f.kind)}</td><td class="n ${f.amount>=0?'up':'down'}">${money(f.amount)}</td>
+      <td class="mut">${esc(f.method||'')}</td></tr>`)));
+    w.appendChild(t); fb=w; }
+  g.appendChild(panel('Capital Flows', fb, '', 'span5'));
   v.appendChild(g);
 }
 

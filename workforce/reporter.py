@@ -94,6 +94,28 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def _capital_block(db, equity: float, equity_start: float) -> Dict[str, Any]:
+    """Separate capital you ADDED from money the strategy MADE. With deposits/
+    withdrawals recorded (see treasury), trading P&L = equity − net capital;
+    otherwise it falls back to the equity_start baseline."""
+    s = db.capital_summary()
+    net = s["net_capital"]
+    if net > 0:
+        trading_pnl = equity - net
+        ret = (equity / net - 1.0) * 100
+    else:  # no flows recorded → baseline accounting
+        trading_pnl = equity - equity_start
+        ret = (equity / equity_start - 1.0) * 100 if equity_start else 0.0
+    return {
+        "deposits": round(s["deposits"], 2),
+        "withdrawals": round(s["withdrawals"], 2),
+        "net_capital": round(net, 2),
+        "flows": s["flows"],
+        "trading_pnl": round(trading_pnl, 2),
+        "trading_return_pct": round(ret, 3),
+    }
+
+
 def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[str, Any]) -> Dict[str, Any]:
     db = firm.db
     client = firm.client
@@ -152,6 +174,8 @@ def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[st
             "realized": round(realized, 2), "premium_collected": round(premium, 2),
             "total_return_pct": round((eq / eq0 - 1.0) * 100, 3) if eq0 else 0.0,
         },
+        "capital": _capital_block(db, eq, eq0),
+        "capital_flows": db.capital_ledger(20),
         "health": {
             "mode": mode,
             "broker_online": client.online,
