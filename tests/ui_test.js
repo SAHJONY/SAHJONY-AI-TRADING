@@ -49,7 +49,13 @@ async function main() {
   win.WebSocket = FakeWS;
   const CRYPTO = [{ symbol: 'btc', name: 'Bitcoin', current_price: 61000, price_change_percentage_24h: 2.4, market_cap: 1.2e12, total_volume: 3e10 }];
   const ARTS = [{ title: 'Markets rally on cooling inflation', url: 'https://news.test/a', domain: 'reuters.com', seendate: '20260620T210000Z' }];
-  win.fetch = async (url) => {
+  const credCalls = [];
+  win.fetch = async (url, opts) => {
+    if (/functions\/v1\/set-credential/.test(url)) {
+      const body = JSON.parse((opts && opts.body) || '{}');
+      credCalls.push({ url, headers: (opts && opts.headers) || {}, body });
+      return { ok: true, json: async () => ({ ok: true, saved: Object.keys(body.credentials || {}) }) };
+    }
     if (/alternative\.me/.test(url)) return { ok: true, json: async () => ({ data: [{ value: '72', value_classification: 'Greed', timestamp: '1' }] }) };
     if (/search\/trending/.test(url)) return { ok: true, json: async () => ({ coins: [{ item: { name: 'Solana', symbol: 'SOL', market_cap_rank: 5 } }] }) };
     if (/api\/v3\/global/.test(url)) return { ok: true, json: async () => ({ data: { total_market_cap: { usd: 2.4e12 }, market_cap_change_percentage_24h_usd: 1.5, market_cap_percentage: { btc: 52.3, eth: 17.1 }, active_cryptocurrencies: 12000 } }) };
@@ -106,6 +112,20 @@ async function main() {
   const flat = [...win.document.querySelectorAll('#view button')].find(b => /flatten/i.test(b.textContent));
   flat.onclick(); await new Promise(r => setTimeout(r, 20));
   check(state.updates.some(u => u.command === 'flatten'), 'Flatten click writes command=flatten');
+
+  // ── self-service broker keys onboarding ──
+  navClick(win, 'Controls');
+  check(/Broker Keys/.test(viewText(win)), 'Controls renders the self-service Broker Keys panel');
+  win.document.getElementById('kak').value = 'PKTEST123';
+  win.document.getElementById('kas').value = 'secret-xyz';
+  const savek = [...win.document.querySelectorAll('#view button')].find(b => /SAVE KEYS/.test(b.textContent));
+  check(!!savek, 'SAVE KEYS button present'); savek.onclick(); await new Promise(r => setTimeout(r, 30));
+  check(credCalls.length === 1, 'SAVE KEYS calls the set-credential Edge Function once');
+  check(/\/functions\/v1\/set-credential$/.test(credCalls[0].url), 'posts to the set-credential function endpoint');
+  check(credCalls[0].body.credentials.ALPACA_API_KEY === 'PKTEST123'
+    && credCalls[0].body.credentials.ALPACA_SECRET_KEY === 'secret-xyz', 'sends entered broker keys in the body');
+  check(/^Bearer /.test(credCalls[0].headers.Authorization || ''), 'authorizes with the caller bearer token');
+  check(credCalls[0].body.desk_id === 'desk-1', 'scopes the save to the signed-in desk_id');
 
   // ── realtime streaming ──
   check(win.document.getElementById('dStream').className.includes('live'), 'crypto WebSocket connects (STREAM dot live)');

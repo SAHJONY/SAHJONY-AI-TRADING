@@ -18,6 +18,35 @@ Decisions locked: **Supabase + Next.js on Vercel**, the Python engine on a
   - `worker/run.py` — cron entry (`python -m worker.run`)
   - `worker/crypto.py` — AES-256-GCM, byte-compatible with the web side
   - `worker/db_pg.py` — service-role Postgres access (bypasses RLS)
+- **`supabase/functions/set-credential/`** — a Deno Edge Function that lets a
+  signed-in user save their own broker keys **without** a separate Next.js app.
+  It AES-256-GCM-encrypts each value server-side (so the browser never holds the
+  encryption key) in the exact format `base64(iv) + "." + base64(ct||tag)` that
+  `worker/crypto.py` decrypts, then upserts to `broker_credentials` through the
+  caller's JWT so RLS pins the write to that user's desk.
+- **Dashboard onboarding panel** — `public/index.html` → Controls tab →
+  **Broker Keys**. Signed-in users type their Alpaca (and optional Anthropic)
+  keys; `saveCredentials()` POSTs them to the Edge Function. The panel only ever
+  shows **set / missing**, never a stored value.
+
+## Onboarding a family/friend account (self-service)
+1. They open the dashboard and sign in (Supabase Auth). The signup trigger has
+   already created their profile + a default desk.
+2. **Controls → Broker Keys** → paste Alpaca **paper** keys → SAVE KEYS. The
+   Edge Function encrypts and stores them under *their* desk.
+3. **Controls → Configuration / Trading Mode** → set tickers, caps, and `paper`.
+4. The worker's next pass decrypts their keys and runs their desk. Live trading
+   still requires the per-desk `mode=live` + `live_ack` opt-in.
+
+### Deploy the Edge Function (one-time)
+```bash
+supabase functions deploy set-credential
+# 32-byte key, SAME value as the worker's SECRET_ENCRYPTION_KEY:
+supabase secrets set SECRET_ENCRYPTION_KEY="$(python -c 'import os,base64;print(base64.b64encode(os.urandom(32)).decode())')"
+# SUPABASE_URL and SUPABASE_ANON_KEY are injected automatically.
+```
+The web `public/config.js` needs only the public `SUPABASE_URL` + anon key — the
+function URL is derived as `${SUPABASE_URL}/functions/v1/set-credential`.
 
 ## Secret handling
 Customer keys are stored **encrypted** (AES-256-GCM) in `broker_credentials`.
@@ -33,9 +62,9 @@ Alpaca keys are present; otherwise the worker falls back to `sim` for that run
 (logged, never silently traded) — the same deliberate opt-in as the personal app.
 
 ## Still to build (next phases)
-- **`web/`** — Next.js on Vercel: Supabase auth, an onboarding form to add your
-  own keys + pick mode/tickers (server action encrypts with `SECRET_ENCRYPTION_KEY`),
-  and a per-desk dashboard reading `desks.last_status` + `equity_points`.
+- ~~Onboarding form + per-desk dashboard~~ — **done** via the static dashboard's
+  Controls tab (auth, Broker Keys, config/mode, live controls) + the
+  `set-credential` Edge Function. A full Next.js `web/` app is now optional.
 - Deploy the worker on Railway/Render/Fly with a cron schedule.
 - Billing / invites for family & friends.
 
