@@ -1062,7 +1062,8 @@ function Brain(v){
     <div class="row"><span class="mut">Claude (brain)</span><span class="tag amber">${esc(mdl.brain||b.brain_model||'—')}</span></div>
     <div class="row"><span class="mut">OpenAI (counsellor)</span><span class="tag">${esc(mdl.openai||'—')}</span></div>
     <div class="row"><span class="mut">Grok (counsellor)</span><span class="tag">${esc(mdl.grok||'—')}</span></div>
-    <div class="row"><span class="mut">Gemini (counsellor)</span><span class="tag">${esc(mdl.gemini||'—')}</span></div>`;
+    <div class="row"><span class="mut">Gemini (counsellor)</span><span class="tag">${esc(mdl.gemini||'—')}</span></div>
+    <div class="row"><span class="mut">NVIDIA NIM (free · fallback)</span><span class="tag ${mdl.nvidia?'on':''}">${esc(mdl.nvidia||'—')}</span></div>`;
   g.appendChild(panel('Live Models · auto-resolved', ms, 'refreshes daily', 'span7'));
   g.appendChild(panel('Brain Commentary',
     `<div class="commentary">${b.commentary?esc(b.commentary):'<span class="empty">AI brain advisory overlay. Set AI_BRAIN_ENABLED=true + ANTHROPIC_API_KEY.</span>'}</div>`, '', 'span7'));
@@ -1070,7 +1071,8 @@ function Brain(v){
   if(cs.openai)cc.appendChild($(`<div class="counsel"><b>OpenAI (GPT)</b> — ${esc(cs.openai)}</div>`));
   if(cs.grok)cc.appendChild($(`<div class="counsel"><b>Grok (xAI)</b> — ${esc(cs.grok)}</div>`));
   if(cs.gemini)cc.appendChild($(`<div class="counsel"><b>Gemini (Google)</b> — ${esc(cs.gemini)}</div>`));
-  if(!cs.openai&&!cs.grok&&!cs.gemini)cc.innerHTML='<div class="empty">Add OPENAI_API_KEY / XAI_API_KEY / GEMINI_API_KEY to enlist counsellors.</div>';
+  if(cs.nvidia)cc.appendChild($(`<div class="counsel"><b>NVIDIA NIM</b> — ${esc(cs.nvidia)}</div>`));
+  if(!cs.openai&&!cs.grok&&!cs.gemini&&!cs.nvidia)cc.innerHTML='<div class="empty">Add OPENAI_API_KEY / XAI_API_KEY / GEMINI_API_KEY / NVIDIA_API_KEY to enlist counsellors.</div>';
   g.appendChild(panel('Counsellors', cc, 'advisory', 'span12'));
   v.appendChild(g);
 }
