@@ -14,5 +14,5 @@ window.SAHJONY_CONFIG = {
   OWNER_EMAIL: "sahjonycapitalllc@outlook.com",
   // Optional FREE key from finnhub.io → live stock quotes + financial news.
   // Crypto (CoinGecko) and fallback news (GDELT) need NO key.
-  FINNHUB_API_KEY: ""
+  FINNHUB_API_KEY: "d8rijc1r01qnkitnb050d8rijc1r01qnkitnb05g"
 };
