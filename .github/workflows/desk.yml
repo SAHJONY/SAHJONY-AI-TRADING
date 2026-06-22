@@ -98,3 +98,16 @@ jobs:
           else
             echo "No change in public/status.json — nothing to commit."
           fi
+
+      # Reliable production deploy independent of the Git integration: if a Vercel
+      # Deploy Hook URL is set as secret VERCEL_DEPLOY_HOOK, ping it each cycle so
+      # the dashboard always publishes the latest commit. No-op if unset.
+      - name: Trigger Vercel production deploy (if hook configured)
+        env:
+          HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK }}
+        run: |
+          if [ -n "$HOOK" ]; then
+            curl -fsS -X POST "$HOOK" >/dev/null && echo "Vercel deploy hook fired ✓" || echo "deploy hook call failed"
+          else
+            echo "VERCEL_DEPLOY_HOOK not set — skipping (add it to auto-publish the dashboard)."
+          fi
