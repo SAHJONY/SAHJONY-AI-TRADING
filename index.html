@@ -1314,9 +1314,51 @@ function vHandle(transcript){
   if(vAny(t,['deployed','invested','desplegado','invertido'])){vReply('deployed',spokenMoney((DATA.account||{}).deployed));return;}
   if(vAny(t,['positions','position','posiciones','posicion'])){vReply('positions',(DATA.positions||[]).length);return;}
   if(vAny(t,['posture','market read','market','mercado','postura'])){vReply('posture',spokenPosture());return;}
+  // the desk's own AI analysis (instant, from the latest brain commentary)
+  if(vAny(t,['analysis','analyze','analyse','opinion','what do you think','your view','assessment','outlook','analisis','opinas','que opinas','que piensas','tu opinion','perspectiva'])){
+    const b=DATA.brain||{}; const c=(b.used&&b.commentary)?b.commentary:null;
+    const msg=c||((VOICE.lang==='es'?'Lectura del mercado: ':'Market read: ')+spokenPosture()+'. '+marketRead().text);
+    vShow(tr().listening,null,msg); vSpeak(msg); return;}
   // bare navigation keyword (no intent word) as a final fallback
   if(vNav(t))return;
-  vReply('unknown');
+  // everything else → intelligent LLM assistant (free NVIDIA NIM via Edge Function)
+  vAsk(transcript);
+}
+// ── compact live-dashboard context for the assistant ──
+function vContext(){
+  const a=DATA.account||{},p=DATA.pnl||{},b=DATA.brain||{};
+  const council=(DATA.council||[]).map(c=>`${c.symbol} ${c.direction} conv ${Math.round((c.conviction||0)*100)}% $${(+c.price||0).toFixed(2)}`).join('; ');
+  const pos=(DATA.positions||[]).map(x=>`${x.symbol} ${num(x.shares,4)}sh uPnL ${money(x.unrealized)}`).join('; ')||'flat (no positions)';
+  const ml=Array.isArray(MARKETS.list)?MARKETS.list:[];
+  const mv=ml.slice(0,6).map(m=>`${(m.symbol||'').toUpperCase()} ${(m.price_change_percentage_24h||0).toFixed(1)}%`).join(', ');
+  return [
+    `Firm: ${DATA.firm||'SAHJONY CAPITAL'} — PAPER trading, mode ${DATA.mode||'?'}, cycle ${DATA.cycle||'?'}`,
+    `Equity ${money(a.equity)}, cash ${money(a.cash)}, deployed ${money(a.deployed)}, total return ${pct(p.total_return_pct)}, realized P&L ${money(p.realized)}`,
+    `Synthesized posture ${marketRead().posture}; AI brain posture ${b.posture||'n/a'}, risk x${(b.global_risk_multiplier||1).toFixed(2)}; brain commentary: ${(b.commentary||'n/a')}`,
+    `Council: ${council||'n/a'}`,
+    `Open positions: ${pos}`,
+    `Top crypto movers 24h: ${mv||'n/a'}`,
+    `Current tab: ${TAB}; user signed in: ${SESSION?'yes':'no'}; tabs: ${visibleTabs().join(', ')}`,
+  ].join('\n');
+}
+// ── ask the LLM assistant; speak the reply and run any safe nav action ──
+async function vAsk(text){
+  const base=(CFG.SUPABASE_URL||'').replace(/\/$/,'');
+  if(!base||!CFG.SUPABASE_ANON_KEY){ vReply('unknown'); return; }
+  vShow(tr().listening, text, VOICE.lang==='es'?'pensando…':'thinking…');
+  try{
+    const r=await fetch(base+'/functions/v1/voice-assistant',{method:'POST',
+      headers:{'Content-Type':'application/json','apikey':CFG.SUPABASE_ANON_KEY,
+        'Authorization':'Bearer '+((SESSION&&SESSION.access_token)||CFG.SUPABASE_ANON_KEY)},
+      body:JSON.stringify({text,lang:VOICE.lang,context:vContext()})});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const d=await r.json();
+    const reply=(d&&d.reply)||tr().unknown;
+    vShow(tr().listening,text,reply); vSpeak(reply);
+    const act=d&&d.action;
+    if(act&&act.type==='nav'&&act.tab&&TABS.includes(act.tab)&&!(OWNER_TABS.includes(act.tab)&&!SESSION)){
+      TAB=act.tab; render(); buildNav(); }
+  }catch(e){ vReply('unknown'); }
 }
 function updateVoiceLangBtn(){const b=document.getElementById('voiceLang');if(b)b.textContent='🌐 '+(VOICE.lang==='es'?'ES':'EN');
   if(VOICE.rec)VOICE.rec.lang=VOICE.lang==='es'?'es-ES':'en-US';}
