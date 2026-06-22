@@ -2,8 +2,8 @@
   "firm": "SAHJONY CAPITAL LLC",
   "tagline": "Autonomous multi-agent quant trading \u2014 PAPER",
   "mode": "offline-sim",
-  "ts": "2026-06-22T20:13:49.940165+00:00",
-  "cycle": 10,
+  "ts": "2026-06-22T20:19:00.098050+00:00",
+  "cycle": 11,
   "account": {
     "equity": 100000.0,
     "equity_start": 100000.0,
@@ -1010,14 +1010,14 @@
     "enabled": true,
     "used": true,
     "posture": "neutral",
-    "global_risk_multiplier": 0.95,
-    "commentary": "The portfolio leans modestly long with a beta around 0.3\u20110.5 and volatility near 27\u202f%. Tech names dominate and a few (NVDA, TSLA, META) show negative alpha, making those signals fragile. Maintaining a neutral stance with a slight risk reduction (0.95\u00d7) preserves capital while allowing upside on the stronger long ideas.",
+    "global_risk_multiplier": 0.92,
+    "commentary": "The council leans modestly bullish on core tech and broad market exposure (AAPL, MSFT, GOOGL, SPY, DIA) with positive composites and alphas, but several high\u2011profile names (NVDA, TSLA, META, QQQ) are flat with negative composites/alphas, indicating fragile signals. Maintaining a neutral stance with a slight de\u2011risking bias (multiplier <1) preserves capital while allowing upside on the stronger long ideas.",
     "brain_model": "nvidia:openai/gpt-oss-120b",
     "counsellors": {
       "openai": "",
       "grok": "",
       "gemini": "",
-      "nvidia": "**Risk posture:** The slate is a modest\u2011beta, tech\u2011heavy long bias (\u03b2\u22480.3\u20110.5 overall) with volatility clustered around 27\u202f%. Alpha is mixed; a few names show negative signals, so sector concentration could amplify downside in a market pull\u2011back.\n\n**Adjustment suggestions (\u00b10.15)"
+      "nvidia": ""
     }
   },
   "positions": [
@@ -1219,9 +1219,47 @@
       "cash": 100000.0,
       "realized_pnl": 0.0,
       "premium": 0.0
+    },
+    {
+      "ts": "2026-06-22T20:19:00.097171+00:00",
+      "cycle": 11,
+      "equity": 100000.0,
+      "cash": 100000.0,
+      "realized_pnl": 0.0,
+      "premium": 0.0
     }
   ],
   "decisions": [
+    {
+      "ts": "2026-06-22T20:19:00.053852+00:00",
+      "kind": "ladder_update",
+      "symbol": "DIA",
+      "reason": "px 176.73 peak 176.73 gain +0%"
+    },
+    {
+      "ts": "2026-06-22T20:19:00.050811+00:00",
+      "kind": "ladder_update",
+      "symbol": "SPY",
+      "reason": "px 250.84 peak 250.84 gain +0%"
+    },
+    {
+      "ts": "2026-06-22T20:19:00.044082+00:00",
+      "kind": "ladder_update",
+      "symbol": "GOOGL",
+      "reason": "px 408.20 peak 408.20 gain +0%"
+    },
+    {
+      "ts": "2026-06-22T20:19:00.040397+00:00",
+      "kind": "ladder_update",
+      "symbol": "MSFT",
+      "reason": "px 466.69 peak 466.69 gain +56% trail 443.35"
+    },
+    {
+      "ts": "2026-06-22T20:19:00.034683+00:00",
+      "kind": "wheel_wait",
+      "symbol": "AAPL",
+      "reason": "IV-rank 32% too low to sell premium"
+    },
     {
       "ts": "2026-06-22T20:13:49.893071+00:00",
       "kind": "ladder_update",
@@ -1341,36 +1379,6 @@
       "kind": "ladder_update",
       "symbol": "MSFT",
       "reason": "px 466.69 peak 466.69 gain +56% trail 443.35"
-    },
-    {
-      "ts": "2026-06-22T15:08:51.454031+00:00",
-      "kind": "wheel_wait",
-      "symbol": "AAPL",
-      "reason": "IV-rank 32% too low to sell premium"
-    },
-    {
-      "ts": "2026-06-22T07:36:30.656783+00:00",
-      "kind": "wheel_skip",
-      "symbol": "SPY",
-      "reason": "budget $2,644 < $22,575/contract"
-    },
-    {
-      "ts": "2026-06-22T07:36:30.654826+00:00",
-      "kind": "ladder_update",
-      "symbol": "MSFT",
-      "reason": "px 466.69 peak 466.69 gain +56% trail 443.35"
-    },
-    {
-      "ts": "2026-06-22T07:36:30.650092+00:00",
-      "kind": "wheel_wait",
-      "symbol": "AAPL",
-      "reason": "IV-rank 32% too low to sell premium"
-    },
-    {
-      "ts": "2026-06-22T07:29:33.137526+00:00",
-      "kind": "wheel_skip",
-      "symbol": "SPY",
-      "reason": "budget $1,994 < $22,575/contract"
     }
   ],
   "agents_roster": [
