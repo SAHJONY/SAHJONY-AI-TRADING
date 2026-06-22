@@ -975,14 +975,20 @@ function councilHeat(){
   const c=DATA.council||[];
   if(!c.length) return '<div class="empty">no council output</div>';
   const agents=(c[0].agents||[]).map(a=>a.name);
+  const abbr=a=>String(a).split(/\s+/).map(w=>w[0]).join('').slice(0,3).toUpperCase();
+  const box=$(`<div></div>`);
+  box.appendChild($(`<div class="mut mono" style="font-size:9.5px;letter-spacing:.4px;margin-bottom:6px">⇄ scroll sideways to see all ${agents.length} agents · the SYMBOL column stays pinned · hover a cell for the exact score</div>`));
   const wrap=$(`<div class="scroll"></div>`);
   const t=$(`<table class="heat"></table>`);
-  const head=$(`<thead><tr><th class="sym">SYMBOL</th><th>DIR</th><th>CONV</th></tr></thead>`);
-  agents.forEach(a=>head.querySelector('tr').appendChild($(`<th title="${esc(a)}">${esc(a.split(' ').map(w=>w[0]).join('').slice(0,3))}</th>`)));
+  const head=$(`<thead><tr>
+    <th class="sym" style="position:sticky;left:0;background:var(--panel2);z-index:3">SYMBOL</th>
+    <th>DIR</th><th>CONV</th></tr></thead>`);
+  agents.forEach(a=>head.querySelector('tr').appendChild($(`<th title="${esc(a)}">${esc(abbr(a))}</th>`)));
   t.appendChild(head);
   const tb=$(`<tbody></tbody>`);
   c.forEach(r=>{
-    const tr=$(`<tr><td class="sym">${esc(r.symbol)} <span class="mut" style="font-size:9px">${money(r.price)}</span></td>
+    const tr=$(`<tr>
+      <td class="sym" style="position:sticky;left:0;background:var(--panel2);z-index:2">${esc(r.symbol)} <span class="mut" style="font-size:9px">${money(r.price)}</span></td>
       <td><span class="tag ${r.direction==='long'?'on':(r.direction==='short'?'off':'')}">${esc(r.direction)}</span></td>
       <td><span class="tag amber">${(r.conviction*100).toFixed(0)}%</span></td></tr>`);
     (r.agents||[]).forEach(a=>{const td=$(`<td></td>`);
@@ -990,7 +996,13 @@ function councilHeat(){
       tr.appendChild(td);});
     tb.appendChild(tr);
   });
-  t.appendChild(tb); wrap.appendChild(t); return wrap;
+  t.appendChild(tb); wrap.appendChild(t); box.appendChild(wrap);
+  // legend: abbreviation → full agent name (so the columns are readable)
+  box.appendChild($(`<div class="mut mono" style="font-size:9px;letter-spacing:1px;text-transform:uppercase;margin:11px 0 5px">Agent legend</div>`));
+  const leg=$(`<div style="display:flex;flex-wrap:wrap;gap:5px"></div>`);
+  agents.forEach(a=>leg.appendChild($(`<span class="pill" style="font-size:9px;padding:2px 7px"><b class="amber">${esc(abbr(a))}</b> ${esc(a)}</span>`)));
+  box.appendChild(leg);
+  return box;
 }
 
 function activityFeed(){
