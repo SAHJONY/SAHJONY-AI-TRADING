@@ -2,8 +2,8 @@
   "firm": "SAHJONY CAPITAL LLC",
   "tagline": "Autonomous multi-agent quant trading \u2014 PAPER",
   "mode": "offline-sim",
-  "ts": "2026-06-22T15:08:51.465468+00:00",
-  "cycle": 6,
+  "ts": "2026-06-22T15:49:07.846309+00:00",
+  "cycle": 7,
   "account": {
     "equity": 100000.0,
     "equity_start": 100000.0,
@@ -351,15 +351,15 @@
   "brain": {
     "enabled": true,
     "used": true,
-    "posture": "neutral",
-    "global_risk_multiplier": 0.9,
-    "commentary": "Moderate risk posture with a mix of long positions and relatively low beta values. Adjustments made to reflect potential overconfidence in MSFT and volatility in SPY.",
+    "posture": "risk_off",
+    "global_risk_multiplier": 0.8,
+    "commentary": "The overall risk posture is deemed high due to the high beta and vol across the board, as cautioned by the NVIDIA counsellor. The quant signal for MSFT appears fragile due to its negative beta. Adjustments are made to reflect a more cautious stance.",
     "brain_model": "nvidia:meta/llama-3.3-70b-instruct",
     "counsellors": {
       "openai": "",
       "grok": "",
       "gemini": "",
-      "nvidia": "Based on the quant council verdicts, the overall risk posture appears moderate, with a mix of long positions and relatively low beta values. \n\nPer symbol adjustments: \n- AAPL: +0.05 (stable conviction, moderate alpha)\n- MSFT: -0.10 (high conviction, but negative beta may indicate"
+      "nvidia": "I advise a cautious stance due to high beta and vol across the board. Suggested conviction adjustments: AAPL (+0.05), MSFT (-0.10) due to its negative beta, and SPY (+0.05). The quant signal for MSFT appears fragile due to its negative beta, warranting closer monitoring. Overall,"
     }
   },
   "positions": [
@@ -448,9 +448,35 @@
       "cash": 100000.0,
       "realized_pnl": 0.0,
       "premium": 0.0
+    },
+    {
+      "ts": "2026-06-22T15:49:07.845647+00:00",
+      "cycle": 7,
+      "equity": 100000.0,
+      "cash": 100000.0,
+      "realized_pnl": 0.0,
+      "premium": 0.0
     }
   ],
   "decisions": [
+    {
+      "ts": "2026-06-22T15:49:07.844504+00:00",
+      "kind": "wheel_skip",
+      "symbol": "SPY",
+      "reason": "budget $2,350 < $22,575/contract"
+    },
+    {
+      "ts": "2026-06-22T15:49:07.842226+00:00",
+      "kind": "ladder_update",
+      "symbol": "MSFT",
+      "reason": "px 466.69 peak 466.69 gain +56% trail 443.35"
+    },
+    {
+      "ts": "2026-06-22T15:49:07.838586+00:00",
+      "kind": "wheel_wait",
+      "symbol": "AAPL",
+      "reason": "IV-rank 32% too low to sell premium"
+    },
     {
       "ts": "2026-06-22T15:08:51.463194+00:00",
       "kind": "wheel_skip",
