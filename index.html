@@ -317,7 +317,7 @@ async function load(){
 }
 
 // ── free live market & news feeds (run in the browser) ──────────────────────
-const COINGECKO="https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=20&page=1&price_change_percentage=24h&sparkline=true";
+const COINGECKO="https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=50&page=1&price_change_percentage=24h&sparkline=true";
 function fmtTs(ms){const d=new Date(ms);return isNaN(d)?'':d.toLocaleString();}
 function fmtGdelt(s){if(!s)return'';const d=new Date(String(s).replace(/(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z/,'$1-$2-$3T$4:$5:$6Z'));return isNaN(d)?'':d.toLocaleString();}
 
@@ -329,22 +329,48 @@ async function fetchMarkets(force){
   buildTape(); if(TAB==='Markets')render();
 }
 
+// Multi-source financial wire — aggregates every configured provider in parallel,
+// merges + dedupes by headline, sorts newest-first. Free sources need no key;
+// optional keyed services (added in config.js) widen coverage. Each source is
+// fault-isolated: one failing never blocks the others.
+const MARKETAUX=(CFG.MARKETAUX_API_KEY||"").trim();   // free tier + paid (marketaux.com)
+const CRYPTOPANIC=(CFG.CRYPTOPANIC_API_KEY||"").trim(); // free crypto news (cryptopanic.com)
 async function fetchNews(force){
   if(!force && Date.now()-NEWS.ts<300000 && NEWS.list.length) return;
-  try{
-    let list=[], src='';
-    if(FINNHUB){
-      const r=await fetch(`https://finnhub.io/api/v1/news?category=general&token=${encodeURIComponent(FINNHUB)}`);
-      if(!r.ok) throw new Error('HTTP '+r.status);
-      list=((await r.json())||[]).slice(0,40).map(a=>({title:a.headline,url:a.url,source:a.source,time:fmtTs(a.datetime*1000)})); src='Finnhub';
-    }else{
-      const q=encodeURIComponent('(markets OR finance OR stocks OR economy OR earnings OR "Federal Reserve") sourcelang:english');
-      const r=await fetch(`https://api.gdeltproject.org/api/v2/doc/doc?query=${q}&mode=ArtList&maxrecords=40&sort=DateDesc&format=json`);
-      if(!r.ok) throw new Error('HTTP '+r.status);
-      list=(((await r.json())||{}).articles||[]).map(a=>({title:a.title,url:a.url,source:a.domain,time:fmtGdelt(a.seendate)})); src='GDELT';
-    }
-    NEWS={list,err:null,ts:Date.now(),src};
-  }catch(e){ NEWS={list:NEWS.list, err:String(e&&e.message||e), ts:Date.now(), src:NEWS.src}; }
+  const used=[];
+  const jobs=[];
+  // GDELT — free, no key, global financial coverage
+  jobs.push((async()=>{try{
+    const q=encodeURIComponent('(markets OR finance OR stocks OR economy OR earnings OR "Federal Reserve") sourcelang:english');
+    const r=await fetch(`https://api.gdeltproject.org/api/v2/doc/doc?query=${q}&mode=ArtList&maxrecords=40&sort=DateDesc&format=json`);
+    if(!r.ok)throw 0; const arts=(((await r.json())||{}).articles||[]);
+    used.push('GDELT'); return arts.map(a=>{const t=Date.parse(String(a.seendate||'').replace(/(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z/,'$1-$2-$3T$4:$5:$6Z'))||0;
+      return {title:a.title,url:a.url,source:a.domain,time:fmtGdelt(a.seendate),t};});
+  }catch(e){return [];}})());
+  // Finnhub — free key (already used elsewhere): general market headlines
+  if(FINNHUB) jobs.push((async()=>{try{
+    const r=await fetch(`https://finnhub.io/api/v1/news?category=general&token=${encodeURIComponent(FINNHUB)}`);
+    if(!r.ok)throw 0; const a=((await r.json())||[]).slice(0,40);
+    used.push('Finnhub'); return a.map(x=>({title:x.headline,url:x.url,source:x.source,time:fmtTs(x.datetime*1000),t:(x.datetime||0)*1000}));
+  }catch(e){return [];}})());
+  // Marketaux — free tier + paid: entity-tagged market news
+  if(MARKETAUX) jobs.push((async()=>{try{
+    const r=await fetch(`https://api.marketaux.com/v1/news/all?language=en&filter_entities=true&limit=25&api_token=${encodeURIComponent(MARKETAUX)}`);
+    if(!r.ok)throw 0; const a=(((await r.json())||{}).data||[]);
+    used.push('Marketaux'); return a.map(x=>{const t=Date.parse(x.published_at)||0;return {title:x.title,url:x.url,source:x.source,time:fmtTs(t),t};});
+  }catch(e){return [];}})());
+  // CryptoPanic — free crypto news
+  if(CRYPTOPANIC) jobs.push((async()=>{try{
+    const r=await fetch(`https://cryptopanic.com/api/v1/posts/?auth_token=${encodeURIComponent(CRYPTOPANIC)}&public=true&kind=news`);
+    if(!r.ok)throw 0; const a=(((await r.json())||{}).results||[]).slice(0,25);
+    used.push('CryptoPanic'); return a.map(x=>{const t=Date.parse(x.published_at)||0;return {title:x.title,url:x.url,source:(x.source&&x.source.title)||'CryptoPanic',time:fmtTs(t),t};});
+  }catch(e){return [];}})());
+  let lists=[]; try{ lists=await Promise.all(jobs); }catch(e){}
+  const seen=new Set(), merged=[];
+  lists.flat().forEach(it=>{ if(!it||!it.title)return; const k=String(it.title).toLowerCase().replace(/[^a-z0-9]+/g,' ').trim().slice(0,80);
+    if(!k||seen.has(k))return; seen.add(k); merged.push(it); });
+  merged.sort((a,b)=>(b.t||0)-(a.t||0));
+  NEWS={list:merged.slice(0,60), err:merged.length?null:'no news sources reachable (CORS or offline)', ts:Date.now(), src:used.join(' + ')||'free feed'};
   if(TAB==='News')render();
 }
 
