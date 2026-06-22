@@ -178,6 +178,14 @@
     transition:transform .12s,box-shadow .12s;cursor:default}
   .cell:hover{transform:scale(1.18);box-shadow:0 0 12px rgba(255,255,255,.25);z-index:2;position:relative}
   .sym{font-size:12px;font-weight:700;color:var(--txt);text-align:left!important;padding-right:8px!important}
+  /* council heatmap — compact per-symbol cards for small screens (no h-scroll) */
+  .heat-cards{display:none}
+  .hcard{background:linear-gradient(180deg,rgba(20,27,41,.7),rgba(10,14,22,.7));border:1px solid var(--line2);border-radius:11px;padding:11px 12px}
+  .hcard-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px;margin-bottom:9px}
+  .hchips{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:5px}
+  .hchip{font-family:var(--mono);font-size:9.5px;color:#04121a;font-weight:700;border-radius:6px;padding:4px 7px;display:flex;align-items:center;justify-content:space-between;gap:5px}
+  .hchip b{font-weight:800;opacity:.85}
+  @media(max-width:680px){.heat-wide{display:none}.heat-cards{display:grid;gap:10px}}
 
   .cb{display:flex;align-items:center;gap:10px;padding:11px 13px;border-radius:10px;border:1px solid var(--line2);font-size:12px;margin-bottom:11px}
   .cb.ok{border-color:rgba(52,227,168,.35);background:linear-gradient(90deg,rgba(52,227,168,.09),transparent)}
@@ -977,8 +985,9 @@ function councilHeat(){
   const agents=(c[0].agents||[]).map(a=>a.name);
   const abbr=a=>String(a).split(/\s+/).map(w=>w[0]).join('').slice(0,3).toUpperCase();
   const box=$(`<div></div>`);
-  box.appendChild($(`<div class="mut mono" style="font-size:9.5px;letter-spacing:.4px;margin-bottom:6px">⇄ scroll sideways to see all ${agents.length} agents · the SYMBOL column stays pinned · hover a cell for the exact score</div>`));
-  const wrap=$(`<div class="scroll"></div>`);
+  box.appendChild($(`<div class="heat-wide mut mono" style="font-size:9.5px;letter-spacing:.4px;margin-bottom:6px">⇄ scroll sideways to see all ${agents.length} agents · the SYMBOL column stays pinned · hover a cell for the exact score</div>`));
+  // ── wide table (desktop) ──
+  const wrap=$(`<div class="scroll heat-wide"></div>`);
   const t=$(`<table class="heat"></table>`);
   const head=$(`<thead><tr>
     <th class="sym" style="position:sticky;left:0;background:var(--panel2);z-index:3">SYMBOL</th>
@@ -997,7 +1006,19 @@ function councilHeat(){
     tb.appendChild(tr);
   });
   t.appendChild(tb); wrap.appendChild(t); box.appendChild(wrap);
-  // legend: abbreviation → full agent name (so the columns are readable)
+  // ── per-symbol cards (small screens) — no horizontal scrolling ──
+  const cards=$(`<div class="heat-cards"></div>`);
+  c.forEach(r=>{
+    const card=$(`<div class="hcard"></div>`);
+    card.appendChild($(`<div class="hcard-h"><b class="amber">${esc(r.symbol)}</b> <span class="mut mono" style="font-size:11px">${money(r.price)}</span>
+      <span class="tag ${r.direction==='long'?'on':(r.direction==='short'?'off':'')}">${esc(r.direction)}</span>
+      <span class="tag amber">${(r.conviction*100).toFixed(0)}% conv</span></div>`));
+    const chips=$(`<div class="hchips"></div>`);
+    (r.agents||[]).forEach(a=>chips.appendChild($(`<span class="hchip" title="${esc(a.name)}: ${a.score>=0?'+':''}${a.score.toFixed(2)} (${(a.confidence*100).toFixed(0)}%)" style="background:${heatColor(a.score)}"><b>${esc(abbr(a.name))}</b> ${a.score>=0?'+':''}${a.score.toFixed(1)}</span>`)));
+    card.appendChild(chips); cards.appendChild(card);
+  });
+  box.appendChild(cards);
+  // legend: abbreviation → full agent name (applies to both views)
   box.appendChild($(`<div class="mut mono" style="font-size:9px;letter-spacing:1px;text-transform:uppercase;margin:11px 0 5px">Agent legend</div>`));
   const leg=$(`<div style="display:flex;flex-wrap:wrap;gap:5px"></div>`);
   agents.forEach(a=>leg.appendChild($(`<span class="pill" style="font-size:9px;padding:2px 7px"><b class="amber">${esc(abbr(a))}</b> ${esc(a)}</span>`)));
