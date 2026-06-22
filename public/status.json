@@ -2,8 +2,8 @@
   "firm": "SAHJONY CAPITAL LLC",
   "tagline": "Autonomous multi-agent quant trading \u2014 PAPER",
   "mode": "offline-sim",
-  "ts": "2026-06-22T06:59:47.556064+00:00",
-  "cycle": 3,
+  "ts": "2026-06-22T07:29:33.138906+00:00",
+  "cycle": 4,
   "account": {
     "equity": 100000.0,
     "equity_start": 100000.0,
@@ -353,13 +353,13 @@
     "used": true,
     "posture": "neutral",
     "global_risk_multiplier": 0.9,
-    "commentary": "Moderate portfolio risk posture with a mix of low to moderate beta values. Caution is advised due to potential overestimation in MSFT's quant signal.",
+    "commentary": "Moderate risk posture with a mix of growth stocks and a market index. Adjusting conviction levels based on counsellor opinions and quant signal fragility.",
     "brain_model": "nvidia:meta/llama-3.3-70b-instruct",
     "counsellors": {
       "openai": "",
       "grok": "",
       "gemini": "",
-      "nvidia": "I advise a cautious approach. The overall portfolio risk posture appears moderate, with a mix of low to moderate beta values. I suggest the following conviction adjustments: \n- AAPL: +0.05 (stable alpha and low beta)\n- MSFT: -0.10 (high alpha, but negative beta may indicate overe"
+      "nvidia": "Based on the quant council verdicts, the overall risk posture appears moderate, with a mix of long positions in growth stocks (AAPL, MSFT) and a market index (SPY). \n\nI suggest the following conviction adjustments:\n- AAPL: +0.05 (stable growth prospects)\n- MSFT: +0.10 (strong con"
     }
   },
   "positions": [
@@ -424,9 +424,35 @@
       "cash": 100000.0,
       "realized_pnl": 0.0,
       "premium": 0.0
+    },
+    {
+      "ts": "2026-06-22T07:29:33.138344+00:00",
+      "cycle": 4,
+      "equity": 100000.0,
+      "cash": 100000.0,
+      "realized_pnl": 0.0,
+      "premium": 0.0
     }
   ],
   "decisions": [
+    {
+      "ts": "2026-06-22T07:29:33.137526+00:00",
+      "kind": "wheel_skip",
+      "symbol": "SPY",
+      "reason": "budget $1,994 < $22,575/contract"
+    },
+    {
+      "ts": "2026-06-22T07:29:33.135924+00:00",
+      "kind": "ladder_update",
+      "symbol": "MSFT",
+      "reason": "px 466.69 peak 466.69 gain +56% trail 443.35"
+    },
+    {
+      "ts": "2026-06-22T07:29:33.130408+00:00",
+      "kind": "wheel_wait",
+      "symbol": "AAPL",
+      "reason": "IV-rank 32% too low to sell premium"
+    },
     {
       "ts": "2026-06-22T06:59:47.554643+00:00",
       "kind": "wheel_skip",
