@@ -73,8 +73,8 @@ class AIBrain:
         self.nvidia_key = (os.getenv("NVIDIA_API_KEY", "") or os.getenv("NVIDIA_NIM_API_KEY", "")).strip()
         self.nvidia_base = (os.getenv("NVIDIA_BASE_URL", "https://integrate.api.nvidia.com/v1")
                             or "https://integrate.api.nvidia.com/v1").strip().rstrip("/")
-        self.nvidia_model = (os.getenv("NVIDIA_MODEL", "meta/llama-3.3-70b-instruct")
-                             or "meta/llama-3.3-70b-instruct").strip()
+        self.nvidia_model = (os.getenv("NVIDIA_MODEL", "openai/gpt-oss-120b")
+                             or "openai/gpt-oss-120b").strip()
         # Autonomously resolve each provider's latest model (cached ~daily). Falls
         # back to the configured defaults whenever the lookup can't run.
         self.brain_model = cfg.anthropic_model

@@ -12,7 +12,7 @@
 // Deploy:
 //   supabase functions deploy voice-assistant --no-verify-jwt
 //   supabase secrets set NVIDIA_API_KEY=nvapi-xxxxxxxx
-//   (optional) supabase secrets set NVIDIA_MODEL=meta/llama-3.3-70b-instruct
+//   (optional) supabase secrets set NVIDIA_MODEL=openai/gpt-oss-120b
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const cors = {
@@ -39,7 +39,7 @@ serve(async (req) => {
 
   const key = Deno.env.get("NVIDIA_API_KEY");
   if (!key) return json({ reply: offline, action: { type: "none" } });
-  const model = Deno.env.get("NVIDIA_MODEL") || "meta/llama-3.3-70b-instruct";
+  const model = Deno.env.get("NVIDIA_MODEL") || "openai/gpt-oss-120b";
   const base = (Deno.env.get("NVIDIA_BASE_URL") || "https://integrate.api.nvidia.com/v1").replace(/\/$/, "");
 
   const system =

@@ -67,7 +67,7 @@ ENV_CATALOG = [
     ("GEMINI_API_KEY", "AI Counsellor", True, "Gemini (Google) counsellor"),
     ("GEMINI_MODEL", "AI Counsellor", False, "default gemini-2.5-pro"),
     ("NVIDIA_API_KEY", "AI Counsellor", True, "NVIDIA NIM — free counsellor + fallback brain"),
-    ("NVIDIA_MODEL", "AI Counsellor", False, "default meta/llama-3.3-70b-instruct"),
+    ("NVIDIA_MODEL", "AI Counsellor", False, "default openai/gpt-oss-120b"),
     ("AI_BRAIN_ENABLED", "AI Brain", False, "true to enable LLM overlay"),
     ("AUTO_UPDATE_MODELS", "AI Brain", False, "true = always latest model"),
     ("VOICE_API_KEY", "Voice (Bland.ai)", True, "Bland.ai API key"),

@@ -48,7 +48,7 @@ jobs:
       XAI_API_KEY: ${{ secrets.XAI_API_KEY }}               # Grok (xAI) — counsellor
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}         # Gemini (Google) — counsellor
       NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}         # NVIDIA NIM — free counsellor + fallback brain
-      NVIDIA_MODEL: ${{ vars.NVIDIA_MODEL }}                # optional, e.g. meta/llama-3.3-70b-instruct
+      NVIDIA_MODEL: ${{ vars.NVIDIA_MODEL }}                # optional override; default openai/gpt-oss-120b
       # Master switch — keys can sit loaded without spending. Defaults ON once a
       # Claude OR NVIDIA key exists; set repo Variable AI_BRAIN_ENABLED=false to keep
       # the brain OFF (no LLM calls / no cost) until you're ready to "go and pay".
