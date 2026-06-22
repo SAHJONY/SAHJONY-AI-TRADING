@@ -19,6 +19,10 @@ on:
         description: 'Run even if the market is closed'
         type: boolean
         default: true
+      deploy_hook:
+        description: 'Optional Vercel Deploy Hook URL to publish this run'
+        type: string
+        default: ''
 
 concurrency:
   group: sahjony-desk
@@ -104,7 +108,7 @@ jobs:
       # the dashboard always publishes the latest commit. No-op if unset.
       - name: Trigger Vercel production deploy (if hook configured)
         env:
-          HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK }}
+          HOOK: ${{ github.event.inputs.deploy_hook || secrets.VERCEL_DEPLOY_HOOK }}
         run: |
           if [ -n "$HOOK" ]; then
             curl -fsS -X POST "$HOOK" >/dev/null && echo "Vercel deploy hook fired ✓" || echo "deploy hook call failed"
