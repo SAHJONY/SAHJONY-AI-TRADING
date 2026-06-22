@@ -79,6 +79,11 @@ ENV_CATALOG = [
     ("MIN_COUNCIL_CONVICTION", "Risk", False, "min conviction to trade"),
     ("MAX_DAILY_DRAWDOWN_PCT", "Risk", False, "daily-loss halt (≤0.25)"),
     ("TRADING_HALT", "Risk", False, "true = kill switch (suspend new risk)"),
+    ("DAY_TRADING_ENABLED", "Day Trading / Forex", False, "intraday FX desk on/off"),
+    ("FOREX_PAIRS", "Day Trading / Forex", False, "FX universe, e.g. EUR/USD,GBP/USD"),
+    ("DAY_TRADE_SYMBOLS", "Day Trading / Forex", False, "extra intraday symbols"),
+    ("DAY_TRADE_TARGET_PCT", "Day Trading / Forex", False, "intraday profit target"),
+    ("DAY_TRADE_STOP_PCT", "Day Trading / Forex", False, "intraday stop loss"),
     ("CYCLE_MINUTES", "Ops", False, "run cadence"),
     ("LOG_LEVEL", "Ops", False, "INFO / DEBUG"),
 ]

@@ -31,6 +31,7 @@ from intelligence.ai_brain import AIBrain, BrainVerdict
 from risk.risk_engine import RiskEngine
 from strategies.base import OrderIntent
 from strategies.copy_trading import CopyTrader
+from strategies.day_trading import DayTrading
 from strategies.trailing_ladder import TrailingLadder
 from strategies.wheel_strategy import WheelStrategy
 from utils.logger import get_logger
@@ -166,6 +167,7 @@ class Firm:
         self.wheel = WheelStrategy(cfg)
         self.ladder = TrailingLadder(cfg)
         self.copy = CopyTrader(cfg)
+        self.dayts = DayTrading(cfg)
 
     def _position_value(self, state: Dict[str, Any]) -> float:
         total = 0.0
@@ -292,6 +294,33 @@ class Firm:
                         log.info("COPY desk mirrored %d trade(s)", len(done))
             except Exception as exc:
                 log.error("copy-trading step failed: %s", exc)
+
+        # 6c) Day-Trading / Forex desk — intraday momentum + mean-reversion on the
+        # FX majors (and any extra DAY_TRADE_SYMBOLS), disjoint from the core tickers.
+        if trade and self.cfg.day_trading_enabled:
+            universe = [*self.cfg.forex_pairs, *self.cfg.day_trade_symbols]
+            today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+            for sym in universe:
+                try:
+                    snap, verdict = self.research.research(sym, bench)
+                    pos = state.get("positions", {}).get(sym)
+                    conv = 0.70   # technical-signal desk; risk engine still gates size
+                    budget = self.risk.position_budget(equity, conv, 1.0)
+                    intents = self.dayts.decide(sym, snap, pos, budget, today)
+                    done, deployed = self.execution.execute(intents, state, cycle, equity,
+                                                            deployed, conv, allow_new_risk)
+                    executed += done
+                    self.db.log_council(cycle, sym, verdict.conviction, verdict.direction,
+                                        verdict.composite_score, verdict.risk_multiplier, verdict.metrics)
+                    npos = state.get("positions", {}).get(sym, {})
+                    shares = npos.get("shares", 0) or 0
+                    self.db.log_snapshot(cycle, sym, "daytrade", npos.get("strategy") or "flat",
+                                         shares, npos.get("cost_basis", 0.0), snap.price,
+                                         shares * snap.price, 0.0)
+                except Exception as exc:
+                    log.error("day-desk %s failed: %s", sym, exc)
+            if self.cfg.day_trading_enabled:
+                log.info("DAY/FOREX desk ran %d symbol(s)", len(universe))
 
         # 7) Treasurer — equity curve
         acct = self.client.get_account()

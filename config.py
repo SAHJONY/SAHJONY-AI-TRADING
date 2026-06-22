@@ -118,6 +118,15 @@ class Config:
     copy_trading_api_key: str = ""
     copy_trading_max_symbols: int = 10
 
+    # day-trading / forex (intraday desk — never holds overnight)
+    day_trading_enabled: bool = True
+    forex_pairs: List[str] = field(default_factory=lambda: ["EUR/USD", "GBP/USD", "USD/JPY", "AUD/USD"])
+    day_trade_symbols: List[str] = field(default_factory=list)   # extra intraday symbols (keep disjoint from tickers)
+    day_trade_target_pct: float = 0.015
+    day_trade_stop_pct: float = 0.01
+    day_trade_max_units: int = 100
+    day_trade_min_signal: float = 0.55
+
     # firm / branding
     firm_name: str = "SAHJONY CAPITAL LLC"
     # public base URL of the deployed dashboard, used to build investor share links
@@ -204,6 +213,13 @@ def load_config() -> Config:
         copy_trading_source_url=(os.getenv("COPY_TRADING_SOURCE_URL", "") or "").strip(),
         copy_trading_api_key=os.getenv("COPY_TRADING_API_KEY", "").strip(),
         copy_trading_max_symbols=max(1, _i("COPY_TRADING_MAX_SYMBOLS", 10)),
+        day_trading_enabled=_b("DAY_TRADING_ENABLED", True),
+        forex_pairs=_list("FOREX_PAIRS", "EUR/USD,GBP/USD,USD/JPY,AUD/USD"),
+        day_trade_symbols=_list("DAY_TRADE_SYMBOLS", ""),
+        day_trade_target_pct=_clamp(_f("DAY_TRADE_TARGET_PCT", 0.015), 0.002, 0.10),
+        day_trade_stop_pct=_clamp(_f("DAY_TRADE_STOP_PCT", 0.01), 0.002, 0.10),
+        day_trade_max_units=max(1, _i("DAY_TRADE_MAX_UNITS", 100)),
+        day_trade_min_signal=_clamp(_f("DAY_TRADE_MIN_SIGNAL", 0.55), 0.50, 0.95),
         firm_name=(os.getenv("FIRM_NAME", "SAHJONY CAPITAL LLC") or "SAHJONY CAPITAL LLC").strip(),
         public_base_url=(os.getenv("PUBLIC_BASE_URL", "") or "").strip().rstrip("/"),
         voice_alerts=_b("VOICE_ALERTS", False),
