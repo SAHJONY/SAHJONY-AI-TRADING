@@ -1,19 +1,11 @@
 name: SAHJONY desk (scheduled)
 
-# Runs the autonomous desk on a schedule in the cloud, so the public dashboard
-# (sahjonycapital.com) stays fresh without an always-on machine. Each run advances
-# one cycle and commits the secret-free public/status.json — Vercel then redeploys.
-#
-# Modes (safety first — see SCHEDULING.md):
-#   • No secrets        → offline-sim (zero orders); the dashboard simply stays alive.
-#   • Alpaca paper keys → trades the real market on Alpaca PAPER (fake money).
-#   • Real money is NEVER enabled here (LIVE_TRADING_ACK is intentionally unset).
-
 on:
   schedule:
-    # Every 15 min during the US cash session (≈13:00–21:00 UTC), Mon–Fri.
-    - cron: '*/15 13-20 * * 1-5'
-  workflow_dispatch:        # manual "Run workflow" button
+    # 24/7 desk: every 15 min, all hours, every day. Crypto trades round-the-clock;
+    # equities simply queue while their market is closed.
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
     inputs:
       force:
         description: 'Run even if the market is closed'
@@ -29,36 +21,38 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: write           # to commit the refreshed public/status.json
+  contents: write
 
 jobs:
   run:
     runs-on: ubuntu-latest
     timeout-minutes: 12
     env:
-      # Paper-trading keys (optional). Add these as repo secrets to go from
-      # offline-sim to Alpaca PAPER. Leave unset to keep pure simulation.
       ALPACA_API_KEY: ${{ secrets.ALPACA_API_KEY }}
       ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
-      ALPACA_PAPER: 'true'                 # PAPER only — never live from CI
-      # AI brain + counsellors (advisory overlay). Add only the keys you want as
-      # repo secrets — each provider activates automatically when its key exists.
-      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}   # Claude — primary brain
-      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}         # GPT (OpenAI) — counsellor
-      XAI_API_KEY: ${{ secrets.XAI_API_KEY }}               # Grok (xAI) — counsellor
-      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}         # Gemini (Google) — counsellor
-      NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}         # NVIDIA NIM — free counsellor + fallback brain
-      NVIDIA_MODEL: ${{ vars.NVIDIA_MODEL }}                # optional override; default openai/gpt-oss-120b
-      # Master switch — keys can sit loaded without spending. Defaults ON once a
-      # Claude OR NVIDIA key exists; set repo Variable AI_BRAIN_ENABLED=false to keep
-      # the brain OFF (no LLM calls / no cost) until you're ready to "go and pay".
-      # (NVIDIA NIM is free, so it's safe to test with even while OFF for paid models.)
+      ALPACA_PAPER: 'true'
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      XAI_API_KEY: ${{ secrets.XAI_API_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+      NVIDIA_MODEL: ${{ vars.NVIDIA_MODEL }}
       AI_BRAIN_ENABLED: ${{ vars.AI_BRAIN_ENABLED || secrets.AI_BRAIN_ENABLED || ((secrets.ANTHROPIC_API_KEY != '' || secrets.NVIDIA_API_KEY != '') && 'true' || 'false') }}
-      AUTO_UPDATE_MODELS: 'true'           # always resolve each provider's latest model
-      # Optional desk config overrides. Default universe broadened to more markets
-      # (mega-cap equities + index ETFs). Override anytime via repo Variable TICKERS
-      # (e.g. add crypto: "...,BTC/USD,ETH/USD").
-      TICKERS: ${{ vars.TICKERS || 'AAPL,MSFT,NVDA,GOOGL,AMZN,TSLA,META,SPY,QQQ,DIA' }}
+      AUTO_UPDATE_MODELS: 'true'
+      TICKERS: ${{ vars.TICKERS || 'AAPL,MSFT,NVDA,GOOGL,AMZN,TSLA,META,SPY,QQQ,DIA,BTC/USD,ETH/USD,SOL/USD,LTC/USD' }}
+      MARKET_HOURS: ${{ vars.MARKET_HOURS || '24_7' }}
+      CYCLE_MINUTES: ${{ vars.CYCLE_MINUTES || '15' }}
+      MAX_ALLOCATION_PCT: ${{ vars.MAX_ALLOCATION_PCT || '0.12' }}
+      MAX_TOTAL_DEPLOYED_PCT: ${{ vars.MAX_TOTAL_DEPLOYED_PCT || '0.70' }}
+      MIN_COUNCIL_CONVICTION: ${{ vars.MIN_COUNCIL_CONVICTION || '0.52' }}
+      MAX_DAILY_DRAWDOWN_PCT: ${{ vars.MAX_DAILY_DRAWDOWN_PCT || '0.10' }}
+      DAY_TRADING_ENABLED: ${{ vars.DAY_TRADING_ENABLED || 'true' }}
+      LADDER_ENABLE_AVERAGING: ${{ vars.LADDER_ENABLE_AVERAGING || 'true' }}
+      COPY_TRADING_ENABLED: ${{ vars.COPY_TRADING_ENABLED || 'false' }}
+      COPY_TRADING_SOURCE_URL: ${{ vars.COPY_TRADING_SOURCE_URL || '' }}
+      VOICE_ALERTS: ${{ vars.VOICE_ALERTS || 'false' }}
+      VOICE_API_KEY: ${{ secrets.VOICE_API_KEY }}
+      OWNER_PHONE: ${{ secrets.OWNER_PHONE }}
     steps:
       - uses: actions/checkout@v4
 
@@ -72,9 +66,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # Restore desk continuity (state + SQLite DB) from the previous run. These
-      # are gitignored runtime artifacts; the cache keeps the equity curve, ledger
-      # and positions consistent across scheduled runs (best-effort).
       - name: Restore desk state
         uses: actions/cache@v4
         with:
@@ -105,9 +96,6 @@ jobs:
             echo "No change in public/status.json — nothing to commit."
           fi
 
-      # Reliable production deploy independent of the Git integration: if a Vercel
-      # Deploy Hook URL is set as secret VERCEL_DEPLOY_HOOK, ping it each cycle so
-      # the dashboard always publishes the latest commit. No-op if unset.
       - name: Trigger Vercel production deploy (if hook configured)
         env:
           HOOK: ${{ github.event.inputs.deploy_hook || secrets.VERCEL_DEPLOY_HOOK }}
@@ -115,5 +103,5 @@ jobs:
           if [ -n "$HOOK" ]; then
             curl -fsS -X POST "$HOOK" >/dev/null && echo "Vercel deploy hook fired ✓" || echo "deploy hook call failed"
           else
-            echo "VERCEL_DEPLOY_HOOK not set — skipping (add it to auto-publish the dashboard)."
+            echo "VERCEL_DEPLOY_HOOK not set — skipping."
           fi
