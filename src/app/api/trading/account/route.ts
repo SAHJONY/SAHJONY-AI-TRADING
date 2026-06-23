@@ -1,16 +1,17 @@
+// GET    /api/trading/account          — portfolio snapshot (account + positions + open orders)
 // POST   /api/trading/account          — execute a trade
-// GET    /api/trading/account          — portfolio snapshot
 // DELETE /api/trading/account?symbol=X — close a position
 
 import { NextRequest, NextResponse } from 'next/server'
-import { alpacaFetch, getAccount, getPositions } from '@/lib/trading/alpaca'
+import { brokerFetch, getAccount, getPositions, resolveAccountId } from '@/lib/trading/alpaca'
 
 export async function GET() {
   try {
+    const id = await resolveAccountId()
     const [account, positions, orders] = await Promise.all([
       getAccount(),
       getPositions(),
-      alpacaFetch('/v2/orders?status=open'),
+      brokerFetch(`/v1/trading/accounts/${id}/orders?status=open`),
     ])
     return NextResponse.json({ account, positions, openOrders: orders || [] })
   } catch (error: any) {
@@ -26,10 +27,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'symbol and side required' }, { status: 400 })
     }
 
+    const id      = await resolveAccountId()
     const payload: any = {
-      symbol: symbol.toUpperCase(),
+      symbol:        symbol.toUpperCase(),
       side,
-      type: type || 'market',
+      type:          type || 'market',
       time_in_force: timeInForce || 'gtc',
     }
 
@@ -40,9 +42,9 @@ export async function POST(req: NextRequest) {
     if (limitPrice) payload.limit_price = String(limitPrice)
     if (stopPrice)  payload.stop_price  = String(stopPrice)
 
-    const order = await alpacaFetch('/v2/orders', {
+    const order = await brokerFetch(`/v1/trading/accounts/${id}/orders`, {
       method: 'POST',
-      body: JSON.stringify(payload),
+      body:   JSON.stringify(payload),
     })
     return NextResponse.json({ success: true, order })
   } catch (error: any) {
@@ -55,8 +57,9 @@ export async function DELETE(req: NextRequest) {
     const symbol = req.nextUrl.searchParams.get('symbol')
     if (!symbol) return NextResponse.json({ error: 'symbol required' }, { status: 400 })
 
-    const result = await alpacaFetch(
-      `/v2/positions/${symbol.toUpperCase()}`,
+    const id     = await resolveAccountId()
+    const result = await brokerFetch(
+      `/v1/trading/accounts/${id}/positions/${symbol.toUpperCase()}`,
       { method: 'DELETE' }
     )
     return NextResponse.json({ success: true, result })
