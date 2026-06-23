@@ -1,0 +1,86 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master, "claude/**"]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  lint-typecheck:
+    name: Lint & Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npm run lint
+
+  trading-bot:
+    name: Trading Bot (Python)
+    runs-on: ubuntu-latest
+    env:
+      # ── Alpaca (standardized names — Alpaca SDK convention) ──
+      APCA_API_KEY_ID:     ${{ secrets.APCA_API_KEY_ID }}
+      APCA_API_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
+      # Broker API sandbox URL — change to https://broker-api.alpaca.markets for production
+      APCA_API_BASE_URL:   ${{ secrets.APCA_API_BASE_URL }}
+      # ── Legacy aliases kept for backwards compat ──
+      ALPACA_API_KEY:      ${{ secrets.ALPACA_API_KEY }}
+      ALPACA_SECRET_KEY:   ${{ secrets.ALPACA_SECRET_KEY }}
+      # ── AI / LLM ──
+      OPENAI_API_KEY:      ${{ secrets.OPENAI_API_KEY }}
+      ANTHROPIC_API_KEY:   ${{ secrets.ANTHROPIC_API_KEY }}
+      NVIDIA_API_KEY:      ${{ secrets.NVIDIA_API_KEY }}
+      NVIDIA_MODEL:        ${{ secrets.NVIDIA_MODEL }}
+      GEMINI_API_KEY:      ${{ secrets.GEMINI_API_KEY }}
+      XAI_API_KEY:         ${{ secrets.XAI_API_KEY }}
+      AI_BRAIN_ENABLED:    ${{ secrets.AI_BRAIN_ENABLED }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install Python dependencies
+        run: pip install -r requirements/base.txt
+
+      - name: Verify Alpaca credentials are wired
+        run: |
+          python - <<'EOF'
+          import os, sys
+          key    = os.getenv("APCA_API_KEY_ID") or os.getenv("ALPACA_API_KEY")
+          secret = os.getenv("APCA_API_SECRET_KEY") or os.getenv("ALPACA_SECRET_KEY")
+          base   = os.getenv("APCA_API_BASE_URL", "https://paper-api.alpaca.markets")
+          if not key or not secret:
+              print("ERROR: Alpaca credentials not found in environment")
+              sys.exit(1)
+          mode = "PAPER" if "paper" in base else "LIVE"
+          print(f"Alpaca credentials present — mode: {mode}")
+          EOF
+
+  deploy:
+    name: Deploy to Vercel
+    runs-on: ubuntu-latest
+    needs: [lint-typecheck]
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Trigger Vercel deployment
+        run: |
+          curl -s -X POST "${{ secrets.VERCEL_DEPLOY_HOOK }}" \
+            -o /dev/null -w "Vercel hook status: %{http_code}\n"
