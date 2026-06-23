@@ -186,6 +186,12 @@
   .hchip{font-family:var(--mono);font-size:9.5px;color:#04121a;font-weight:700;border-radius:6px;padding:4px 7px;display:flex;align-items:center;justify-content:space-between;gap:5px}
   .hchip b{font-weight:800;opacity:.85}
   @media(max-width:680px){.heat-wide{display:none}.heat-cards{display:grid;gap:10px}}
+  /* phones: denser tables so the few-column blotters fit without awkward scroll */
+  @media(max-width:560px){
+    main{padding:11px}.pb{padding:11px}
+    table{font-size:11px} th,td{padding:5px 6px}
+    .scroll{scrollbar-width:thin}
+  }
 
   .cb{display:flex;align-items:center;gap:10px;padding:11px 13px;border-radius:10px;border:1px solid var(--line2);font-size:12px;margin-bottom:11px}
   .cb.ok{border-color:rgba(52,227,168,.35);background:linear-gradient(90deg,rgba(52,227,168,.09),transparent)}
