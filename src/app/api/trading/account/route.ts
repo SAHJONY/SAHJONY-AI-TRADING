@@ -1,6 +1,6 @@
-// POST /api/trading/account  — execute a trade
-// GET  /api/trading/account  — portfolio snapshot (account + positions + open orders)
-// DELETE /api/trading/account?symbol=AAPL — close a position
+// POST   /api/trading/account          — execute a trade
+// GET    /api/trading/account          — portfolio snapshot
+// DELETE /api/trading/account?symbol=X — close a position
 
 import { NextRequest, NextResponse } from 'next/server'
 import { alpacaFetch, getAccount, getPositions } from '@/lib/trading/alpaca'
@@ -33,14 +33,17 @@ export async function POST(req: NextRequest) {
       time_in_force: timeInForce || 'gtc',
     }
 
-    if (notional)    payload.notional    = String(notional)
-    else if (qty)    payload.qty         = String(qty)
+    if (notional)   payload.notional    = String(notional)
+    else if (qty)   payload.qty         = String(qty)
     else return NextResponse.json({ error: 'qty or notional required' }, { status: 400 })
 
-    if (limitPrice)  payload.limit_price = String(limitPrice)
-    if (stopPrice)   payload.stop_price  = String(stopPrice)
+    if (limitPrice) payload.limit_price = String(limitPrice)
+    if (stopPrice)  payload.stop_price  = String(stopPrice)
 
-    const order = await alpacaFetch('/v2/orders', { method: 'POST', body: JSON.stringify(payload) })
+    const order = await alpacaFetch('/v2/orders', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
     return NextResponse.json({ success: true, order })
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 })
@@ -52,7 +55,10 @@ export async function DELETE(req: NextRequest) {
     const symbol = req.nextUrl.searchParams.get('symbol')
     if (!symbol) return NextResponse.json({ error: 'symbol required' }, { status: 400 })
 
-    const result = await alpacaFetch(`/v2/positions/${symbol.toUpperCase()}`, { method: 'DELETE' })
+    const result = await alpacaFetch(
+      `/v2/positions/${symbol.toUpperCase()}`,
+      { method: 'DELETE' }
+    )
     return NextResponse.json({ success: true, result })
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 })

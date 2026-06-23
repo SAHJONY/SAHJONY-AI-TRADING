@@ -1,9 +1,11 @@
 // ──────────────────────────────────────────────────────────────
-// SAHJONY CAPITAL — ALPACA CLIENT
+// SAHJONY CAPITAL — ALPACA TRADING API CLIENT
 // Credential resolution order:
 //   1. APCA_API_KEY_ID / APCA_API_SECRET_KEY  (Alpaca SDK standard)
 //   2. ALPACA_API_KEY / ALPACA_SECRET_KEY      (legacy GitHub secret names)
-// Base URL comes from APCA_API_BASE_URL; defaults to paper trading.
+// APCA_API_BASE_URL switches between paper and live:
+//   Paper: https://paper-api.alpaca.markets  (default)
+//   Live:  https://api.alpaca.markets
 // ──────────────────────────────────────────────────────────────
 
 export const PAPER_BASE = 'https://paper-api.alpaca.markets'
@@ -143,8 +145,8 @@ export async function executeOrder(order: TradeOrder): Promise<any> {
     time_in_force: order.timeInForce,
   }
 
-  if (order.notional) payload.notional = String(order.notional)
-  else if (order.qty) payload.qty = String(order.qty)
+  if (order.notional)   payload.notional    = String(order.notional)
+  else if (order.qty)   payload.qty         = String(order.qty)
   else throw new Error('Must specify either qty or notional amount')
 
   if (order.limitPrice) payload.limit_price = String(order.limitPrice)
