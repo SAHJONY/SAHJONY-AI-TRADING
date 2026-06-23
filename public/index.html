@@ -186,11 +186,35 @@
   .hchip{font-family:var(--mono);font-size:9.5px;color:#04121a;font-weight:700;border-radius:6px;padding:4px 7px;display:flex;align-items:center;justify-content:space-between;gap:5px}
   .hchip b{font-weight:800;opacity:.85}
   @media(max-width:680px){.heat-wide{display:none}.heat-cards{display:grid;gap:10px}}
-  /* phones: denser tables so the few-column blotters fit without awkward scroll */
+  /* phones: legibility + comfortable touch targets so every device reads clearly */
   @media(max-width:560px){
     main{padding:11px}.pb{padding:11px}
-    table{font-size:11px} th,td{padding:5px 6px}
+    table{font-size:12.5px} th,td{padding:7px 7px} th{font-size:10.5px}
     .scroll{scrollbar-width:thin}
+    /* lift the tiny 9–10.5px labels into a readable range on small screens */
+    body{font-size:14px}
+    .brand h1{font-size:16px}
+    .brand .sub{font-size:10.5px;letter-spacing:1.8px}
+    .badge{font-size:10.5px}
+    .stat,.mpill{font-size:12px}
+    .ph h3{font-size:12px;letter-spacing:1.1px} .ph .x{font-size:11px}
+    .kpi .l{font-size:11px} .kpi .v{font-size:21px} .kpi .d{font-size:12px}
+    .tag{font-size:11px} .pill{font-size:11px}
+    .feed{font-size:12.5px} .feed .k{min-width:72px}
+    .heat th{font-size:10.5px} footer{font-size:11px}
+    /* touch targets ≥44px (Apple/Material guidance) */
+    header{gap:9px;padding:11px 13px}
+    nav{gap:5px;padding:9px 11px}
+    nav button{padding:11px 14px;font-size:13px;min-height:44px}
+    .btn{padding:10px 13px;font-size:12px;min-height:42px}
+    .act,.ghost{padding:11px 15px;min-height:44px}
+    /* Controls/trade-ticket inputs: ignore desktop inline max-width caps, go full width */
+    input.f,select.f,input[style*="max-width"],select[style*="max-width"]{max-width:100%!important;width:100%!important}
+  }
+  /* very small phones (~360px): keep KPIs 2-up and trim the largest type */
+  @media(max-width:400px){
+    .kpis{grid-template-columns:repeat(2,1fr)}
+    .brand h1{font-size:15px} .kpi .v{font-size:19px}
   }
 
   .cb{display:flex;align-items:center;gap:10px;padding:11px 13px;border-radius:10px;border:1px solid var(--line2);font-size:12px;margin-bottom:11px}
