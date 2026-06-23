@@ -16,10 +16,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
       - name: Type check
         run: npx tsc --noEmit
@@ -31,15 +30,11 @@ jobs:
     name: Trading Bot (Python)
     runs-on: ubuntu-latest
     env:
-      # ── Alpaca (standardized names — Alpaca SDK convention) ──
       APCA_API_KEY_ID:     ${{ secrets.APCA_API_KEY_ID }}
       APCA_API_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
-      # Broker API sandbox URL — change to https://broker-api.alpaca.markets for production
       APCA_API_BASE_URL:   ${{ secrets.APCA_API_BASE_URL }}
-      # ── Legacy aliases kept for backwards compat ──
       ALPACA_API_KEY:      ${{ secrets.ALPACA_API_KEY }}
       ALPACA_SECRET_KEY:   ${{ secrets.ALPACA_SECRET_KEY }}
-      # ── AI / LLM ──
       OPENAI_API_KEY:      ${{ secrets.OPENAI_API_KEY }}
       ANTHROPIC_API_KEY:   ${{ secrets.ANTHROPIC_API_KEY }}
       NVIDIA_API_KEY:      ${{ secrets.NVIDIA_API_KEY }}
@@ -53,10 +48,6 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-          cache: pip
-
-      - name: Install Python dependencies
-        run: pip install -r requirements/base.txt
 
       - name: Verify Alpaca credentials are wired
         run: |
@@ -64,11 +55,11 @@ jobs:
           import os, sys
           key    = os.getenv("APCA_API_KEY_ID") or os.getenv("ALPACA_API_KEY")
           secret = os.getenv("APCA_API_SECRET_KEY") or os.getenv("ALPACA_SECRET_KEY")
-          base   = os.getenv("APCA_API_BASE_URL", "https://paper-api.alpaca.markets")
+          base   = os.getenv("APCA_API_BASE_URL", "https://broker-api.sandbox.alpaca.markets")
           if not key or not secret:
               print("ERROR: Alpaca credentials not found in environment")
               sys.exit(1)
-          mode = "PAPER" if "paper" in base else "LIVE"
+          mode = "SANDBOX" if "sandbox" in base else "PRODUCTION"
           print(f"Alpaca credentials present — mode: {mode}")
           EOF
 
@@ -78,8 +69,6 @@ jobs:
     needs: [lint-typecheck]
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
     steps:
-      - uses: actions/checkout@v4
-
       - name: Trigger Vercel deployment
         run: |
           curl -s -X POST "${{ secrets.VERCEL_DEPLOY_HOOK }}" \
