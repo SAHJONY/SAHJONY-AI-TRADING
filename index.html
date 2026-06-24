@@ -341,11 +341,17 @@ async function refreshCreds(){
   try{ const {data}=await SB.from('broker_credentials').select('name').eq('desk_id',DESK.id);
     CREDS=(data||[]).map(r=>r.name); }catch(e){ CREDS=[]; }
 }
+// Live data straight from GitHub (raw) so the dashboard is always current and never
+// frozen by Vercel deploy limits; falls back to the co-located snapshot if needed.
+const STATUS_REMOTE='https://raw.githubusercontent.com/SAHJONY/SAHJONY-AI-TRADING/master/public/status.json';
 async function load(){
   try{
     await refreshDesk();
     if(DESK && DESK.last_status){ DATA=DESK.last_status; }
-    else { const r=await fetch('./status.json?_='+Date.now()); DATA=await r.json(); }
+    else {
+      try{ const r=await fetch(STATUS_REMOTE+'?_='+Date.now(),{cache:'no-store'}); if(!r.ok)throw 0; DATA=await r.json(); }
+      catch(_){ const r=await fetch('./status.json?_='+Date.now()); DATA=await r.json(); }
+    }
   }catch(e){
     try{const r=await fetch('./status.json?_='+Date.now());DATA=await r.json();}catch(_){DATA={_error:String(e)};}
   }
