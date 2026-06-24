@@ -574,9 +574,9 @@ function Macro(v){
   // earnings this week
   let eb;
   if(INTEL.earnings && INTEL.earnings.length){ const w=$(`<div class="scroll"></div>`);
-    const t=$(`<table><thead><tr><th>SYM</th><th>DATE</th><th>HOUR</th><th class="n">EPS EST</th></tr></thead><tbody></tbody></table>`);
+    const t=$(`<table><thead><tr><th>SYM</th><th>DATE</th><th class="opt">HOUR</th><th class="n">EPS EST</th></tr></thead><tbody></tbody></table>`);
     INTEL.earnings.forEach(e=>t.querySelector('tbody').appendChild($(`<tr><td class="amber">${esc(e.symbol)}</td><td>${esc(e.date)}</td>
-      <td class="mut">${esc(e.hour||'')}</td><td class="n">${e.epsEstimate!=null?num(e.epsEstimate):'—'}</td></tr>`)));
+      <td class="mut opt">${esc(e.hour||'')}</td><td class="n">${e.epsEstimate!=null?num(e.epsEstimate):'—'}</td></tr>`)));
     w.appendChild(t); eb=w; }
   else eb = FINNHUB ? `<div class="empty">no earnings in the next 7 days</div>` : `<div class="empty">add FINNHUB_API_KEY for the earnings calendar</div>`;
   g.appendChild(panel('Earnings · Next 7 Days', eb, 'Finnhub', 'span8'));
@@ -621,9 +621,9 @@ function Markets(v){
       const valid=(rows||[]).filter(q=>q && q.c);   // drop empty/zero quotes (bad key / rate limit)
       if(!valid.length){ sb.textContent='live quotes unavailable — check FINNHUB_API_KEY (free tier 60/min)'; return; }
       const w=$(`<div class="scroll"></div>`);
-      const t=$(`<table><thead><tr><th>SYM</th><th class="n">PRICE</th><th class="n">CHG</th><th class="n">%</th><th class="n">HIGH</th><th class="n">LOW</th></tr></thead><tbody></tbody></table>`);
+      const t=$(`<table><thead><tr><th>SYM</th><th class="n">PRICE</th><th class="n opt">CHG</th><th class="n">%</th><th class="n opt">HIGH</th><th class="n opt">LOW</th></tr></thead><tbody></tbody></table>`);
       valid.forEach(q=>{const up=(q.dp||0)>=0; t.querySelector('tbody').appendChild($(`<tr><td class="amber">${esc(q.sym)}</td><td class="n">${money(q.c)}</td>
-        <td class="n ${up?'up':'down'}">${(q.d>=0?'+':'')}${num(q.d)}</td><td class="n ${up?'up':'down'}">${pct(q.dp)}</td><td class="n">${money(q.h)}</td><td class="n">${money(q.l)}</td></tr>`));});
+        <td class="n opt ${up?'up':'down'}">${(q.d>=0?'+':'')}${num(q.d)}</td><td class="n ${up?'up':'down'}">${pct(q.dp)}</td><td class="n opt">${money(q.h)}</td><td class="n opt">${money(q.l)}</td></tr>`));});
       w.appendChild(t);            // attach the table (was missing → panel rendered empty)
       sb.replaceWith(w);
     }).catch(()=>{ sb.textContent='live quotes unavailable'; });
@@ -1011,10 +1011,10 @@ function positionsTable(){
   const pos=DATA.positions||[];
   if(!pos.length) return '<div class="empty">flat — no open positions</div>';
   const wrap=$(`<div class="scroll"></div>`);
-  const t=$(`<table><thead><tr><th>SYM</th><th>DESK</th><th>STATE</th><th class="n">QTY</th><th class="n">COST</th><th class="n">LAST</th><th class="n">uPnL</th></tr></thead><tbody></tbody></table>`);
+  const t=$(`<table><thead><tr><th>SYM</th><th class="opt">DESK</th><th class="opt">STATE</th><th class="n">QTY</th><th class="n opt">COST</th><th class="n opt">LAST</th><th class="n">uPnL</th></tr></thead><tbody></tbody></table>`);
   const tb=t.querySelector('tbody');
-  pos.forEach(p=>tb.appendChild($(`<tr><td class="amber">${esc(p.symbol)}</td><td class="mut">${esc(p.strategy)}</td><td class="mut">${esc(p.state)}</td>
-    <td class="n">${num(p.shares,6)}</td><td class="n">${money(p.cost_basis)}</td><td class="n">${money(p.price)}</td>
+  pos.forEach(p=>tb.appendChild($(`<tr><td class="amber">${esc(p.symbol)}</td><td class="mut opt">${esc(p.strategy)}</td><td class="mut opt">${esc(p.state)}</td>
+    <td class="n">${num(p.shares,6)}</td><td class="n opt">${money(p.cost_basis)}</td><td class="n opt">${money(p.price)}</td>
     <td class="n ${p.unrealized>=0?'up':'down'}">${money(p.unrealized)}</td></tr>`)));
   wrap.appendChild(t); return wrap;
 }
@@ -1109,9 +1109,9 @@ function Book(v){
   const tr=DATA.recent_trades||[]; let tbl;
   if(!tr.length) tbl='<div class="empty">no trades yet</div>';
   else{ const w=$(`<div class="scroll"></div>`);
-    const t=$(`<table><thead><tr><th>SYM</th><th>SIDE</th><th>PURPOSE</th><th class="n">QTY</th><th class="n">PX</th></tr></thead><tbody></tbody></table>`);
+    const t=$(`<table><thead><tr><th>SYM</th><th>SIDE</th><th class="opt">PURPOSE</th><th class="n">QTY</th><th class="n">PX</th></tr></thead><tbody></tbody></table>`);
     tr.forEach(x=>t.querySelector('tbody').appendChild($(`<tr><td class="amber">${esc(x.symbol)}</td><td class="${/buy/i.test(x.side)?'up':'down'}">${esc(x.side)}</td>
-      <td class="mut">${esc(x.purpose)}</td><td class="n">${num(x.qty,6)}</td><td class="n">${money(x.price)}</td></tr>`)));
+      <td class="mut opt">${esc(x.purpose)}</td><td class="n">${num(x.qty,6)}</td><td class="n">${money(x.price)}</td></tr>`)));
     w.appendChild(t); tbl=w; }
   g.appendChild(panel('Recent Trades', tbl, '', 'span7'));
   const crm=DATA.crm||{};
@@ -1136,10 +1136,10 @@ function Book(v){
   const flows=DATA.capital_flows||[]; let fb;
   if(!flows.length) fb='<div class="empty">no deposits/withdrawals recorded yet</div>';
   else{ const w=$(`<div class="scroll"></div>`);
-    const t=$(`<table><thead><tr><th>DATE</th><th>TYPE</th><th class="n">AMOUNT</th><th>METHOD</th></tr></thead><tbody></tbody></table>`);
+    const t=$(`<table><thead><tr><th>DATE</th><th>TYPE</th><th class="n">AMOUNT</th><th class="opt">METHOD</th></tr></thead><tbody></tbody></table>`);
     flows.forEach(f=>t.querySelector('tbody').appendChild($(`<tr><td class="mut">${esc((f.ts||'').slice(0,10))}</td>
       <td class="${f.amount>=0?'up':'down'}">${esc(f.kind)}</td><td class="n ${f.amount>=0?'up':'down'}">${money(f.amount)}</td>
-      <td class="mut">${esc(f.method||'')}</td></tr>`)));
+      <td class="mut opt">${esc(f.method||'')}</td></tr>`)));
     w.appendChild(t); fb=w; }
   g.appendChild(panel('Capital Flows', fb, '', 'span5'));
   v.appendChild(g);
