@@ -60,7 +60,7 @@ class DayTrading:
         if sig != "long" or strength < self.cfg.day_trade_min_signal or budget <= 0:
             return []
         price = snap.price
-        qty = size_qty(symbol, budget, price, self.cfg.day_trade_max_units)
+        qty = size_qty(symbol, budget, price, self.cfg.day_trade_max_units, self.cfg.allow_fractional)
         if qty <= 0:
             return []
         stop = price * (1 - self.cfg.day_trade_stop_pct)

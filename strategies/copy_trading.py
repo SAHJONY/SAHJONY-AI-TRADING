@@ -96,7 +96,7 @@ class CopyTrader:
                 if price <= 0:
                     continue
                 qty = size_qty(sym, budget_each * min(1.0, s.get("weight", 1.0)), price,
-                               int(budget_each // price) if price else 0)
+                               int(budget_each // price) if price else 0, self.cfg.allow_fractional)
                 if qty <= 0:
                     continue
                 intents.append(OrderIntent(

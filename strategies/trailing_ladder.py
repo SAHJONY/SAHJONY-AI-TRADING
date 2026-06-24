@@ -39,7 +39,7 @@ class TrailingLadder:
         price = snap.price
         if price <= 0 or budget <= 0:
             return []
-        qty = size_qty(symbol, budget, price, self.cfg.ladder_base_qty)
+        qty = size_qty(symbol, budget, price, self.cfg.ladder_base_qty, self.cfg.allow_fractional)
         if qty <= 0:
             return [OrderIntent(symbol, "ladder", "state", "ladder_skip",
                                 reason=f"budget ${budget:,.0f} too small @ {price:.2f}")]
@@ -95,7 +95,7 @@ class TrailingLadder:
             adds = [(-0.20, 0, self.cfg.ladder_base_qty), (-0.30, 1, 2 * self.cfg.ladder_base_qty)]
             for threshold, idx, add_qty in adds:
                 if gain <= threshold and not rungs[idx] and price > 0:
-                    q = size_qty(symbol, budget, price, add_qty)
+                    q = size_qty(symbol, budget, price, add_qty, self.cfg.allow_fractional)
                     if q > 0:
                         new_cost = (new_cost * new_shares + price * q) / (new_shares + q)
                         new_shares += q

@@ -193,8 +193,10 @@ class AlpacaClient:
             from alpaca.trading.requests import MarketOrderRequest
             from alpaca.trading.enums import OrderSide, TimeInForce
             crypto = _is_crypto(symbol)
-            # crypto requires GTC and supports fractional qty; equities use DAY + whole shares
-            order_qty = round(float(qty), 6) if crypto else int(qty)
+            # crypto requires GTC + fractional; equities use DAY. Fractional equity
+            # orders (dollar-investing) are allowed when ALLOW_FRACTIONAL is on.
+            frac_equity = getattr(self.cfg, "allow_fractional", False)
+            order_qty = round(float(qty), 6) if (crypto or frac_equity) else int(qty)
             if order_qty <= 0:
                 return {"status": "rejected", "reason": "qty<=0"}
             order = self._trading.submit_order(MarketOrderRequest(

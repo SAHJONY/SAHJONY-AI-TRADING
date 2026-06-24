@@ -98,6 +98,9 @@ class Config:
     # the broker balance is larger (e.g. keep $100k paper but only risk $500). 0 =
     # use the full broker equity. All sizing/risk and the equity curve scale to this.
     trading_capital: float = 0.0
+    # Dollar-based (fractional) equity orders — lets a small account buy a slice of
+    # an expensive stock instead of rounding to 0 shares. Crypto is always fractional.
+    allow_fractional: bool = True
 
     # wheel
     wheel_put_otm_pct: float = 0.10
@@ -204,6 +207,7 @@ def load_config() -> Config:
         max_daily_drawdown_pct=_clamp(_f("MAX_DAILY_DRAWDOWN_PCT", 0.06), 0.01, HARD_MAX_DAILY_DRAWDOWN_PCT),
         trading_halt=_b("TRADING_HALT", False),
         trading_capital=max(0.0, _f("TRADING_CAPITAL", 0.0)),
+        allow_fractional=_b("ALLOW_FRACTIONAL", True),
         wheel_put_otm_pct=_clamp(_f("WHEEL_PUT_OTM_PCT", 0.10), 0.01, 0.40),
         wheel_call_otm_pct=_clamp(_f("WHEEL_CALL_OTM_PCT", 0.10), 0.01, 0.40),
         wheel_dte_min=max(1, _i("WHEEL_DTE_MIN", 14)),
