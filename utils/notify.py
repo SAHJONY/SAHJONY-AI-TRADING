@@ -28,15 +28,43 @@ class Notifier:
         self.api_key = os.getenv("VOICE_API_KEY", "").strip()
         self.from_number = os.getenv("VOICE_FROM_NUMBER", "").strip()
         self.owner_phone = os.getenv("OWNER_PHONE", "").strip()
+        # Telegram channel (text alerts) — needs TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID.
+        self.tg_token = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
+        self.tg_chat = os.getenv("TELEGRAM_CHAT_ID", "").strip()
 
     @property
     def configured(self) -> bool:
         return bool(self.api_key)
 
     @property
+    def telegram_configured(self) -> bool:
+        return bool(self.tg_token and self.tg_chat)
+
+    @property
     def status(self) -> dict:
         return {"enabled": self.cfg.voice_alerts, "voice_configured": self.configured,
-                "owner_phone_set": bool(self.owner_phone)}
+                "owner_phone_set": bool(self.owner_phone),
+                "telegram_configured": self.telegram_configured}
+
+    def telegram_send(self, message: str) -> dict:
+        """Send a Telegram message to the configured chat. Fault-isolated."""
+        if not self.telegram_configured:
+            return {"ok": False, "reason": "telegram_not_configured"}
+        try:
+            import requests
+            r = requests.post(f"https://api.telegram.org/bot{self.tg_token}/sendMessage",
+                              timeout=15,
+                              json={"chat_id": self.tg_chat, "text": message,
+                                    "disable_web_page_preview": True})
+            data = r.json() if r.content else {}
+            if data.get("ok"):
+                log.info("Telegram alert sent to chat %s", self.tg_chat)
+                return {"ok": True}
+            log.warning("Telegram send failed: %s", data.get("description"))
+            return {"ok": False, "reason": data.get("description", "http_" + str(r.status_code))}
+        except Exception as exc:
+            log.error("telegram_send failed: %s", exc)
+            return {"ok": False, "reason": str(exc)}
 
     def voice_call(self, message: str, phone: Optional[str] = None) -> dict:
         """Place a Bland.ai voice call delivering `message`. Returns a result dict."""
@@ -70,9 +98,12 @@ class Notifier:
             return {"ok": False, "reason": str(exc)}
 
     def maybe_alert(self, status: dict) -> Optional[dict]:
-        """Alert policy: only call when enabled AND something notable happened —
-        an executed action this cycle or an AI-brain risk-off posture."""
-        if not (self.cfg.voice_alerts and self.configured and self.owner_phone):
+        """Alert policy: only fire when alerts are enabled AND something notable
+        happened — an executed action this cycle or an AI-brain risk-off posture.
+        Delivers to every configured channel (Telegram text + Bland.ai voice)."""
+        if not self.cfg.voice_alerts:        # master alerts switch (VOICE_ALERTS)
+            return None
+        if not (self.telegram_configured or (self.configured and self.owner_phone)):
             return None
         executed = status.get("executed_this_cycle", [])
         posture = (status.get("brain", {}) or {}).get("posture", "neutral")
@@ -83,19 +114,27 @@ class Notifier:
         msg = (f"Cycle {status.get('cycle')} update. Equity {a['equity']:,.0f} dollars, "
                f"return {p['total_return_pct']:+.2f} percent. Posture {posture}. "
                f"Actions: {acts}.")
-        return self.voice_call(msg)
+        results = {}
+        if self.telegram_configured:
+            results["telegram"] = self.telegram_send("📊 " + self.cfg.firm_name + " — " + msg)
+        if self.configured and self.owner_phone:
+            results["voice"] = self.voice_call(msg)
+        return results or None
 
 
 def _main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="notify", description="Bland.ai voice comms")
-    ap.add_argument("--test", action="store_true", help="place a test call")
+    ap.add_argument("--test", action="store_true", help="place a test voice call")
+    ap.add_argument("--telegram", action="store_true", help="send a test Telegram message")
     ap.add_argument("--phone", help="destination (defaults to OWNER_PHONE)")
-    ap.add_argument("--message", default="This is a test call from SAHJONY CAPITAL LLC. Voice comms are working.")
+    ap.add_argument("--message", default="This is a test from SAHJONY CAPITAL LLC. Comms are working.")
     args = ap.parse_args(argv)
     n = Notifier(load_config())
     print("status:", n.status)
+    if args.telegram:
+        print("telegram:", n.telegram_send("✅ " + args.message))
     if args.test:
-        print(n.voice_call(args.message, args.phone))
+        print("voice:", n.voice_call(args.message, args.phone))
     return 0
 
 
