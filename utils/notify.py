@@ -31,6 +31,17 @@ class Notifier:
         # Telegram channel (text alerts) — needs TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID.
         self.tg_token = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
         self.tg_chat = os.getenv("TELEGRAM_CHAT_ID", "").strip()
+        # WhatsApp via Meta WhatsApp Cloud API — needs WHATSAPP_TOKEN (permanent
+        # access token) + WHATSAPP_PHONE_NUMBER_ID. Destination defaults to OWNER_PHONE.
+        # Proactive (business-initiated) sends outside the 24h window require an
+        # approved template: set WHATSAPP_TEMPLATE (name) + WHATSAPP_TEMPLATE_LANG.
+        self.wa_token = os.getenv("WHATSAPP_TOKEN", "").strip()
+        self.wa_phone_id = os.getenv("WHATSAPP_PHONE_NUMBER_ID", "").strip()
+        self.wa_to = (os.getenv("WHATSAPP_TO", "") or self.owner_phone).strip()
+        self.wa_template = os.getenv("WHATSAPP_TEMPLATE", "").strip()
+        self.wa_template_lang = (os.getenv("WHATSAPP_TEMPLATE_LANG", "en_US") or "en_US").strip()
+        self.wa_api = "https://graph.facebook.com/" + \
+            (os.getenv("WHATSAPP_API_VERSION", "v21.0") or "v21.0").strip()
 
     @property
     def configured(self) -> bool:
@@ -41,10 +52,15 @@ class Notifier:
         return bool(self.tg_token and self.tg_chat)
 
     @property
+    def whatsapp_configured(self) -> bool:
+        return bool(self.wa_token and self.wa_phone_id and self.wa_to)
+
+    @property
     def status(self) -> dict:
         return {"enabled": self.cfg.voice_alerts, "voice_configured": self.configured,
                 "owner_phone_set": bool(self.owner_phone),
-                "telegram_configured": self.telegram_configured}
+                "telegram_configured": self.telegram_configured,
+                "whatsapp_configured": self.whatsapp_configured}
 
     def telegram_send(self, message: str) -> dict:
         """Send a Telegram message to the configured chat. Fault-isolated."""
@@ -64,6 +80,41 @@ class Notifier:
             return {"ok": False, "reason": data.get("description", "http_" + str(r.status_code))}
         except Exception as exc:
             log.error("telegram_send failed: %s", exc)
+            return {"ok": False, "reason": str(exc)}
+
+    def whatsapp_send(self, message: str) -> dict:
+        """Send a WhatsApp message via Meta's WhatsApp Cloud API. Fault-isolated.
+
+        Uses a free-form text message by default (works only inside the 24h
+        customer-service window). If WHATSAPP_TEMPLATE is set, sends that approved
+        template instead with `message` as its first body parameter — required for
+        proactive, business-initiated alerts outside the 24h window."""
+        if not self.whatsapp_configured:
+            return {"ok": False, "reason": "whatsapp_not_configured"}
+        to = self.wa_to.lstrip("+")   # Cloud API wants E.164 digits, no '+'
+        if self.wa_template:
+            payload = {"messaging_product": "whatsapp", "to": to, "type": "template",
+                       "template": {"name": self.wa_template,
+                                    "language": {"code": self.wa_template_lang},
+                                    "components": [{"type": "body", "parameters": [
+                                        {"type": "text", "text": message[:1024]}]}]}}
+        else:
+            payload = {"messaging_product": "whatsapp", "to": to, "type": "text",
+                       "text": {"body": message[:4096]}}
+        try:
+            import requests
+            r = requests.post(f"{self.wa_api}/{self.wa_phone_id}/messages", timeout=20,
+                              headers={"Authorization": "Bearer " + self.wa_token,
+                                       "Content-Type": "application/json"}, json=payload)
+            data = r.json() if r.content else {}
+            if r.ok and data.get("messages"):
+                log.info("WhatsApp alert sent to %s", to)
+                return {"ok": True, "id": data["messages"][0].get("id")}
+            err = (data.get("error") or {}).get("message", "http_" + str(r.status_code))
+            log.warning("WhatsApp send failed: %s", err)
+            return {"ok": False, "reason": err}
+        except Exception as exc:
+            log.error("whatsapp_send failed: %s", exc)
             return {"ok": False, "reason": str(exc)}
 
     def voice_call(self, message: str, phone: Optional[str] = None) -> dict:
@@ -103,7 +154,8 @@ class Notifier:
         Delivers to every configured channel (Telegram text + Bland.ai voice)."""
         if not self.cfg.voice_alerts:        # master alerts switch (VOICE_ALERTS)
             return None
-        if not (self.telegram_configured or (self.configured and self.owner_phone)):
+        if not (self.telegram_configured or self.whatsapp_configured
+                or (self.configured and self.owner_phone)):
             return None
         executed = status.get("executed_this_cycle", [])
         posture = (status.get("brain", {}) or {}).get("posture", "neutral")
@@ -115,8 +167,11 @@ class Notifier:
                f"return {p['total_return_pct']:+.2f} percent. Posture {posture}. "
                f"Actions: {acts}.")
         results = {}
+        tagged = "📊 " + self.cfg.firm_name + " — " + msg
         if self.telegram_configured:
-            results["telegram"] = self.telegram_send("📊 " + self.cfg.firm_name + " — " + msg)
+            results["telegram"] = self.telegram_send(tagged)
+        if self.whatsapp_configured:
+            results["whatsapp"] = self.whatsapp_send(tagged)
         if self.configured and self.owner_phone:
             results["voice"] = self.voice_call(msg)
         return results or None
@@ -126,6 +181,7 @@ def _main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="notify", description="Bland.ai voice comms")
     ap.add_argument("--test", action="store_true", help="place a test voice call")
     ap.add_argument("--telegram", action="store_true", help="send a test Telegram message")
+    ap.add_argument("--whatsapp", action="store_true", help="send a test WhatsApp message")
     ap.add_argument("--phone", help="destination (defaults to OWNER_PHONE)")
     ap.add_argument("--message", default="This is a test from SAHJONY CAPITAL LLC. Comms are working.")
     args = ap.parse_args(argv)
@@ -133,6 +189,8 @@ def _main(argv=None) -> int:
     print("status:", n.status)
     if args.telegram:
         print("telegram:", n.telegram_send("✅ " + args.message))
+    if args.whatsapp:
+        print("whatsapp:", n.whatsapp_send("✅ " + args.message))
     if args.test:
         print("voice:", n.voice_call(args.message, args.phone))
     return 0
