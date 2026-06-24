@@ -191,6 +191,7 @@
     main{padding:11px}.pb{padding:11px}
     table{font-size:12.5px} th,td{padding:7px 7px} th{font-size:10.5px}
     .scroll{scrollbar-width:thin}
+    .opt{display:none}   /* hide heavy columns (7D/mktcap/vol) so tables fit the screen fully */
     /* lift the tiny 9–10.5px labels into a readable range on small screens */
     body{font-size:14px}
     .brand h1{font-size:16px}
@@ -602,12 +603,12 @@ function Markets(v){
   else if(!(MARKETS.list||[]).length) cbody='<div class="empty">loading live crypto…</div>';
   else{
     const w=$(`<div class="scroll"></div>`);
-    const t=$(`<table><thead><tr><th>#</th><th>COIN</th><th class="n">PRICE</th><th class="n">24H</th><th>7D TREND</th><th class="n">MKT CAP</th><th class="n">VOL 24H</th></tr></thead><tbody></tbody></table>`);
+    const t=$(`<table><thead><tr><th>#</th><th>COIN</th><th class="n">PRICE</th><th class="n">24H</th><th class="opt">7D TREND</th><th class="n opt">MKT CAP</th><th class="n opt">VOL 24H</th></tr></thead><tbody></tbody></table>`);
     MARKETS.list.forEach((m,i)=>{const up=(m.price_change_percentage_24h||0)>=0;
       const spark=cellSpark((m.sparkline_in_7d||{}).price, up?'#34e3a8':'#ff5c6c');
       t.querySelector('tbody').appendChild($(`<tr><td class="mut">${i+1}</td><td><b class="amber">${esc((m.symbol||'').toUpperCase())}</b> <span class="mut">${esc(m.name)}</span></td>
         <td class="n">${money(m.current_price)}</td><td class="n ${up?'up':'down'}">${pct(m.price_change_percentage_24h)}</td>
-        <td>${spark}</td><td class="n">$${num(m.market_cap,0)}</td><td class="n">$${num(m.total_volume,0)}</td></tr>`));});
+        <td class="opt">${spark}</td><td class="n opt">$${num(m.market_cap,0)}</td><td class="n opt">$${num(m.total_volume,0)}</td></tr>`));});
     w.appendChild(t); cbody=w;
   }
   g.appendChild(panel('Crypto · Live (CoinGecko, no key)', cbody, (MARKETS.list||[]).length+' assets', 'span12'));
