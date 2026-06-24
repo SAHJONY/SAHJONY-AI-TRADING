@@ -617,11 +617,14 @@ function Markets(v){
     const sb=$(`<div class="empty">loading live quotes…</div>`);
     g.appendChild(panel('Equities · Live (Finnhub)', sb, syms.length+' symbols', 'span12'));
     fetchStockQuotes(syms).then(rows=>{
+      const valid=(rows||[]).filter(q=>q && q.c);   // drop empty/zero quotes (bad key / rate limit)
+      if(!valid.length){ sb.textContent='live quotes unavailable — check FINNHUB_API_KEY (free tier 60/min)'; return; }
       const w=$(`<div class="scroll"></div>`);
       const t=$(`<table><thead><tr><th>SYM</th><th class="n">PRICE</th><th class="n">CHG</th><th class="n">%</th><th class="n">HIGH</th><th class="n">LOW</th></tr></thead><tbody></tbody></table>`);
-      rows.forEach(q=>{const up=(q.dp||0)>=0; t.querySelector('tbody').appendChild($(`<tr><td class="amber">${esc(q.sym)}</td><td class="n">${money(q.c)}</td>
+      valid.forEach(q=>{const up=(q.dp||0)>=0; t.querySelector('tbody').appendChild($(`<tr><td class="amber">${esc(q.sym)}</td><td class="n">${money(q.c)}</td>
         <td class="n ${up?'up':'down'}">${(q.d>=0?'+':'')}${num(q.d)}</td><td class="n ${up?'up':'down'}">${pct(q.dp)}</td><td class="n">${money(q.h)}</td><td class="n">${money(q.l)}</td></tr>`));});
-      sb.replaceWith(w); g.querySelector('.panel:last-child .pb').appendChild(w);
+      w.appendChild(t);            // attach the table (was missing → panel rendered empty)
+      sb.replaceWith(w);
     }).catch(()=>{ sb.textContent='live quotes unavailable'; });
   } else {
     g.appendChild(panel('Equities · Live',
