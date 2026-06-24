@@ -53,6 +53,13 @@ jobs:
       VOICE_ALERTS: ${{ vars.VOICE_ALERTS || 'false' }}
       VOICE_API_KEY: ${{ secrets.VOICE_API_KEY }}
       OWNER_PHONE: ${{ secrets.OWNER_PHONE }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      WHATSAPP_TOKEN: ${{ secrets.WHATSAPP_TOKEN }}
+      WHATSAPP_PHONE_NUMBER_ID: ${{ secrets.WHATSAPP_PHONE_NUMBER_ID }}
+      WHATSAPP_TO: ${{ vars.WHATSAPP_TO || secrets.OWNER_PHONE }}
+      WHATSAPP_TEMPLATE: ${{ vars.WHATSAPP_TEMPLATE }}
+      SEC_USER_AGENT: 'SAHJONY Capital research contact@sahjonycapital.com'
     steps:
       - uses: actions/checkout@v4
 
@@ -76,6 +83,8 @@ jobs:
           key: sahjony-state-${{ github.run_id }}
           restore-keys: |
             sahjony-state-
+             - name: Refresh copy-trading signals (SEC Form 4 insider buys)
+        run: python -m scripts.build_copy_signals || true
 
       - name: Run one trading cycle
         run: python main.py --once --force
