@@ -177,6 +177,19 @@ class Firm:
                 total += shares * self.client.get_price(sym)
         return total
 
+    def _position_cost(self, state: Dict[str, Any]) -> float:
+        return sum((p.get("shares", 0) or 0) * p.get("cost_basis", 0.0)
+                   for p in state.get("positions", {}).values())
+
+    def _sleeve(self, state: Dict[str, Any]):
+        """Virtual capital sleeve → (equity, cash) measured against cfg.trading_capital,
+        so the desk behaves like a small account even on a large broker balance.
+        equity = capital + realized + unrealized; cash = capital + realized − cost."""
+        cap = self.cfg.trading_capital
+        realized = state.get("realized_pnl", 0.0) + state.get("premium_collected", 0.0)
+        cost = self._position_cost(state)
+        return cap + realized + (self._position_value(state) - cost), cap + realized - cost
+
     def _kill_switch(self) -> bool:
         """Owner kill switch: TRADING_HALT env or a HALT file in the desk home."""
         from paths import halt_path
@@ -216,7 +229,22 @@ class Firm:
         mode = getattr(self.client, "mode", self.cfg.mode)   # broker-accurate
         state["mode"] = mode
         acct = self.client.get_account()
-        equity = acct["equity"]
+        if self.cfg.trading_capital and self.cfg.trading_capital > 0:
+            # Re-anchor the baseline the first time a cap is applied or changed
+            # (e.g. switching a $100k desk to a $500 sleeve).
+            if state.get("sleeve_capital") != self.cfg.trading_capital:
+                state["sleeve_capital"] = self.cfg.trading_capital
+                state["equity_start"] = self.cfg.trading_capital
+                state["positions"] = {}               # start the sleeve FLAT (drop prior-size positions)
+                state["realized_pnl"] = 0.0
+                state["premium_collected"] = 0.0
+                state.pop("benchmark_start", None)    # re-anchor SPY alpha to the sleeve start
+                state.pop("equity_day_start", None)
+                log.info("Capital sleeve set to $%.0f — baseline + positions reset for a clean test.",
+                         self.cfg.trading_capital)
+            equity, _ = self._sleeve(state)
+        else:
+            equity = acct["equity"]
         if state.get("equity_start") is None:
             state["equity_start"] = equity
         state["equity_last"] = equity
@@ -324,9 +352,13 @@ class Firm:
 
         # 7) Treasurer — equity curve
         acct = self.client.get_account()
-        self.db.log_equity(cycle, acct["equity"], acct["cash"], self._position_value(state),
+        if self.cfg.trading_capital and self.cfg.trading_capital > 0:
+            eq_now, cash_now = self._sleeve(state)
+        else:
+            eq_now, cash_now = acct["equity"], acct["cash"]
+        self.db.log_equity(cycle, eq_now, cash_now, self._position_value(state),
                            state.get("realized_pnl", 0.0), state.get("premium_collected", 0.0), mode)
 
-        return {"cycle": cycle, "equity": acct["equity"], "cash": acct["cash"],
+        return {"cycle": cycle, "equity": eq_now, "cash": cash_now,
                 "research": research, "brain": brain, "executed": executed,
                 "deployed": self._position_value(state), "halt": halt}

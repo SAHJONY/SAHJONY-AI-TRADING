@@ -94,6 +94,10 @@ class Config:
     max_daily_drawdown_pct: float = 0.06
     # Kill switch: hard-stop all new risk regardless of P&L (env or a HALT file).
     trading_halt: bool = False
+    # Virtual capital cap: trade as if the account were this many dollars, even when
+    # the broker balance is larger (e.g. keep $100k paper but only risk $500). 0 =
+    # use the full broker equity. All sizing/risk and the equity curve scale to this.
+    trading_capital: float = 0.0
 
     # wheel
     wheel_put_otm_pct: float = 0.10
@@ -199,6 +203,7 @@ def load_config() -> Config:
         min_council_conviction=_clamp(_f("MIN_COUNCIL_CONVICTION", 0.55), HARD_MIN_CONVICTION, 1.0),
         max_daily_drawdown_pct=_clamp(_f("MAX_DAILY_DRAWDOWN_PCT", 0.06), 0.01, HARD_MAX_DAILY_DRAWDOWN_PCT),
         trading_halt=_b("TRADING_HALT", False),
+        trading_capital=max(0.0, _f("TRADING_CAPITAL", 0.0)),
         wheel_put_otm_pct=_clamp(_f("WHEEL_PUT_OTM_PCT", 0.10), 0.01, 0.40),
         wheel_call_otm_pct=_clamp(_f("WHEEL_CALL_OTM_PCT", 0.10), 0.01, 0.40),
         wheel_dte_min=max(1, _i("WHEEL_DTE_MIN", 14)),
