@@ -149,13 +149,18 @@ class Notifier:
             return {"ok": False, "reason": str(exc)}
 
     def maybe_alert(self, status: dict) -> Optional[dict]:
-        """Alert policy: only fire when alerts are enabled AND something notable
-        happened — an executed action this cycle or an AI-brain risk-off posture.
-        Delivers to every configured channel (Telegram text + Bland.ai voice)."""
-        if not self.cfg.voice_alerts:        # master alerts switch (VOICE_ALERTS)
-            return None
-        if not (self.telegram_configured or self.whatsapp_configured
-                or (self.configured and self.owner_phone)):
+        """Alert policy: fire when something notable happened — an executed action
+        this cycle or an AI-brain risk-off posture.
+
+        Channel gating:
+          • Telegram = ALWAYS-ON (fires whenever configured, independent of any
+            master switch) — the owner's designated primary channel.
+          • Voice (Bland) + WhatsApp = "active outreach", gated by VOICE_ALERTS so
+            they can be muted without touching Telegram."""
+        push = bool(self.cfg.voice_alerts)   # gates voice + WhatsApp only
+        if not (self.telegram_configured
+                or (push and self.whatsapp_configured)
+                or (push and self.configured and self.owner_phone)):
             return None
         executed = status.get("executed_this_cycle", [])
         posture = (status.get("brain", {}) or {}).get("posture", "neutral")
@@ -168,11 +173,11 @@ class Notifier:
                f"Actions: {acts}.")
         results = {}
         tagged = "📊 " + self.cfg.firm_name + " — " + msg
-        if self.telegram_configured:
+        if self.telegram_configured:                       # always-on
             results["telegram"] = self.telegram_send(tagged)
-        if self.whatsapp_configured:
+        if push and self.whatsapp_configured:
             results["whatsapp"] = self.whatsapp_send(tagged)
-        if self.configured and self.owner_phone:
+        if push and self.configured and self.owner_phone:
             results["voice"] = self.voice_call(msg)
         return results or None
 
