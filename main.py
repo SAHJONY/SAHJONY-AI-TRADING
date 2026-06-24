@@ -141,10 +141,13 @@ def run_once(firm: Firm, state, force: bool) -> dict:
     shared = write_investor_views(firm.db, status)  # token-keyed read-only investor snapshots
     if shared:
         log.info("Refreshed %d investor share view(s).", shared)
-    save_state(state)
     alert = firm.notifier.maybe_alert(status)
     if alert:
-        log.info("Voice alert: %s", alert)
+        log.info("Alert sent: %s", alert)
+    weekly = firm.notifier.maybe_weekly_summary(status, state)  # self-gates to once/7 days
+    if weekly:
+        log.info("Weekly performance summary sent to Telegram.")
+    save_state(state)   # after weekly so last_weekly_report persists
     print(console_board(status))
     return result
 

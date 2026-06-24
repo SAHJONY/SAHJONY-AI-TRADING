@@ -181,6 +181,52 @@ class Notifier:
             results["voice"] = self.voice_call(msg)
         return results or None
 
+    def maybe_weekly_summary(self, status: dict, state: dict) -> Optional[dict]:
+        """No-hype weekly performance digest to Telegram. Self-gating: fires at most
+        once every 7 days via state['last_weekly_report'] (so it's safe to call every
+        cycle). Telegram-only — independent of the voice/VOICE_ALERTS switch."""
+        if not self.telegram_configured:
+            return None
+        from datetime import datetime, timezone, timedelta
+        now = datetime.now(timezone.utc)
+        last = state.get("last_weekly_report")
+        if last:
+            try:
+                if now - datetime.fromisoformat(last) < timedelta(days=7):
+                    return None
+            except Exception:
+                pass
+        acc = status.get("account", {}) or {}
+        p = status.get("pnl", {}) or {}
+        b = status.get("benchmark", {}) or {}
+        curve = status.get("equity_curve", []) or []
+        peak, maxdd = float("-inf"), 0.0
+        for pt in curve:
+            e = float(pt.get("equity", 0) or 0); peak = max(peak, e)
+            if peak > 0:
+                maxdd = min(maxdd, (e - peak) / peak * 100)
+        rets = []
+        for i in range(1, len(curve)):
+            a = float(curve[i-1].get("equity", 0) or 0); c = float(curve[i].get("equity", 0) or 0)
+            if a > 0:
+                rets.append(c / a - 1)
+        winrate = (sum(1 for r in rets if r > 0) / len(rets) * 100) if rets else 0.0
+        lines = [f"📈 {status.get('firm', 'SAHJONY')} — Weekly Report",
+                 f"Cycle {status.get('cycle')} · {status.get('mode')}",
+                 f"Equity ${acc.get('equity', 0):,.0f} (start ${acc.get('equity_start', 0):,.0f})",
+                 f"Return {p.get('total_return_pct', 0.0):+.2f}%"]
+        if b.get("alpha_pct") is not None:
+            lines.append(f"Alpha vs {b.get('symbol', 'SPY')} {b['alpha_pct']:+.2f}% "
+                         f"(SPY {b.get('return_pct', 0.0):+.2f}%)")
+        lines += [f"Max drawdown {maxdd:.2f}%",
+                  f"Cycle win rate {winrate:.0f}% · {len(curve)} cycles · {len(status.get('recent_trades', []) or [])} recent trades"]
+        if len(curve) < 30:
+            lines.append("⚠ Small sample — treat as noise until ~30+ cycles.")
+        lines.append("Dashboard: https://sahjony.github.io/SAHJONY-AI-TRADING/")
+        res = self.telegram_send("\n".join(lines))
+        state["last_weekly_report"] = now.isoformat()   # persisted by the caller
+        return res
+
 
 def _main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="notify", description="Bland.ai voice comms")
