@@ -305,7 +305,7 @@
 <script src="./config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const TABS = ["Parquet","Markets","Macro","News","Council","Book","Brain","Controls","Workforce","Env"];
+const TABS = ["Parquet","Perf","Markets","Macro","News","Council","Book","Brain","Controls","Workforce","Env"];
 let DATA=null, TAB="Parquet", SESSION=null, DESK=null, CREDS=[];
 let MARKETS={list:[],err:null,ts:0};            // CoinGecko crypto (no key)
 let NEWS={list:[],err:null,ts:0,src:''};        // Finnhub (key) or GDELT (no key)
@@ -833,7 +833,35 @@ function render(){
   document.getElementById('foot').textContent =
     `cycle ${DATA.cycle} · ${new Date(DATA.ts).toLocaleString()} · ${DESK?'LIVE via Supabase':'static snapshot'} · auto-refresh 30s`;
   v.innerHTML="";
-  ({Parquet,Markets,Macro,News,Council,Book,Brain,Controls,Workforce,Env}[TAB]||Parquet)(v);
+  ({Parquet,Perf,Markets,Macro,News,Council,Book,Brain,Controls,Workforce,Env}[TAB]||Parquet)(v);
+}
+
+// ── Performance: honest, data-driven scorecard (proves or disproves the desk) ──
+function Perf(v){
+  const cur=(DATA.equity_curve||[]), acc=DATA.account||{}, p=DATA.pnl||{}, b=DATA.benchmark||{};
+  const rets=[]; for(let i=1;i<cur.length;i++){const a=+cur[i-1].equity||0,c=+cur[i].equity||0; if(a>0)rets.push(c/a-1);}
+  const mean=rets.length?rets.reduce((s,x)=>s+x,0)/rets.length:0;
+  const sd=rets.length>1?Math.sqrt(rets.reduce((s,x)=>s+(x-mean)*(x-mean),0)/(rets.length-1)):0;
+  const sharpe=sd>0?mean/sd:0, wins=rets.filter(x=>x>0).length, winRate=rets.length?wins/rets.length*100:0;
+  const dd=ddSeries(cur), maxDD=dd.length?Math.min(...dd):0;
+  const totRet=(p.total_return_pct!=null)?p.total_return_pct:(acc.equity_start?((acc.equity/acc.equity_start-1)*100):0);
+  const g=$(`<div class="grid c12"></div>`);
+  if(cur.length<30) g.appendChild($(`<div class="span12"><div class="cb" style="border-color:var(--amber);background:linear-gradient(90deg,rgba(255,176,0,.12),transparent);color:#ffe9b0">⚠ Only ${cur.length} cycles of history — these numbers are <b>noise, not skill</b>. They mean little until ~30+ cycles across different market conditions. A few good cycles ≠ an edge.</div></div>`));
+  const kw=$(`<div class="span12"><div class="kpis"></div></div>`), k=kw.querySelector('.kpis');
+  const tile=(l,val,cls,acc2)=>k.appendChild($(`<div class="kpi" style="--accent:${acc2||'var(--amber)'}"><div class="l">${l}</div><div class="v ${cls||''}">${val}</div></div>`));
+  tile('Total Return',(totRet>=0?'+':'')+totRet.toFixed(2)+'%',totRet>=0?'up':'down');
+  if(b&&b.alpha_pct!=null){ tile('Alpha vs '+(b.symbol||'SPY'),(b.alpha_pct>=0?'+':'')+b.alpha_pct.toFixed(2)+'%',b.alpha_pct>=0?'up':'down','var(--cyan)');
+    tile((b.symbol||'SPY')+' buy&hold',(b.return_pct>=0?'+':'')+b.return_pct.toFixed(2)+'%',b.return_pct>=0?'up':'down'); }
+  else tile('Alpha vs SPY','— (gathering)','mut');
+  tile('Max Drawdown',maxDD.toFixed(2)+'%','down','var(--down)');
+  tile('Volatility / cycle',(sd*100).toFixed(2)+'%','');
+  tile('Sharpe / cycle',sharpe.toFixed(2),sharpe>=0?'up':'down','var(--violet)');
+  tile('Cycle Win Rate',winRate.toFixed(0)+'%','');
+  tile('Cycles Tracked',String(cur.length),'mut');
+  g.appendChild(kw);
+  g.appendChild(panel('Drawdown · Underwater',drawdownChart(cur,160),'peak-to-trough %','span12'));
+  g.appendChild(panel('Reality Check', `<div class="commentary"><b>Alpha vs SPY is the only number that matters.</b> It must stay positive across many cycles and different market regimes before it means anything — beating the market briefly is usually luck. The council uses transparent public-domain signals, not a proven edge; this panel exists to <b>prove or disprove</b> the desk with data, not to flatter it. Keep it on paper until the track record earns trust.</div>`,'','span12'));
+  v.appendChild(g);
 }
 
 // ── panels helper ──

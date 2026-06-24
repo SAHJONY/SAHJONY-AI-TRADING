@@ -166,10 +166,27 @@ def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[st
             "counsellors": brain.counsellors,
         })
 
+    # Benchmark (buy-and-hold SPY) anchored at the desk's first cycle, persisted in
+    # state — gives an HONEST alpha-vs-market number instead of a bare return.
+    bench = {}
+    try:
+        bsym = (cfg.benchmark or "SPY").upper()
+        bpx = float(client.get_price(bsym))
+        if bpx > 0:
+            b0 = state.get("benchmark_start") or bpx
+            state["benchmark_start"] = b0           # anchor once; main.py persists state
+            bret = (bpx / b0 - 1.0) * 100 if b0 else 0.0
+            total_ret = (eq / eq0 - 1.0) * 100 if eq0 else 0.0
+            bench = {"symbol": bsym, "start_price": round(b0, 2), "last_price": round(bpx, 2),
+                     "return_pct": round(bret, 3), "alpha_pct": round(total_ret - bret, 3)}
+    except Exception:  # benchmark is informational — never break the cycle
+        bench = {}
+
     return {
         "firm": cfg.firm_name,
         "tagline": "Autonomous multi-agent quant trading — PAPER",
         "mode": mode,
+        "benchmark": bench,
         "ts": _now(),
         "cycle": state.get("cycle", 0),
         "account": {
