@@ -35,6 +35,15 @@ Officer gates on. `CREDIT_SPREADS_ENABLED=false` restores the 2-way split.
 Advisory overlay only: nudges conviction + global risk posture; never invents trades.
 Gated by `AI_BRAIN_ENABLED` + provider keys; degrades to neutral if unavailable.
 
+## Advisory Board (`intelligence/advisors.py`)
+The 6-agent Intelligence Council from the README: Buffett (quality/value),
+Munger (discipline), Macro, Growth, Quant — each a transparent price-based
+proxy scoring [-1,1] with a rationale — plus a Risk Agent protection gate
+(0..1) and a Decision Engine that blends them into a conviction tilt clamped
+to ±0.10, gate-scaled (a stressed name never gets a positive nudge). Advisory
+only; stacked tilts (alt-data + Hermes + board) are clamped to ±0.20 overall,
+and Hermes' data quarantine always wins. `ADVISORS_ENABLED=false` disables.
+
 ## Hermes guardian (`intelligence/hermes.py`)
 Background agent with a well-defined goal (`HERMES_GOAL`), run before the
 strategists each cycle: (1) validates every market feed and QUARANTINES hard

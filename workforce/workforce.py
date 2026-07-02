@@ -27,6 +27,7 @@ from typing import Any, Dict, List
 from config import Config
 from database import Database
 from intelligence.agents import Council, CouncilVerdict, MarketSnapshot
+from intelligence.advisors import AdvisoryBoard
 from intelligence.ai_brain import AIBrain, BrainVerdict
 from intelligence.alt_data import AltData
 from intelligence.hermes import Hermes, HermesReport
@@ -178,6 +179,7 @@ class Firm:
         self.brain = AIBrain(cfg)
         self.alt = AltData(cfg)   # QuiverQuant insider/congress alt-data overlay
         self.hermes = Hermes(cfg) # background guardian: data integrity + scores + self-calibration
+        self.board = AdvisoryBoard(cfg)  # Buffett/Munger/Macro/Growth/Quant council + risk gate
         self.notifier = Notifier(cfg)
         self.risk = RiskEngine(cfg)
         self.research = ResearchDesk(client, self.council)
@@ -292,6 +294,14 @@ class Firm:
             log.error("alt-data overlay failed: %s", exc)
             alt_signals = {}
 
+        # 1b2) Advisory Board — the six-agent Intelligence Council (Buffett/Munger/
+        # Macro/Growth/Quant + Risk gate). Advisory only: a bounded tilt per symbol.
+        try:
+            board = self.board.evaluate(research)
+        except Exception as exc:
+            log.error("advisory board failed: %s", exc)
+            board = {}
+
         # 1c) Hermes guardian — background agent validating every feed (bad feeds are
         # quarantined: no NEW risk, exits still flow) and grading the council's realized
         # accuracy into a small self-improvement tilt. Fault-isolated like everything else.
@@ -333,7 +343,12 @@ class Firm:
                 if pos and pos.get("strategy") in ("wheel", "ladder", "spread"):
                     strat = pos["strategy"]
                 alt_tilt = alt_signals[sym].tilt if sym in alt_signals else 0.0
-                tilt = alt_tilt + hermes.tilt.get(sym, 0.0)
+                board_tilt = board[sym].tilt if sym in board else 0.0
+                hermes_tilt = hermes.tilt.get(sym, 0.0)
+                if hermes_tilt <= -1.0:      # data quarantine always wins outright
+                    tilt = hermes_tilt
+                else:                        # advisory layers stack, but stay bounded
+                    tilt = max(-0.20, min(0.20, alt_tilt + board_tilt + hermes_tilt))
                 conviction, risk_mult, budget = self.pm.effective(verdict, brain, equity, tilt)
                 # Hermes strategy calibration: budget leans toward desks with a proven
                 # realized edge (bounded 0.70–1.15; hard risk ceilings still apply).
@@ -419,4 +434,4 @@ class Firm:
         return {"cycle": cycle, "equity": eq_now, "cash": cash_now,
                 "research": research, "brain": brain, "executed": executed,
                 "deployed": self._position_value(state), "halt": halt,
-                "hermes": hermes}
+                "hermes": hermes, "board": board}

@@ -84,6 +84,8 @@ jobs:
       HERMES_GOAL: ${{ vars.HERMES_GOAL || '' }}
       # Credit Spread Desk — defined-risk bull put spreads (max loss known at entry).
       CREDIT_SPREADS_ENABLED: ${{ vars.CREDIT_SPREADS_ENABLED || 'true' }}
+      # Advisory Board — 6-agent council (Buffett/Munger/Macro/Growth/Quant + gate).
+      ADVISORS_ENABLED: ${{ vars.ADVISORS_ENABLED || 'true' }}
     steps:
       - uses: actions/checkout@v4
 

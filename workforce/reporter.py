@@ -36,6 +36,7 @@ AGENT_ROSTER = [
 ]
 WORKFORCE = [
     ("Research Desk", "Convenes the 12-agent council per ticker"),
+    ("Advisory Board", "Buffett/Munger/Macro/Growth/Quant + risk gate"),
     ("Hermes Guardian", "Data integrity, Sharpe scorecard, self-calibration"),
     ("Chief Strategist (AI Brain)", "Claude — synthesizes council + counsellors"),
     ("Counsellors", "OpenAI (GPT) + Grok (xAI) — advisory"),
@@ -74,6 +75,7 @@ ENV_CATALOG = [
     ("AUTO_UPDATE_MODELS", "AI Brain", False, "true = always latest model"),
     ("QUIVER_API_KEY", "Alt-Data", True, "QuiverQuant insider/congress alt-data"),
     ("QUIVER_ENABLED", "Alt-Data", False, "auto-on with a key; false to disable"),
+    ("ADVISORS_ENABLED", "Advisory Board", False, "6-agent council overlay (default on)"),
     ("HERMES_ENABLED", "Hermes", False, "background guardian agent (default on)"),
     ("HERMES_GOAL", "Hermes", False, "the desk's well-defined objective"),
     ("CREDIT_SPREADS_ENABLED", "Options", False, "defined-risk put-spread desk (default on)"),
@@ -245,8 +247,14 @@ def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[st
             "ai_brain": firm.brain.status,
             "alt_data": getattr(firm, "alt", None).status if getattr(firm, "alt", None) else {"enabled": False},
             "hermes": _hermes_block(firm, db, cycle_result),
+            "advisory_board": getattr(firm, "board", None).status if getattr(firm, "board", None) else {"enabled": False},
             "voice": firm.notifier.status,
         },
+        "advisors": [
+            {"symbol": v.symbol, "scores": v.scores, "gate": v.gate,
+             "composite": v.composite, "tilt": v.tilt, "rationale": v.rationale}
+            for v in (cycle_result.get("board") or {}).values()
+        ],
         "council": council,
         "brain": brain_block,
         "positions": positions,
