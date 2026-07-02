@@ -1114,6 +1114,21 @@ function activityFeed(){
 function Council(v){
   const g=$(`<div class="grid c12"></div>`);
   g.appendChild(panel('Intelligence Council · Heatmap', councilHeat(), 'score −1…+1', 'span12'));
+  // Advisory Board — the six-agent council (Buffett/Munger/Macro/Growth/Quant + risk gate)
+  const adv=DATA.advisors||[];
+  if(adv.length){
+    const w=$(`<div class="scroll"></div>`);
+    const t=$(`<table><thead><tr><th>SYM</th><th class="n">BUFFETT</th><th class="n">MUNGER</th><th class="n">MACRO</th><th class="n">GROWTH</th><th class="n">QUANT</th><th class="n">GATE</th><th class="n">TILT</th></tr></thead><tbody></tbody></table>`);
+    const tb=t.querySelector('tbody');
+    const cell=(x)=>`<td class="n ${x>=0?'up':'down'}">${x>=0?'+':''}${(+x).toFixed(2)}</td>`;
+    adv.forEach(a=>{const s=a.scores||{};
+      tb.appendChild($(`<tr title="${esc(Object.entries(a.rationale||{}).map(([k,r])=>`${k}: ${r}`).join('\n'))}">
+        <td><b>${esc(a.symbol)}</b></td>${cell(s.buffett||0)}${cell(s.munger||0)}${cell(s.macro||0)}${cell(s.growth||0)}${cell(s.quant||0)}
+        <td class="n ${a.gate>=.7?'up':(a.gate>=.35?'amber':'down')}">${(+a.gate).toFixed(2)}</td>${cell(a.tilt||0)}</tr>`));});
+    w.appendChild(t);
+    g.appendChild(panel('Advisory Board · Buffett / Munger / Macro / Growth / Quant', w,
+      'advisory tilt ±0.10 · risk gate 0–1 · hover for rationale', 'span12'));
+  }
   (DATA.council||[]).forEach(c=>{
     const body=$(`<div></div>`);
     (c.agents||[]).forEach(a=>{const w=Math.min(100,Math.abs(a.score)*100), col=a.score>=0?'var(--up)':'var(--down)';
