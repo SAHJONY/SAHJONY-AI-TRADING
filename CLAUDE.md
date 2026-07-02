@@ -44,6 +44,14 @@ native SQLite CRM/database and a static owner dashboard deployed on Vercel.
   depth via `output_config.effort`; server-side refusal fallback to `claude-opus-4-8`).
   If you touch the Anthropic call, consult the claude-api reference — don't guess the SDK.
 
+## Analyst toolkit (Claude Code sessions on this repo)
+- `.claude/settings.json` registers Anthropic's `claude-for-financial-services`
+  plugin marketplace and enables `financial-analysis` (/comps, /dcf, /lbo) and
+  `equity-research` (/earnings, /model-update) for OWNER research on names the
+  desk trades. These are human-review drafting tools — they are NOT wired into
+  the autonomous loop, make no recommendations, and execute nothing. Keep it
+  that way: the trading cycle stays deterministic quant + the advisory AI brain.
+
 ## AI brain hierarchy (owner's directive)
 - **Primary engine / brain:** Claude (`anthropic` SDK).
 - **Secondary engines / counsellors:** OpenAI (GPT) + Grok (xAI) + Gemini
