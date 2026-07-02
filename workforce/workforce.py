@@ -29,6 +29,7 @@ from database import Database
 from intelligence.agents import Council, CouncilVerdict, MarketSnapshot
 from intelligence.ai_brain import AIBrain, BrainVerdict
 from intelligence.alt_data import AltData
+from intelligence.hermes import Hermes, HermesReport
 from risk.risk_engine import RiskEngine
 from strategies.base import OrderIntent
 from strategies.copy_trading import CopyTrader
@@ -164,6 +165,7 @@ class Firm:
         self.council = Council()
         self.brain = AIBrain(cfg)
         self.alt = AltData(cfg)   # QuiverQuant insider/congress alt-data overlay
+        self.hermes = Hermes(cfg) # background guardian: data integrity + scores + self-calibration
         self.notifier = Notifier(cfg)
         self.risk = RiskEngine(cfg)
         self.research = ResearchDesk(client, self.council)
@@ -277,6 +279,18 @@ class Firm:
             log.error("alt-data overlay failed: %s", exc)
             alt_signals = {}
 
+        # 1c) Hermes guardian — background agent validating every feed (bad feeds are
+        # quarantined: no NEW risk, exits still flow) and grading the council's realized
+        # accuracy into a small self-improvement tilt. Fault-isolated like everything else.
+        try:
+            hermes = self.hermes.review(research, state)
+            if hermes.quarantined:
+                log.warning("HERMES quarantined %s — new risk blocked (bad data)",
+                            ", ".join(hermes.quarantined))
+        except Exception as exc:
+            log.error("hermes review failed: %s", exc)
+            hermes = HermesReport(used=False)
+
         # 2) Chief Strategist — AI brain advisory overlay
         portfolio = [{
             "symbol": r["symbol"], "price": round(r["snap"].price, 2),
@@ -301,7 +315,8 @@ class Firm:
             try:
                 strat = self.pm.assign_strategy(sym, idx)
                 alt_tilt = alt_signals[sym].tilt if sym in alt_signals else 0.0
-                conviction, risk_mult, budget = self.pm.effective(verdict, brain, equity, alt_tilt)
+                tilt = alt_tilt + hermes.tilt.get(sym, 0.0)
+                conviction, risk_mult, budget = self.pm.effective(verdict, brain, equity, tilt)
                 pos = state.get("positions", {}).get(sym)
                 if strat == "wheel":
                     chain = self.client.get_option_chain(sym, snap.price, self.cfg.wheel_dte_min,
@@ -377,4 +392,5 @@ class Firm:
 
         return {"cycle": cycle, "equity": eq_now, "cash": cash_now,
                 "research": research, "brain": brain, "executed": executed,
-                "deployed": self._position_value(state), "halt": halt}
+                "deployed": self._position_value(state), "halt": halt,
+                "hermes": hermes}

@@ -1190,6 +1190,17 @@ function Brain(v){
     <div class="row"><span class="mut">Global risk multiplier</span><span class="tag">×${(b.global_risk_multiplier||1).toFixed(2)}</span></div>
     <div class="row"><span class="mut">Alt-data (QuiverQuant)</span><span class="tag ${(((DATA.health||{}).alt_data||{}).enabled)?'on':'off'}">${(((DATA.health||{}).alt_data||{}).enabled)?'insider + congress · on':'off'}</span></div>`;
   g.appendChild(panel('Chief Strategist', s, '', 'span5'));
+  // Hermes guardian — background agent: data integrity, honest scores, self-calibration
+  const hm=((DATA.health||{}).hermes)||{}; const sc=hm.scorecard||{};
+  const hs=$(`<div></div>`);
+  hs.innerHTML=`<div class="row"><span class="mut">Status</span><span class="tag ${hm.enabled?'on':'off'}">${hm.enabled?'guarding':'off'}</span></div>
+    <div class="row"><span class="mut">Goal</span><span class="tag amber" title="${esc(hm.goal||'')}">${esc((hm.goal||'—').split('—')[0].trim())}</span></div>
+    <div class="row"><span class="mut">Data quality (this cycle)</span><span class="tag ${(hm.data_ok_pct??1)>=1?'on':((hm.data_ok_pct??1)>=.8?'amber':'off')}">${Math.round((hm.data_ok_pct??1)*100)}% clean${(hm.quarantined||[]).length?` · ${hm.quarantined.length} quarantined`:''}</span></div>
+    <div class="row"><span class="mut">Sharpe (annualized est.)</span><span class="tag ${sc.sharpe>0?'on':(sc.sharpe<0?'off':'')}">${sc.sharpe!=null?sc.sharpe:'—'}</span></div>
+    <div class="row"><span class="mut">Sortino</span><span class="tag">${sc.sortino!=null?sc.sortino:'—'}</span></div>
+    <div class="row"><span class="mut">Max drawdown</span><span class="tag ${sc.max_drawdown_pct<-5?'off':''}">${sc.max_drawdown_pct!=null?sc.max_drawdown_pct+'%':'—'}</span></div>
+    ${Object.keys(hm.hit_rates||{}).length?`<div class="row"><span class="mut">Council hit-rate</span><span class="tag">${Object.entries(hm.hit_rates).map(([k,v])=>`${esc(k)} ${Math.round(v*100)}%`).join(' · ')}</span></div>`:''}`;
+  g.appendChild(panel('Hermes Guardian', hs, 'background agent', 'span7'));
   // autonomous model updater — show the live model each provider is pinned to
   const ai=((DATA.health||{}).ai_brain)||{}; const mdl=ai.models||{};
   const ms=$(`<div></div>`);

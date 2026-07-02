@@ -28,3 +28,12 @@ Research Desk → Chief Strategist (AI Brain) → Portfolio Manager → Strategy
 - COUNSELLORS: OpenAI (GPT) + Grok (xAI) — advisory inputs to the brain.
 Advisory overlay only: nudges conviction + global risk posture; never invents trades.
 Gated by `AI_BRAIN_ENABLED` + provider keys; degrades to neutral if unavailable.
+
+## Hermes guardian (`intelligence/hermes.py`)
+Background agent with a well-defined goal (`HERMES_GOAL`), run before the
+strategists each cycle: (1) validates every market feed and QUARANTINES hard
+failures (conviction forced to 0 → Risk Officer blocks new risk; exits still
+flow); (2) keeps an honest Sharpe/Sortino/drawdown scorecard off the equity
+curve; (3) self-improvement — grades the council's realized directional
+hit-rate (decayed) into a bounded conviction tilt (±0.10). Deterministic,
+transparent, fault-isolated; default ON, disabled via `HERMES_ENABLED=false`.

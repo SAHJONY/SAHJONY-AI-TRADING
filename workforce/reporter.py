@@ -36,6 +36,7 @@ AGENT_ROSTER = [
 ]
 WORKFORCE = [
     ("Research Desk", "Convenes the 12-agent council per ticker"),
+    ("Hermes Guardian", "Data integrity, Sharpe scorecard, self-calibration"),
     ("Chief Strategist (AI Brain)", "Claude — synthesizes council + counsellors"),
     ("Counsellors", "OpenAI (GPT) + Grok (xAI) — advisory"),
     ("Portfolio Manager", "Strategy assignment + conviction sizing"),
@@ -72,6 +73,8 @@ ENV_CATALOG = [
     ("AUTO_UPDATE_MODELS", "AI Brain", False, "true = always latest model"),
     ("QUIVER_API_KEY", "Alt-Data", True, "QuiverQuant insider/congress alt-data"),
     ("QUIVER_ENABLED", "Alt-Data", False, "auto-on with a key; false to disable"),
+    ("HERMES_ENABLED", "Hermes", False, "background guardian agent (default on)"),
+    ("HERMES_GOAL", "Hermes", False, "the desk's well-defined objective"),
     ("VOICE_API_KEY", "Voice (Bland.ai)", True, "Bland.ai API key"),
     ("VOICE_FROM_NUMBER", "Voice (Bland.ai)", False, "outbound caller ID"),
     ("OWNER_PHONE", "Voice (Bland.ai)", False, "owner phone for alerts (+1…)"),
@@ -123,6 +126,29 @@ def _capital_block(db, equity: float, equity_start: float) -> Dict[str, Any]:
         "trading_pnl": round(trading_pnl, 2),
         "trading_return_pct": round(ret, 3),
     }
+
+
+def _hermes_block(firm, db, cycle_result: Dict[str, Any]) -> Dict[str, Any]:
+    """Hermes guardian status: goal, this cycle's data quality + calibration, and the
+    honest Sharpe/Sortino scorecard off the equity curve. Secret-free, fault-isolated."""
+    hermes = getattr(firm, "hermes", None)
+    if hermes is None:
+        return {"enabled": False}
+    out: Dict[str, Any] = dict(hermes.status)
+    rep = cycle_result.get("hermes")
+    if rep is not None:
+        out.update({
+            "used": getattr(rep, "used", False),
+            "data_ok_pct": getattr(rep, "data_ok_pct", 1.0),
+            "quarantined": list(getattr(rep, "quarantined", [])),
+            "issues": dict(getattr(rep, "issues", {})),
+            "hit_rates": dict(getattr(rep, "hit_rates", {})),
+        })
+    try:
+        out["scorecard"] = hermes.scorecard(db.equity_history(150))
+    except Exception:
+        out["scorecard"] = {}
+    return out
 
 
 def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[str, Any]) -> Dict[str, Any]:
@@ -213,6 +239,7 @@ def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[st
             "circuit_breaker": cycle_result.get("halt", {"halted": False, "reason": ""}),
             "ai_brain": firm.brain.status,
             "alt_data": getattr(firm, "alt", None).status if getattr(firm, "alt", None) else {"enabled": False},
+            "hermes": _hermes_block(firm, db, cycle_result),
             "voice": firm.notifier.status,
         },
         "council": council,

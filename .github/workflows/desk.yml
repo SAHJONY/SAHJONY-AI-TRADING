@@ -76,6 +76,10 @@ jobs:
       # secret QUIVER_API_KEY to activate; auto-on when present. The desk runs HERE
       # (GitHub Actions), not on Vercel — a Vercel env var can't reach it.
       QUIVER_API_KEY: ${{ secrets.QUIVER_API_KEY }}
+      # Hermes guardian — background agent (data integrity, Sharpe scorecard,
+      # bounded self-calibration). On by default; set Variable HERMES_ENABLED=false to disable.
+      HERMES_ENABLED: ${{ vars.HERMES_ENABLED || 'true' }}
+      HERMES_GOAL: ${{ vars.HERMES_GOAL || '' }}
     steps:
       - uses: actions/checkout@v4
 
