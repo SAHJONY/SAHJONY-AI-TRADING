@@ -1214,6 +1214,7 @@ function Brain(v){
     <div class="row"><span class="mut">Sharpe (annualized est.)</span><span class="tag ${sc.sharpe>0?'on':(sc.sharpe<0?'off':'')}">${sc.sharpe!=null?sc.sharpe:'—'}</span></div>
     <div class="row"><span class="mut">Sortino</span><span class="tag">${sc.sortino!=null?sc.sortino:'—'}</span></div>
     <div class="row"><span class="mut">Max drawdown</span><span class="tag ${sc.max_drawdown_pct<-5?'off':''}">${sc.max_drawdown_pct!=null?sc.max_drawdown_pct+'%':'—'}</span></div>
+    ${(()=>{const vt=((DATA.health||{}).vol_targeting)||{};return vt.target_annual?`<div class="row"><span class="mut">Vol targeting (${Math.round(vt.target_annual*100)}% target)</span><span class="tag ${(vt.scale??1)>=1?'on':'amber'}">budgets ×${(vt.scale??1).toFixed(2)}</span></div>`:''})()}
     ${Object.keys(hm.hit_rates||{}).length?`<div class="row"><span class="mut">Council hit-rate</span><span class="tag">${Object.entries(hm.hit_rates).map(([k,v])=>`${esc(k)} ${Math.round(v*100)}%`).join(' · ')}</span></div>`:''}
     ${Object.keys(hm.strategy_weights||{}).length?`<div class="row"><span class="mut">Desk calibration (learned)</span><span class="tag">${Object.entries(hm.strategy_weights).map(([k,v])=>`${esc(k)} ×${v}`).join(' · ')}</span></div>`:''}`;
   g.appendChild(panel('Hermes Guardian', hs, 'background agent', 'span7'));
