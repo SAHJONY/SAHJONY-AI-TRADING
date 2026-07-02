@@ -321,6 +321,16 @@ let INTEL={fng:null,global:null,trending:null,fx:null,indices:null,earnings:null
 
 const CFG=(window.SAHJONY_CONFIG||{});
 const FINNHUB=(CFG.FINNHUB_API_KEY||"").trim();
+// Owner-device gate: shared/public links show a clean view-only page with NO
+// sign-in entry point. A device proves ownership by visiting once with #owner
+// (or signing in) — that sets a persistent local flag. /login.html still works
+// directly for the owner; it is simply never advertised to visitors.
+function OWNER_DEVICE(){
+  try{
+    if(/[?#&]owner\b/.test(location.hash+location.search)) localStorage.setItem('sahjony_owner','1');
+    return localStorage.getItem('sahjony_owner')==='1';
+  }catch(_){return false;}
+}
 const LIVE_OK=!!(CFG.SUPABASE_URL && CFG.SUPABASE_ANON_KEY && window.supabase);
 const SB=LIVE_OK ? window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY) : null;
 
@@ -812,9 +822,15 @@ function setStatus(){
   document.getElementById('cycTxt').textContent = (DATA&&DATA.cycle)||'0';
   const acc=document.getElementById('account');
   const vb=document.getElementById('viewerBadge');
-  if(SESSION&&SESSION.user){acc.textContent='⏻ '+String(SESSION.user.email).split('@')[0];acc.removeAttribute('href');acc.onclick=()=>sbLogout();
+  if(SESSION&&SESSION.user){acc.style.display='';acc.textContent='⏻ '+String(SESSION.user.email).split('@')[0];acc.removeAttribute('href');acc.onclick=()=>sbLogout();
+    try{localStorage.setItem('sahjony_owner','1');}catch(_){}
     if(vb)vb.style.display='none';}
-  else{acc.textContent='SIGN IN';acc.setAttribute('href','./login.html');acc.onclick=null;
+  else{
+    // Shared/public links get a clean view-only page: the owner entry point is
+    // hidden unless this device has proven ownership (signed in before, or
+    // visited once with #owner). Owner can always go to /login.html directly.
+    acc.style.display=OWNER_DEVICE()?'':'none';
+    acc.textContent='SIGN IN';acc.setAttribute('href','./login.html');acc.onclick=null;
     if(vb)vb.style.display='';}
   setStreamDot();
 }
