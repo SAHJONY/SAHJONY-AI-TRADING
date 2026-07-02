@@ -36,6 +36,7 @@ from strategies.base import OrderIntent
 from strategies.copy_trading import CopyTrader
 from strategies.credit_spreads import CreditSpreads
 from strategies.day_trading import DayTrading
+from strategies.pairs_trading import PairsDesk
 from strategies.trailing_ladder import TrailingLadder
 from strategies.wheel_strategy import WheelStrategy
 from utils.logger import get_logger
@@ -151,7 +152,9 @@ class ExecutionTrader:
                     log.warning("order not filled %s: %s", intent.symbol, res)
                     continue
                 self._apply(intent, state)
-                if intent.side in ("buy",):
+                # buys and risk-gated short opens both consume deployed budget
+                if intent.side == "buy" or (intent.risk_check and intent.side == "sell"
+                                            and intent.kind == "equity"):
                     deployed += intent.est_notional
                 self.db.log_trade({
                     "cycle": cycle, "symbol": intent.symbol, "strategy": intent.strategy,
@@ -190,13 +193,25 @@ class Firm:
         self.spread = CreditSpreads(cfg)
         self.copy = CopyTrader(cfg)
         self.dayts = DayTrading(cfg)
+        self.pairs_desk = PairsDesk(cfg)
 
     def _position_value(self, state: Dict[str, Any]) -> float:
+        """SIGNED market value (shorts negative) — correct for equity/P&L math."""
         total = 0.0
         for sym, pos in state.get("positions", {}).items():
             shares = pos.get("shares", 0) or 0
             if shares:
                 total += shares * self.client.get_price(sym)
+        return total
+
+    def _gross_exposure(self, state: Dict[str, Any]) -> float:
+        """GROSS exposure (|shares|·price) — what the deployed-capital cap gates on.
+        A short is risk too; it must consume the same risk budget as a long."""
+        total = 0.0
+        for sym, pos in state.get("positions", {}).items():
+            shares = pos.get("shares", 0) or 0
+            if shares:
+                total += abs(shares) * self.client.get_price(sym)
         return total
 
     def _position_cost(self, state: Dict[str, Any]) -> float:
@@ -339,8 +354,9 @@ class Firm:
             log.info("AI BRAIN posture=%s risk_mult=%.2f — %s",
                      brain.posture, brain.global_risk_multiplier, brain.commentary[:120])
 
-        # 3-6) PM → Strategy → Risk → Execution → Treasurer, per ticker
-        deployed = self._position_value(state)
+        # 3-6) PM → Strategy → Risk → Execution → Treasurer, per ticker.
+        # The deployed cap gates on GROSS exposure so shorts consume budget too.
+        deployed = self._gross_exposure(state)
         executed: List[Dict] = []
         for idx, r in enumerate(research):
             sym, snap, verdict = r["symbol"], r["snap"], r["verdict"]
@@ -351,6 +367,10 @@ class Firm:
                 # that opened it, even if the assignment rotation changes over time.
                 if pos and pos.get("strategy") in ("wheel", "ladder", "spread"):
                     strat = pos["strategy"]
+                # A pairs leg belongs to the Pairs Desk (6d) — core desks hands off.
+                pairs_owned = bool(pos) and pos.get("strategy") == "pairs"
+                if pairs_owned:
+                    strat = "pairs"
                 alt_tilt = alt_signals[sym].tilt if sym in alt_signals else 0.0
                 board_tilt = board[sym].tilt if sym in board else 0.0
                 hermes_tilt = hermes.tilt.get(sym, 0.0)
@@ -362,7 +382,9 @@ class Firm:
                 # Hermes strategy calibration: budget leans toward desks with a proven
                 # realized edge (bounded 0.70–1.15; hard risk ceilings still apply).
                 budget *= hermes.strategy_weights.get(strat, 1.0) * vol_scale
-                if strat == "wheel":
+                if pairs_owned:
+                    intents = []
+                elif strat == "wheel":
                     chain = self.client.get_option_chain(sym, snap.price, self.cfg.wheel_dte_min,
                                                          self.cfg.wheel_dte_max, snap.vol)
                     intents = self.wheel.decide(sym, snap, pos, verdict, budget, chain)
@@ -430,6 +452,36 @@ class Firm:
                     log.error("day-desk %s failed: %s", sym, exc)
             if self.cfg.day_trading_enabled:
                 log.info("DAY/FOREX desk ran %d symbol(s)", len(universe))
+
+        # 6d) Pairs / StatArb desk — market-neutral spreads on cointegrated pairs
+        # (long the cheap leg, short the rich leg). Both legs are risk-gated; an
+        # orphan leg is closed immediately. Uses core research when available.
+        if trade and self.cfg.pairs_enabled:
+            from intelligence import engines
+            snaps = {r["symbol"]: r["snap"] for r in research}
+            for pair in self.cfg.pairs:
+                try:
+                    if ":" not in pair:
+                        continue
+                    sym_a, sym_b = (p.strip() for p in pair.split(":", 1))
+                    snap_a = snaps.get(sym_a) or self.research.research(sym_a, bench)[0]
+                    snap_b = snaps.get(sym_b) or self.research.research(sym_b, bench)[0]
+                    coint = engines.cointegration(snap_a.closes, snap_b.closes)
+                    pos_a = state.get("positions", {}).get(sym_a)
+                    pos_b = state.get("positions", {}).get(sym_b)
+                    conv = 0.70   # signal desk; the Risk Officer still gates size
+                    budget = self.risk.position_budget(equity, conv, 1.0) \
+                        * hermes.strategy_weights.get("pairs", 1.0) * vol_scale
+                    intents = self.pairs_desk.decide(sym_a, sym_b, snap_a.price, snap_b.price,
+                                                     pos_a, pos_b, budget, coint)
+                    done, deployed = self.execution.execute(intents, state, cycle, equity,
+                                                            deployed, conv, allow_new_risk)
+                    executed += done
+                    if done:
+                        log.info("PAIRS desk %s/%s: %d order(s), z=%+.2f",
+                                 sym_a, sym_b, len(done), coint.get("spread_z", 0.0))
+                except Exception as exc:
+                    log.error("pairs desk %s failed: %s", pair, exc)
 
         # 7) Treasurer — equity curve
         acct = self.client.get_account()

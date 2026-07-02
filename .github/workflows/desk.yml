@@ -87,6 +87,9 @@ jobs:
       CREDIT_SPREADS_ENABLED: ${{ vars.CREDIT_SPREADS_ENABLED || 'true' }}
       # Advisory Board — 6-agent council (Buffett/Munger/Macro/Growth/Quant + gate).
       ADVISORS_ENABLED: ${{ vars.ADVISORS_ENABLED || 'true' }}
+      # Pairs / StatArb desk — market-neutral cointegrated spreads (long/short).
+      PAIRS_ENABLED: ${{ vars.PAIRS_ENABLED || 'true' }}
+      PAIRS: ${{ vars.PAIRS || 'SPY:QQQ,GLD:SLV' }}
     steps:
       - uses: actions/checkout@v4
 

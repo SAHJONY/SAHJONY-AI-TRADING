@@ -123,8 +123,16 @@ class SimBroker:
             pos["avg_price"] = (pos["avg_price"] * pos["qty"] + cost) / new_qty if new_qty else px
             pos["qty"] = new_qty
             self._cash -= cost
+            if pos["qty"] == 0:              # buying back a short to flat
+                self._positions.pop(symbol, None)
         else:
-            pos["qty"] = max(0.0, pos["qty"] - qty)
+            new_qty = pos["qty"] - qty
+            # Selling below flat opens/extends a SHORT: qty goes negative and is
+            # marked to market as qty*price in get_account (the sale credited cash,
+            # the negative position carries the liability). Mirrors Alpaca paper.
+            if pos["qty"] >= 0 and new_qty < 0:
+                pos["avg_price"] = px
+            pos["qty"] = new_qty
             self._cash += px * qty
             if pos["qty"] == 0:
                 self._positions.pop(symbol, None)

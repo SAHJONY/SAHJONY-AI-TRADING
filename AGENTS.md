@@ -26,6 +26,13 @@ Execution Trader → Treasurer/CRM → Reporter.
 Volatility targeting (`RiskEngine.vol_scalar`, `VOL_TARGET_ANNUAL`, default 20%):
 realized portfolio vol above target scales every new-position budget down
 ([×0.5, ×1.0] — de-risks only, never levers up); hard ceilings apply on top.
+Pairs / StatArb Desk (`strategies/pairs_trading.py`, `PAIRS`, default
+SPY:QQQ + GLD:SLV): market-neutral Engle-Granger spreads — short the rich leg,
+long the cheap leg on |z| ≥ 2, exit on reversion (|z| ≤ 0.5), stop on blow-out
+(|z| ≥ 4) or time. Legs live under their real symbols with strategy "pairs"
+(short = negative shares); core desks skip pairs-owned symbols; the deployed
+cap gates on GROSS exposure so shorts consume budget; an orphan leg is closed
+immediately. Sim broker supports shorts (negative qty, marked to market).
 Equities rotate wheel/ladder/spread deterministically; an open position always
 finishes under the desk that opened it (position-first routing). The Credit
 Spread Desk (`strategies/credit_spreads.py`) sells bull put spreads — max loss

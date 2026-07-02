@@ -135,6 +135,14 @@ class Config:
     copy_trading_api_key: str = ""
     copy_trading_max_symbols: int = 10
 
+    # pairs / statistical arbitrage (market-neutral desk)
+    pairs_enabled: bool = True
+    pairs: List[str] = field(default_factory=lambda: ["SPY:QQQ", "GLD:SLV"])
+    pairs_entry_z: float = 2.0
+    pairs_exit_z: float = 0.5
+    pairs_stop_z: float = 4.0
+    pairs_max_hold: int = 96      # cycles (~4 trading days at 15-min cadence)
+
     # day-trading / forex (intraday desk — never holds overnight)
     day_trading_enabled: bool = True
     forex_pairs: List[str] = field(default_factory=lambda: ["EUR/USD", "GBP/USD", "USD/JPY", "AUD/USD"])
@@ -236,6 +244,12 @@ def load_config() -> Config:
         copy_trading_source_url=(os.getenv("COPY_TRADING_SOURCE_URL", "") or "").strip(),
         copy_trading_api_key=os.getenv("COPY_TRADING_API_KEY", "").strip(),
         copy_trading_max_symbols=max(1, _i("COPY_TRADING_MAX_SYMBOLS", 10)),
+        pairs_enabled=_b("PAIRS_ENABLED", True),
+        pairs=_list("PAIRS", "SPY:QQQ,GLD:SLV"),
+        pairs_entry_z=_clamp(_f("PAIRS_ENTRY_Z", 2.0), 1.0, 5.0),
+        pairs_exit_z=_clamp(_f("PAIRS_EXIT_Z", 0.5), 0.1, 2.0),
+        pairs_stop_z=_clamp(_f("PAIRS_STOP_Z", 4.0), 2.0, 8.0),
+        pairs_max_hold=max(4, _i("PAIRS_MAX_HOLD", 96)),
         day_trading_enabled=_b("DAY_TRADING_ENABLED", True),
         forex_pairs=_list("FOREX_PAIRS", "EUR/USD,GBP/USD,USD/JPY,AUD/USD"),
         day_trade_symbols=_list("DAY_TRADE_SYMBOLS", ""),
