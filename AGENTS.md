@@ -35,5 +35,8 @@ strategists each cycle: (1) validates every market feed and QUARANTINES hard
 failures (conviction forced to 0 → Risk Officer blocks new risk; exits still
 flow); (2) keeps an honest Sharpe/Sortino/drawdown scorecard off the equity
 curve; (3) self-improvement — grades the council's realized directional
-hit-rate (decayed) into a bounded conviction tilt (±0.10). Deterministic,
-transparent, fault-isolated; default ON, disabled via `HERMES_ENABLED=false`.
+hit-rate (decayed) into a bounded conviction tilt (±0.10), and re-weights
+capital across strategy desks by realized win-rate (×0.70–×1.15; a losing desk
+is trimmed, never switched off). Memory lives in state.json (cached across CI
+runs) with exponential decay, so the learning loop runs in perpetuity.
+Deterministic, transparent, fault-isolated; default ON, `HERMES_ENABLED=false` to disable.

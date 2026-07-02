@@ -99,6 +99,14 @@ class ExecutionTrader:
             positions[intent.symbol] = pos
         state["premium_collected"] = state.get("premium_collected", 0.0) + intent.premium_delta
         state["realized_pnl"] = state.get("realized_pnl", 0.0) + intent.realized_delta
+        # Attribute every realized outcome to its strategy so Hermes can learn which
+        # desks actually win and re-weight capital toward them (bounded, perpetual).
+        if intent.realized_delta:
+            events = state.setdefault("hermes_events", [])
+            events.append({"strategy": intent.strategy or "?",
+                           "realized": float(intent.realized_delta)})
+            if len(events) > 400:
+                del events[:len(events) - 400]
 
     def execute(self, intents: List[OrderIntent], state: Dict[str, Any], cycle: int,
                 equity: float, deployed: float, conviction: float,
@@ -317,6 +325,9 @@ class Firm:
                 alt_tilt = alt_signals[sym].tilt if sym in alt_signals else 0.0
                 tilt = alt_tilt + hermes.tilt.get(sym, 0.0)
                 conviction, risk_mult, budget = self.pm.effective(verdict, brain, equity, tilt)
+                # Hermes strategy calibration: budget leans toward desks with a proven
+                # realized edge (bounded 0.70–1.15; hard risk ceilings still apply).
+                budget *= hermes.strategy_weights.get(strat, 1.0)
                 pos = state.get("positions", {}).get(sym)
                 if strat == "wheel":
                     chain = self.client.get_option_chain(sym, snap.price, self.cfg.wheel_dte_min,
@@ -364,7 +375,8 @@ class Firm:
                     snap, verdict = self.research.research(sym, bench)
                     pos = state.get("positions", {}).get(sym)
                     conv = 0.70   # technical-signal desk; risk engine still gates size
-                    budget = self.risk.position_budget(equity, conv, 1.0)
+                    budget = self.risk.position_budget(equity, conv, 1.0) \
+                        * hermes.strategy_weights.get("daytrade", 1.0)
                     intents = self.dayts.decide(sym, snap, pos, budget, today)
                     done, deployed = self.execution.execute(intents, state, cycle, equity,
                                                             deployed, conv, allow_new_risk)

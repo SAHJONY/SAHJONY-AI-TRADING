@@ -38,6 +38,10 @@ log = get_logger("hermes")
 _MAX_TILT = 0.10
 _DECAY = 0.97          # exponential decay on the hit-rate memory (recent > ancient)
 _MIN_OBS = 8           # observations required before calibration kicks in
+# Strategy-level capital re-weighting stays in a tight band: a winning desk earns at
+# most +15% budget, a losing one is trimmed at most -30% — never switched off, so it
+# can keep generating the evidence needed to earn its budget back (perpetual loop).
+_W_MIN, _W_MAX = 0.70, 1.15
 _JUMP_LIMIT = 0.25     # |price/last_close - 1| beyond this = suspect feed
 # Annualization for 15-min cycles across the US cash session (~26/day * 252).
 _CYCLES_PER_YEAR = 6552.0
@@ -55,6 +59,7 @@ class HermesReport:
     tilt: Dict[str, float] = field(default_factory=dict)          # calibration nudge per symbol
     hit_rates: Dict[str, float] = field(default_factory=dict)     # realized council accuracy
     data_ok_pct: float = 1.0                                      # share of clean feeds this cycle
+    strategy_weights: Dict[str, float] = field(default_factory=dict)  # capital weight per desk
 
 
 class Hermes:
@@ -127,6 +132,28 @@ class Hermes:
         # Officer blocks all NEW risk on a broken feed. Exits still flow.
         for sym in rep.quarantined:
             rep.tilt[sym] = -1.0
+
+        # 3b) STRATEGY-LEVEL SELF-IMPROVEMENT — consume the execution desk's realized
+        # outcomes (state['hermes_events']) into decayed per-strategy win-rates and
+        # convert them to bounded capital weights. Winning desks earn more budget,
+        # losing desks are trimmed but never switched off — the loop runs forever.
+        strat_mem: Dict[str, Dict[str, float]] = mem.setdefault("strat", {})
+        for ev in state.get("hermes_events") or []:
+            name = str(ev.get("strategy") or "?")
+            try:
+                won = float(ev.get("realized") or 0.0) > 0
+            except (TypeError, ValueError):
+                continue
+            m = strat_mem.get(name, {"n": 0.0, "w": 0.0})
+            m["n"] = m["n"] * _DECAY + 1.0
+            m["w"] = m["w"] * _DECAY + (1.0 if won else 0.0)
+            strat_mem[name] = m
+        state["hermes_events"] = []
+        for name, m in strat_mem.items():
+            if m["n"] >= _MIN_OBS:
+                rate = m["w"] / m["n"]
+                rep.strategy_weights[name] = round(
+                    max(_W_MIN, min(_W_MAX, 1.0 + (rate - 0.5) * 0.6)), 3)
         return rep
 
     # ── 2) SHARP SCORES — honest stats straight off the equity curve ─────────────

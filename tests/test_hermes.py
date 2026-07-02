@@ -80,7 +80,8 @@ def main() -> int:
            "calibration tilt bounded to ±0.10")
     _check(rep2.hit_rates["WINNER"] > 0.9 and rep2.hit_rates["LOSER"] < 0.1,
            "hit-rates reflect realized accuracy")
-    _check(set(st.keys()) == {"hermes"}, "only state['hermes'] is touched")
+    _check(set(st.keys()) <= {"hermes", "hermes_events"},
+           "only Hermes' own state keys are touched")
 
     # ── 3) sharp scores: honest scorecard math ──
     eq, curve = 100000.0, []
@@ -94,6 +95,24 @@ def main() -> int:
     flat = Hermes.scorecard([{"equity": 100000.0}] * 10)
     _check(flat["sharpe"] is None, "zero-variance curve → Sharpe undefined (None), never fabricated")
     _check(Hermes.scorecard([])["sharpe"] is None, "empty curve → no fabricated stats")
+
+    # ── 3b) strategy-level self-improvement: capital leans toward winning desks ──
+    from intelligence.hermes import _W_MIN, _W_MAX
+    h4 = Hermes(load_config())
+    st4 = {}
+    for _ in range(_MIN_OBS + 6):
+        st4.setdefault("hermes_events", []).extend([
+            {"strategy": "ladder", "realized": 25.0},    # ladder keeps winning
+            {"strategy": "wheel", "realized": -12.0},    # wheel keeps losing
+        ])
+        rep4 = h4.review([_row("GOOD", 106.0, good_closes)], st4)
+    _check(rep4.strategy_weights.get("ladder", 0) > 1.0,
+           f"winning desk earns extra budget (ladder ×{rep4.strategy_weights.get('ladder')})")
+    _check(rep4.strategy_weights.get("wheel", 1) < 1.0,
+           f"losing desk gets trimmed (wheel ×{rep4.strategy_weights.get('wheel')})")
+    _check(all(_W_MIN <= w <= _W_MAX for w in rep4.strategy_weights.values()),
+           "strategy weights bounded — a desk is never switched off")
+    _check(st4["hermes_events"] == [], "realized events consumed each review")
 
     # ── 4) kill switch ──
     os.environ["HERMES_ENABLED"] = "false"

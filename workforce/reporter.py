@@ -143,6 +143,7 @@ def _hermes_block(firm, db, cycle_result: Dict[str, Any]) -> Dict[str, Any]:
             "quarantined": list(getattr(rep, "quarantined", [])),
             "issues": dict(getattr(rep, "issues", {})),
             "hit_rates": dict(getattr(rep, "hit_rates", {})),
+            "strategy_weights": dict(getattr(rep, "strategy_weights", {})),
         })
     try:
         out["scorecard"] = hermes.scorecard(db.equity_history(150))
