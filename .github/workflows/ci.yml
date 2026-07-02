@@ -17,14 +17,64 @@ jobs:
         with:
           node-version: 20
 
+      # These steps only apply if the repo grows an npm project (package.json).
+      # Without one, `npm install` / `npm run lint` fail every push — guard them.
       - name: Install dependencies
-        run: npm install
+        run: |
+          if [ -f package.json ]; then npm install; else echo "no package.json — skipping"; fi
 
       - name: Type check
-        run: npx tsc --noEmit
+        run: |
+          if [ -f tsconfig.json ]; then npx tsc --noEmit; else echo "no tsconfig.json — skipping"; fi
 
       - name: Lint
-        run: npm run lint
+        run: |
+          if [ -f package.json ] && node -e "process.exit(require('./package.json').scripts?.lint?0:1)"; then
+            npm run lint
+          else
+            echo "no lint script — skipping"
+          fi
+
+  tests:
+    name: Test Suites (Python + Dashboard)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Syntax gate
+        run: python -m py_compile $(git ls-files '*.py')
+
+      - name: Python test suites
+        run: |
+          python -m tests.test_dry_run
+          python -m tests.test_hermes
+          python -m tests.test_advisors
+          python -m tests.test_credit_spreads
+          python -m tests.test_day_trading
+          python -m tests.test_vol_target
+          python -m tests.test_alt_data
+          python -m tests.test_model_registry
+          python -m tests.test_copy_trading
+          python -m tests.test_circuit_breaker
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Dashboard UI test (jsdom)
+        run: |
+          npm install --no-save jsdom@24
+          node tests/ui_test.js
 
   trading-bot:
     name: Trading Bot (Python)

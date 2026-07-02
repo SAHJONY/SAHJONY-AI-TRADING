@@ -94,6 +94,11 @@ class Config:
     max_daily_drawdown_pct: float = 0.06
     # Kill switch: hard-stop all new risk regardless of P&L (env or a HALT file).
     trading_halt: bool = False
+    # Volatility targeting: when realized portfolio vol (annualized, from the
+    # equity curve) exceeds this, new-position budgets scale down proportionally
+    # (never below ×0.5, never above ×1.0 — it de-risks, never levers up).
+    # 0 disables. Hard ceilings still apply on top.
+    vol_target_annual: float = 0.20
     # Virtual capital cap: trade as if the account were this many dollars, even when
     # the broker balance is larger (e.g. keep $100k paper but only risk $500). 0 =
     # use the full broker equity. All sizing/risk and the equity curve scale to this.
@@ -211,6 +216,7 @@ def load_config() -> Config:
         min_council_conviction=_clamp(_f("MIN_COUNCIL_CONVICTION", 0.55), HARD_MIN_CONVICTION, 1.0),
         max_daily_drawdown_pct=_clamp(_f("MAX_DAILY_DRAWDOWN_PCT", 0.06), 0.01, HARD_MAX_DAILY_DRAWDOWN_PCT),
         trading_halt=_b("TRADING_HALT", False),
+        vol_target_annual=_clamp(_f("VOL_TARGET_ANNUAL", 0.20), 0.0, 2.0),
         trading_capital=max(0.0, _f("TRADING_CAPITAL", 0.0)),
         allow_fractional=_b("ALLOW_FRACTIONAL", True),
         wheel_put_otm_pct=_clamp(_f("WHEEL_PUT_OTM_PCT", 0.10), 0.01, 0.40),

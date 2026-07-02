@@ -275,6 +275,15 @@ class Firm:
         halt = self._halt_check(state, equity)
         allow_new_risk = trade and not halt["halted"]
 
+        # Volatility targeting — realized portfolio vol above target scales every
+        # new-position budget down ([0.5, 1.0]); fault-isolated, neutral on failure.
+        try:
+            vol_scale = self.risk.vol_scalar(
+                [row.get("equity") for row in self.db.equity_history(60)])
+        except Exception as exc:
+            log.warning("vol targeting skipped: %s", exc)
+            vol_scale = 1.0
+
         bench = self.client.get_history(self.cfg.benchmark, 250)["closes"]
 
         # 1) Research Desk — council per ticker
@@ -352,7 +361,7 @@ class Firm:
                 conviction, risk_mult, budget = self.pm.effective(verdict, brain, equity, tilt)
                 # Hermes strategy calibration: budget leans toward desks with a proven
                 # realized edge (bounded 0.70–1.15; hard risk ceilings still apply).
-                budget *= hermes.strategy_weights.get(strat, 1.0)
+                budget *= hermes.strategy_weights.get(strat, 1.0) * vol_scale
                 if strat == "wheel":
                     chain = self.client.get_option_chain(sym, snap.price, self.cfg.wheel_dte_min,
                                                          self.cfg.wheel_dte_max, snap.vol)
@@ -405,7 +414,7 @@ class Firm:
                     pos = state.get("positions", {}).get(sym)
                     conv = 0.70   # technical-signal desk; risk engine still gates size
                     budget = self.risk.position_budget(equity, conv, 1.0) \
-                        * hermes.strategy_weights.get("daytrade", 1.0)
+                        * hermes.strategy_weights.get("daytrade", 1.0) * vol_scale
                     intents = self.dayts.decide(sym, snap, pos, budget, today)
                     done, deployed = self.execution.execute(intents, state, cycle, equity,
                                                             deployed, conv, allow_new_risk)
@@ -434,4 +443,4 @@ class Firm:
         return {"cycle": cycle, "equity": eq_now, "cash": cash_now,
                 "research": research, "brain": brain, "executed": executed,
                 "deployed": self._position_value(state), "halt": halt,
-                "hermes": hermes, "board": board}
+                "hermes": hermes, "board": board, "vol_scale": round(vol_scale, 3)}

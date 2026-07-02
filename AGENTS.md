@@ -23,6 +23,9 @@ into a long-conviction (0–1) and a risk multiplier.
 Research Desk → Chief Strategist (AI Brain) → Portfolio Manager → Strategy Desks
 (Wheel, Credit Spreads, Ladder; + Day/Forex and Copy desks) → Risk Officer →
 Execution Trader → Treasurer/CRM → Reporter.
+Volatility targeting (`RiskEngine.vol_scalar`, `VOL_TARGET_ANNUAL`, default 20%):
+realized portfolio vol above target scales every new-position budget down
+([×0.5, ×1.0] — de-risks only, never levers up); hard ceilings apply on top.
 Equities rotate wheel/ladder/spread deterministically; an open position always
 finishes under the desk that opened it (position-first routing). The Credit
 Spread Desk (`strategies/credit_spreads.py`) sells bull put spreads — max loss
