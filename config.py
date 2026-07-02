@@ -148,10 +148,10 @@ class Config:
     # AI brain & counsellors (advisory overlay on the quant council)
     ai_brain_enabled: bool = False
     # These are FALLBACK defaults. With auto_update_models on (default), the brain
-    # autonomously resolves each provider's latest model at run time (latest Opus
+    # autonomously resolves each provider's latest model at run time (latest Fable
     # for Claude, latest flagship GPT / Grok for the counsellors) and only falls
     # back to these IDs when the lookup can't run (no key / offline / API error).
-    anthropic_model: str = "claude-opus-4-8"   # PRIMARY brain (Claude)
+    anthropic_model: str = "claude-fable-5"    # PRIMARY brain (Claude Fable 5)
     openai_model: str = "gpt-4o"               # counsellor (OpenAI / GPT)
     xai_model: str = "grok-2-latest"           # counsellor (Grok / xAI)
     gemini_model: str = "gemini-2.5-pro"       # counsellor (Gemini / Google)
@@ -235,7 +235,7 @@ def load_config() -> Config:
         voice_language=(os.getenv("VOICE_LANGUAGE", "en") or "en").strip(),
         voice_name=(os.getenv("VOICE_NAME", "june") or "june").strip(),
         ai_brain_enabled=_b("AI_BRAIN_ENABLED", False),
-        anthropic_model=(os.getenv("ANTHROPIC_MODEL", "claude-opus-4-8") or "claude-opus-4-8").strip(),
+        anthropic_model=(os.getenv("ANTHROPIC_MODEL", "claude-fable-5") or "claude-fable-5").strip(),
         openai_model=(os.getenv("OPENAI_MODEL", "gpt-4o") or "gpt-4o").strip(),
         xai_model=(os.getenv("XAI_MODEL", "grok-2-latest") or "grok-2-latest").strip(),
         gemini_model=(os.getenv("GEMINI_MODEL", "gemini-2.5-pro") or "gemini-2.5-pro").strip(),

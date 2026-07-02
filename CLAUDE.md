@@ -40,8 +40,9 @@ native SQLite CRM/database and a static owner dashboard deployed on Vercel.
 ## Deploy
 - `public/` is a zero-build static site. Pushing to the linked Vercel project
   deploys it. The trading loop runs locally/cron (NOT on Vercel serverless).
-- Model IDs: Claude brain default is `claude-opus-4-8` (adaptive thinking). If you
-  touch the Anthropic call, consult the claude-api reference — don't guess the SDK.
+- Model IDs: Claude brain default is `claude-fable-5` (thinking always on; steer
+  depth via `output_config.effort`; server-side refusal fallback to `claude-opus-4-8`).
+  If you touch the Anthropic call, consult the claude-api reference — don't guess the SDK.
 
 ## AI brain hierarchy (owner's directive)
 - **Primary engine / brain:** Claude (`anthropic` SDK).

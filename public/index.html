@@ -1177,10 +1177,11 @@ function Brain(v){
   const b=DATA.brain||{};
   const g=$(`<div class="grid c12"></div>`);
   const s=$(`<div></div>`);
-  s.innerHTML=`<div class="row"><span class="mut">Primary brain</span><span class="tag amber">Claude · ${esc(b.brain_model||'claude-opus-4-8')}</span></div>
+  s.innerHTML=`<div class="row"><span class="mut">Primary brain</span><span class="tag amber">Claude · ${esc(b.brain_model||'claude-fable-5')}</span></div>
     <div class="row"><span class="mut">Status</span><span class="tag ${b.used?'on':'off'}">${b.used?'active this cycle':(b.enabled?'enabled (idle)':'disabled')}</span></div>
     <div class="row"><span class="mut">Posture</span><span class="tag ${b.posture==='risk_off'?'off':(b.posture==='risk_on'?'on':'amber')}">${esc(b.posture||'neutral')}</span></div>
-    <div class="row"><span class="mut">Global risk multiplier</span><span class="tag">×${(b.global_risk_multiplier||1).toFixed(2)}</span></div>`;
+    <div class="row"><span class="mut">Global risk multiplier</span><span class="tag">×${(b.global_risk_multiplier||1).toFixed(2)}</span></div>
+    <div class="row"><span class="mut">Alt-data (QuiverQuant)</span><span class="tag ${(((DATA.health||{}).alt_data||{}).enabled)?'on':'off'}">${(((DATA.health||{}).alt_data||{}).enabled)?'insider + congress · on':'off'}</span></div>`;
   g.appendChild(panel('Chief Strategist', s, '', 'span5'));
   // autonomous model updater — show the live model each provider is pinned to
   const ai=((DATA.health||{}).ai_brain)||{}; const mdl=ai.models||{};

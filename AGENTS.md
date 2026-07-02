@@ -24,7 +24,7 @@ Research Desk → Chief Strategist (AI Brain) → Portfolio Manager → Strategy
 (Wheel, Ladder) → Risk Officer → Execution Trader → Treasurer/CRM → Reporter.
 
 ## AI brain & counsellors (`intelligence/ai_brain.py`)
-- PRIMARY: Claude (`claude-opus-4-8`, Anthropic SDK) — Chief Investment Strategist.
+- PRIMARY: Claude (`claude-fable-5`, Anthropic SDK) — Chief Investment Strategist.
 - COUNSELLORS: OpenAI (GPT) + Grok (xAI) — advisory inputs to the brain.
 Advisory overlay only: nudges conviction + global risk posture; never invents trades.
 Gated by `AI_BRAIN_ENABLED` + provider keys; degrades to neutral if unavailable.

@@ -6,7 +6,8 @@ queries each provider's public *models* endpoint, picks the newest model in the
 preferred tier, and caches the answer so we don't re-query every cycle.
 
 Hierarchy preserved (CLAUDE.md): Claude is the PRIMARY brain (we prefer the
-latest **Opus**), OpenAI (GPT) and Grok (xAI) are counsellors (latest flagship).
+latest **Fable**, Anthropic's most capable line, then fall back through Opus),
+OpenAI (GPT) and Grok (xAI) are counsellors (latest flagship).
 
 Fault isolation: every lookup is wrapped. No key, no network, a slow/odd API —
 any failure falls back to the configured default model. The trading loop never
@@ -98,7 +99,7 @@ def _openai_compatible_models(key: str, url: str) -> List[Dict]:
 # Google/Gemini exposes an OpenAI-compatible surface, so it reuses the same lister.
 _GEMINI_MODELS_URL = "https://generativelanguage.googleapis.com/v1beta/openai/models"
 _PROVIDERS: Dict[str, Tuple[Callable[[str], List[Dict]], Tuple[str, ...]]] = {
-    "anthropic": (lambda k: _anthropic_models(k), ("opus", "sonnet", "haiku")),
+    "anthropic": (lambda k: _anthropic_models(k), ("fable", "opus", "sonnet", "haiku")),
     "openai":    (lambda k: _openai_compatible_models(k, "https://api.openai.com/v1/models"),
                   ("gpt-5", "gpt-4.1", "gpt-4o", "gpt-4", "gpt")),
     "xai":       (lambda k: _openai_compatible_models(k, "https://api.x.ai/v1/models"),

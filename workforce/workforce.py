@@ -28,6 +28,7 @@ from config import Config
 from database import Database
 from intelligence.agents import Council, CouncilVerdict, MarketSnapshot
 from intelligence.ai_brain import AIBrain, BrainVerdict
+from intelligence.alt_data import AltData
 from risk.risk_engine import RiskEngine
 from strategies.base import OrderIntent
 from strategies.copy_trading import CopyTrader
@@ -67,8 +68,11 @@ class PortfolioManager:
             return "ladder"
         return "wheel" if idx % 2 == 0 else "ladder"
 
-    def effective(self, council: CouncilVerdict, brain: BrainVerdict, equity: float):
-        conviction = max(0.0, min(1.0, council.conviction + brain.adjust_for(council.symbol)))
+    def effective(self, council: CouncilVerdict, brain: BrainVerdict, equity: float,
+                  alt_tilt: float = 0.0):
+        # Council conviction, nudged by the AI brain and the alt-data overlay (both
+        # clamped small upstream so they can only tilt, never hijack, the quant signal).
+        conviction = max(0.0, min(1.0, council.conviction + brain.adjust_for(council.symbol) + alt_tilt))
         risk_mult = max(0.1, min(1.2, council.risk_multiplier * brain.global_risk_multiplier))
         budget = self.risk.position_budget(equity, conviction, risk_mult)
         return conviction, risk_mult, budget
@@ -159,6 +163,7 @@ class Firm:
         self.db = db
         self.council = Council()
         self.brain = AIBrain(cfg)
+        self.alt = AltData(cfg)   # QuiverQuant insider/congress alt-data overlay
         self.notifier = Notifier(cfg)
         self.risk = RiskEngine(cfg)
         self.research = ResearchDesk(client, self.council)
@@ -264,6 +269,14 @@ class Firm:
             except Exception as exc:
                 log.error("research failed %s: %s", sym, exc)
 
+        # 1b) Alt-data overlay — QuiverQuant insider/congress disclosures per symbol
+        # (fault-isolated; empty when disabled). Feeds the brain's view and conviction.
+        try:
+            alt_signals = self.alt.signals([r["symbol"] for r in research])
+        except Exception as exc:
+            log.error("alt-data overlay failed: %s", exc)
+            alt_signals = {}
+
         # 2) Chief Strategist — AI brain advisory overlay
         portfolio = [{
             "symbol": r["symbol"], "price": round(r["snap"].price, 2),
@@ -272,6 +285,8 @@ class Firm:
             "alpha": round(r["verdict"].metrics.get("alpha", 0.0), 4),
             "beta": round(r["verdict"].metrics.get("beta", 1.0), 3),
             "vol": round(r["verdict"].metrics.get("vol", 0.0), 3),
+            "alt_tilt": round(alt_signals[r["symbol"]].tilt, 3) if r["symbol"] in alt_signals else 0.0,
+            "alt_note": alt_signals[r["symbol"]].summary if r["symbol"] in alt_signals else "",
         } for r in research]
         brain = self.brain.advise(portfolio)
         if brain.used:
@@ -285,7 +300,8 @@ class Firm:
             sym, snap, verdict = r["symbol"], r["snap"], r["verdict"]
             try:
                 strat = self.pm.assign_strategy(sym, idx)
-                conviction, risk_mult, budget = self.pm.effective(verdict, brain, equity)
+                alt_tilt = alt_signals[sym].tilt if sym in alt_signals else 0.0
+                conviction, risk_mult, budget = self.pm.effective(verdict, brain, equity, alt_tilt)
                 pos = state.get("positions", {}).get(sym)
                 if strat == "wheel":
                     chain = self.client.get_option_chain(sym, snap.price, self.cfg.wheel_dte_min,

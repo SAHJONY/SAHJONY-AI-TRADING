@@ -1,7 +1,7 @@
 """AI Brain & Counsellors — the firm's LLM advisory layer.
 
 Hierarchy (as directed by the owner):
-  • PRIMARY ENGINE / BRAIN  — Claude (Anthropic, `claude-opus-4-8`) via the
+  • PRIMARY ENGINE / BRAIN  — Claude (Anthropic, `claude-fable-5`) via the
     official `anthropic` SDK. Acts as Chief Investment Strategist: it reads the
     quant council's per-symbol verdicts AND the two counsellors' opinions, then
     issues the authoritative advisory overlay.
@@ -197,8 +197,17 @@ class AIBrain:
             "required": ["posture", "global_risk_multiplier", "commentary", "per_symbol_adjust"],
             "additionalProperties": False,
         }
-        resp = client.messages.create(
+        # Claude Fable 5 (the primary brain) keeps thinking always on — we pass
+        # {type:"adaptive"} (any other explicit config 400s) and steer depth via
+        # output_config.effort. Safety classifiers can decline a request with
+        # stop_reason=="refusal"; we opt into the server-side fallback beta so a
+        # decline is transparently re-served by Opus 4.8 inside the same call
+        # (false positives on benign quant work do happen). This is forward-
+        # compatible: Opus-tier models accept the same request shape.
+        resp = client.beta.messages.create(
             model=self.brain_model,
+            betas=["server-side-fallback-2026-06-01"],
+            fallbacks=[{"model": "claude-opus-4-8"}],
             # headroom for adaptive thinking: thinking tokens count toward max_tokens,
             # so a tight cap can truncate the JSON overlay and degrade the brain to neutral.
             max_tokens=8000,
@@ -207,7 +216,11 @@ class AIBrain:
             system=_SYSTEM.format(firm=self.cfg.firm_name),
             messages=[{"role": "user", "content": question + "\n\nCounsellor opinions:\n" + counsel_text}],
         )
-        text = next((b.text for b in resp.content if b.type == "text"), "{}")
+        # Always inspect stop_reason before reading content: a refusal carries an
+        # empty content array, so parsing it blind would look like a broken brain.
+        if getattr(resp, "stop_reason", None) == "refusal":
+            raise RuntimeError("Claude declined the request (stop_reason=refusal)")
+        text = next((b.text for b in resp.content if getattr(b, "type", "") == "text"), "{}")
         data = json.loads(text)
         adj = {s: _clamp(data.get("per_symbol_adjust", {}).get(s, 0.0), -_MAX_ADJ, _MAX_ADJ)
                for s in symbols}
