@@ -33,6 +33,7 @@ from intelligence.hermes import Hermes, HermesReport
 from risk.risk_engine import RiskEngine
 from strategies.base import OrderIntent
 from strategies.copy_trading import CopyTrader
+from strategies.credit_spreads import CreditSpreads
 from strategies.day_trading import DayTrading
 from strategies.trailing_ladder import TrailingLadder
 from strategies.wheel_strategy import WheelStrategy
@@ -64,9 +65,12 @@ class PortfolioManager:
 
     def assign_strategy(self, symbol: str, idx: int) -> str:
         # crypto has no options on Alpaca → always the equity-style ladder.
-        # equities: deterministic split, even index → wheel, odd → ladder.
+        # equities rotate deterministically across the three desks; with the
+        # credit-spread desk disabled it falls back to the classic wheel/ladder split.
         if "/" in symbol:
             return "ladder"
+        if getattr(self.cfg, "credit_spreads_enabled", True):
+            return ("wheel", "ladder", "spread")[idx % 3]
         return "wheel" if idx % 2 == 0 else "ladder"
 
     def effective(self, council: CouncilVerdict, brain: BrainVerdict, equity: float,
@@ -181,6 +185,7 @@ class Firm:
         self.execution = ExecutionTrader(client, self.risk, db, cfg)
         self.wheel = WheelStrategy(cfg)
         self.ladder = TrailingLadder(cfg)
+        self.spread = CreditSpreads(cfg)
         self.copy = CopyTrader(cfg)
         self.dayts = DayTrading(cfg)
 
@@ -322,17 +327,26 @@ class Firm:
             sym, snap, verdict = r["symbol"], r["snap"], r["verdict"]
             try:
                 strat = self.pm.assign_strategy(sym, idx)
+                pos = state.get("positions", {}).get(sym)
+                # Position-first routing: an open trade always finishes under the desk
+                # that opened it, even if the assignment rotation changes over time.
+                if pos and pos.get("strategy") in ("wheel", "ladder", "spread"):
+                    strat = pos["strategy"]
                 alt_tilt = alt_signals[sym].tilt if sym in alt_signals else 0.0
                 tilt = alt_tilt + hermes.tilt.get(sym, 0.0)
                 conviction, risk_mult, budget = self.pm.effective(verdict, brain, equity, tilt)
                 # Hermes strategy calibration: budget leans toward desks with a proven
                 # realized edge (bounded 0.70–1.15; hard risk ceilings still apply).
                 budget *= hermes.strategy_weights.get(strat, 1.0)
-                pos = state.get("positions", {}).get(sym)
                 if strat == "wheel":
                     chain = self.client.get_option_chain(sym, snap.price, self.cfg.wheel_dte_min,
                                                          self.cfg.wheel_dte_max, snap.vol)
                     intents = self.wheel.decide(sym, snap, pos, verdict, budget, chain)
+                elif strat == "spread":
+                    chain = self.client.get_option_chain(sym, snap.price, self.cfg.wheel_dte_min,
+                                                         self.cfg.wheel_dte_max, snap.vol,
+                                                         kinds=("put",))
+                    intents = self.spread.decide(sym, snap, pos, verdict, budget, chain)
                 else:
                     intents = self.ladder.decide(sym, snap, pos, verdict, budget)
                 if trade:

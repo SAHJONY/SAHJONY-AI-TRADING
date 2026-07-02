@@ -21,7 +21,13 @@ into a long-conviction (0–1) and a risk multiplier.
 
 ## Operational workforce (`workforce/workforce.py`)
 Research Desk → Chief Strategist (AI Brain) → Portfolio Manager → Strategy Desks
-(Wheel, Ladder) → Risk Officer → Execution Trader → Treasurer/CRM → Reporter.
+(Wheel, Credit Spreads, Ladder; + Day/Forex and Copy desks) → Risk Officer →
+Execution Trader → Treasurer/CRM → Reporter.
+Equities rotate wheel/ladder/spread deterministically; an open position always
+finishes under the desk that opened it (position-first routing). The Credit
+Spread Desk (`strategies/credit_spreads.py`) sells bull put spreads — max loss
+= (width − credit), known at entry, and that exact number is what the Risk
+Officer gates on. `CREDIT_SPREADS_ENABLED=false` restores the 2-way split.
 
 ## AI brain & counsellors (`intelligence/ai_brain.py`)
 - PRIMARY: Claude (`claude-fable-5`, Anthropic SDK) — Chief Investment Strategist.

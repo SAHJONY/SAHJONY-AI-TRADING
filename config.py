@@ -108,6 +108,11 @@ class Config:
     wheel_dte_min: int = 14
     wheel_dte_max: int = 28
 
+    # credit spreads (defined-risk options desk — bull put spreads)
+    credit_spreads_enabled: bool = True
+    spread_short_otm_pct: float = 0.05   # short put this far below spot
+    spread_width_pct: float = 0.05       # long (hedge) put this much further down
+
     # trailing ladder
     ladder_hard_floor_pct: float = 0.10
     ladder_ratchet_trigger_pct: float = 0.10
@@ -212,6 +217,9 @@ def load_config() -> Config:
         wheel_call_otm_pct=_clamp(_f("WHEEL_CALL_OTM_PCT", 0.10), 0.01, 0.40),
         wheel_dte_min=max(1, _i("WHEEL_DTE_MIN", 14)),
         wheel_dte_max=max(2, _i("WHEEL_DTE_MAX", 28)),
+        credit_spreads_enabled=_b("CREDIT_SPREADS_ENABLED", True),
+        spread_short_otm_pct=_clamp(_f("SPREAD_SHORT_OTM_PCT", 0.05), 0.02, 0.20),
+        spread_width_pct=_clamp(_f("SPREAD_WIDTH_PCT", 0.05), 0.02, 0.20),
         ladder_hard_floor_pct=_clamp(_f("LADDER_HARD_FLOOR_PCT", 0.10), 0.02, 0.50),
         ladder_ratchet_trigger_pct=_clamp(_f("LADDER_RATCHET_TRIGGER_PCT", 0.10), 0.02, 1.0),
         ladder_trail_pct=_clamp(_f("LADDER_TRAIL_PCT", 0.05), 0.01, 0.50),

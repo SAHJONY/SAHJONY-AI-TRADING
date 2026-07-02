@@ -39,7 +39,9 @@ jobs:
       NVIDIA_MODEL: ${{ vars.NVIDIA_MODEL }}
       AI_BRAIN_ENABLED: ${{ vars.AI_BRAIN_ENABLED || secrets.AI_BRAIN_ENABLED || ((secrets.ANTHROPIC_API_KEY != '' || secrets.NVIDIA_API_KEY != '') && 'true' || 'false') }}
       AUTO_UPDATE_MODELS: 'true'
-      TICKERS: ${{ vars.TICKERS || 'AAPL,MSFT,NVDA,GOOGL,AMZN,TSLA,META,SPY,QQQ,DIA,BTC/USD,ETH/USD,SOL/USD,LTC/USD' }}
+      # Universe spans asset classes: mega-cap equities, index ETFs, commodities
+      # (GLD/SLV), bonds (TLT), international (EEM) and 24/7 crypto.
+      TICKERS: ${{ vars.TICKERS || 'AAPL,MSFT,NVDA,GOOGL,AMZN,TSLA,META,SPY,QQQ,DIA,GLD,SLV,TLT,EEM,BTC/USD,ETH/USD,SOL/USD,LTC/USD' }}
       MARKET_HOURS: ${{ vars.MARKET_HOURS || '24_7' }}
       CYCLE_MINUTES: ${{ vars.CYCLE_MINUTES || '15' }}
       MAX_ALLOCATION_PCT: ${{ vars.MAX_ALLOCATION_PCT || '0.12' }}
@@ -80,6 +82,8 @@ jobs:
       # bounded self-calibration). On by default; set Variable HERMES_ENABLED=false to disable.
       HERMES_ENABLED: ${{ vars.HERMES_ENABLED || 'true' }}
       HERMES_GOAL: ${{ vars.HERMES_GOAL || '' }}
+      # Credit Spread Desk — defined-risk bull put spreads (max loss known at entry).
+      CREDIT_SPREADS_ENABLED: ${{ vars.CREDIT_SPREADS_ENABLED || 'true' }}
     steps:
       - uses: actions/checkout@v4
 
