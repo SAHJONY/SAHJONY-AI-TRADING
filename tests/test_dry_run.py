@@ -69,9 +69,14 @@ def main() -> int:
     _check(len(db.equity_history()) == 8, "equity curve has 8 points in DB")
     _check(len(db.recent_trades()) >= 0, "trades table queryable")
 
-    # no fabricated 000/0000 wheel pricks should appear as real numbers — sanity on positions
+    # Sanity on positions: a finite, real share count (no NaN/inf garbage).
+    # NOTE: negative shares are VALID — the Pairs/StatArb desk sells short, so the
+    # old `shares >= 0` assertion contradicted that feature and tripped whenever a
+    # short happened to be open at cycle-end.
     for pos in st["positions"]:
-        _check(pos["shares"] >= 0, f"position {pos['symbol']} has sane share count")
+        sh = pos["shares"]
+        _check(isinstance(sh, (int, float)) and sh == sh and abs(sh) < 1e12,
+               f"position {pos['symbol']} has a finite share count (shorts allowed)")
 
     # ── investor read-only share links ──
     inv_id = db.upsert_investor("Test Investor", "test@example.com", kind="investor")
