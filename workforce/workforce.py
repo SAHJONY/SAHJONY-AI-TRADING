@@ -152,9 +152,14 @@ class ExecutionTrader:
                     log.warning("order not filled %s: %s", intent.symbol, res)
                     continue
                 self._apply(intent, state)
-                # buys and risk-gated short opens both consume deployed budget
-                if intent.side == "buy" or (intent.risk_check and intent.side == "sell"
-                                            and intent.kind == "equity"):
+                # Consume deployed budget for: equity buys, risk-gated equity shorts,
+                # and cash-secured puts (sell_to_open carries collateral in
+                # est_notional; covered calls are sell_to_open with est_notional 0,
+                # so they correctly add nothing). Keeps stacked CSPs within the cap
+                # within a single cycle, before _gross_exposure re-seeds next cycle.
+                if (intent.side == "buy"
+                        or (intent.risk_check and intent.side == "sell" and intent.kind == "equity")
+                        or intent.side == "sell_to_open"):
                     deployed += intent.est_notional
                 self.db.log_trade({
                     "cycle": cycle, "symbol": intent.symbol, "strategy": intent.strategy,
@@ -206,12 +211,24 @@ class Firm:
 
     def _gross_exposure(self, state: Dict[str, Any]) -> float:
         """GROSS exposure (|shares|·price) — what the deployed-capital cap gates on.
-        A short is risk too; it must consume the same risk budget as a long."""
+        A short is risk too; it must consume the same risk budget as a long.
+        Includes cash-secured-put collateral (0-share short_put legs) — see below."""
         total = 0.0
         for sym, pos in state.get("positions", {}).items():
             shares = pos.get("shares", 0) or 0
             if shares:
                 total += abs(shares) * self.client.get_price(sym)
+        return total + self._csp_collateral(state)
+
+    def _csp_collateral(self, state: Dict[str, Any]) -> float:
+        """Capital committed by open cash-secured puts (stage 'short_put'). A CSP
+        holds 0 shares, so _gross_exposure's share loop can't see it — but its
+        strike×100×contracts collateral is real committed capital and must count
+        against the total-deployed cap, or stacked CSPs quietly breach it."""
+        total = 0.0
+        for pos in state.get("positions", {}).values():
+            if pos.get("stage") == "short_put":
+                total += float(pos.get("strike", 0.0)) * 100 * int(pos.get("contracts", 1))
         return total
 
     def _position_cost(self, state: Dict[str, Any]) -> float:
