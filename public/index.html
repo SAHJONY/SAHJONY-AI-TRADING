@@ -58,7 +58,9 @@
       radial-gradient(46% 44% at 62% 88%,rgba(231,182,74,.045),transparent 60%);
     animation:aurora 44s ease-in-out infinite}
   @keyframes aurora{0%{transform:translate3d(-3%,-1.5%,0) scale(1)}50%{transform:translate3d(3%,2%,0) scale(1.08)}100%{transform:translate3d(-3%,-1.5%,0) scale(1)}}
-  @media(prefers-reduced-motion:reduce){body::after{animation:none}}
+  @media(prefers-reduced-motion:reduce){
+    body::after,.tape .track,.dot.live,#voiceBtn.listening{animation:none!important}
+  }
   main,header,nav,footer,.tape{position:relative;z-index:1}
   .mono{font-family:var(--mono)}
   .up{color:var(--up)} .down{color:var(--down)} .mut{color:var(--mut)} .amber{color:var(--amber)}
@@ -87,6 +89,9 @@
     transition:border-color .2s}
   .stat:hover{border-color:var(--line2)}
   .stat b{color:var(--txt);font-weight:600}
+  /* data-freshness badge: green (live) → amber (aging) → red (stale/frozen worker) */
+  .stat.warn{color:var(--amber);border-color:rgba(255,176,0,.4);background:rgba(255,176,0,.07)}
+  .stat.stale{color:var(--down);border-color:rgba(255,92,108,.5);background:rgba(255,92,108,.09)}
   .dot{width:7px;height:7px;border-radius:50%;background:var(--dim);box-shadow:0 0 0 0 rgba(0,0,0,0)}
   .dot.g{background:var(--up);box-shadow:0 0 9px var(--up)} .dot.r{background:var(--down);box-shadow:0 0 9px var(--down)} .dot.a{background:var(--amber);box-shadow:0 0 9px var(--amber)}
   .dot.live{background:var(--up);animation:pulse 1.4s infinite}
@@ -292,13 +297,14 @@
   <span class="stat">CYC <b id="cycTxt">—</b></span>
   <span class="stat"><span class="dot" id="dStream"></span>STREAM</span>
   <span class="stat mono" id="clock">--:--:-- UTC</span>
+  <span class="stat mono" id="freshStat" title="Data freshness — time since the desk last updated this snapshot" style="display:none"><span class="dot" id="dFresh"></span><span id="freshTxt">—</span></span>
   <span class="badge" id="viewerBadge" style="display:none" title="Shareable read-only view — no changes can be made from here">◇ VIEW ONLY</span>
   <span class="mpill" id="mode">—</span>
   <a class="btn" id="account" href="./login.html">SIGN IN</a>
-  <button class="btn" id="voiceLang" title="Voice language — English / Español">🌐 EN</button>
-  <button class="btn" id="voiceWake" title="Hands-free — say “Hey Sahjony …” to command">👂 WAKE</button>
-  <button class="btn" id="voiceBtn" title="Voice control — click and speak (English / Español)" aria-label="Voice control">🎙️ VOICE</button>
-  <button class="btn" onclick="load()">↻</button>
+  <button class="btn" id="voiceLang" title="Voice language — English / Español" aria-label="Toggle voice language, English or Spanish">🌐 EN</button>
+  <button class="btn" id="voiceWake" title="Hands-free — say “Hey Sahjony …” to command" aria-label="Toggle hands-free wake word">👂 WAKE</button>
+  <button class="btn" id="voiceBtn" title="Voice control — click and speak (English / Español)" aria-label="Voice control — click and speak">🎙️ VOICE</button>
+  <button class="btn" onclick="load()" title="Refresh data now" aria-label="Refresh data now">↻</button>
 </header>
 
 <div class="tape"><div class="track" id="tape"></div></div>
@@ -341,7 +347,27 @@ const pct=(n)=>(Number(n||0)>=0?"+":"")+Number(n||0).toFixed(2)+"%";
 const num=(n,d=2)=>Number(n||0).toLocaleString(undefined,{maximumFractionDigits:d});
 
 // ── clock ──
-setInterval(()=>{const el=document.getElementById('clock');if(el)el.textContent=new Date().toISOString().slice(11,19)+" UTC";},1000);
+// The clock keeps ticking even if the worker dies, so a frozen board can look
+// "live". updateFreshness() flags a stale snapshot (worker stopped / deploy frozen).
+function tsMs(ts){const d=ts?Date.parse(ts):NaN;return isNaN(d)?null:d;}
+function relAge(ms){const s=Math.max(0,Math.round(ms/1000));
+  if(s<60)return s+"s ago";const m=Math.round(s/60);
+  if(m<60)return m+"m ago";const h=Math.round(m/60);
+  if(h<48)return h+"h ago";return Math.round(h/24)+"d ago";}
+const FRESH_WARN_MS=20*60*1000, FRESH_STALE_MS=45*60*1000;  // snapshot cadence ~15min
+function updateFreshness(){
+  const stat=document.getElementById('freshStat');if(!stat)return;
+  const t=(typeof DATA!=='undefined'&&DATA&&DATA.ts)?tsMs(DATA.ts):null;
+  if(t==null){stat.style.display='none';return;}
+  stat.style.display='';
+  const age=Date.now()-t,dot=document.getElementById('dFresh'),txt=document.getElementById('freshTxt');
+  txt.textContent='updated '+relAge(age);
+  stat.classList.remove('warn','stale');
+  if(age>=FRESH_STALE_MS){stat.classList.add('stale');dot.className='dot r';stat.title='STALE — the desk has not updated this snapshot recently. The worker may be stopped.';}
+  else if(age>=FRESH_WARN_MS){stat.classList.add('warn');dot.className='dot a';stat.title='Aging — snapshot older than one update cycle.';}
+  else{dot.className='dot g';stat.title='Fresh — snapshot within the normal update cadence.';}
+}
+setInterval(()=>{const el=document.getElementById('clock');if(el)el.textContent=new Date().toISOString().slice(11,19)+" UTC";updateFreshness();},1000);
 
 // ── Supabase live-control plane ──
 async function refreshDesk(){
@@ -850,11 +876,13 @@ function render(){
   const v=document.getElementById('view');
   if(!SESSION && OWNER_TABS.includes(TAB)) TAB="Parquet";   // viewers never land on owner tabs
   if(!DATA||DATA._error){v.innerHTML=`<div class="panel"><div class="pb empty">No data feed. Run the desk or sign in. ${esc(DATA&&DATA._error||'')}</div></div>`;
-    document.getElementById('foot').textContent='no feed'; return;}
+    document.getElementById('foot').textContent='no feed'; updateFreshness(); return;}
   document.getElementById('firm').textContent=(DATA.firm||'SAHJONY CAPITAL').replace(/ LLC$/,'');
   setStatus(); buildTape();
+  const _tms=tsMs(DATA.ts), _when=_tms!=null?`${new Date(_tms).toLocaleString()} (${relAge(Date.now()-_tms)})`:'time unknown';
   document.getElementById('foot').textContent =
-    `cycle ${DATA.cycle} · ${new Date(DATA.ts).toLocaleString()} · ${DESK?'LIVE via Supabase':'static snapshot'} · auto-refresh 30s`;
+    `cycle ${DATA.cycle} · ${_when} · ${DESK?'LIVE via Supabase':'static snapshot'} · auto-refresh 30s`;
+  updateFreshness();
   v.innerHTML="";
   ({Parquet,Perf,Markets,Macro,News,Council,Book,Brain,Controls,Workforce,Env}[TAB]||Parquet)(v);
 }
