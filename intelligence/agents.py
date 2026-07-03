@@ -64,8 +64,13 @@ class AgentVerdict:
     metrics: Dict[str, float] = field(default_factory=dict)
 
     def clamp(self) -> "AgentVerdict":
-        self.score = float(max(-1.0, min(1.0, self.score)))
-        self.confidence = float(max(0.0, min(1.0, self.confidence)))
+        # Guard non-finite FIRST: min(1.0, nan) returns 1.0 in Python, so a NaN/inf
+        # score (e.g. from a bad price tick feeding tanh) would otherwise clamp to
+        # +1.0 with confidence 1.0 — a fabricated max-conviction LONG. A broken
+        # input must fail to NEUTRAL (0 score, 0 confidence), never to max-bullish.
+        s, c = self.score, self.confidence
+        self.score = 0.0 if not math.isfinite(s) else float(max(-1.0, min(1.0, s)))
+        self.confidence = 0.0 if not math.isfinite(c) else float(max(0.0, min(1.0, c)))
         return self
 
 
@@ -118,7 +123,10 @@ class BridgewaterRisk(Agent):
 
     def evaluate(self, s):
         vol = s.vol or 0.0
-        risk_scale = 0.0 if vol <= 0 else min(1.0, self.TARGET_VOL / vol)
+        # Vol-targeting: size ∝ TARGET_VOL/vol, capped at 1.0. As vol→0 the limit is
+        # 1.0 (a calm market gets full, capped size) — so a flat/zero-vol reading
+        # must map to 1.0, not 0.0, or the calmest market gets the SMALLEST size.
+        risk_scale = 1.0 if vol <= 0 else min(1.0, self.TARGET_VOL / vol)
         # defensive tilt when vol blows out far past target
         score = -_tanh((vol - self.TARGET_VOL) * 2.0) * 0.5
         return AgentVerdict(self.name, self.persona, score, 0.6,
