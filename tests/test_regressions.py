@@ -21,6 +21,9 @@ from strategies.wheel_strategy import WheelStrategy
 from strategies.trailing_ladder import TrailingLadder
 from strategies.copy_trading import CopyTrader
 from intelligence.agents import AgentVerdict, Council, MarketSnapshot, BridgewaterRisk
+from database import Database
+from utils.alpaca_client import AlpacaClient
+from workforce import Firm
 
 # Hermetic: config.py runs load_dotenv() at import, so scrub broker creds AFTER
 # importing it — this guarantees offline-sim regardless of the developer's .env.
@@ -156,6 +159,22 @@ def test_council_nan_price_stays_neutral(cfg):
            f"NaN price → neutral council (conviction {cv.conviction:.3f}, no pinned agents)")
 
 
+def test_csp_collateral_counts_toward_cap(cfg):
+    """Bug #csp: a cash-secured put holds 0 shares, so it must be counted via its
+    strike×100×contracts collateral — otherwise it escapes the total-deployed cap."""
+    import tempfile
+    db = Database(os.path.join(tempfile.mkdtemp(), "t.db"))
+    firm = Firm(cfg, AlpacaClient(cfg), db)
+    state = {"positions": {"X": {"strategy": "wheel", "stage": "short_put", "shares": 0,
+                                 "strike": 90.0, "contracts": 3}}}
+    coll = firm._csp_collateral(state)
+    _check(abs(coll - 90.0 * 100 * 3) < 1e-6,
+           f"CSP collateral = strike×100×contracts = $27,000 (got ${coll:,.0f})")
+    _check(firm._gross_exposure(state) >= coll,
+           "gross exposure (the deployed-cap seed) includes CSP collateral")
+    db.close()
+
+
 def test_bridgewater_zero_vol_full_size(cfg):
     """Bug #intel-2: a flat / zero-vol market must map to full (capped) size, not
     the minimum — the vol-targeting limit as vol→0 is 1.0."""
@@ -175,6 +194,7 @@ def main() -> int:
     test_copy_buy_weighted_cost_basis(cfg)
     test_clamp_neutralizes_nonfinite(cfg)
     test_council_nan_price_stays_neutral(cfg)
+    test_csp_collateral_counts_toward_cap(cfg)
     test_bridgewater_zero_vol_full_size(cfg)
     print("\nALL REGRESSION TESTS PASSED ✓")
     return 0

@@ -10,5 +10,10 @@ alpaca-py>=0.20.0
 # AI brain (primary engine) — Claude via the official Anthropic SDK
 anthropic>=0.40.0
 
+# Robinhood Crypto (REAL-MONEY live venue, BROKER=robinhood_crypto) — Ed25519
+# request signing. Orders are hard-gated (dry-run until LIVE_TRADING_ACK +
+# ROBINHOOD_LIVE=true). Verify auth read-only first: python -m scripts.robinhood_check
+pynacl>=1.5.0
+
 # The system also runs offline-sim with only numpy + pandas + python-dotenv:
 # no broker keys, no LLM keys, zero real orders. Install the rest to go live.
