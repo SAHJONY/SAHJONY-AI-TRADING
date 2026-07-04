@@ -184,6 +184,29 @@ def test_bridgewater_zero_vol_full_size(cfg):
            f"zero-vol risk_scale is 1.0 (full size), got {v.metrics['risk_scale']}")
 
 
+def test_equity_regime_drops_capital_reanchors(cfg):
+    """A TRADING_CAPITAL change re-anchors the equity baseline (e.g. $100k desk →
+    $50 crypto sleeve), leaving synthetic >50% cliffs that are NOT trading P&L.
+    equity_history_regime must return only the CURRENT regime so those cliffs
+    can't poison the Sharpe scorecard, vol-targeting, or the dashboard chart."""
+    import tempfile
+    from intelligence.hermes import Hermes
+    db = Database(os.path.join(tempfile.mkdtemp(), "regime.db"))
+    # $100k paper era → cliff to $500 → cliff to $50 sleeve, then real small moves
+    curve = [100000, 100100, 99900, 500, 505, 498, 510, 50, 50.2, 49.8, 50.5, 50.1]
+    for i, e in enumerate(curve):
+        db.log_equity(i + 1, e, e, 0.0, 0.0, 0.0, "LIVE")
+    reg = db.equity_history_regime(150)
+    _check(reg[0]["equity"] == 50.0 and reg[0]["cycle"] == 8,
+           f"regime starts at the $50 sleeve (cycle 8), got cycle {reg[0]['cycle']} @ {reg[0]['equity']}")
+    _check(len(reg) == 5, f"regime keeps only the current sleeve's 5 points, got {len(reg)}")
+    # the fake -99.95% cliff must be gone from the scorecard
+    full_dd = Hermes.scorecard(db.equity_history(150))["max_drawdown_pct"]
+    reg_dd = Hermes.scorecard(reg)["max_drawdown_pct"]
+    _check(full_dd < -99 and reg_dd > -5,
+           f"cliff drawdown removed: full {full_dd}% → regime {reg_dd}%")
+
+
 def main() -> int:
     cfg = load_config()
     _check(cfg.mode == "offline-sim", "hermetic: runs in offline-sim")
@@ -196,6 +219,7 @@ def main() -> int:
     test_council_nan_price_stays_neutral(cfg)
     test_csp_collateral_counts_toward_cap(cfg)
     test_bridgewater_zero_vol_full_size(cfg)
+    test_equity_regime_drops_capital_reanchors(cfg)
     print("\nALL REGRESSION TESTS PASSED ✓")
     return 0
 

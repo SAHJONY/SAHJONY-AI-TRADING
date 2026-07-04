@@ -311,7 +311,7 @@ class Firm:
         # new-position budget down ([0.5, 1.0]); fault-isolated, neutral on failure.
         try:
             vol_scale = self.risk.vol_scalar(
-                [row.get("equity") for row in self.db.equity_history(60)])
+                [row.get("equity") for row in self.db.equity_history_regime(60)])
         except Exception as exc:
             log.warning("vol targeting skipped: %s", exc)
             vol_scale = 1.0

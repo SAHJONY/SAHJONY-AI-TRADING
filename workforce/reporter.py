@@ -157,7 +157,7 @@ def _hermes_block(firm, db, cycle_result: Dict[str, Any]) -> Dict[str, Any]:
             "strategy_weights": dict(getattr(rep, "strategy_weights", {})),
         })
     try:
-        out["scorecard"] = hermes.scorecard(db.equity_history(150))
+        out["scorecard"] = hermes.scorecard(db.equity_history_regime(150))
     except Exception:
         out["scorecard"] = {}
     return out
@@ -267,7 +267,7 @@ def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[st
         "positions": positions,
         "crm": db.fund_summary(),
         "recent_trades": db.recent_trades(15),
-        "equity_curve": db.equity_history(150),
+        "equity_curve": db.equity_history_regime(150),
         "decisions": list(reversed(state.get("history", [])[-25:])),
         "agents_roster": [{"name": n, "role": role} for n, role in AGENT_ROSTER],
         "workforce": [{"role": n, "mandate": m} for n, m in WORKFORCE],
