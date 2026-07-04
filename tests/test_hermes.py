@@ -63,6 +63,21 @@ def main() -> int:
     _check("STALE" not in rep.quarantined and "STALE" in rep.issues, "stale feed flagged but not quarantined")
     _check(abs(rep.data_ok_pct - 1 / 5) < 1e-9, f"data_ok_pct honest (got {rep.data_ok_pct})")
 
+    # ── 1b) REGRESSION: NumPy-array closes must validate without crashing ──
+    # Real broker adapters (Robinhood crypto, Alpaca) hand Hermes an np.ndarray
+    # for closes. The old `getattr(snap,"closes",[]) or []` raised "truth value of
+    # an array is ambiguous", which was caught and mis-scored as a HARD failure —
+    # quarantining every crypto symbol so the desk never traded. Pin it.
+    import numpy as np
+    repnp = Hermes(load_config()).review([
+        _row("NPGOOD", good_closes[-1], np.array(good_closes)),   # clean ndarray history
+        _row("NPEMPTY", 50.0, np.array([])),                      # empty ndarray → soft only
+    ], {})
+    _check("NPGOOD" not in repnp.quarantined,
+           "ndarray closes validate cleanly (no ambiguous-truth crash)")
+    _check(not any("validator error" in " ".join(v) for v in repnp.issues.values()),
+           "no validator error surfaced on ndarray history")
+
     # ── 2) self-improvement: correct calls → positive tilt; wrong → negative ──
     h2 = Hermes(load_config())
     st = {}
