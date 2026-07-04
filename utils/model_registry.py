@@ -30,9 +30,15 @@ from utils.logger import get_logger
 log = get_logger("model_registry")
 
 _DEFAULT_TTL_HOURS = 24.0
-# substrings that mark a NON-chat / non-flagship variant we never want to pick
+# substrings that mark a variant we never want as a chat counsellor:
+#  - non-chat utility models (embeddings, audio, image, moderation, …)
+#  - "-pro" tier models: OpenAI's gpt-*-pro are Responses-API-only and 404 on
+#    v1/chat/completions; Gemini's *-pro-preview carry a tiny free quota and 429.
+#    Our counsellors speak only chat/completions and want a model that actually
+#    answers, so we steer to the standard/flash tier (plenty for a <120-word view).
 _EXCLUDE = ("embed", "whisper", "tts", "audio", "realtime", "moderation",
-            "dall-e", "image", "vision-only", "search", "transcribe", "instruct")
+            "dall-e", "image", "vision-only", "search", "transcribe", "instruct",
+            "-pro")
 
 
 def _refresh_hours() -> float:
@@ -134,7 +140,11 @@ def resolve(provider: str, key: str, default: str, *, force: bool = False) -> st
         return default
     cache = _load_cache()
     entry = cache.get(provider) or {}
-    fresh = (not force and entry.get("model")
+    # A cached pick that a newer exclusion rule now rejects (e.g. a "-pro" model
+    # that 404s/429s on the chat endpoint) must NOT be served just because it's
+    # fresh — re-query so the fix takes effect without waiting out the 24h TTL.
+    cached_ok = entry.get("model") and _ok_id(entry["model"])
+    fresh = (not force and cached_ok
              and (time.time() - entry.get("ts", 0)) < _refresh_hours() * 3600)
     if fresh:
         return entry["model"]
@@ -144,9 +154,9 @@ def resolve(provider: str, key: str, default: str, *, force: bool = False) -> st
         latest = _pick_latest(lister(key), prefer)
     except Exception as exc:  # network/API/parse — never break the brain
         log.warning("%s model lookup failed (%s) → using %s", provider, exc, default)
-        return entry.get("model") or default
+        return (entry["model"] if cached_ok else "") or default
     if not latest:
-        return entry.get("model") or default
+        return (entry["model"] if cached_ok else "") or default
 
     if latest != entry.get("model"):
         log.info("%s latest model: %s%s", provider, latest,
