@@ -316,16 +316,29 @@ class AIBrain:
         """OpenAI-compatible chat endpoint (both OpenAI and xAI speak it)."""
         try:
             import requests
-            r = requests.post(url, timeout=45,
-                              headers={"Authorization": "Bearer " + key,
-                                       "Content-Type": "application/json"},
-                              json={"model": model, "max_tokens": 400, "temperature": 0.3,
-                                    "messages": [
-                                        {"role": "system", "content":
-                                         f"You are a counsellor to the Chief Strategist of "
-                                         f"{self.cfg.firm_name}. Give a concise (<120 words) risk-"
-                                         f"aware view on the portfolio. You advise; you do not decide."},
-                                        {"role": "user", "content": question}]})
+            headers = {"Authorization": "Bearer " + key, "Content-Type": "application/json"}
+            payload = {"model": model, "max_tokens": 400, "temperature": 0.3,
+                       "messages": [
+                           {"role": "system", "content":
+                            f"You are a counsellor to the Chief Strategist of "
+                            f"{self.cfg.firm_name}. Give a concise (<120 words) risk-"
+                            f"aware view on the portfolio. You advise; you do not decide."},
+                           {"role": "user", "content": question}]}
+            r = requests.post(url, timeout=45, headers=headers, json=payload)
+            # GPT-5-family reasoning models reject the classic chat params: they want
+            # 'max_completion_tokens' (not 'max_tokens') and only the default
+            # temperature. Adapt to whatever the 400 body names, then retry once.
+            if r.status_code == 400:
+                body = (r.text or "").lower()
+                adapted = False
+                if "max_completion_tokens" in body or "max_tokens" in body:
+                    payload["max_completion_tokens"] = payload.pop("max_tokens", 400)
+                    adapted = True
+                if "temperature" in body:
+                    payload.pop("temperature", None)
+                    adapted = True
+                if adapted:
+                    r = requests.post(url, timeout=45, headers=headers, json=payload)
             if not r.ok:
                 # Log the model tried AND the provider's error body: a 4xx body says
                 # exactly why (model_not_found vs invalid_api_key vs quota), which the
