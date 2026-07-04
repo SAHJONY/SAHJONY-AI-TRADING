@@ -913,6 +913,7 @@ function Perf(v){
   const dd=ddSeries(cur), maxDD=dd.length?Math.min(...dd):0;
   const totRet=(p.total_return_pct!=null)?p.total_return_pct:(acc.equity_start?((acc.equity/acc.equity_start-1)*100):0);
   const g=$(`<div class="grid c12"></div>`);
+  const gp=goalPanel(cur,b,maxDD); if(gp) g.appendChild(gp);
   if(cur.length<30) g.appendChild($(`<div class="span12"><div class="cb" style="border-color:var(--amber);background:linear-gradient(90deg,rgba(255,176,0,.12),transparent);color:#ffe9b0">⚠ Only ${cur.length} cycles of history — these numbers are <b>noise, not skill</b>. They mean little until ~30+ cycles across different market conditions. A few good cycles ≠ an edge.</div></div>`));
   const kw=$(`<div class="span12"><div class="kpis"></div></div>`), k=kw.querySelector('.kpis');
   const tile=(l,val,cls,acc2)=>k.appendChild($(`<div class="kpi" style="--accent:${acc2||'var(--amber)'}"><div class="l">${l}</div><div class="v ${cls||''}">${val}</div></div>`));
@@ -929,6 +930,37 @@ function Perf(v){
   g.appendChild(panel('Drawdown · Underwater',drawdownChart(cur,160),'peak-to-trough %','span12'));
   g.appendChild(panel('Reality Check', `<div class="commentary"><b>Alpha vs SPY is the only number that matters.</b> It must stay positive across many cycles and different market regimes before it means anything — beating the market briefly is usually luck. The council uses transparent public-domain signals, not a proven edge; this panel exists to <b>prove or disprove</b> the desk with data, not to flatter it. Keep it on paper until the track record earns trust.</div>`,'','span12'));
   v.appendChild(g);
+}
+
+// ── Goal · Progress: scores the live HERMES_GOAL against its measurable gates ──
+// (beat buy&hold / drawdown<15% / track-record toward 90 days) — honest north star.
+function goalPanel(cur,b,maxDD){
+  const goal=((((DATA.health||{}).hermes)||{}).goal)||'';
+  if(!goal) return null;
+  const alpha=(b&&b.alpha_pct!=null)?b.alpha_pct:null;
+  const DD_LIMIT=15, TARGET_DAYS=90;
+  const ddOk=Math.abs(maxDD)<DD_LIMIT, alphaOk=(alpha!=null&&alpha>0);
+  let days=0;
+  if(cur.length>=2){const t0=Date.parse(cur[0].ts||''),t1=Date.parse(cur[cur.length-1].ts||'');if(t1>t0)days=(t1-t0)/86400000;}
+  let verdict,vcls,vmsg;
+  if(alpha==null){verdict='GATHERING DATA';vcls='amber';vmsg='Alpha vs benchmark is still anchoring — no verdict yet.';}
+  else if(!ddOk){verdict='DRAWDOWN LIMIT HIT';vcls='off';vmsg='Max drawdown breached the 15% mandate — de-risk before anything else.';}
+  else if(!alphaOk){verdict='NO EDGE YET';vcls='off';vmsg='Not beating buy-and-hold. Stay on paper; do not scale live capital.';}
+  else if(days<TARGET_DAYS){verdict='PROMISING · BUILDING';vcls='amber';vmsg='Beating buy-and-hold within risk limits — keep compounding the track record before scaling.';}
+  else {verdict='EDGE HOLDING';vcls='on';vmsg='Positive alpha within risk limits over a meaningful window — candidate for a deliberate capital scale-up.';}
+  const gate=(label,val,ok,detail)=>`<div style="margin:7px 0">
+    <div class="row"><span class="mut">${label}</span><span class="tag ${ok?'on':'off'}">${val}</span></div>
+    <div class="mut mono" style="font-size:10px;margin-top:2px">${detail}</div></div>`;
+  const bh=(b&&b.return_pct!=null)?((b.return_pct>=0?'+':'')+b.return_pct.toFixed(1)+'%'):'—';
+  const body=`
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px">
+      <span class="tag ${vcls}" style="font-size:13px;padding:6px 13px;letter-spacing:1px">${verdict}</span>
+      <span class="commentary" style="flex:1;min-width:220px">${vmsg}</span></div>
+    ${gate('① Beat buy &amp; hold (alpha vs '+((b&&b.symbol)||'BTC')+')', alpha==null?'—':(alpha>=0?'+':'')+alpha.toFixed(2)+'%', alphaOk, 'goal: stay positive · '+((b&&b.symbol)||'BTC')+' buy&hold '+bh)}
+    ${gate('② Max drawdown under 15%', maxDD.toFixed(1)+'%', ddOk, 'mandate: keep shallower than -15% · currently using '+(Math.min(999,Math.abs(maxDD)/DD_LIMIT*100)).toFixed(0)+'% of the limit')}
+    ${gate('③ Track record toward 90 days', days.toFixed(1)+' days', days>=TARGET_DAYS, 'prove it is edge, not luck · '+(Math.min(100,days/TARGET_DAYS*100)).toFixed(0)+'% there')}
+    <div class="commentary" style="margin-top:9px;font-size:11px;opacity:.85"><b>Goal:</b> ${goal}</div>`;
+  return panel('🎯 Goal · Progress', body, 'north star', 'span12');
 }
 
 // ── panels helper ──
