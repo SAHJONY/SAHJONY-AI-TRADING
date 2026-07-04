@@ -127,12 +127,35 @@ jobs:
             state.json
             model_cache.json
             data
+            desks
           key: sahjony-state-${{ github.run_id }}
           restore-keys: |
             sahjony-state-
 
       - name: Refresh copy-trading signals (SEC Form 4 insider buys)
         run: python -m scripts.build_copy_signals || true
+
+      # Paper "trainer" desk — Alpaca crypto, SAME universe as the live bot but
+      # more capital + a looser conviction gate, so it explores more setups. It
+      # trades zero real money and feeds realized outcomes into public/knowledge.json.
+      # Runs BEFORE the live desk so the live desk reads the freshest pool this cycle.
+      # Gated: does nothing until Variable PAPER_TRAINER_ENABLED=true. Isolated via
+      # SAHJONY_HOME=desks/paper (own state/db/status). Step env overrides job env;
+      # BROKER=alpaca + cleared live gates make real-money placement impossible here.
+      - name: Run paper trainer cycle (Alpaca crypto — shared-knowledge sandbox)
+        if: ${{ vars.PAPER_TRAINER_ENABLED == 'true' }}
+        env:
+          SAHJONY_HOME: desks/paper
+          BROKER: alpaca
+          ALPACA_PAPER: 'true'
+          LIVE_TRADING_ACK: ''
+          ROBINHOOD_LIVE: 'false'
+          TICKERS: ${{ vars.PAPER_TICKERS || vars.TICKERS || 'BTC/USD,ETH/USD,SOL/USD,LTC/USD' }}
+          TRADING_CAPITAL: ${{ vars.PAPER_TRADING_CAPITAL || '2000' }}
+          MIN_COUNCIL_CONVICTION: ${{ vars.PAPER_MIN_CONVICTION || '0.40' }}
+          KNOWLEDGE_ROLE: alpaca-paper-trainer
+          BENCHMARK: ${{ vars.BENCHMARK || 'BTC-USD' }}
+        run: python main.py --once --force || true
 
       - name: Run one trading cycle
         run: python main.py --once --force
@@ -145,12 +168,13 @@ jobs:
         run: |
           git config user.name  "sahjony-desk[bot]"
           git config user.email "noreply@anthropic.com"
-          if ! git diff --quiet -- public/status.json; then
-            git add public/status.json public/copy_signals.json
+          git add public/status.json public/copy_signals.json public/knowledge.json 2>/dev/null || true
+          git add desks/paper/public/status.json 2>/dev/null || true
+          if ! git diff --cached --quiet; then
             git commit -m "Desk snapshot: cycle ${{ github.run_number }} update"
             for i in 1 2 3 4; do git push && break || sleep $((2**i)); done
           else
-            echo "No change in public/status.json — nothing to commit."
+            echo "No snapshot changes — nothing to commit."
           fi
 
       - name: Trigger Vercel production deploy (if hook configured)

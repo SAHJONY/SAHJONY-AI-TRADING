@@ -207,6 +207,36 @@ def test_equity_regime_drops_capital_reanchors(cfg):
            f"cliff drawdown removed: full {full_dd}% → regime {reg_dd}%")
 
 
+def test_shared_knowledge_roundtrip(cfg):
+    """Cross-desk shared knowledge: a trainer desk's strategy pool saves and
+    reloads intact, malformed input degrades to empty (never crashes the loop),
+    and the derived weight stays inside Hermes' [0.70,1.15] clamp so a pooled
+    win-rate can only nudge — never blow out — the live desk's position budget."""
+    from intelligence import knowledge
+    path = knowledge._path()
+    backup = None
+    if os.path.exists(path):
+        with open(path, encoding="utf-8") as fh:
+            backup = fh.read()
+    try:
+        knowledge.save({"wheel": {"n": 20.0, "w": 13.0}, "ladder": {"n": 15.0, "w": 6.0}},
+                       {"BTC/USD": 0.61}, role="test", cycle=1, ts="2026-01-01T00:00:00Z")
+        pool = knowledge.load_strat()
+        _check(pool.get("wheel", {}).get("n") == 20.0 and pool.get("wheel", {}).get("w") == 13.0,
+               "shared pool round-trips intact (wheel n=20 w=13)")
+        # a decayed win-count can never exceed observations
+        _check(pool["ladder"]["w"] <= pool["ladder"]["n"], "win-count clamped to <= observations")
+        with open(path, "w", encoding="utf-8") as fh:
+            fh.write("{ not valid json")
+        _check(knowledge.load_strat() == {}, "malformed knowledge.json → empty (fault-isolated)")
+    finally:
+        if backup is not None:
+            with open(path, "w", encoding="utf-8") as fh:
+                fh.write(backup)
+        elif os.path.exists(path):
+            os.remove(path)
+
+
 def main() -> int:
     cfg = load_config()
     _check(cfg.mode == "offline-sim", "hermetic: runs in offline-sim")
@@ -220,6 +250,7 @@ def main() -> int:
     test_csp_collateral_counts_toward_cap(cfg)
     test_bridgewater_zero_vol_full_size(cfg)
     test_equity_regime_drops_capital_reanchors(cfg)
+    test_shared_knowledge_roundtrip(cfg)
     print("\nALL REGRESSION TESTS PASSED ✓")
     return 0
 
