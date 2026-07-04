@@ -399,9 +399,19 @@ async function load(){
   }catch(e){
     try{const r=await fetch('./status.json?_='+Date.now());DATA=await r.json();}catch(_){DATA={_error:String(e)};}
   }
+  await fetchRobinhood();                       // live real-money account (read-only)
   buildNav(); render();
   fetchMarkets(); fetchNews(); fetchIntel();   // free REST snapshots (self-cached)
   startStreams(); subscribeRealtime();         // realtime: Binance/Finnhub WS + Supabase
+}
+
+// Live real-money Robinhood snapshot (managed via the Robinhood MCP, written to
+// public/robinhood.json). Read-only on the dashboard — displayed alongside, and
+// kept strictly separate from, the paper desk. Absent file = panel hidden.
+let RH=null;
+async function fetchRobinhood(){
+  try{ const r=await fetch('./robinhood.json?_='+Date.now(),{cache:'no-store'}); RH=r.ok?await r.json():null; }
+  catch(_){ RH=null; }
 }
 
 // ── free live market & news feeds (run in the browser) ──────────────────────
@@ -1195,8 +1205,52 @@ function Council(v){
   v.appendChild(g);
 }
 
+// ── LIVE real-money Robinhood account (read-only mirror of the MCP account) ──
+function robinhoodPanel(){
+  const r=RH||{}, pos=r.positions||[], ord=r.orders||[];
+  const updTs=tsMs(r.updated), upd=updTs!=null?`${new Date(updTs).toLocaleString()} (${relAge(Date.now()-updTs)})`:'—';
+  const body=$(`<div></div>`);
+  body.innerHTML=`
+    <div class="cb" style="border-color:var(--down);background:linear-gradient(90deg,rgba(255,92,108,.13),transparent);color:#ffd0d5;margin-bottom:10px">
+      🔴 <b>REAL MONEY</b> — live ${esc(r.broker||'Robinhood')} account ${esc(r.account_mask||'')}${r.nickname?` · “${esc(r.nickname)}”`:''}.
+      Managed autonomously via the Robinhood MCP. This is <b>separate from the paper desk</b> above and is shown read-only.
+    </div>
+    <div class="kpis" style="margin-bottom:10px">
+      <div class="kpi" style="--accent:var(--down)"><div class="l">Account Value</div><div class="v">${money(r.total_value)}</div></div>
+      <div class="kpi" style="--accent:var(--cyan)"><div class="l">Buying Power</div><div class="v">${money(r.buying_power)}</div></div>
+      <div class="kpi"><div class="l">Cash</div><div class="v">${money(r.cash)}</div></div>
+      <div class="kpi" style="--accent:var(--amber)"><div class="l">In Open Orders</div><div class="v">${money(r.committed_open_orders)}</div></div>
+    </div>`;
+  // holdings
+  if(pos.length){
+    const w=$(`<div class="scroll" style="margin-bottom:8px"></div>`);
+    const t=$(`<table><thead><tr><th>SYM</th><th class="n">SHARES</th><th class="n">AVG</th><th class="n">PX</th><th class="n">VALUE</th><th class="n">P&L</th></tr></thead><tbody></tbody></table>`);
+    pos.forEach(p=>{const up=(p.unrealized||0)>=0;
+      t.querySelector('tbody').appendChild($(`<tr><td class="amber" title="${esc(p.name||'')}">${esc(p.symbol)}</td>
+        <td class="n">${num(p.shares,6)}</td><td class="n">${p.avg_cost!=null?money(p.avg_cost):'—'}</td>
+        <td class="n">${money(p.price)}</td><td class="n">${money(p.market_value)}</td>
+        <td class="n ${up?'up':'down'}">${p.shares?((up?'+':'')+money(p.unrealized)):'<span class="mut">'+esc(p.note||'—')+'</span>'}</td></tr>`));});
+    w.appendChild(t); body.appendChild(w);
+  }
+  // open / recent orders
+  if(ord.length){
+    const w=$(`<div class="scroll"></div>`);
+    const t=$(`<table><thead><tr><th>SYM</th><th>SIDE</th><th class="opt">TYPE</th><th class="n">AMOUNT</th><th>STATE</th><th class="opt">SRC</th></tr></thead><tbody></tbody></table>`);
+    ord.forEach(o=>{const amt=o.dollar_amount!=null?money(o.dollar_amount):num(o.qty,6);
+      const stCls=/fill/i.test(o.state)?'up':(/(cancel|reject|fail|void)/i.test(o.state)?'down':'amber');
+      t.querySelector('tbody').appendChild($(`<tr><td class="amber">${esc(o.symbol)}</td>
+        <td class="${/buy/i.test(o.side)?'up':'down'}">${esc(o.side)}</td><td class="mut opt">${esc(o.type)}</td>
+        <td class="n">${amt}</td><td><span class="tag ${stCls}">${esc(o.state)}</span></td>
+        <td class="mut opt">${esc(o.placed_agent||'')}</td></tr>`));});
+    w.appendChild(t); body.appendChild(w);
+  }
+  if(!pos.length&&!ord.length) body.appendChild($(`<div class="empty">no holdings or orders</div>`));
+  return panel('🔴 LIVE · Robinhood (real money)', body, 'updated '+upd, 'span12');
+}
+
 function Book(v){
   const g=$(`<div class="grid c12"></div>`);
+  if(RH&&RH.live) g.appendChild(robinhoodPanel());
   g.appendChild(panel('Positions Treemap · value × P&L', treemap(DATA.positions), (DATA.positions||[]).length+' holdings', 'span12'));
   g.appendChild(panel('Positions Blotter', positionsTable(), (DATA.positions||[]).length+' open', 'span12'));
   // recent trades
