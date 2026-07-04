@@ -171,7 +171,7 @@ class Config:
     # back to these IDs when the lookup can't run (no key / offline / API error).
     anthropic_model: str = "claude-fable-5"    # PRIMARY brain (Claude Fable 5)
     openai_model: str = "gpt-4o"               # counsellor (OpenAI / GPT)
-    xai_model: str = "grok-2-latest"           # counsellor (Grok / xAI)
+    xai_model: str = "grok-4"                  # counsellor (Grok / xAI); grok-2 retired
     gemini_model: str = "gemini-2.5-pro"       # counsellor (Gemini / Google)
     # Autonomously keep every provider on its newest model (owner directive).
     auto_update_models: bool = True
@@ -265,7 +265,7 @@ def load_config() -> Config:
         ai_brain_enabled=_b("AI_BRAIN_ENABLED", False),
         anthropic_model=(os.getenv("ANTHROPIC_MODEL", "claude-fable-5") or "claude-fable-5").strip(),
         openai_model=(os.getenv("OPENAI_MODEL", "gpt-4o") or "gpt-4o").strip(),
-        xai_model=(os.getenv("XAI_MODEL", "grok-2-latest") or "grok-2-latest").strip(),
+        xai_model=(os.getenv("XAI_MODEL", "grok-4") or "grok-4").strip(),
         gemini_model=(os.getenv("GEMINI_MODEL", "gemini-2.5-pro") or "gemini-2.5-pro").strip(),
         auto_update_models=_b("AUTO_UPDATE_MODELS", True),
         cycle_minutes=max(1, _i("CYCLE_MINUTES", 15)),

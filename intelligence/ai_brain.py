@@ -316,7 +316,7 @@ class AIBrain:
         """OpenAI-compatible chat endpoint (both OpenAI and xAI speak it)."""
         try:
             import requests
-            r = requests.post(url, timeout=30,
+            r = requests.post(url, timeout=45,
                               headers={"Authorization": "Bearer " + key,
                                        "Content-Type": "application/json"},
                               json={"model": model, "max_tokens": 400, "temperature": 0.3,
@@ -327,10 +327,14 @@ class AIBrain:
                                          f"aware view on the portfolio. You advise; you do not decide."},
                                         {"role": "user", "content": question}]})
             if not r.ok:
-                log.warning("%s counsellor HTTP %s", label, r.status_code)
+                # Log the model tried AND the provider's error body: a 4xx body says
+                # exactly why (model_not_found vs invalid_api_key vs quota), which the
+                # bare status code hides — this is what makes the failure diagnosable.
+                log.warning("%s counsellor HTTP %s (model=%s): %s",
+                            label, r.status_code, model, (r.text or "")[:200].replace("\n", " "))
                 return None
             data = r.json()
             return data["choices"][0]["message"]["content"].strip()
         except Exception as exc:
-            log.warning("%s counsellor failed: %s", label, exc)
+            log.warning("%s counsellor failed (model=%s): %s", label, model, exc)
             return None
