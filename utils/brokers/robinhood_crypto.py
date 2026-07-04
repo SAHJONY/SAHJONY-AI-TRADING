@@ -44,11 +44,32 @@ log = get_logger("robinhood_crypto")
 _HOST = "https://trading.robinhood.com"
 _ACK_PHRASE = "I_UNDERSTAND_REAL_MONEY"
 
+# Robinhood's crypto TRADING API serves no OHLC candles, so the council's signal
+# engines (RSI/MACD/regime/cointegration) would run blind on an empty series and
+# stay permanently neutral → the desk would never trade crypto. We backfill daily
+# closes from CoinGecko (free, no key, US-accessible — same source the dashboard
+# uses). Anything not mapped falls back to the flat live-price series (safe).
+_CG_BASE = "https://api.coingecko.com/api/v3"
+_CG_IDS = {
+    "BTC": "bitcoin", "ETH": "ethereum", "SOL": "solana", "LTC": "litecoin",
+    "DOGE": "dogecoin", "ADA": "cardano", "XRP": "ripple", "AVAX": "avalanche-2",
+    "MATIC": "matic-network", "DOT": "polkadot", "LINK": "chainlink",
+    "BCH": "bitcoin-cash", "UNI": "uniswap", "AAVE": "aave", "XLM": "stellar",
+    "ETC": "ethereum-classic", "SHIB": "shiba-inu", "COMP": "compound-governance-token",
+    "USDC": "usd-coin", "USDT": "tether",
+}
+
 
 def _rh_symbol(sym: str) -> str:
     """Normalize a desk symbol to Robinhood's 'BTC-USD' form ('BTC/USD' or 'BTC')."""
     s = sym.upper().replace("/", "-")
     return s if "-" in s else f"{s}-USD"
+
+
+def _coingecko_id(symbol: str) -> str:
+    """Base asset of a desk/RH symbol → CoinGecko coin id ('' if unmapped)."""
+    base = _rh_symbol(symbol).split("-")[0]
+    return _CG_IDS.get(base, "")
 
 
 class RobinhoodCryptoBroker:
@@ -162,11 +183,43 @@ class RobinhoodCryptoBroker:
             return self._price_cache.get(rh, 0.0)
 
     def get_history(self, symbol: str, days: int = 120) -> Dict[str, np.ndarray]:
-        # The trading API doesn't serve OHLC candles; the council degrades safely
-        # on a short/empty series (low confidence, neutral — see agents.clamp).
+        """Daily closes+volumes for the council. RH's trading API has no candles,
+        so backfill from CoinGecko; fall back to the flat live-price series on any
+        failure (unmapped asset, network, rate-limit) so the loop never breaks."""
+        hist = self._coingecko_history(symbol, days)
+        if hist is not None and hist["closes"].size >= 2:
+            return hist
+        # Fallback: council degrades safely on a short series (neutral — agents.clamp).
         px = self.get_price(symbol)
         closes = np.array([px] * 2, dtype=float) if px > 0 else np.array([], dtype=float)
         return {"closes": closes, "volumes": np.array([], dtype=float)}
+
+    def _coingecko_history(self, symbol: str, days: int):
+        """Free daily OHLC-close history from CoinGecko. Returns None on any issue
+        (never raises) so get_history's flat-series fallback takes over."""
+        cid = _coingecko_id(symbol)
+        if not cid:
+            return None
+        try:
+            import requests
+            url = f"{_CG_BASE}/coins/{cid}/market_chart"
+            params = {"vs_currency": "usd", "days": str(max(2, int(days))), "interval": "daily"}
+            r = requests.get(url, params=params, timeout=15)
+            if not r.ok:
+                log.warning("CoinGecko %s → HTTP %s; using flat fallback", cid, r.status_code)
+                return None
+            data = r.json() or {}
+            closes = np.array([p[1] for p in (data.get("prices") or []) if p and p[1] is not None],
+                              dtype=float)
+            vols = np.array([v[1] for v in (data.get("total_volumes") or []) if v and v[1] is not None],
+                            dtype=float)
+            closes = closes[np.isfinite(closes)]
+            if closes.size < 2:
+                return None
+            return {"closes": closes, "volumes": vols[np.isfinite(vols)]}
+        except Exception as exc:  # network / parse / rate-limit — degrade, don't crash
+            log.warning("CoinGecko history(%s) failed: %s — using flat fallback", symbol, exc)
+            return None
 
     def is_market_open(self) -> bool:
         return True   # crypto trades 24/7

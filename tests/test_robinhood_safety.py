@@ -86,11 +86,55 @@ def test_symbol_normalization():
     _check(_rh_symbol("sol-usd") == "SOL-USD", "'sol-usd' → 'SOL-USD'")
 
 
+def test_coingecko_id_mapping():
+    from utils.brokers.robinhood_crypto import _coingecko_id
+    _check(_coingecko_id("BTC-USD") == "bitcoin", "'BTC-USD' → coingecko id 'bitcoin'")
+    _check(_coingecko_id("ETH/USD") == "ethereum", "'ETH/USD' → 'ethereum'")
+    _check(_coingecko_id("WAT-USD") == "", "unmapped asset → '' (triggers flat fallback)")
+
+
+def test_history_parses_coingecko_without_network():
+    """get_history backfills daily closes from CoinGecko so the council isn't blind
+    on crypto. Stub the HTTP layer so this stays offline/deterministic."""
+    import requests
+    rh = RobinhoodCryptoBroker(load_config())
+
+    class _Resp:
+        ok = True
+        status_code = 200
+        def json(self):
+            return {"prices": [[0, 100.0], [1, 101.0], [2, 102.5]],
+                    "total_volumes": [[0, 5.0], [1, 6.0], [2, 7.0]]}
+
+    saved = requests.get
+    requests.get = lambda *a, **k: _Resp()
+    try:
+        h = rh.get_history("BTC-USD", days=3)
+    finally:
+        requests.get = saved
+    _check(list(h["closes"]) == [100.0, 101.0, 102.5], "closes parsed from CoinGecko 'prices'")
+    _check(list(h["volumes"]) == [5.0, 6.0, 7.0], "volumes parsed from 'total_volumes'")
+
+
+def test_history_falls_back_when_feed_unavailable():
+    """Any feed failure (unmapped, network, rate-limit) must degrade to the flat
+    live-price series — never raise — so the 24/7 loop can't be broken by CoinGecko."""
+    rh = RobinhoodCryptoBroker(load_config())
+    rh.get_price = lambda s: 250.0                       # avoid network on the fallback
+    rh._coingecko_history = lambda symbol, days: None    # simulate feed down / unmapped
+    h = rh.get_history("BTC-USD", days=120)
+    _check(h["closes"].size == 2 and float(h["closes"][0]) == 250.0,
+           "feed down → flat 2-point live-price series (safe degrade, no crash)")
+
+
 def main() -> int:
     test_signature_message_and_verify()
     test_orders_hard_gated_when_unarmed()
     test_per_order_usd_cap_enforced()
     test_symbol_normalization()
+    test_coingecko_id_mapping()
+    test_history_parses_coingecko_without_network()
+    test_history_falls_back_when_feed_unavailable()
     print("\nROBINHOOD SAFETY TESTS PASSED ✓")
     return 0
 
