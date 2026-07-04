@@ -207,7 +207,13 @@ class Hermes:
             hard.append("bad price")
         closes = []
         bad_hist = False
-        for c in list(getattr(snap, "closes", []) or []):
+        # NB: snap.closes may be a NumPy array — never use it in a boolean/`or`
+        # context (raises "truth value of an array is ambiguous"). Normalize by
+        # identity, not truthiness.
+        raw_closes = getattr(snap, "closes", None)
+        if raw_closes is None:
+            raw_closes = []
+        for c in list(raw_closes):
             try:
                 v = float(c)
             except (TypeError, ValueError):
