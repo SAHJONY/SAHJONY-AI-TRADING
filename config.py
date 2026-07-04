@@ -176,6 +176,13 @@ class Config:
     # Autonomously keep every provider on its newest model (owner directive).
     auto_update_models: bool = True
 
+    # Cross-desk shared knowledge: pool Hermes strategy-calibration across a paper
+    # "trainer" desk and the live desk (both trading the same universe). Bounded by
+    # Hermes' existing [0.70,1.15] weight clamp, so it's a safe nudge. role labels
+    # the writer in knowledge.json (informational).
+    shared_knowledge: bool = True
+    knowledge_role: str = "desk"
+
     # scheduler / ops
     cycle_minutes: int = 15
     log_level: str = "INFO"
@@ -268,6 +275,8 @@ def load_config() -> Config:
         xai_model=(os.getenv("XAI_MODEL", "grok-4") or "grok-4").strip(),
         gemini_model=(os.getenv("GEMINI_MODEL", "gemini-2.5-pro") or "gemini-2.5-pro").strip(),
         auto_update_models=_b("AUTO_UPDATE_MODELS", True),
+        shared_knowledge=_b("SHARED_KNOWLEDGE", True),
+        knowledge_role=(os.getenv("KNOWLEDGE_ROLE", "") or os.getenv("BROKER", "desk") or "desk").strip().lower(),
         cycle_minutes=max(1, _i("CYCLE_MINUTES", 15)),
         log_level=(os.getenv("LOG_LEVEL", "INFO") or "INFO").strip().upper(),
     )
