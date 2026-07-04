@@ -327,18 +327,14 @@ class AIBrain:
             r = requests.post(url, timeout=45, headers=headers, json=payload)
             # GPT-5-family reasoning models reject the classic chat params: they want
             # 'max_completion_tokens' (not 'max_tokens') and only the default
-            # temperature. Adapt to whatever the 400 body names, then retry once.
-            if r.status_code == 400:
-                body = (r.text or "").lower()
-                adapted = False
-                if "max_completion_tokens" in body or "max_tokens" in body:
-                    payload["max_completion_tokens"] = payload.pop("max_tokens", 400)
-                    adapted = True
-                if "temperature" in body:
-                    payload.pop("temperature", None)
-                    adapted = True
-                if adapted:
-                    r = requests.post(url, timeout=45, headers=headers, json=payload)
+            # temperature. The API reports these ONE AT A TIME, so a single-param
+            # retry just trips the next complaint — apply BOTH known fixes together
+            # when a 400 names either, then retry once.
+            if r.status_code == 400 and ("max_tokens" in (r.text or "").lower()
+                                         or "temperature" in (r.text or "").lower()):
+                payload["max_completion_tokens"] = payload.pop("max_tokens", 400)
+                payload.pop("temperature", None)
+                r = requests.post(url, timeout=45, headers=headers, json=payload)
             if not r.ok:
                 # Log the model tried AND the provider's error body: a 4xx body says
                 # exactly why (model_not_found vs invalid_api_key vs quota), which the
