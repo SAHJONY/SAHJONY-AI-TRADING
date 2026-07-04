@@ -154,7 +154,11 @@ jobs:
           TRADING_CAPITAL: ${{ vars.PAPER_TRADING_CAPITAL || '2000' }}
           MIN_COUNCIL_CONVICTION: ${{ vars.PAPER_MIN_CONVICTION || '0.40' }}
           KNOWLEDGE_ROLE: alpaca-paper-trainer
-          BENCHMARK: ${{ vars.BENCHMARK || 'BTC-USD' }}
+          # Alpaca crypto uses the slash form (BTC/USD); BTC-USD 400s there.
+          BENCHMARK: ${{ vars.PAPER_BENCHMARK || 'BTC/USD' }}
+          # Keep the trainer crypto-focused so its calibration transfers to the live
+          # crypto bot — SEC-insider copy signals are equities (off-mission noise here).
+          COPY_TRADING_ENABLED: 'false'
         run: python main.py --once --force || true
 
       - name: Run one trading cycle
