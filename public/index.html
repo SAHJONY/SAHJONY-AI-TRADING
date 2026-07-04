@@ -408,8 +408,14 @@ async function load(){
 // Live real-money Robinhood snapshot (managed via the Robinhood MCP, written to
 // public/robinhood.json). Read-only on the dashboard — displayed alongside, and
 // kept strictly separate from, the paper desk. Absent file = panel hidden.
+// Fetch from GitHub raw FIRST (same as status.json): a fresh MCP snapshot is
+// published the instant it's committed to master, with no Vercel deploy needed
+// (the free tier caps deploys/day, and the 15-min desk commits burn that quota).
+const RH_REMOTE='https://raw.githubusercontent.com/SAHJONY/SAHJONY-AI-TRADING/master/public/robinhood.json';
 let RH=null;
 async function fetchRobinhood(){
+  try{ const r=await fetch(RH_REMOTE+'?_='+Date.now(),{cache:'no-store'}); if(!r.ok)throw 0; RH=await r.json(); return; }
+  catch(_){}
   try{ const r=await fetch('./robinhood.json?_='+Date.now(),{cache:'no-store'}); RH=r.ok?await r.json():null; }
   catch(_){ RH=null; }
 }
