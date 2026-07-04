@@ -127,10 +127,32 @@ def test_history_falls_back_when_feed_unavailable():
            "feed down → flat 2-point live-price series (safe degrade, no crash)")
 
 
+def test_arming_gates_flip_to_live():
+    """Both gates set → armed + mode LIVE, and an armed order routes a real POST.
+    Guards the bool-vs-string bug that left the venue permanently in dry-run.
+    _request is mocked so this moves NO money and hits NO network."""
+    os.environ["ROBINHOOD_LIVE"] = "true"
+    os.environ["LIVE_TRADING_ACK"] = "I_UNDERSTAND_REAL_MONEY"
+    try:
+        rh = RobinhoodCryptoBroker(load_config())
+        _check(rh.armed, "both gates (LIVE_TRADING_ACK + ROBINHOOD_LIVE=true) → armed")
+        _check(rh.mode == "LIVE", "armed venue reports mode 'LIVE'")
+        seen = {}
+        rh.get_price = lambda s: 100.0                       # ~$1 order, under cap
+        rh._request = lambda m, p, b=None: (seen.update(method=m, path=p) or {"id": "TEST"})
+        res = rh.submit_equity_order("BTC-USD", 0.01, "buy")
+        _check(seen.get("method") == "POST" and res.get("simulated") is False,
+               "armed order routes a real POST to the orders endpoint (not a dry-run)")
+    finally:
+        os.environ.pop("ROBINHOOD_LIVE", None)
+        os.environ.pop("LIVE_TRADING_ACK", None)
+
+
 def main() -> int:
     test_signature_message_and_verify()
     test_orders_hard_gated_when_unarmed()
     test_per_order_usd_cap_enforced()
+    test_arming_gates_flip_to_live()
     test_symbol_normalization()
     test_coingecko_id_mapping()
     test_history_parses_coingecko_without_network()

@@ -94,7 +94,10 @@ class RobinhoodCryptoBroker:
                 log.error("Robinhood signer init failed (%s) — auth disabled", exc)
                 self._signer = None
 
-        self.armed = (cfg.live_trading_ack == _ACK_PHRASE
+        # cfg.live_trading_ack is already a BOOL (config.py parses it as
+        # env == "I_UNDERSTAND_REAL_MONEY"). Comparing that bool to the phrase
+        # string is always False → the venue could never arm. Gate on the bool.
+        self.armed = (bool(cfg.live_trading_ack)
                       and (os.getenv("ROBINHOOD_LIVE", "") or "").strip().lower() == "true"
                       and self._signer is not None)
         try:
