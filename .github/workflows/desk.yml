@@ -28,9 +28,24 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 12
     env:
+      # ── Broker selection ──────────────────────────────────────────────────────
+      # Default 'alpaca' (paper) keeps the desk 100% paper. Set repo Variable
+      # BROKER=robinhood_crypto to route the LIVE 24/7 crypto engine instead.
+      BROKER: ${{ vars.BROKER || 'alpaca' }}
       ALPACA_API_KEY: ${{ secrets.ALPACA_API_KEY }}
       ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
       ALPACA_PAPER: 'true'
+      # ── Robinhood Crypto (REAL MONEY, official Ed25519 API) ───────────────────
+      # HARD-GATED: real orders place ONLY when the adapter is armed — i.e. ALL of
+      #   BROKER=robinhood_crypto  +  ROBINHOOD_API_KEY  +  ROBINHOOD_PRIVATE_KEY
+      #   +  ROBINHOOD_LIVE=true  +  LIVE_TRADING_ACK=I_UNDERSTAND_REAL_MONEY.
+      # Missing any → dry-run (prices live, places nothing). Per-order notional is
+      # capped by ROBINHOOD_MAX_ORDER_USD and the risk engine still gates size.
+      ROBINHOOD_API_KEY: ${{ secrets.ROBINHOOD_API_KEY }}
+      ROBINHOOD_PRIVATE_KEY: ${{ secrets.ROBINHOOD_PRIVATE_KEY }}
+      ROBINHOOD_LIVE: ${{ vars.ROBINHOOD_LIVE || 'false' }}
+      ROBINHOOD_MAX_ORDER_USD: ${{ vars.ROBINHOOD_MAX_ORDER_USD || '10' }}
+      LIVE_TRADING_ACK: ${{ secrets.LIVE_TRADING_ACK }}
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       XAI_API_KEY: ${{ secrets.XAI_API_KEY }}
@@ -40,7 +55,9 @@ jobs:
       AI_BRAIN_ENABLED: ${{ vars.AI_BRAIN_ENABLED || secrets.AI_BRAIN_ENABLED || ((secrets.ANTHROPIC_API_KEY != '' || secrets.NVIDIA_API_KEY != '') && 'true' || 'false') }}
       AUTO_UPDATE_MODELS: 'true'
       # Universe spans asset classes: mega-cap equities, index ETFs, commodities
-      # (GLD/SLV), bonds (TLT), international (EEM) and 24/7 crypto.
+      # (GLD/SLV), bonds (TLT), international (EEM) and 24/7 crypto. When BROKER=
+      # robinhood_crypto, set Variable TICKERS to crypto-only, e.g.
+      # 'BTC/USD,ETH/USD,SOL/USD,LTC/USD' (stock symbols can't price on a crypto venue).
       TICKERS: ${{ vars.TICKERS || 'AAPL,MSFT,NVDA,GOOGL,AMZN,TSLA,META,SPY,QQQ,DIA,GLD,SLV,TLT,EEM,BTC/USD,ETH/USD,SOL/USD,LTC/USD' }}
       MARKET_HOURS: ${{ vars.MARKET_HOURS || '24_7' }}
       CYCLE_MINUTES: ${{ vars.CYCLE_MINUTES || '15' }}
