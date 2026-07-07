@@ -1098,6 +1098,16 @@ function brokerPanel(){
     <span class="tag" style="color:${feedCol};border-color:${feedCol}">${feed}</span></span></div>`));
   const stat=(k,val)=>`<div class="row"><span class="mut">${k}</span><span class="mono"><b>${val}</b></span></div>`;
   box.appendChild($(`<div>${stat('Equity',money(b.equity))}${stat('Cash',money(b.cash))}${stat('Buying power',money(b.buying_power))}</div>`));
+  // Reconciliation: broker-reported equity vs the desk's internal book. A drift
+  // beyond ~1% flags an unaccounted fill or account activity outside the desk.
+  const deskEq=(DATA.account||{}).equity||0;
+  const drift=(+b.equity||0)-deskEq, driftPct=deskEq?drift/deskEq*100:0;
+  const ok=Math.abs(driftPct)<=1;
+  const dcol=ok?'var(--up)':'var(--down)';
+  box.appendChild($(`<div class="row" title="Broker-reported equity minus the desk's internal book equity">
+    <span class="mut">Recon vs desk</span>
+    <span class="mono"><b style="color:${dcol}">${drift>=0?'+':''}${money(drift)} · ${driftPct>=0?'+':''}${driftPct.toFixed(2)}%</b>
+    <span class="tag" style="color:${dcol};border-color:${dcol};margin-left:6px">${ok?'✓ IN SYNC':'⚠ DRIFT'}</span></span></div>`));
   const hold=b.holdings||[];
   if(!hold.length){ box.appendChild($(`<div class="empty" style="margin-top:9px">no broker-reported holdings ${b.online?'':'(run the desk on this venue to populate)'}</div>`)); }
   else{
