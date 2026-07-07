@@ -62,6 +62,25 @@ regenerates `public/status.json`, and ends with a read-only broker preflight.
 - [ ] `python main.py --once` → confirm the 5-second **LIVE REAL-MONEY** banner,
       then let it run. Tighten caps in `.env` first if you want.
 
+### E. Going LIVE on Robinhood Crypto (real money — no paper venue)
+Robinhood's Crypto Trading API has **no sandbox**, so this adapter is deliberately
+**double-locked** and stays OFFLINE-SIM until *both* switches are set.
+- [ ] `pip install -r requirements-robinhood.txt` (Ed25519 signing via PyNaCl).
+- [ ] In the Robinhood app: Crypto → **API** → generate an API key + private key.
+- [ ] `.env`: `BROKER=robinhood`, `ROBINHOOD_API_KEY=…`, `ROBINHOOD_PRIVATE_KEY=…`,
+      `TICKERS=BTC/USD,ETH/USD`, `MARKET_HOURS=24_7`.
+- [ ] `python main.py --preflight` → still OFFLINE-SIM; confirm it reads your real
+      account and prices **before** arming. Fix any ✗ first.
+- [ ] Arm with **both**: `ROBINHOOD_LIVE=true` **and**
+      `LIVE_TRADING_ACK=I_UNDERSTAND_REAL_MONEY`. Either one alone stays sim.
+- [ ] `python main.py --once` → confirm the 5-second **LIVE REAL-MONEY** banner.
+      Start with tiny caps (e.g. `MAX_ALLOCATION_PCT=0.02`) and keep buying power low.
+
+> Notes: Robinhood's Crypto API has no historical-candle feed, so history-based
+> strategies get no data and won't trade live on it — start with a small crypto
+> universe and low caps. This is one Robinhood account (the keys you generate);
+> it is **not** a switch that trades "all your accounts."
+
 > ⚠️ Real money can lose money. The "intelligence" is transparent public-domain
 > estimators, not a profit guarantee. Start on paper and only arm live when you
 > understand the behavior.

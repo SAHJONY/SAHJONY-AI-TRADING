@@ -74,6 +74,13 @@ class Config:
     ccxt_password: str = ""        # some exchanges require an API passphrase
     ccxt_sandbox: bool = True      # testnet/paper by default
     ccxt_quote: str = "USDT"       # quote currency for equity valuation
+    # Robinhood (BROKER=robinhood) — official Crypto Trading API (Ed25519-signed).
+    # There is NO paper venue; this is real money, so it is double-locked: it only
+    # arms when robinhood_live is set AND the desk-wide live_trading_ack is set.
+    robinhood_api_key: str = ""
+    robinhood_private_key: str = ""   # base64 Ed25519 private key from the RH app
+    robinhood_live: bool = False      # arm THIS venue for real orders (ROBINHOOD_LIVE)
+    robinhood_quote: str = "USD"      # quote currency for crypto pairs (BTC-USD)
     # Real-money safety: live orders are refused unless this is explicitly set.
     # Set LIVE_TRADING_ACK="I_UNDERSTAND_REAL_MONEY" to arm live (with ALPACA_PAPER=false).
     live_trading_ack: bool = False
@@ -160,6 +167,23 @@ class Config:
         return bool(self.alpaca_api_key and self.alpaca_secret_key)
 
     @property
+    def venue_configured(self) -> bool:
+        """True when the selected broker has enough credentials/config to attempt a
+        real connection. When True but the adapter is still offline-sim, that's a
+        genuine connection failure worth flagging; when False, offline-sim is the
+        expected safe default (no creds) and not an error."""
+        b = self.broker
+        if b == "alpaca":
+            return self.has_credentials
+        if b == "ibkr":
+            return True   # always attempts a local TWS/Gateway connection
+        if b == "ccxt":
+            return bool(self.ccxt_api_key and self.ccxt_secret)
+        if b == "robinhood":
+            return bool(self.robinhood_api_key and self.robinhood_private_key)
+        return False
+
+    @property
     def always_on(self) -> bool:
         """True for a 24/7 desk: explicit MARKET_HOURS=24_7, or an all-crypto universe."""
         if self.market_hours == "24_7":
@@ -190,6 +214,10 @@ def load_config() -> Config:
         ccxt_password=os.getenv("CCXT_PASSWORD", "").strip(),
         ccxt_sandbox=_b("CCXT_SANDBOX", True),
         ccxt_quote=(os.getenv("CCXT_QUOTE", "USDT") or "USDT").strip().upper(),
+        robinhood_api_key=os.getenv("ROBINHOOD_API_KEY", "").strip(),
+        robinhood_private_key=os.getenv("ROBINHOOD_PRIVATE_KEY", "").strip(),
+        robinhood_live=_b("ROBINHOOD_LIVE", False),
+        robinhood_quote=(os.getenv("ROBINHOOD_QUOTE", "USD") or "USD").strip().upper(),
         live_trading_ack=(os.getenv("LIVE_TRADING_ACK", "").strip() == "I_UNDERSTAND_REAL_MONEY"),
         tickers=_list("TICKERS", "AAPL,MSFT,SPY"),
         benchmark=(os.getenv("BENCHMARK", "SPY") or "SPY").strip().upper(),

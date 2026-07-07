@@ -70,6 +70,9 @@ def get_broker(cfg: Config):
     if name == "ccxt":
         from utils.brokers.ccxt_broker import CCXTBroker
         return _verify(CCXTBroker(cfg))
-    raise ValueError(f"Unknown BROKER '{name}'. Registered: alpaca, ibkr, ccxt. "
+    if name == "robinhood":
+        from utils.brokers.robinhood import RobinhoodBroker
+        return _verify(RobinhoodBroker(cfg))
+    raise ValueError(f"Unknown BROKER '{name}'. Registered: alpaca, ibkr, ccxt, robinhood. "
                      f"Implement an adapter (see utils/brokers/template_adapter.py) "
                      f"and register it in utils/broker.py.")

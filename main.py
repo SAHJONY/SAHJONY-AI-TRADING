@@ -47,7 +47,7 @@ def preflight(cfg, client) -> int:
     if mode == "offline-sim":
         print(f"  • {cfg.broker}: OFFLINE-SIM (no real orders). Add credentials/connection "
               f"for paper/live.")
-        if cfg.has_credentials or cfg.broker != "alpaca":
+        if cfg.venue_configured:
             print("  ✗ credentials/connection configured but broker did not connect (see logs).")
             ok = False
     else:
