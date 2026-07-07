@@ -62,15 +62,18 @@ regenerates `public/status.json`, and ends with a read-only broker preflight.
 - [ ] `python main.py --once` → confirm the 5-second **LIVE REAL-MONEY** banner,
       then let it run. Tighten caps in `.env` first if you want.
 
-### E. Going LIVE on Robinhood Crypto (real money — no paper venue)
-Robinhood's Crypto Trading API has **no sandbox**, so this adapter is deliberately
-**double-locked** and stays OFFLINE-SIM until *both* switches are set.
+### E. Robinhood Crypto — live DATA (read-only) then, optionally, live TRADING
+Robinhood's Crypto Trading API has **no sandbox**. READ and WRITE are separated:
+**just your keys** gives read-only live data on the dashboard; **real orders** need
+a deliberate double-lock on top.
 - [ ] `pip install -r requirements-robinhood.txt` (Ed25519 signing via PyNaCl).
 - [ ] In the Robinhood app: Crypto → **API** → generate an API key + private key.
 - [ ] `.env`: `BROKER=robinhood`, `ROBINHOOD_API_KEY=…`, `ROBINHOOD_PRIVATE_KEY=…`,
       `TICKERS=BTC/USD,ETH/USD`, `MARKET_HOURS=24_7`.
-- [ ] `python main.py --preflight` → still OFFLINE-SIM; confirm it reads your real
-      account and prices **before** arming. Fix any ✗ first.
+- [ ] `python main.py --preflight` → connects **READ-ONLY (mode `live-data`)**: your
+      real buying power, holdings, and prices appear on the dashboard's Venue
+      Account panel. **No orders are placed here.** Fix any ✗ first.
+- [ ] Run the desk normally to keep those live numbers refreshing (still no orders).
 - [ ] Arm with **both**: `ROBINHOOD_LIVE=true` **and**
       `LIVE_TRADING_ACK=I_UNDERSTAND_REAL_MONEY`. Either one alone stays sim.
 - [ ] `python main.py --once` → confirm the 5-second **LIVE REAL-MONEY** banner.

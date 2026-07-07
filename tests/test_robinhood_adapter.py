@@ -72,6 +72,18 @@ def main() -> int:
     for k in ("ROBINHOOD_API_KEY", "ROBINHOOD_PRIVATE_KEY", "ROBINHOOD_LIVE"):
         del os.environ[k]
 
+    # WRITE-tier gate (network-free): a read-only live-DATA connection reports
+    # online for real data, but orders MUST still route to the simulator until the
+    # double-lock arms trading — the core guarantee of the read/write split.
+    client._data_online = True      # pretend the DATA tier connected
+    client._trading_armed = False   # but trading is NOT armed
+    client._signing_key = object()  # truthy → online True
+    _check(client.online is True, "read-only live-data reports online (real data flows)")
+    ro = client.submit_equity_order("BTC/USD", 0.01, "buy")
+    _check(ro.get("simulated") is True and ro["status"] == "filled",
+           "read-only live-data STILL routes orders to sim (no real order w/o the double-lock)")
+    client._data_online = False; client._trading_armed = False; client._signing_key = None
+
     # a full cycle runs end-to-end on a Robinhood (sim-fallback) desk
     db = Database(":memory:")
     firm = Firm(cfg, client, db)

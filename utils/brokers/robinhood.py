@@ -6,16 +6,19 @@ credentials are missing, if the connection fails, or if live trading is not
 explicitly armed, it degrades to the shared SimBroker (ZERO real orders) — like
 every adapter, the loop never crashes (fault isolation, per CLAUDE.md).
 
-⚠️ REAL MONEY, NO SANDBOX. Robinhood exposes no paper venue for the Crypto API,
-so this adapter is deliberately DOUBLE-LOCKED before it will place a single real
-order:
+READ and WRITE are separated so you can see live Robinhood data WITHOUT risking a
+cent:
 
-    1. ROBINHOOD_LIVE=true            (arm THIS venue for real orders)
-    2. LIVE_TRADING_ACK="I_UNDERSTAND_REAL_MONEY"   (the desk-wide real-money ack)
-
-With either missing it runs OFFLINE-SIM. When both are set it reports mode="LIVE",
-which additionally routes through main.py's confirm_live() 5-second abort gate and
-the risk engine's hard ceilings (config.py) — real orders are never unattended.
+  • DATA tier (read-only) — connects for real account, holdings, buying power, and
+    prices as soon as valid credentials + PyNaCl are present. No orders, ever.
+    Reports mode="live-data". This is what populates the dashboard's live numbers.
+  • WRITE tier (real orders) — additionally DOUBLE-LOCKED. A real order is placed
+    only when BOTH are set:
+        1. ROBINHOOD_LIVE=true                          (arm THIS venue)
+        2. LIVE_TRADING_ACK="I_UNDERSTAND_REAL_MONEY"   (desk-wide real-money ack)
+    Only then does it report mode="LIVE", which additionally routes through
+    main.py's confirm_live() 5-second abort gate and the risk engine's hard
+    ceilings (config.py). Until armed, orders route to the SimBroker.
 
 ⚠️ UNTESTED AGAINST A LIVE ACCOUNT in this repo's CI. It is written to Robinhood's
 documented Crypto Trading API; validate it with `python main.py --preflight` (a
@@ -57,21 +60,25 @@ class RobinhoodBroker:
         self.cfg = cfg
         self._sim = SimBroker(cfg)
         self._signing_key = None
-        self._live = False
+        self._data_online = False    # real read-only account/market data
+        self._trading_armed = False  # real order placement (double-locked)
         self.mode = "offline-sim"
         self._connect()
 
     # ── connection / arming ─────────────────────────────────────────────────────
     def _connect(self) -> None:
-        """Arm live trading ONLY when creds + PyNaCl + both safety flags are present
-        AND the account endpoint answers. Any gap → OFFLINE-SIM (zero real orders)."""
+        """Two independent tiers, so READ (data) and WRITE (real orders) are separate:
+
+          • DATA (read-only): connects for real account/holdings/prices as soon as
+            valid credentials + PyNaCl are present and the account endpoint answers.
+            Harmless — no orders are ever placed on this tier.
+          • TRADING (real orders): additionally requires the double-lock
+            ROBINHOOD_LIVE=true AND LIVE_TRADING_ACK. Only then will submit_* place
+            a real order; otherwise orders route to the SimBroker.
+
+        Any gap in the DATA tier → OFFLINE-SIM (zero real orders, sim data)."""
         if not (self.cfg.robinhood_api_key and self.cfg.robinhood_private_key):
             log.warning("No Robinhood credentials → OFFLINE-SIM mode (no real orders).")
-            return
-        # The desk-wide real-money ack AND this venue's own arm flag are both required.
-        if not (self.cfg.robinhood_live and self.cfg.live_trading_ack):
-            log.warning("Robinhood credentials present but live NOT armed "
-                        "(need ROBINHOOD_LIVE=true and LIVE_TRADING_ACK) → OFFLINE-SIM.")
             return
         try:
             from nacl.signing import SigningKey
@@ -85,14 +92,24 @@ class RobinhoodBroker:
             log.error("Robinhood account probe failed → OFFLINE-SIM (no real orders).")
             self._signing_key = None
             return
-        self._live = True
-        self.mode = "LIVE"
-        log.info("Connected to Robinhood Crypto (LIVE, armed). Account %s.",
-                 acct.get("account_number", "?"))
+        # DATA tier is live.
+        self._data_online = True
+        # WRITE tier requires the explicit double-lock.
+        self._trading_armed = bool(self.cfg.robinhood_live and self.cfg.live_trading_ack)
+        self.mode = "LIVE" if self._trading_armed else "live-data"
+        if self._trading_armed:
+            log.info("Connected to Robinhood Crypto — LIVE TRADING ARMED. Account %s.",
+                     acct.get("account_number", "?"))
+        else:
+            log.info("Connected to Robinhood Crypto — READ-ONLY LIVE DATA (no orders). "
+                     "Set ROBINHOOD_LIVE=true and LIVE_TRADING_ACK to arm real orders. "
+                     "Account %s.", acct.get("account_number", "?"))
 
     @property
     def online(self) -> bool:
-        return self._live and self._signing_key is not None
+        """True when connected for real DATA (read-only or armed). Order placement is
+        governed separately by _trading_armed — see submit_equity_order."""
+        return self._data_online and self._signing_key is not None
 
     def advance_sim(self, steps: int = 1) -> None:
         if not self.online:
@@ -208,9 +225,10 @@ class RobinhoodBroker:
         side = side.lower()
         if qty <= 0:
             return {"status": "rejected", "reason": "qty<=0"}
-        # Defense in depth: refuse a real order unless fully armed, even if some
-        # other code path reached us with online False.
-        if not self.online:
+        # Defense in depth: a real order requires the WRITE tier (_trading_armed),
+        # NOT merely a live DATA connection. Read-only live-data desks route orders
+        # to the simulator so live balances can be shown without risking real funds.
+        if not self._trading_armed:
             return self._sim.submit_equity_order(symbol, qty, side)
         rh = self._rh_symbol(symbol)
         body = {
