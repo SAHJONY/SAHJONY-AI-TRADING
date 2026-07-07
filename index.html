@@ -767,9 +767,9 @@ function setStatus(){
   const h=(DATA&&DATA.health)||{};
   const md=document.getElementById('mode'); const m=(DATA&&DATA.mode)||'—';
   const venue=(DATA&&DATA.broker)||h.broker||'';
-  const mLabel = m==='LIVE'?'LIVE':(m==='paper'?'PAPER':(m==='offline-sim'?'SIM':m));
+  const mLabel = m==='LIVE'?'LIVE':(m==='paper'?'PAPER':(m==='offline-sim'?'SIM':(m==='live-data'?'LIVE DATA':m)));
   md.textContent = venue ? `${venue.toUpperCase()} · ${mLabel}` : mLabel;
-  const c = m==='LIVE'?'var(--down)':(m==='paper'?'var(--up)':'var(--amber)');
+  const c = m==='LIVE'?'var(--down)':(m==='paper'?'var(--up)':(m==='live-data'?'var(--cyan)':'var(--amber)'));
   md.style.color=c; md.style.borderColor=c;
   // Honest real-money banner: only when a LIVE venue is deliberately armed.
   const armed=!!h.live_armed;
