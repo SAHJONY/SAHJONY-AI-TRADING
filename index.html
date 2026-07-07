@@ -97,6 +97,9 @@
     border-bottom:1px solid var(--down);box-shadow:0 2px 18px rgba(255,92,108,.35);animation:livePulse 2.4s ease-in-out infinite}
   #liveBanner b{color:var(--amber2)}
   @keyframes livePulse{0%,100%{opacity:1}50%{opacity:.72}}
+  #haltBanner{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;
+    text-align:center;padding:7px 12px;color:#1a1205;background:linear-gradient(90deg,#c8890f,#ffb000,#c8890f);
+    border-bottom:1px solid var(--amber2)}
   .btn{font-family:var(--mono);font-size:11px;background:rgba(255,255,255,.025);border:1px solid var(--line2);color:var(--txt);
     border-radius:7px;padding:6px 11px;cursor:pointer;white-space:nowrap;transition:all .18s}
   .btn:hover{border-color:var(--amber);color:var(--amber2);box-shadow:0 0 14px rgba(255,176,0,.18)}
@@ -267,6 +270,7 @@
   <span class="stat mono" id="clock">--:--:-- UTC</span>
   <span class="badge" id="viewerBadge" style="display:none" title="Shareable read-only view — no changes can be made from here">◇ VIEW ONLY</span>
   <span class="mpill" id="mode">—</span>
+  <button class="btn" id="killBtn" style="display:none" title="Kill switch — suspend all new orders instantly (exits still allowed)">⛔ STOP</button>
   <a class="btn" id="account" href="./login.html">SIGN IN</a>
   <button class="btn" id="voiceLang" title="Voice language — English / Español">🌐 EN</button>
   <button class="btn" id="voiceWake" title="Hands-free — say “Hey Sahjony …” to command">👂 WAKE</button>
@@ -274,6 +278,7 @@
   <button class="btn" onclick="load()">↻</button>
 </header>
 <div id="liveBanner" style="display:none">⚠ LIVE — REAL MONEY ARMED · orders use real funds on <b id="liveVenue">—</b> · hard risk ceilings enforced</div>
+<div id="haltBanner" style="display:none">⛔ TRADING HALTED · new risk suspended (kill switch) · exits still allowed · tap RESUME to trade again</div>
 
 <div class="tape"><div class="track" id="tape"></div></div>
 <nav id="nav"></nav>
@@ -776,6 +781,21 @@ function setStatus(){
   const lb=document.getElementById('liveBanner');
   if(lb){ lb.style.display=armed?'':'none';
     const lv=document.getElementById('liveVenue'); if(lv)lv.textContent=(venue||'broker').toUpperCase(); }
+  // Always-visible kill switch (owner + Supabase desk): one tap from any device.
+  // Writes desk.halt → the worker turns it into TRADING_HALT next cycle.
+  const kb=document.getElementById('killBtn');
+  if(kb){
+    if(SESSION && DESK){
+      kb.style.display='';
+      if(DESK.halt){ kb.textContent='▶ RESUME'; kb.style.color='var(--up)'; kb.style.borderColor='var(--up)';
+        kb.onclick=()=>sbUpdate({halt:false}); }
+      else { kb.textContent='⛔ STOP'; kb.style.color='var(--down)'; kb.style.borderColor='var(--down)';
+        kb.onclick=()=>sbUpdate({halt:true}); }
+    } else { kb.style.display='none'; }
+  }
+  // Halt banner: owner's remote kill switch OR the engine's circuit breaker.
+  const halted=(DESK&&DESK.halt)||((h.circuit_breaker||{}).halted);
+  const hbn=document.getElementById('haltBanner'); if(hbn)hbn.style.display=halted?'':'none';
   const db=document.getElementById('dBroker'), dm=document.getElementById('dMkt');
   document.getElementById('brokerTxt').textContent =
     (venue?venue.toUpperCase()+' ':'') + (h.broker_online?'LIVE FEED':'OFFLINE SIM');

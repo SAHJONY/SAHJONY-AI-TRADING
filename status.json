@@ -3,26 +3,26 @@
   "tagline": "Autonomous multi-agent quant trading \u2014 OFFLINE SIM",
   "mode": "offline-sim",
   "broker": "alpaca",
-  "ts": "2026-07-07T13:28:32.071765+00:00",
-  "cycle": 16,
+  "ts": "2026-07-07T14:00:54.401858+00:00",
+  "cycle": 24,
   "account": {
-    "equity": 106619.17,
+    "equity": 107086.42,
     "equity_start": 100000.0,
-    "cash": 99155.83,
-    "deployed": 7463.34
+    "cash": 99590.37,
+    "deployed": 7496.05
   },
   "pnl": {
-    "realized": -575.36,
+    "realized": -952.29,
     "premium_collected": 0.0,
-    "total_return_pct": 6.619
+    "total_return_pct": 7.086
   },
   "capital": {
     "deposits": 0.0,
     "withdrawals": 0.0,
     "net_capital": 0.0,
     "flows": 0,
-    "trading_pnl": 6619.17,
-    "trading_return_pct": 6.619
+    "trading_pnl": 7086.42,
+    "trading_return_pct": 7.086
   },
   "capital_flows": [],
   "health": {
@@ -30,7 +30,7 @@
     "broker": "alpaca",
     "live_armed": false,
     "broker_online": false,
-    "market_open": false,
+    "market_open": true,
     "risk_caps": {
       "per_position_pct": 0.1,
       "total_deployed_pct": 0.6,
@@ -40,7 +40,7 @@
     "circuit_breaker": {
       "halted": false,
       "reason": "",
-      "day_return": 0.0662,
+      "day_return": 0.0709,
       "day_start": 100000.0,
       "limit_pct": 0.06
     },
@@ -365,10 +365,10 @@
       "symbol": "GBP/USD",
       "strategy": "daytrade",
       "state": "long",
-      "shares": 108.575746,
+      "shares": 109.051562,
       "cost_basis": 68.74,
       "price": 68.74,
-      "market_value": 7463.34,
+      "market_value": 7496.05,
       "unrealized": 0.0
     }
   ],
@@ -377,13 +377,13 @@
     "mode": "offline-sim",
     "online": false,
     "live_armed": false,
-    "equity": 106619.17,
-    "cash": 99155.83,
-    "buying_power": 99155.83,
+    "equity": 107086.42,
+    "cash": 99590.37,
+    "buying_power": 99590.37,
     "holdings": [
       {
         "symbol": "GBP/USD",
-        "qty": 108.575746,
+        "qty": 109.051562,
         "avg_price": 68.74,
         "market_value": 0.0
       }
@@ -397,6 +397,176 @@
     "committed": 0.0
   },
   "recent_trades": [
+    {
+      "id": 29,
+      "ts": "2026-07-07T14:00:54.377034+00:00",
+      "cycle": 24,
+      "symbol": "GBP/USD",
+      "strategy": "daytrade",
+      "kind": "equity",
+      "side": "buy",
+      "qty": 109.051562,
+      "price": 68.74,
+      "premium": 0.0,
+      "notional": 7496.049179715073,
+      "purpose": "daytrade_entry",
+      "reason": "intraday long @ 68.7386 (rsi 29.0, macd 0.3328)",
+      "mode": "offline-sim",
+      "simulated": 1
+    },
+    {
+      "id": 28,
+      "ts": "2026-07-07T14:00:54.190774+00:00",
+      "cycle": 22,
+      "symbol": "GBP/USD",
+      "strategy": "daytrade",
+      "kind": "equity",
+      "side": "sell",
+      "qty": 111.128855,
+      "price": 68.51,
+      "premium": 0.0,
+      "notional": 0.0,
+      "purpose": "daytrade_target",
+      "reason": "target +1.68% @ 68.5076, realize $125.93",
+      "mode": "offline-sim",
+      "simulated": 1
+    },
+    {
+      "id": 27,
+      "ts": "2026-07-07T14:00:54.029880+00:00",
+      "cycle": 20,
+      "symbol": "GBP/USD",
+      "strategy": "daytrade",
+      "kind": "equity",
+      "side": "buy",
+      "qty": 111.128855,
+      "price": 67.37,
+      "premium": 0.0,
+      "notional": 7487.233891993044,
+      "purpose": "daytrade_entry",
+      "reason": "intraday long @ 67.3743 (rsi 17.4, macd -0.0895)",
+      "mode": "offline-sim",
+      "simulated": 1
+    },
+    {
+      "id": 26,
+      "ts": "2026-07-07T14:00:53.954768+00:00",
+      "cycle": 19,
+      "symbol": "GBP/USD",
+      "strategy": "daytrade",
+      "kind": "equity",
+      "side": "sell",
+      "qty": 108.222708,
+      "price": 69.07,
+      "premium": 0.0,
+      "notional": 0.0,
+      "purpose": "daytrade_trendbreak",
+      "reason": "trend break @ 69.0730, realize $-26.15",
+      "mode": "offline-sim",
+      "simulated": 1
+    },
+    {
+      "id": 25,
+      "ts": "2026-07-07T14:00:53.943768+00:00",
+      "cycle": 19,
+      "symbol": "EUR/USD",
+      "strategy": "daytrade",
+      "kind": "equity",
+      "side": "sell",
+      "qty": 84.916836,
+      "price": 86.26,
+      "premium": 0.0,
+      "notional": 0.0,
+      "purpose": "daytrade_stop",
+      "reason": "stop 87.4551 hit, realize $-176.57",
+      "mode": "offline-sim",
+      "simulated": 1
+    },
+    {
+      "id": 24,
+      "ts": "2026-07-07T14:00:53.887806+00:00",
+      "cycle": 18,
+      "symbol": "USD/JPY",
+      "strategy": "daytrade",
+      "kind": "equity",
+      "side": "sell",
+      "qty": 28.74378,
+      "price": 238.74,
+      "premium": 0.0,
+      "notional": 0.0,
+      "purpose": "daytrade_stop",
+      "reason": "stop 241.0956 hit, realize $-137.62",
+      "mode": "offline-sim",
+      "simulated": 1
+    },
+    {
+      "id": 23,
+      "ts": "2026-07-07T14:00:53.877450+00:00",
+      "cycle": 18,
+      "symbol": "GBP/USD",
+      "strategy": "daytrade",
+      "kind": "equity",
+      "side": "buy",
+      "qty": 108.222708,
+      "price": 69.31,
+      "premium": 0.0,
+      "notional": 7501.424330072228,
+      "purpose": "daytrade_entry",
+      "reason": "intraday long @ 69.3147 (rsi 29.0, macd -0.2182)",
+      "mode": "offline-sim",
+      "simulated": 1
+    },
+    {
+      "id": 22,
+      "ts": "2026-07-07T14:00:53.866449+00:00",
+      "cycle": 18,
+      "symbol": "EUR/USD",
+      "strategy": "daytrade",
+      "kind": "equity",
+      "side": "buy",
+      "qty": 84.916836,
+      "price": 88.34,
+      "premium": 0.0,
+      "notional": 7501.424330232896,
+      "purpose": "daytrade_entry",
+      "reason": "intraday long @ 88.3385 (rsi 25.2, macd -0.594)",
+      "mode": "offline-sim",
+      "simulated": 1
+    },
+    {
+      "id": 21,
+      "ts": "2026-07-07T14:00:53.806076+00:00",
+      "cycle": 17,
+      "symbol": "USD/JPY",
+      "strategy": "daytrade",
+      "kind": "equity",
+      "side": "buy",
+      "qty": 28.74378,
+      "price": 243.53,
+      "premium": 0.0,
+      "notional": 6999.9999558761565,
+      "purpose": "daytrade_entry",
+      "reason": "intraday long @ 243.5309 (rsi 55.0, macd 1.6124)",
+      "mode": "offline-sim",
+      "simulated": 1
+    },
+    {
+      "id": 20,
+      "ts": "2026-07-07T14:00:53.794073+00:00",
+      "cycle": 17,
+      "symbol": "GBP/USD",
+      "strategy": "daytrade",
+      "kind": "equity",
+      "side": "sell",
+      "qty": 108.575746,
+      "price": 67.24,
+      "premium": 0.0,
+      "notional": 0.0,
+      "purpose": "daytrade_stop",
+      "reason": "stop 68.0512 hit, realize $-162.51",
+      "mode": "offline-sim",
+      "simulated": 1
+    },
     {
       "id": 19,
       "ts": "2026-07-07T13:28:32.043290+00:00",
@@ -479,176 +649,6 @@
       "notional": 0.0,
       "purpose": "daytrade_stop",
       "reason": "stop 87.4551 hit, realize $-175.80",
-      "mode": "offline-sim",
-      "simulated": 1
-    },
-    {
-      "id": 14,
-      "ts": "2026-07-07T13:28:31.499512+00:00",
-      "cycle": 10,
-      "symbol": "USD/JPY",
-      "strategy": "daytrade",
-      "kind": "equity",
-      "side": "sell",
-      "qty": 28.74378,
-      "price": 238.74,
-      "premium": 0.0,
-      "notional": 0.0,
-      "purpose": "daytrade_stop",
-      "reason": "stop 241.0956 hit, realize $-137.62",
-      "mode": "offline-sim",
-      "simulated": 1
-    },
-    {
-      "id": 13,
-      "ts": "2026-07-07T13:28:31.481835+00:00",
-      "cycle": 10,
-      "symbol": "GBP/USD",
-      "strategy": "daytrade",
-      "kind": "equity",
-      "side": "buy",
-      "qty": 107.750508,
-      "price": 69.31,
-      "premium": 0.0,
-      "notional": 7468.69392964037,
-      "purpose": "daytrade_entry",
-      "reason": "intraday long @ 69.3147 (rsi 29.0, macd -0.2182)",
-      "mode": "offline-sim",
-      "simulated": 1
-    },
-    {
-      "id": 12,
-      "ts": "2026-07-07T13:28:31.467581+00:00",
-      "cycle": 10,
-      "symbol": "EUR/USD",
-      "strategy": "daytrade",
-      "kind": "equity",
-      "side": "buy",
-      "qty": 84.546325,
-      "price": 88.34,
-      "premium": 0.0,
-      "notional": 7468.693951182751,
-      "purpose": "daytrade_entry",
-      "reason": "intraday long @ 88.3385 (rsi 25.2, macd -0.594)",
-      "mode": "offline-sim",
-      "simulated": 1
-    },
-    {
-      "id": 11,
-      "ts": "2026-07-07T13:28:31.402051+00:00",
-      "cycle": 9,
-      "symbol": "USD/JPY",
-      "strategy": "daytrade",
-      "kind": "equity",
-      "side": "buy",
-      "qty": 28.74378,
-      "price": 243.53,
-      "premium": 0.0,
-      "notional": 6999.9999558761565,
-      "purpose": "daytrade_entry",
-      "reason": "intraday long @ 243.5309 (rsi 55.0, macd 1.6124)",
-      "mode": "offline-sim",
-      "simulated": 1
-    },
-    {
-      "id": 10,
-      "ts": "2026-07-07T13:28:31.388837+00:00",
-      "cycle": 9,
-      "symbol": "GBP/USD",
-      "strategy": "daytrade",
-      "kind": "equity",
-      "side": "sell",
-      "qty": 101.622084,
-      "price": 67.24,
-      "premium": 0.0,
-      "notional": 0.0,
-      "purpose": "daytrade_stop",
-      "reason": "stop 68.0512 hit, realize $-152.11",
-      "mode": "offline-sim",
-      "simulated": 1
-    },
-    {
-      "id": 9,
-      "ts": "2026-07-07T13:08:15.114293+00:00",
-      "cycle": 8,
-      "symbol": "GBP/USD",
-      "strategy": "daytrade",
-      "kind": "equity",
-      "side": "buy",
-      "qty": 101.622084,
-      "price": 68.74,
-      "premium": 0.0,
-      "notional": 6985.357434945648,
-      "purpose": "daytrade_entry",
-      "reason": "intraday long @ 68.7386 (rsi 29.0, macd 0.3328)",
-      "mode": "offline-sim",
-      "simulated": 1
-    },
-    {
-      "id": 8,
-      "ts": "2026-07-07T13:08:14.922094+00:00",
-      "cycle": 6,
-      "symbol": "GBP/USD",
-      "strategy": "daytrade",
-      "kind": "equity",
-      "side": "sell",
-      "qty": 103.557855,
-      "price": 68.51,
-      "premium": 0.0,
-      "notional": 0.0,
-      "purpose": "daytrade_target",
-      "reason": "target +1.68% @ 68.5076, realize $117.35",
-      "mode": "offline-sim",
-      "simulated": 1
-    },
-    {
-      "id": 7,
-      "ts": "2026-07-07T13:08:14.720946+00:00",
-      "cycle": 4,
-      "symbol": "GBP/USD",
-      "strategy": "daytrade",
-      "kind": "equity",
-      "side": "buy",
-      "qty": 103.557855,
-      "price": 67.37,
-      "premium": 0.0,
-      "notional": 6977.142720836108,
-      "purpose": "daytrade_entry",
-      "reason": "intraday long @ 67.3743 (rsi 17.4, macd -0.0895)",
-      "mode": "offline-sim",
-      "simulated": 1
-    },
-    {
-      "id": 6,
-      "ts": "2026-07-07T13:08:14.630280+00:00",
-      "cycle": 3,
-      "symbol": "GBP/USD",
-      "strategy": "daytrade",
-      "kind": "equity",
-      "side": "sell",
-      "qty": 100.849698,
-      "price": 69.07,
-      "premium": 0.0,
-      "notional": 0.0,
-      "purpose": "daytrade_trendbreak",
-      "reason": "trend break @ 69.0730, realize $-24.37",
-      "mode": "offline-sim",
-      "simulated": 1
-    },
-    {
-      "id": 5,
-      "ts": "2026-07-07T13:08:14.617139+00:00",
-      "cycle": 3,
-      "symbol": "EUR/USD",
-      "strategy": "daytrade",
-      "kind": "equity",
-      "side": "sell",
-      "qty": 79.131611,
-      "price": 86.26,
-      "premium": 0.0,
-      "notional": 0.0,
-      "purpose": "daytrade_stop",
-      "reason": "stop 87.4551 hit, realize $-164.54",
       "mode": "offline-sim",
       "simulated": 1
     }
@@ -781,9 +781,157 @@
       "cash": 99155.83264385544,
       "realized_pnl": -575.3621962405807,
       "premium": 0.0
+    },
+    {
+      "ts": "2026-07-07T14:00:53.819615+00:00",
+      "cycle": 17,
+      "equity": 107300.82764566252,
+      "cash": 100300.82768978635,
+      "realized_pnl": -737.8768155907521,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-07T14:00:53.900359+00:00",
+      "cycle": 18,
+      "equity": 107163.20451870828,
+      "cash": 92160.35585840316,
+      "realized_pnl": -875.4999425449774,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-07T14:00:53.977309+00:00",
+      "cycle": 19,
+      "equity": 106960.48419909948,
+      "cash": 106960.48419909948,
+      "realized_pnl": -1078.220262153773,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-07T14:00:54.053599+00:00",
+      "cycle": 20,
+      "equity": 106960.48419909948,
+      "cash": 99473.25030710643,
+      "realized_pnl": -1078.220262153773,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-07T14:00:54.134887+00:00",
+      "cycle": 21,
+      "equity": 107062.33512350793,
+      "cash": 99473.25030710643,
+      "realized_pnl": -1078.220262153773,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-07T14:00:54.227625+00:00",
+      "cycle": 22,
+      "equity": 107086.41655454806,
+      "cash": 107086.41655454806,
+      "realized_pnl": -952.2879067051783,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-07T14:00:54.322295+00:00",
+      "cycle": 23,
+      "equity": 107086.41655454806,
+      "cash": 107086.41655454806,
+      "realized_pnl": -952.2879067051783,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-07T14:00:54.400989+00:00",
+      "cycle": 24,
+      "equity": 107086.41655454806,
+      "cash": 99590.36737483299,
+      "realized_pnl": -952.2879067051783,
+      "premium": 0.0
     }
   ],
   "decisions": [
+    {
+      "ts": "2026-07-07T14:00:54.377922+00:00",
+      "kind": "daytrade_entry",
+      "symbol": "GBP/USD",
+      "reason": "intraday long @ 68.7386 (rsi 29.0, macd 0.3328)"
+    },
+    {
+      "ts": "2026-07-07T14:00:54.191941+00:00",
+      "kind": "daytrade_target",
+      "symbol": "GBP/USD",
+      "reason": "target +1.68% @ 68.5076, realize $125.93"
+    },
+    {
+      "ts": "2026-07-07T14:00:54.111872+00:00",
+      "kind": "daytrade_hold",
+      "symbol": "GBP/USD",
+      "reason": "hold 68.2909 peak 68.2909 gain +1.36%"
+    },
+    {
+      "ts": "2026-07-07T14:00:54.031453+00:00",
+      "kind": "daytrade_entry",
+      "symbol": "GBP/USD",
+      "reason": "intraday long @ 67.3743 (rsi 17.4, macd -0.0895)"
+    },
+    {
+      "ts": "2026-07-07T14:00:54.005513+00:00",
+      "kind": "wheel_wait",
+      "symbol": "AAPL",
+      "reason": "IV-rank 0% too low to sell premium"
+    },
+    {
+      "ts": "2026-07-07T14:00:53.955631+00:00",
+      "kind": "daytrade_trendbreak",
+      "symbol": "GBP/USD",
+      "reason": "trend break @ 69.0730, realize $-26.15"
+    },
+    {
+      "ts": "2026-07-07T14:00:53.944690+00:00",
+      "kind": "daytrade_stop",
+      "symbol": "EUR/USD",
+      "reason": "stop 87.4551 hit, realize $-176.57"
+    },
+    {
+      "ts": "2026-07-07T14:00:53.929510+00:00",
+      "kind": "wheel_wait",
+      "symbol": "AAPL",
+      "reason": "IV-rank 0% too low to sell premium"
+    },
+    {
+      "ts": "2026-07-07T14:00:53.888650+00:00",
+      "kind": "daytrade_stop",
+      "symbol": "USD/JPY",
+      "reason": "stop 241.0956 hit, realize $-137.62"
+    },
+    {
+      "ts": "2026-07-07T14:00:53.878296+00:00",
+      "kind": "daytrade_entry",
+      "symbol": "GBP/USD",
+      "reason": "intraday long @ 69.3147 (rsi 29.0, macd -0.2182)"
+    },
+    {
+      "ts": "2026-07-07T14:00:53.867343+00:00",
+      "kind": "daytrade_entry",
+      "symbol": "EUR/USD",
+      "reason": "intraday long @ 88.3385 (rsi 25.2, macd -0.594)"
+    },
+    {
+      "ts": "2026-07-07T14:00:53.806923+00:00",
+      "kind": "daytrade_entry",
+      "symbol": "USD/JPY",
+      "reason": "intraday long @ 243.5309 (rsi 55.0, macd 1.6124)"
+    },
+    {
+      "ts": "2026-07-07T14:00:53.795258+00:00",
+      "kind": "daytrade_stop",
+      "symbol": "GBP/USD",
+      "reason": "stop 68.0512 hit, realize $-162.51"
+    },
+    {
+      "ts": "2026-07-07T14:00:53.759881+00:00",
+      "kind": "wheel_wait",
+      "symbol": "AAPL",
+      "reason": "IV-rank 4% too low to sell premium"
+    },
     {
       "ts": "2026-07-07T13:28:32.044447+00:00",
       "kind": "daytrade_entry",
@@ -846,90 +994,6 @@
     },
     {
       "ts": "2026-07-07T13:28:31.468718+00:00",
-      "kind": "daytrade_entry",
-      "symbol": "EUR/USD",
-      "reason": "intraday long @ 88.3385 (rsi 25.2, macd -0.594)"
-    },
-    {
-      "ts": "2026-07-07T13:28:31.403094+00:00",
-      "kind": "daytrade_entry",
-      "symbol": "USD/JPY",
-      "reason": "intraday long @ 243.5309 (rsi 55.0, macd 1.6124)"
-    },
-    {
-      "ts": "2026-07-07T13:28:31.390206+00:00",
-      "kind": "daytrade_stop",
-      "symbol": "GBP/USD",
-      "reason": "stop 68.0512 hit, realize $-152.11"
-    },
-    {
-      "ts": "2026-07-07T13:28:31.352507+00:00",
-      "kind": "wheel_wait",
-      "symbol": "AAPL",
-      "reason": "IV-rank 4% too low to sell premium"
-    },
-    {
-      "ts": "2026-07-07T13:08:15.115956+00:00",
-      "kind": "daytrade_entry",
-      "symbol": "GBP/USD",
-      "reason": "intraday long @ 68.7386 (rsi 29.0, macd 0.3328)"
-    },
-    {
-      "ts": "2026-07-07T13:08:14.924247+00:00",
-      "kind": "daytrade_target",
-      "symbol": "GBP/USD",
-      "reason": "target +1.68% @ 68.5076, realize $117.35"
-    },
-    {
-      "ts": "2026-07-07T13:08:14.815583+00:00",
-      "kind": "daytrade_hold",
-      "symbol": "GBP/USD",
-      "reason": "hold 68.2909 peak 68.2909 gain +1.36%"
-    },
-    {
-      "ts": "2026-07-07T13:08:14.722607+00:00",
-      "kind": "daytrade_entry",
-      "symbol": "GBP/USD",
-      "reason": "intraday long @ 67.3743 (rsi 17.4, macd -0.0895)"
-    },
-    {
-      "ts": "2026-07-07T13:08:14.689514+00:00",
-      "kind": "wheel_wait",
-      "symbol": "AAPL",
-      "reason": "IV-rank 0% too low to sell premium"
-    },
-    {
-      "ts": "2026-07-07T13:08:14.631947+00:00",
-      "kind": "daytrade_trendbreak",
-      "symbol": "GBP/USD",
-      "reason": "trend break @ 69.0730, realize $-24.37"
-    },
-    {
-      "ts": "2026-07-07T13:08:14.618673+00:00",
-      "kind": "daytrade_stop",
-      "symbol": "EUR/USD",
-      "reason": "stop 87.4551 hit, realize $-164.54"
-    },
-    {
-      "ts": "2026-07-07T13:08:14.598459+00:00",
-      "kind": "wheel_wait",
-      "symbol": "AAPL",
-      "reason": "IV-rank 0% too low to sell premium"
-    },
-    {
-      "ts": "2026-07-07T13:08:14.553105+00:00",
-      "kind": "daytrade_stop",
-      "symbol": "USD/JPY",
-      "reason": "stop 241.0956 hit, realize $-137.62"
-    },
-    {
-      "ts": "2026-07-07T13:08:14.539928+00:00",
-      "kind": "daytrade_entry",
-      "symbol": "GBP/USD",
-      "reason": "intraday long @ 69.3147 (rsi 29.0, macd -0.2182)"
-    },
-    {
-      "ts": "2026-07-07T13:08:14.526384+00:00",
       "kind": "daytrade_entry",
       "symbol": "EUR/USD",
       "reason": "intraday long @ 88.3385 (rsi 25.2, macd -0.594)"
