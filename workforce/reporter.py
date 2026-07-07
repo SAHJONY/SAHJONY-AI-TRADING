@@ -161,6 +161,36 @@ def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[st
             "unrealized": round((price - pos.get("cost_basis", price)) * shares, 2) if shares else 0.0,
         })
 
+    # Broker-reported account + holdings straight from the adapter (e.g. Robinhood's
+    # own numbers), shown next to the desk's internal book so the two reconcile.
+    # Every call is fault-isolated in the adapter; guard again here so the snapshot
+    # never fails to build.
+    try:
+        b_acct = client.get_account() or {}
+    except Exception:
+        b_acct = {}
+    broker_holdings = []
+    try:
+        for sym, h in (client.get_broker_positions() or {}).items():
+            broker_holdings.append({
+                "symbol": sym,
+                "qty": round(float(h.get("qty", 0.0) or 0.0), 8),
+                "avg_price": round(float(h.get("avg_price", 0.0) or 0.0), 2),
+                "market_value": round(float(h.get("market_value", 0.0) or 0.0), 2),
+            })
+    except Exception:
+        pass
+    broker_account = {
+        "venue": cfg.broker,
+        "mode": mode,
+        "online": client.online,
+        "live_armed": live_armed,
+        "equity": round(float(b_acct.get("equity", 0.0) or 0.0), 2),
+        "cash": round(float(b_acct.get("cash", 0.0) or 0.0), 2),
+        "buying_power": round(float(b_acct.get("buying_power", 0.0) or 0.0), 2),
+        "holdings": broker_holdings,
+    }
+
     brain = cycle_result.get("brain")
     brain_block = {"enabled": cfg.ai_brain_enabled, "used": getattr(brain, "used", False)}
     if brain is not None:
@@ -205,6 +235,7 @@ def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[st
         "council": council,
         "brain": brain_block,
         "positions": positions,
+        "broker_account": broker_account,
         "crm": db.fund_summary(),
         "recent_trades": db.recent_trades(15),
         "equity_curve": db.equity_history(150),

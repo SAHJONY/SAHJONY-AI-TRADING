@@ -974,6 +974,11 @@ function Parquet(v){
    .forEach(([k,val])=>riskBody.appendChild($(`<div class="row"><span class="mut">${k}</span><span class="tag amber">${val}</span></div>`)));
   g.appendChild(panel('Risk Gatekeeper', riskBody, '', 'span4'));
 
+  // broker/venue account (e.g. Robinhood) — the venue's own numbers
+  const bh=(DATA.broker_account&&DATA.broker_account.holdings||[]).length;
+  g.appendChild(panel('Venue Account', brokerPanel(),
+    ((DATA.broker_account&&DATA.broker_account.venue)||DATA.broker||'—').toUpperCase()+' · '+bh+' held', 'span4'));
+
   // positions blotter
   const posBody=positionsTable();
   g.appendChild(panel('Positions Blotter', posBody, (DATA.positions||[]).length+' open', 'span8'));
@@ -1081,8 +1086,36 @@ function Council(v){
   v.appendChild(g);
 }
 
+// ── broker/venue account + holdings (the venue's own numbers, e.g. Robinhood) ──
+function brokerPanel(){
+  const b=DATA.broker_account||{};
+  const venue=(b.venue||DATA.broker||'broker').toUpperCase();
+  const feed = b.online?(b.live_armed?'LIVE · REAL MONEY':'LIVE FEED'):'OFFLINE SIM';
+  const feedCol = b.online?(b.live_armed?'var(--down)':'var(--up)'):'var(--amber)';
+  const box=$(`<div></div>`);
+  box.appendChild($(`<div class="row" style="margin-bottom:9px">
+    <span class="mut">Venue</span><span><b>${esc(venue)}</b>
+    <span class="tag" style="color:${feedCol};border-color:${feedCol}">${feed}</span></span></div>`));
+  const stat=(k,val)=>`<div class="row"><span class="mut">${k}</span><span class="mono"><b>${val}</b></span></div>`;
+  box.appendChild($(`<div>${stat('Equity',money(b.equity))}${stat('Cash',money(b.cash))}${stat('Buying power',money(b.buying_power))}</div>`));
+  const hold=b.holdings||[];
+  if(!hold.length){ box.appendChild($(`<div class="empty" style="margin-top:9px">no broker-reported holdings ${b.online?'':'(run the desk on this venue to populate)'}</div>`)); }
+  else{
+    const wrap=$(`<div class="scroll" style="margin-top:9px"></div>`);
+    const t=$(`<table><thead><tr><th>ASSET</th><th class="n">QTY</th><th class="n">AVG</th><th class="n">MKT VALUE</th></tr></thead><tbody></tbody></table>`);
+    const tb=t.querySelector('tbody');
+    hold.slice().sort((a,b)=>(+b.market_value||0)-(+a.market_value||0)).forEach(h=>tb.appendChild($(`<tr>
+      <td class="amber">${esc(h.symbol)}</td><td class="n">${num(h.qty,8)}</td>
+      <td class="n">${h.avg_price?money(h.avg_price):'—'}</td><td class="n">${money(h.market_value)}</td></tr>`)));
+    wrap.appendChild(t); box.appendChild(wrap);
+  }
+  return box;
+}
 function Book(v){
   const g=$(`<div class="grid c12"></div>`);
+  const bh=(DATA.broker_account&&DATA.broker_account.holdings||[]).length;
+  g.appendChild(panel('Venue Account · broker-reported', brokerPanel(),
+    ((DATA.broker_account&&DATA.broker_account.venue)||DATA.broker||'—').toUpperCase()+' · '+bh+' holdings', 'span12'));
   g.appendChild(panel('Positions Treemap · value × P&L', treemap(DATA.positions), (DATA.positions||[]).length+' holdings', 'span12'));
   g.appendChild(panel('Positions Blotter', positionsTable(), (DATA.positions||[]).length+' open', 'span12'));
   // recent trades
