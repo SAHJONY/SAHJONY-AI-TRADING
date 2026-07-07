@@ -92,6 +92,11 @@
   @keyframes fd{0%{background:rgba(255,92,108,.22)}100%{background:transparent}}
   .mpill{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:1px;padding:5px 11px;border-radius:7px;
     border:1px solid var(--line2);text-transform:uppercase;box-shadow:inset 0 0 12px rgba(255,255,255,.02)}
+  #liveBanner{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;
+    text-align:center;padding:7px 12px;color:#fff;background:linear-gradient(90deg,#5c0f16,#a01824,#5c0f16);
+    border-bottom:1px solid var(--down);box-shadow:0 2px 18px rgba(255,92,108,.35);animation:livePulse 2.4s ease-in-out infinite}
+  #liveBanner b{color:var(--amber2)}
+  @keyframes livePulse{0%,100%{opacity:1}50%{opacity:.72}}
   .btn{font-family:var(--mono);font-size:11px;background:rgba(255,255,255,.025);border:1px solid var(--line2);color:var(--txt);
     border-radius:7px;padding:6px 11px;cursor:pointer;white-space:nowrap;transition:all .18s}
   .btn:hover{border-color:var(--amber);color:var(--amber2);box-shadow:0 0 14px rgba(255,176,0,.18)}
@@ -268,6 +273,7 @@
   <button class="btn" id="voiceBtn" title="Voice control — click and speak (English / Español)" aria-label="Voice control">🎙️ VOICE</button>
   <button class="btn" onclick="load()">↻</button>
 </header>
+<div id="liveBanner" style="display:none">⚠ LIVE — REAL MONEY ARMED · orders use real funds on <b id="liveVenue">—</b> · hard risk ceilings enforced</div>
 
 <div class="tape"><div class="track" id="tape"></div></div>
 <nav id="nav"></nav>
@@ -760,11 +766,19 @@ function ringGauge(frac,big,label,color){
 function setStatus(){
   const h=(DATA&&DATA.health)||{};
   const md=document.getElementById('mode'); const m=(DATA&&DATA.mode)||'—';
-  md.textContent=m;
+  const venue=(DATA&&DATA.broker)||h.broker||'';
+  const mLabel = m==='LIVE'?'LIVE':(m==='paper'?'PAPER':(m==='offline-sim'?'SIM':m));
+  md.textContent = venue ? `${venue.toUpperCase()} · ${mLabel}` : mLabel;
   const c = m==='LIVE'?'var(--down)':(m==='paper'?'var(--up)':'var(--amber)');
   md.style.color=c; md.style.borderColor=c;
+  // Honest real-money banner: only when a LIVE venue is deliberately armed.
+  const armed=!!h.live_armed;
+  const lb=document.getElementById('liveBanner');
+  if(lb){ lb.style.display=armed?'':'none';
+    const lv=document.getElementById('liveVenue'); if(lv)lv.textContent=(venue||'broker').toUpperCase(); }
   const db=document.getElementById('dBroker'), dm=document.getElementById('dMkt');
-  document.getElementById('brokerTxt').textContent = h.broker_online?'LIVE FEED':'OFFLINE SIM';
+  document.getElementById('brokerTxt').textContent =
+    (venue?venue.toUpperCase()+' ':'') + (h.broker_online?'LIVE FEED':'OFFLINE SIM');
   db.className='dot '+(h.broker_online?'g':'a');
   document.getElementById('mktTxt').textContent = h.market_open?'OPEN':'CLOSED';
   dm.className='dot '+(h.market_open?'g':'r');
