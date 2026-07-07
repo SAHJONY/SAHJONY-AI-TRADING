@@ -127,6 +127,10 @@ def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[st
     db = firm.db
     client = firm.client
     mode = getattr(client, "mode", cfg.mode)   # broker-accurate (Alpaca/IBKR/sim)
+    # Real-money armed = a LIVE venue that the operator has deliberately acked.
+    live_armed = bool(mode == "LIVE" and cfg.live_trading_ack)
+    _tag_mode = {"LIVE": "LIVE — REAL MONEY", "paper": "PAPER",
+                 "offline-sim": "OFFLINE SIM"}.get(mode, str(mode).upper())
     eq = cycle_result.get("equity", state.get("equity_last") or 0.0)
     eq0 = state.get("equity_start") or eq or 1.0
     realized = state.get("realized_pnl", 0.0)
@@ -168,8 +172,9 @@ def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[st
 
     return {
         "firm": cfg.firm_name,
-        "tagline": "Autonomous multi-agent quant trading — PAPER",
+        "tagline": f"Autonomous multi-agent quant trading — {_tag_mode}",
         "mode": mode,
+        "broker": cfg.broker,
         "ts": _now(),
         "cycle": state.get("cycle", 0),
         "account": {
@@ -185,6 +190,8 @@ def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[st
         "capital_flows": db.capital_ledger(20),
         "health": {
             "mode": mode,
+            "broker": cfg.broker,
+            "live_armed": live_armed,
             "broker_online": client.online,
             "market_open": client.is_market_open(),
             "risk_caps": {"per_position_pct": cfg.max_allocation_pct,
