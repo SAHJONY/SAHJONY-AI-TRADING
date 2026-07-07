@@ -131,6 +131,12 @@ def confirm_live(cfg, client) -> bool:
 
 
 def run_once(firm: Firm, state, force: bool) -> dict:
+    # Remote kill switch (opt-in via REMOTE_HALT_URL): let a dashboard STOP on any
+    # device reach this local desk by toggling the HALT file before we evaluate risk.
+    from utils.remote_control import sync_remote_halt
+    rc = sync_remote_halt(firm.cfg)
+    if rc not in ("disabled", "trading"):
+        log.info("remote control: %s", rc)
     market_open = (not firm.client.online) or firm.client.is_market_open()
     trade = market_open or force
     if not trade:
