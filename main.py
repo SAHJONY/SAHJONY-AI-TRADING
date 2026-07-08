@@ -18,6 +18,8 @@ from __future__ import annotations
 import argparse
 import time
 
+from dotenv import load_dotenv
+load_dotenv(".env")
 from config import HARD_MAX_ALLOCATION_PCT, HARD_MAX_TOTAL_DEPLOYED_PCT, load_config
 from database import Database
 from utils.broker import get_broker

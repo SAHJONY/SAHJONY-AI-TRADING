@@ -1,0 +1,502 @@
+SAHJONY_GLOBAL_AUTONOMOUS_TRADING_SYSTEM:
+  version: "1.0"
+  mission: "Trade every legally accessible market worldwide, 24/7, with maximum intelligence and controlled risk."
+  default_mode: "paper"
+  live_trading_requires_manual_approval: true
+
+  core_principles:
+    - "Maximum skills, not maximum risk."
+    - "No trade without risk approval."
+    - "No stale data trades."
+    - "No strategy bypasses the risk manager."
+    - "Paper → Shadow Live → Micro Live → Full Live."
+    - "Self-healing can fix infrastructure automatically."
+    - "Self-improvement can suggest changes, but live-risk changes require approval."
+
+  markets:
+    equities:
+      status: enabled
+      brokers: ["Alpaca", "Interactive Brokers"]
+    etfs:
+      status: enabled
+      brokers: ["Alpaca", "Interactive Brokers"]
+    options:
+      status: enabled_paper_first
+      brokers: ["Interactive Brokers", "Alpaca_if_supported"]
+    futures:
+      status: enabled_paper_first
+      brokers: ["Interactive Brokers"]
+    forex:
+      status: enabled_paper_first
+      brokers: ["Interactive Brokers"]
+    crypto:
+      status: enabled
+      brokers: ["Coinbase", "Kraken", "Alpaca Crypto"]
+      schedule: "24/7"
+    prediction_markets:
+      status: enabled_paper_first
+      exchanges: ["Kalshi", "Polymarket"]
+    commodities:
+      status: enabled_via_futures_etfs
+    bonds:
+      status: enabled_via_etfs_initially
+
+  accounts:
+    account_orchestrator:
+      enabled: true
+      functions:
+        - sync_buying_power
+        - sync_positions
+        - sync_orders
+        - sync_fills
+        - check_account_permissions
+        - check_margin_status
+        - apply_account_specific_risk
+        - route_orders_to_best_account
+        - prevent_duplicate_exposure
+
+  broker_connectors:
+    alpaca:
+      assets: ["stocks", "etfs", "crypto"]
+      modes: ["paper", "live"]
+    interactive_brokers:
+      assets: ["global_equities", "options", "futures", "forex", "bonds", "etfs"]
+      modes: ["paper", "live"]
+    coinbase:
+      assets: ["crypto"]
+      modes: ["paper", "live"]
+    kraken:
+      assets: ["crypto"]
+      modes: ["paper", "live"]
+    kalshi:
+      assets: ["event_contracts"]
+      modes: ["paper", "live_after_approval"]
+    polymarket:
+      assets: ["prediction_markets"]
+      modes: ["paper", "live_after_approval"]
+
+  infrastructure:
+    backend:
+      language: "Python"
+      framework: "FastAPI"
+      workers: "Celery_or_ARQ"
+      scheduler: "APScheduler"
+    database:
+      primary: "PostgreSQL"
+      time_series: "TimescaleDB_optional"
+      cache: "Redis_or_Upstash"
+    messaging:
+      bus: "Redis Streams_or_NATS"
+    deployment:
+      local: true
+      cloud: true
+      docker: true
+      github_actions: true
+    security:
+      env_secrets_only: true
+      no_keys_in_code: true
+      encrypted_logs: true
+      key_rotation_required: true
+      read_only_mode_available: true
+
+  data_layer:
+    sources:
+      - broker_market_data
+      - exchange_order_books
+      - websocket_feeds
+      - rest_feeds
+      - news
+      - earnings_calendar
+      - economic_calendar
+      - options_chain
+      - crypto_order_books
+      - kalshi_orderbook
+      - polymarket_clob
+    validation:
+      stale_data_detection: true
+      duplicate_tick_filter: true
+      outlier_detection: true
+      latency_monitoring: true
+      market_session_check: true
+      resolution_feed_check_for_prediction_markets: true
+
+  ai_council:
+    enabled: true
+    agents:
+      - name: "Trend Agent"
+        skill: "momentum and trend following"
+      - name: "Mean Reversion Agent"
+        skill: "overbought oversold reversals"
+      - name: "Volatility Agent"
+        skill: "ATR, IV, realized volatility"
+      - name: "Macro Agent"
+        skill: "rates, dollar, oil, gold, indices"
+      - name: "Fundamental Agent"
+        skill: "valuation and earnings quality"
+      - name: "Options Agent"
+        skill: "IV rank, skew, spreads"
+      - name: "Crypto Microstructure Agent"
+        skill: "order book imbalance and funding"
+      - name: "Prediction Market Agent"
+        skill: "Kalshi/Polymarket probability edge"
+      - name: "News Sentiment Agent"
+        skill: "market moving headlines"
+      - name: "Risk Agent"
+        skill: "drawdown, exposure, correlation"
+      - name: "Execution Agent"
+        skill: "slippage, fills, order type selection"
+      - name: "Portfolio Agent"
+        skill: "capital allocation and hedging"
+
+    output_schema:
+      symbol: string
+      market: string
+      account: string
+      direction: ["long", "short", "flat", "hedge"]
+      confidence: "0_to_1"
+      expected_value: float
+      risk_score: "0_to_1"
+      strategy: string
+      timeframe: ["scalp", "intraday", "swing", "position"]
+      explanation_required: true
+
+  signal_engine:
+    technical:
+      - rsi
+      - macd
+      - moving_average_cross
+      - bollinger_bands
+      - atr_breakout
+      - vwap_deviation
+      - support_resistance
+    statistical:
+      - z_score
+      - cointegration
+      - correlation_break
+      - regime_detection
+      - volatility_clustering
+    orderbook:
+      - bid_ask_imbalance
+      - depth_change
+      - spread_expansion
+      - large_order_detection
+      - liquidity_vacuum_detection
+    options:
+      - iv_rank
+      - iv_percentile
+      - put_call_ratio
+      - skew_change
+      - gamma_exposure_proxy
+    prediction_markets:
+      - yes_no_orderbook_imbalance
+      - bayesian_probability_update
+      - net_edge_after_fees
+      - time_to_expiry_decay
+      - related_market_spread_zscore
+      - temporal_arbitrage_detection
+    macro:
+      - rates_signal
+      - dollar_index_proxy
+      - oil_signal
+      - gold_signal
+      - index_futures_signal
+
+  probability_engine:
+    methods:
+      - bayesian_update
+      - ensemble_vote
+      - regime_adjusted_probability
+      - historical_setup_win_rate
+      - net_edge_after_costs
+    cost_adjustments:
+      - broker_fees
+      - exchange_fees
+      - bid_ask_spread
+      - slippage
+      - borrow_cost
+      - funding_rate
+      - settlement_risk
+      - prediction_market_resolution_risk
+
+  strategies:
+    equities:
+      - momentum_breakout
+      - mean_reversion
+      - earnings_gap_continuation
+      - sector_rotation
+      - liquidity_breakout
+    options:
+      - defined_risk_spreads
+      - volatility_crush
+      - protective_puts
+      - covered_calls
+    futures:
+      - macro_trend
+      - volatility_breakout
+      - calendar_spread_paper_first
+    forex:
+      - session_breakout
+      - trend_following
+      - carry_filter
+    crypto:
+      - trend_following
+      - orderbook_imbalance
+      - funding_rate_arbitrage_paper_first
+      - volatility_breakout
+    kalshi:
+      - probability_mispricing
+      - event_arbitrage
+      - time_decay_capture
+      - hedged_event_position
+    polymarket:
+      - temporal_arbitrage
+      - hedged_directional
+      - inventory_market_making
+      - late_resolution_capture
+      - dynamic_position_rotation
+
+  risk_manager:
+    enabled: true
+    hard_blocks:
+      - stale_data
+      - missing_exit_plan
+      - spread_too_wide
+      - excessive_slippage
+      - broker_api_unstable
+      - account_position_mismatch
+      - market_rules_unclear
+      - legal_or_compliance_block
+      - daily_loss_limit_hit
+      - weekly_loss_limit_hit
+
+    global_limits:
+      max_risk_per_trade: "0.25% to 0.50%"
+      max_daily_loss_global: "3%"
+      max_weekly_loss_global: "7%"
+      max_total_drawdown_pause: "10%"
+      max_capital_per_strategy: "15%"
+      max_capital_per_asset: "5%"
+      max_prediction_market_exposure: "2%"
+      max_options_exposure: "5%"
+      max_unhedged_inventory: "20%"
+
+    sizing:
+      method: "fractional_kelly_capped"
+      kelly_fraction: 0.25
+      volatility_targeting: true
+      correlation_adjustment: true
+      reduce_size_after_loss_streak: true
+      increase_size_only_after_approval: true
+
+  execution_engine:
+    default_order_type: "limit"
+    market_orders_enabled: false
+    order_types:
+      - limit
+      - post_only
+      - stop_limit
+      - bracket_order
+      - gtc
+      - gtd
+      - fok
+      - fak
+    smart_execution:
+      split_large_orders: true
+      avoid_low_liquidity: true
+      cancel_stale_orders: true
+      retry_failed_read_requests: true
+      slippage_guard: true
+      reconcile_fills: true
+      maker_preferred_when_possible: true
+
+  prediction_market_engine:
+    exchanges:
+      kalshi:
+        normalized_book_format: "YES/NO converted to binary fair value"
+        paper_first: true
+      polymarket:
+        normalized_book_format: "UP/DOWN or YES/NO CLOB"
+        paper_first: true
+
+    models:
+      orderbook_imbalance: true
+      bayes_update: true
+      net_edge: true
+      spread_zscore: true
+      time_to_expiry: true
+      inventory_adjusted_quote: true
+      fractional_kelly: true
+
+    live_rules:
+      require_resolution_feed_validation: true
+      require_market_rule_parsing: true
+      require_low_latency_data: true
+      require_max_exposure_limit: true
+      require_manual_live_approval: true
+
+  portfolio_manager:
+    functions:
+      - total_exposure_tracking
+      - realized_pnl
+      - unrealized_pnl
+      - drawdown_tracking
+      - correlation_matrix
+      - hedge_detection
+      - cash_management
+      - capital_allocation
+      - rebalance
+      - account_level_risk_summary
+
+  self_healing:
+    enabled: true
+    automatic_actions:
+      - reconnect_websocket
+      - refresh_market_data
+      - retry_read_only_requests
+      - pause_strategy_on_stale_data
+      - cancel_stale_orders
+      - switch_to_paper_mode_on_critical_error
+      - restart_dead_worker
+      - validate_env_secrets
+      - broker_position_reconciliation
+
+    kill_switch_triggers:
+      - stale_data
+      - abnormal_slippage
+      - repeated_failed_orders
+      - broker_position_mismatch
+      - daily_loss_limit_hit
+      - model_confidence_collapse
+      - exchange_api_unstable
+      - unauthorized_order_detected
+
+  self_improvement:
+    enabled: true
+    human_approved_live_changes_only: true
+    functions:
+      - trade_journal_analysis
+      - failed_trade_pattern_detection
+      - strategy_scorecard_updates
+      - parameter_suggestions
+      - regime_learning
+      - walk_forward_backtesting
+      - paper_test_before_promotion
+
+    promotion_rules:
+      min_paper_trades: 200
+      min_test_days: 14
+      profit_factor_min: 1.5
+      sharpe_min: 1.0
+      max_drawdown_max: "5%"
+      live_promotion_requires_manual_approval: true
+
+  observability:
+    dashboards:
+      - account_health
+      - broker_health
+      - market_data_health
+      - open_positions
+      - daily_pnl
+      - risk_exposure
+      - strategy_performance
+      - prediction_market_edge
+      - ai_council_decisions
+      - kill_switch_status
+
+    logs:
+      - every_signal
+      - every_decision
+      - every_risk_block
+      - every_order
+      - every_fill
+      - every_error
+      - every_self_healing_action
+      - every_strategy_change_suggestion
+
+    alerts:
+      channels:
+        - console
+        - email
+        - telegram_optional
+      alert_events:
+        - daily_loss_warning
+        - kill_switch_triggered
+        - broker_disconnect
+        - stale_data
+        - strategy_underperformance
+        - position_mismatch
+        - live_trade_requires_approval
+
+  operating_modes:
+    backtest:
+      real_money: false
+    paper:
+      real_money: false
+      default: true
+    shadow_live:
+      real_money: false
+      uses_live_data: true
+    micro_live:
+      real_money: true
+      approval_required: true
+      max_capital: "very_small"
+    full_live:
+      real_money: true
+      disabled_until_proven: true
+
+  deployment_sequence:
+    phase_1:
+      name: "Core Infrastructure"
+      tasks:
+        - create_project_structure
+        - setup_fastapi_backend
+        - setup_postgres
+        - setup_redis
+        - setup_docker
+        - setup_env_secrets
+    phase_2:
+      name: "Broker/Data Connectors"
+      tasks:
+        - alpaca_connector
+        - interactive_brokers_connector
+        - coinbase_connector
+        - kraken_connector
+        - kalshi_connector
+        - polymarket_connector
+    phase_3:
+      name: "Trading Brain"
+      tasks:
+        - signal_engine
+        - ai_council
+        - probability_engine
+        - strategy_selector
+        - risk_manager
+    phase_4:
+      name: "Execution"
+      tasks:
+        - paper_executor
+        - shadow_live_executor
+        - micro_live_executor
+        - order_reconciliation
+    phase_5:
+      name: "Autonomy"
+      tasks:
+        - self_healing
+        - self_improvement
+        - dashboard
+        - alerts
+        - kill_switch
+
+  success_metrics:
+    before_live:
+      - profit_factor_above_1_5
+      - sharpe_above_1_0
+      - max_drawdown_below_5_percent
+      - fill_ratio_above_60_percent
+      - no_stale_data_trades
+      - no_position_mismatch
+      - slippage_within_expected_range
+      - positive_expectancy_after_costs
+
+  final_rule:
+    "The system may analyze every market 24/7, but it only trades when data, edge, execution, compliance, and risk all approve."

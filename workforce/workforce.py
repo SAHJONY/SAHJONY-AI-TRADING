@@ -298,7 +298,10 @@ class Firm:
         # 6c) Day-Trading / Forex desk — intraday momentum + mean-reversion on the
         # FX majors (and any extra DAY_TRADE_SYMBOLS), disjoint from the core tickers.
         if trade and self.cfg.day_trading_enabled:
-            universe = [*self.cfg.forex_pairs, *self.cfg.day_trade_symbols]
+            if self.cfg.broker == "robinhood":
+                universe = list(self.cfg.day_trade_symbols)
+            else:
+                universe = [*self.cfg.forex_pairs, *self.cfg.day_trade_symbols]
             today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
             for sym in universe:
                 try:
