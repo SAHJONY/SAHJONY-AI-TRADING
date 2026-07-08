@@ -71,6 +71,19 @@ jobs:
         run: python -m py_compile $(git ls-files '*.py')
 
       - name: Offline test suite (zero real orders)
+        # Hermetic: blank the job-level secrets for this step so the suite runs
+        # credential-less (the tests assert offline-sim = zero real orders).
+        env:
+          ALPACA_API_KEY: ""
+          ALPACA_SECRET_KEY: ""
+          APCA_API_KEY_ID: ""
+          APCA_API_SECRET_KEY: ""
+          OPENAI_API_KEY: ""
+          ANTHROPIC_API_KEY: ""
+          NVIDIA_API_KEY: ""
+          GEMINI_API_KEY: ""
+          XAI_API_KEY: ""
+          AI_BRAIN_ENABLED: "false"
         run: |
           python -m tests.test_dry_run
           python -m tests.test_broker_factory
