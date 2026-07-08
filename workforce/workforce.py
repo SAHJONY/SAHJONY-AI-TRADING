@@ -28,6 +28,7 @@ from config import Config
 from database import Database
 from intelligence.agents import Council, CouncilVerdict, MarketSnapshot
 from intelligence.ai_brain import AIBrain, BrainVerdict
+from intelligence.quiver_engine import QuiverEngine
 from risk.risk_engine import RiskEngine
 from strategies.base import OrderIntent
 from strategies.copy_trading import CopyTrader
@@ -159,6 +160,7 @@ class Firm:
         self.db = db
         self.council = Council()
         self.brain = AIBrain(cfg)
+        self.quiver = QuiverEngine()
         self.notifier = Notifier(cfg)
         self.risk = RiskEngine(cfg)
         self.research = ResearchDesk(client, self.council)
@@ -232,6 +234,13 @@ class Firm:
         for sym in self.cfg.tickers:
             try:
                 snap, verdict = self.research.research(sym, bench)
+                quiver = self.quiver.analyze(sym)
+
+                verdict.metrics["quiver_alpha"] = quiver.get("quiver_alpha", 0.5)
+                verdict.metrics["insider_score"] = quiver.get("insider_score", 0.5)
+                verdict.metrics["congress_score"] = quiver.get("congress_score", 0.5)
+                verdict.metrics["quiver_sentiment"] = quiver.get("sentiment", "neutral")
+
                 research.append({"symbol": sym, "snap": snap, "verdict": verdict})
             except Exception as exc:
                 log.error("research failed %s: %s", sym, exc)
