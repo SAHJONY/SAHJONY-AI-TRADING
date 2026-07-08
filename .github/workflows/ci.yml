@@ -13,17 +13,32 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # package.json is intentionally gitignored (Node deps are local-only), so
+      # Node linting only runs if one is ever committed — otherwise skip cleanly
+      # instead of failing every run (and blocking the deploy job downstream).
+      - name: Detect Node project
+        id: node
+        run: echo "present=$([ -f package.json ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
+      - name: No Node project — skipping lint
+        if: steps.node.outputs.present == 'false'
+        run: echo "No package.json committed (gitignored by design) — nothing to lint."
+
       - uses: actions/setup-node@v4
+        if: steps.node.outputs.present == 'true'
         with:
           node-version: 20
 
       - name: Install dependencies
+        if: steps.node.outputs.present == 'true'
         run: npm install
 
       - name: Type check
+        if: steps.node.outputs.present == 'true'
         run: npx tsc --noEmit
 
       - name: Lint
+        if: steps.node.outputs.present == 'true'
         run: npm run lint
 
   trading-bot:
@@ -48,6 +63,21 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -q -r requirements.txt
+
+      - name: Syntax gate
+        run: python -m py_compile $(git ls-files '*.py')
+
+      - name: Offline test suite (zero real orders)
+        run: |
+          python -m tests.test_dry_run
+          python -m tests.test_broker_factory
+          python -m tests.test_broker_conformance
+          python -m tests.test_robinhood_adapter
+          python -m tests.test_remote_control
+          python -m tests.test_controls
 
       - name: Verify Alpaca credentials are wired
         run: |
