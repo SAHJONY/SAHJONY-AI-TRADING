@@ -225,11 +225,18 @@ class Firm:
             state["equity_day"] = today
             state["equity_day_start"] = equity
             state["breaker_latched"] = False
-        day_start = state.get("equity_day_start") or equity or 1.0
-        day_return = (equity / day_start - 1.0) if day_start else 0.0
+        day_start = float(state.get("equity_day_start") or 0.0)
 
-        if day_return <= -abs(self.cfg.max_daily_drawdown_pct):
-            state["breaker_latched"] = True
+        # Zero equity means the connected account is unfunded, not down 100%.
+        # Block new risk through buying-power/account routing checks instead.
+        if equity <= 0.0 or day_start <= 0.0:
+            day_return = 0.0
+            state["equity_day_start"] = equity
+            state["breaker_latched"] = False
+        else:
+            day_return = equity / day_start - 1.0
+            if day_return <= -abs(self.cfg.max_daily_drawdown_pct):
+                state["breaker_latched"] = True
 
         if self._kill_switch():
             reason = "kill switch (TRADING_HALT / HALT file)"
