@@ -10,11 +10,14 @@ import yaml
 @dataclass
 class AccountProfile:
     id: str
+    display_name: str
     enabled: bool
     broker: str
     asset_class: str
     strategy: str
     execution_mode: str
+    live_requested: bool
+    adapter_ready: bool
     symbols: list[str]
     max_risk: float
     max_position: float
@@ -38,11 +41,14 @@ class AccountOrchestrator:
             accounts.append(
                 AccountProfile(
                     id=raw["id"],
+                    display_name=raw.get("display_name", raw["id"]),
                     enabled=bool(raw.get("enabled", True)),
                     broker=raw["broker"],
                     asset_class=raw.get("asset_class", "unknown"),
                     strategy=raw.get("strategy", "balanced"),
                     execution_mode=raw.get("execution_mode", "monitor_only"),
+                    live_requested=bool(raw.get("live_requested", False)),
+                    adapter_ready=bool(raw.get("adapter_ready", False)),
                     symbols=list(raw.get("symbols", [])),
                     max_risk=float(raw.get("max_risk", 0.01)),
                     max_position=float(raw.get("max_position", 0.10)),
@@ -58,24 +64,18 @@ class AccountOrchestrator:
 
     def executable_accounts(self) -> list[AccountProfile]:
         return [
-            a
-            for a in self.enabled_accounts()
-            if a.execution_mode == "api"
+            a for a in self.enabled_accounts()
+            if a.execution_mode == "api" and a.adapter_ready
         ]
 
     def monitor_only_accounts(self) -> list[AccountProfile]:
         return [
-            a
-            for a in self.enabled_accounts()
-            if a.execution_mode == "monitor_only"
+            a for a in self.enabled_accounts()
+            if a.execution_mode == "monitor_only" or not a.adapter_ready
         ]
 
     def accounts_for_broker(self, broker: str) -> list[AccountProfile]:
-        return [
-            a
-            for a in self.enabled_accounts()
-            if a.broker == broker
-        ]
+        return [a for a in self.enabled_accounts() if a.broker == broker]
 
     def can_execute(self, account_id: str) -> bool:
         for account in self.accounts:
@@ -83,6 +83,7 @@ class AccountOrchestrator:
                 return (
                     account.enabled
                     and account.execution_mode == "api"
+                    and account.adapter_ready
                 )
         return False
 
@@ -95,7 +96,6 @@ class AccountOrchestrator:
                     "max_daily_loss": account.max_daily_loss,
                     "paper": account.paper,
                 }
-
         raise ValueError(f"Unknown account_id: {account_id}")
 
     def summary(self) -> dict[str, Any]:
@@ -105,10 +105,13 @@ class AccountOrchestrator:
             "accounts": [
                 {
                     "id": a.id,
+                    "display_name": a.display_name,
                     "broker": a.broker,
                     "asset_class": a.asset_class,
                     "strategy": a.strategy,
                     "execution_mode": a.execution_mode,
+                    "live_requested": a.live_requested,
+                    "adapter_ready": a.adapter_ready,
                     "symbols": a.symbols,
                     "paper": a.paper,
                     "max_risk": a.max_risk,
