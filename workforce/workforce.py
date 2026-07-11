@@ -19,6 +19,8 @@ into one trading cycle:
                     console health board.
 """
 from __future__ import annotations
+from accounts.orchestrator import AccountOrchestrator
+from execution.router import ExecutionRouter
 
 import os
 from datetime import datetime, timezone
@@ -47,6 +49,7 @@ class ResearchDesk:
     def __init__(self, client, council: Council):
         self.client = client
         self.council = council
+        self.router = ExecutionRouter(AccountOrchestrator())
 
     def research(self, symbol: str, bench_closes) -> (MarketSnapshot, CouncilVerdict):
         hist = self.client.get_history(symbol, 250)
@@ -111,6 +114,35 @@ class ExecutionTrader:
                 if intent.kind == "state":
                     self._apply(intent, state)
                     record_event(state, intent.purpose, {"symbol": intent.symbol, "reason": intent.reason})
+                    continue
+                account = self.client.get_account()
+                buying_power = float(account.get("buying_power", 0.0) or 0.0)
+
+                route = self.router.decide(
+                    intent,
+                    equity=equity,
+                    buying_power=buying_power,
+                    daily_pnl=float(state.get("realized_pnl", 0.0) or 0.0),
+                )
+
+                if not route.approved:
+                    log.info(
+                        "ROUTE BLOCK %s %s account=%s reason=%s",
+                        intent.symbol,
+                        intent.purpose,
+                        route.account_id,
+                        route.reason,
+                    )
+                    record_event(
+                        state,
+                        "route_block",
+                        {
+                            "symbol": intent.symbol,
+                            "purpose": intent.purpose,
+                            "account_id": route.account_id,
+                            "reason": route.reason,
+                        },
+                    )
                     continue
                 if intent.risk_check and not allow_new_risk:
                     log.info("HALT BLOCK %s %s — new risk suspended", intent.symbol, intent.purpose)
