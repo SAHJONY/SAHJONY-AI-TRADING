@@ -59,8 +59,18 @@ def preflight(cfg, client) -> int:
     acct = client.get_account()
     print(f"  Equity ${acct['equity']:,.2f} | Cash ${acct['cash']:,.2f} | "
           f"Buying power ${acct['buying_power']:,.2f}")
-    if mode == "LIVE" and acct["equity"] <= 0:
-        print("  ✗ LIVE account shows $0 equity — fund the account first.")
+    trading_ready = True
+
+    if acct["equity"] <= 0:
+        print("  • DATA READY — account and market data are reachable.")
+        print("  ✗ TRADING NOT READY — account equity is zero.")
+        trading_ready = False
+
+    if acct["buying_power"] <= 0:
+        print("  ✗ TRADING NOT READY — buying power is zero.")
+        trading_ready = False
+
+    if mode == "LIVE" and not trading_ready:
         ok = False
 
     # market clock + data feed
@@ -93,7 +103,12 @@ def preflight(cfg, client) -> int:
             print("  • LIVE venue connected but NOT armed — set LIVE_TRADING_ACK to trade real money.")
 
     print(bar)
-    print("  READY ✓ — safe to run." if ok else "  NOT READY ✗ — resolve the ✗ items above.")
+    if ok and trading_ready:
+        print("  DATA READY ✓ | TRADING READY ✓")
+    elif mode != "offline-sim" and not trading_ready:
+        print("  DATA READY ✓ | TRADING READY ✗")
+    else:
+        print("  NOT READY ✗ — resolve the ✗ items above.")
     print(bar)
     return 0 if ok else 1
 

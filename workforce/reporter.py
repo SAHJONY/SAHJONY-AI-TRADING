@@ -131,8 +131,12 @@ def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[st
     live_armed = bool(mode == "LIVE" and cfg.live_trading_ack)
     _tag_mode = {"LIVE": "LIVE — REAL MONEY", "paper": "PAPER",
                  "offline-sim": "OFFLINE SIM"}.get(mode, str(mode).upper())
-    eq = cycle_result.get("equity", state.get("equity_last") or 0.0)
-    eq0 = state.get("equity_start") or eq or 1.0
+    eq = float(cycle_result.get("equity", state.get("equity_last") or 0.0) or 0.0)
+    raw_eq0 = float(state.get("equity_start") or 0.0)
+
+    # An unfunded account has no valid performance baseline.
+    # Do not invent a $1 starting value or report a false -100% return.
+    eq0 = raw_eq0 if raw_eq0 > 0.0 else eq
     realized = state.get("realized_pnl", 0.0)
     premium = state.get("premium_collected", 0.0)
 
@@ -214,7 +218,7 @@ def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[st
         },
         "pnl": {
             "realized": round(realized, 2), "premium_collected": round(premium, 2),
-            "total_return_pct": round((eq / eq0 - 1.0) * 100, 3) if eq0 else 0.0,
+            "total_return_pct": round((eq / eq0 - 1.0) * 100, 3) if eq0 > 0.0 else 0.0,
         },
         "capital": _capital_block(db, eq, eq0),
         "capital_flows": db.capital_ledger(20),
