@@ -11,6 +11,9 @@ import yaml
 class AccountProfile:
     id: str
     display_name: str
+    institution: str
+    account_type: str
+    account_number_last4: str
     enabled: bool
     broker: str
     asset_class: str
@@ -42,6 +45,9 @@ class AccountOrchestrator:
                 AccountProfile(
                     id=raw["id"],
                     display_name=raw.get("display_name", raw["id"]),
+                    institution=raw.get("institution", "unknown"),
+                    account_type=raw.get("account_type", "unknown"),
+                    account_number_last4=str(raw.get("account_number_last4", "")),
                     enabled=bool(raw.get("enabled", True)),
                     broker=raw["broker"],
                     asset_class=raw.get("asset_class", "unknown"),
@@ -106,6 +112,12 @@ class AccountOrchestrator:
                 {
                     "id": a.id,
                     "display_name": a.display_name,
+                    "institution": a.institution,
+                    "account_type": a.account_type,
+                    "account_number_masked": (
+                        f"***{a.account_number_last4}"
+                        if a.account_number_last4 else ""
+                    ),
                     "broker": a.broker,
                     "asset_class": a.asset_class,
                     "strategy": a.strategy,
