@@ -195,6 +195,15 @@ def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[st
         "holdings": broker_holdings,
     }
 
+    # Robinhood/venue account roster from accounts.yaml (AccountOrchestrator) —
+    # masked identifiers only (***last4), so the snapshot stays secret-free.
+    # Fault-isolated: a missing/broken accounts.yaml never sinks the snapshot.
+    try:
+        from accounts.orchestrator import AccountOrchestrator
+        accounts_block = AccountOrchestrator(os.path.join(_ROOT, "accounts.yaml")).summary()
+    except Exception:
+        accounts_block = {"count": 0, "enabled": 0, "accounts": []}
+
     brain = cycle_result.get("brain")
     brain_block = {"enabled": cfg.ai_brain_enabled, "used": getattr(brain, "used", False)}
     if brain is not None:
@@ -240,6 +249,7 @@ def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[st
         "brain": brain_block,
         "positions": positions,
         "broker_account": broker_account,
+        "accounts": accounts_block,
         "crm": db.fund_summary(),
         "recent_trades": db.recent_trades(15),
         "equity_curve": db.equity_history(150),
