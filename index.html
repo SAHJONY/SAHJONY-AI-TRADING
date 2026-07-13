@@ -999,6 +999,10 @@ function Parquet(v){
   g.appendChild(panel('Venue Account', brokerPanel(),
     ((DATA.broker_account&&DATA.broker_account.venue)||DATA.broker||'—').toUpperCase()+' · '+bh+' held', 'span4'));
 
+  // Robinhood account roster (masked ids from accounts.yaml)
+  g.appendChild(panel('Robinhood Accounts', accountsPanel(),
+    (((DATA.accounts||{}).accounts)||[]).length+' configured', 'span8'));
+
   // positions blotter
   const posBody=positionsTable();
   g.appendChild(panel('Positions Blotter', posBody, (DATA.positions||[]).length+' open', 'span8'));
@@ -1141,9 +1145,37 @@ function brokerPanel(){
   }
   return box;
 }
+// ── Robinhood/venue account roster (accounts.yaml via AccountOrchestrator) ──
+// Masked identifiers only (***last4) — the snapshot is secret-free by design.
+function accountsPanel(){
+  const accs=((DATA.accounts||{}).accounts)||[];
+  if(!accs.length) return $(`<div class="empty">no accounts configured — add them to accounts.yaml</div>`);
+  const wrap=$(`<div class="scroll"></div>`);
+  const t=$(`<table><thead><tr><th>ACCOUNT</th><th>NUMBER</th><th>TYPE</th><th>ASSETS</th><th>EXECUTION</th><th>MODE</th></tr></thead><tbody></tbody></table>`);
+  const tb=t.querySelector('tbody');
+  accs.forEach(a=>{
+    const exec = a.execution_mode==='api'
+      ? (a.adapter_ready?'<span class="tag on">API · READY</span>':'<span class="tag amber">API · NOT READY</span>')
+      : '<span class="tag">MONITOR ONLY</span>';
+    const modeTag = a.paper?'<span class="tag on">PAPER</span>'
+      : '<span class="tag" style="color:var(--down);border-color:var(--down)">LIVE</span>';
+    tb.appendChild($(`<tr>
+      <td class="amber">${esc(a.display_name||a.id)}</td>
+      <td class="mono">${esc(a.account_number_masked||'—')}</td>
+      <td class="mut">${esc((a.institution||'')+' '+(a.account_type||''))}</td>
+      <td class="mut">${esc(a.asset_class||'')}${a.symbols&&a.symbols.length?' · '+esc(a.symbols.slice(0,4).join(', ')):''}</td>
+      <td>${exec}</td><td>${modeTag}</td></tr>`));
+  });
+  wrap.appendChild(t);
+  const box=$(`<div></div>`); box.appendChild(wrap);
+  box.appendChild($(`<div class="empty" style="margin-top:8px">Numbers are masked (***last4). The engine's live connection is the Venue Account panel; MONITOR ONLY accounts are tracked but never traded.</div>`));
+  return box;
+}
 function Book(v){
   const g=$(`<div class="grid c12"></div>`);
   const bh=(DATA.broker_account&&DATA.broker_account.holdings||[]).length;
+  g.appendChild(panel('Robinhood Accounts · roster', accountsPanel(),
+    (((DATA.accounts||{}).accounts)||[]).length+' accounts', 'span12'));
   g.appendChild(panel('Venue Account · broker-reported', brokerPanel(),
     ((DATA.broker_account&&DATA.broker_account.venue)||DATA.broker||'—').toUpperCase()+' · '+bh+' holdings', 'span12'));
   g.appendChild(panel('Positions Treemap · value × P&L', treemap(DATA.positions), (DATA.positions||[]).length+' holdings', 'span12'));
