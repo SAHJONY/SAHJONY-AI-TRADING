@@ -61,4 +61,7 @@ accounts:
     max_risk: 0.005
     max_position: 0.05
     max_daily_loss: 0.02
-    paper: true
+    # Live-intent for the roster/audit only. Real orders are still hard-gated by
+    # the adapter's double-lock (LIVE_TRADING_ACK + ROBINHOOD_LIVE=true); this flag
+    # places nothing by itself. Equity accounts stay paper:true (no RH stock API).
+    paper: false
