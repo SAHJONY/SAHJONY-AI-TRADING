@@ -71,13 +71,13 @@ class AccountOrchestrator:
     def executable_accounts(self) -> list[AccountProfile]:
         return [
             a for a in self.enabled_accounts()
-            if a.execution_mode == "api" and a.adapter_ready
+            if a.execution_mode == "api" and a.adapter_ready and not a.paper
         ]
 
     def monitor_only_accounts(self) -> list[AccountProfile]:
         return [
             a for a in self.enabled_accounts()
-            if a.execution_mode == "monitor_only" or not a.adapter_ready
+            if a.execution_mode == "monitor_only" or not a.adapter_ready or a.paper
         ]
 
     def accounts_for_broker(self, broker: str) -> list[AccountProfile]:
@@ -90,6 +90,7 @@ class AccountOrchestrator:
                     account.enabled
                     and account.execution_mode == "api"
                     and account.adapter_ready
+                    and not account.paper
                 )
         return False
 
