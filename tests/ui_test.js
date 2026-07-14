@@ -86,7 +86,7 @@ async function main() {
   win.eval(appScript);
   await new Promise(r => setTimeout(r, 60));
 
-  check(win.document.querySelectorAll('#nav button').length === 10, 'all 10 function tabs present');
+  check(win.document.querySelectorAll('#nav button').length === 11, 'all 11 function tabs present');
   check(win.document.getElementById('tape').textContent.length > 0, 'ticker tape populated');
   check(viewText(win).includes('Equity'), 'Parquet cockpit renders (Equity/NAV)');
   check(viewText(win).includes('Council Heatmap') || viewText(win).includes('Heatmap'), 'Parquet shows council heatmap');
