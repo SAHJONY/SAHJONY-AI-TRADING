@@ -19,8 +19,6 @@ into one trading cycle:
                     console health board.
 """
 from __future__ import annotations
-from accounts.orchestrator import AccountOrchestrator
-from execution.router import ExecutionRouter
 
 import os
 from datetime import datetime, timezone
@@ -29,12 +27,16 @@ from typing import Any, Dict, List
 from config import Config
 from database import Database
 from intelligence.agents import Council, CouncilVerdict, MarketSnapshot
+from intelligence.advisors import AdvisoryBoard
 from intelligence.ai_brain import AIBrain, BrainVerdict
-from intelligence.quiver_engine import QuiverEngine
+from intelligence.alt_data import AltData
+from intelligence.hermes import Hermes, HermesReport
 from risk.risk_engine import RiskEngine
 from strategies.base import OrderIntent
 from strategies.copy_trading import CopyTrader
+from strategies.credit_spreads import CreditSpreads
 from strategies.day_trading import DayTrading
+from strategies.pairs_trading import PairsDesk
 from strategies.trailing_ladder import TrailingLadder
 from strategies.wheel_strategy import WheelStrategy
 from utils.logger import get_logger
@@ -49,7 +51,6 @@ class ResearchDesk:
     def __init__(self, client, council: Council):
         self.client = client
         self.council = council
-        self.router = ExecutionRouter(AccountOrchestrator())
 
     def research(self, symbol: str, bench_closes) -> (MarketSnapshot, CouncilVerdict):
         hist = self.client.get_history(symbol, 250)
@@ -66,13 +67,19 @@ class PortfolioManager:
 
     def assign_strategy(self, symbol: str, idx: int) -> str:
         # crypto has no options on Alpaca → always the equity-style ladder.
-        # equities: deterministic split, even index → wheel, odd → ladder.
+        # equities rotate deterministically across the three desks; with the
+        # credit-spread desk disabled it falls back to the classic wheel/ladder split.
         if "/" in symbol:
             return "ladder"
+        if getattr(self.cfg, "credit_spreads_enabled", True):
+            return ("wheel", "ladder", "spread")[idx % 3]
         return "wheel" if idx % 2 == 0 else "ladder"
 
-    def effective(self, council: CouncilVerdict, brain: BrainVerdict, equity: float):
-        conviction = max(0.0, min(1.0, council.conviction + brain.adjust_for(council.symbol)))
+    def effective(self, council: CouncilVerdict, brain: BrainVerdict, equity: float,
+                  alt_tilt: float = 0.0):
+        # Council conviction, nudged by the AI brain and the alt-data overlay (both
+        # clamped small upstream so they can only tilt, never hijack, the quant signal).
+        conviction = max(0.0, min(1.0, council.conviction + brain.adjust_for(council.symbol) + alt_tilt))
         risk_mult = max(0.1, min(1.2, council.risk_multiplier * brain.global_risk_multiplier))
         budget = self.risk.position_budget(equity, conviction, risk_mult)
         return conviction, risk_mult, budget
@@ -98,6 +105,14 @@ class ExecutionTrader:
             positions[intent.symbol] = pos
         state["premium_collected"] = state.get("premium_collected", 0.0) + intent.premium_delta
         state["realized_pnl"] = state.get("realized_pnl", 0.0) + intent.realized_delta
+        # Attribute every realized outcome to its strategy so Hermes can learn which
+        # desks actually win and re-weight capital toward them (bounded, perpetual).
+        if intent.realized_delta:
+            events = state.setdefault("hermes_events", [])
+            events.append({"strategy": intent.strategy or "?",
+                           "realized": float(intent.realized_delta)})
+            if len(events) > 400:
+                del events[:len(events) - 400]
 
     def execute(self, intents: List[OrderIntent], state: Dict[str, Any], cycle: int,
                 equity: float, deployed: float, conviction: float,
@@ -114,35 +129,6 @@ class ExecutionTrader:
                 if intent.kind == "state":
                     self._apply(intent, state)
                     record_event(state, intent.purpose, {"symbol": intent.symbol, "reason": intent.reason})
-                    continue
-                account = self.client.get_account()
-                buying_power = float(account.get("buying_power", 0.0) or 0.0)
-
-                route = self.router.decide(
-                    intent,
-                    equity=equity,
-                    buying_power=buying_power,
-                    daily_pnl=float(state.get("realized_pnl", 0.0) or 0.0),
-                )
-
-                if not route.approved:
-                    log.info(
-                        "ROUTE BLOCK %s %s account=%s reason=%s",
-                        intent.symbol,
-                        intent.purpose,
-                        route.account_id,
-                        route.reason,
-                    )
-                    record_event(
-                        state,
-                        "route_block",
-                        {
-                            "symbol": intent.symbol,
-                            "purpose": intent.purpose,
-                            "account_id": route.account_id,
-                            "reason": route.reason,
-                        },
-                    )
                     continue
                 if intent.risk_check and not allow_new_risk:
                     log.info("HALT BLOCK %s %s — new risk suspended", intent.symbol, intent.purpose)
@@ -166,7 +152,14 @@ class ExecutionTrader:
                     log.warning("order not filled %s: %s", intent.symbol, res)
                     continue
                 self._apply(intent, state)
-                if intent.side in ("buy",):
+                # Consume deployed budget for: equity buys, risk-gated equity shorts,
+                # and cash-secured puts (sell_to_open carries collateral in
+                # est_notional; covered calls are sell_to_open with est_notional 0,
+                # so they correctly add nothing). Keeps stacked CSPs within the cap
+                # within a single cycle, before _gross_exposure re-seeds next cycle.
+                if (intent.side == "buy"
+                        or (intent.risk_check and intent.side == "sell" and intent.kind == "equity")
+                        or intent.side == "sell_to_open"):
                     deployed += intent.est_notional
                 self.db.log_trade({
                     "cycle": cycle, "symbol": intent.symbol, "strategy": intent.strategy,
@@ -192,7 +185,9 @@ class Firm:
         self.db = db
         self.council = Council()
         self.brain = AIBrain(cfg)
-        self.quiver = QuiverEngine()
+        self.alt = AltData(cfg)   # QuiverQuant insider/congress alt-data overlay
+        self.hermes = Hermes(cfg) # background guardian: data integrity + scores + self-calibration
+        self.board = AdvisoryBoard(cfg)  # Buffett/Munger/Macro/Growth/Quant council + risk gate
         self.notifier = Notifier(cfg)
         self.risk = RiskEngine(cfg)
         self.research = ResearchDesk(client, self.council)
@@ -200,16 +195,54 @@ class Firm:
         self.execution = ExecutionTrader(client, self.risk, db, cfg)
         self.wheel = WheelStrategy(cfg)
         self.ladder = TrailingLadder(cfg)
+        self.spread = CreditSpreads(cfg)
         self.copy = CopyTrader(cfg)
         self.dayts = DayTrading(cfg)
+        self.pairs_desk = PairsDesk(cfg)
 
     def _position_value(self, state: Dict[str, Any]) -> float:
+        """SIGNED market value (shorts negative) — correct for equity/P&L math."""
         total = 0.0
         for sym, pos in state.get("positions", {}).items():
             shares = pos.get("shares", 0) or 0
             if shares:
                 total += shares * self.client.get_price(sym)
         return total
+
+    def _gross_exposure(self, state: Dict[str, Any]) -> float:
+        """GROSS exposure (|shares|·price) — what the deployed-capital cap gates on.
+        A short is risk too; it must consume the same risk budget as a long.
+        Includes cash-secured-put collateral (0-share short_put legs) — see below."""
+        total = 0.0
+        for sym, pos in state.get("positions", {}).items():
+            shares = pos.get("shares", 0) or 0
+            if shares:
+                total += abs(shares) * self.client.get_price(sym)
+        return total + self._csp_collateral(state)
+
+    def _csp_collateral(self, state: Dict[str, Any]) -> float:
+        """Capital committed by open cash-secured puts (stage 'short_put'). A CSP
+        holds 0 shares, so _gross_exposure's share loop can't see it — but its
+        strike×100×contracts collateral is real committed capital and must count
+        against the total-deployed cap, or stacked CSPs quietly breach it."""
+        total = 0.0
+        for pos in state.get("positions", {}).values():
+            if pos.get("stage") == "short_put":
+                total += float(pos.get("strike", 0.0)) * 100 * int(pos.get("contracts", 1))
+        return total
+
+    def _position_cost(self, state: Dict[str, Any]) -> float:
+        return sum((p.get("shares", 0) or 0) * p.get("cost_basis", 0.0)
+                   for p in state.get("positions", {}).values())
+
+    def _sleeve(self, state: Dict[str, Any]):
+        """Virtual capital sleeve → (equity, cash) measured against cfg.trading_capital,
+        so the desk behaves like a small account even on a large broker balance.
+        equity = capital + realized + unrealized; cash = capital + realized − cost."""
+        cap = self.cfg.trading_capital
+        realized = state.get("realized_pnl", 0.0) + state.get("premium_collected", 0.0)
+        cost = self._position_cost(state)
+        return cap + realized + (self._position_value(state) - cost), cap + realized - cost
 
     def _kill_switch(self) -> bool:
         """Owner kill switch: TRADING_HALT env or a HALT file in the desk home."""
@@ -257,7 +290,22 @@ class Firm:
         mode = getattr(self.client, "mode", self.cfg.mode)   # broker-accurate
         state["mode"] = mode
         acct = self.client.get_account()
-        equity = acct["equity"]
+        if self.cfg.trading_capital and self.cfg.trading_capital > 0:
+            # Re-anchor the baseline the first time a cap is applied or changed
+            # (e.g. switching a $100k desk to a $500 sleeve).
+            if state.get("sleeve_capital") != self.cfg.trading_capital:
+                state["sleeve_capital"] = self.cfg.trading_capital
+                state["equity_start"] = self.cfg.trading_capital
+                state["positions"] = {}               # start the sleeve FLAT (drop prior-size positions)
+                state["realized_pnl"] = 0.0
+                state["premium_collected"] = 0.0
+                state.pop("benchmark_start", None)    # re-anchor SPY alpha to the sleeve start
+                state.pop("equity_day_start", None)
+                log.info("Capital sleeve set to $%.0f — baseline + positions reset for a clean test.",
+                         self.cfg.trading_capital)
+            equity, _ = self._sleeve(state)
+        else:
+            equity = acct["equity"]
         if state.get("equity_start") is None:
             state["equity_start"] = equity
         state["equity_last"] = equity
@@ -266,6 +314,15 @@ class Firm:
         halt = self._halt_check(state, equity)
         allow_new_risk = trade and not halt["halted"]
 
+        # Volatility targeting — realized portfolio vol above target scales every
+        # new-position budget down ([0.5, 1.0]); fault-isolated, neutral on failure.
+        try:
+            vol_scale = self.risk.vol_scalar(
+                [row.get("equity") for row in self.db.equity_history_regime(60)])
+        except Exception as exc:
+            log.warning("vol targeting skipped: %s", exc)
+            vol_scale = 1.0
+
         bench = self.client.get_history(self.cfg.benchmark, 250)["closes"]
 
         # 1) Research Desk — council per ticker
@@ -273,16 +330,37 @@ class Firm:
         for sym in self.cfg.tickers:
             try:
                 snap, verdict = self.research.research(sym, bench)
-                quiver = self.quiver.analyze(sym)
-
-                verdict.metrics["quiver_alpha"] = quiver.get("quiver_alpha", 0.5)
-                verdict.metrics["insider_score"] = quiver.get("insider_score", 0.5)
-                verdict.metrics["congress_score"] = quiver.get("congress_score", 0.5)
-                verdict.metrics["quiver_sentiment"] = quiver.get("sentiment", "neutral")
-
                 research.append({"symbol": sym, "snap": snap, "verdict": verdict})
             except Exception as exc:
                 log.error("research failed %s: %s", sym, exc)
+
+        # 1b) Alt-data overlay — QuiverQuant insider/congress disclosures per symbol
+        # (fault-isolated; empty when disabled). Feeds the brain's view and conviction.
+        try:
+            alt_signals = self.alt.signals([r["symbol"] for r in research])
+        except Exception as exc:
+            log.error("alt-data overlay failed: %s", exc)
+            alt_signals = {}
+
+        # 1b2) Advisory Board — the six-agent Intelligence Council (Buffett/Munger/
+        # Macro/Growth/Quant + Risk gate). Advisory only: a bounded tilt per symbol.
+        try:
+            board = self.board.evaluate(research)
+        except Exception as exc:
+            log.error("advisory board failed: %s", exc)
+            board = {}
+
+        # 1c) Hermes guardian — background agent validating every feed (bad feeds are
+        # quarantined: no NEW risk, exits still flow) and grading the council's realized
+        # accuracy into a small self-improvement tilt. Fault-isolated like everything else.
+        try:
+            hermes = self.hermes.review(research, state)
+            if hermes.quarantined:
+                log.warning("HERMES quarantined %s — new risk blocked (bad data)",
+                            ", ".join(hermes.quarantined))
+        except Exception as exc:
+            log.error("hermes review failed: %s", exc)
+            hermes = HermesReport(used=False)
 
         # 2) Chief Strategist — AI brain advisory overlay
         portfolio = [{
@@ -292,25 +370,53 @@ class Firm:
             "alpha": round(r["verdict"].metrics.get("alpha", 0.0), 4),
             "beta": round(r["verdict"].metrics.get("beta", 1.0), 3),
             "vol": round(r["verdict"].metrics.get("vol", 0.0), 3),
+            "alt_tilt": round(alt_signals[r["symbol"]].tilt, 3) if r["symbol"] in alt_signals else 0.0,
+            "alt_note": alt_signals[r["symbol"]].summary if r["symbol"] in alt_signals else "",
         } for r in research]
         brain = self.brain.advise(portfolio)
         if brain.used:
             log.info("AI BRAIN posture=%s risk_mult=%.2f — %s",
                      brain.posture, brain.global_risk_multiplier, brain.commentary[:120])
 
-        # 3-6) PM → Strategy → Risk → Execution → Treasurer, per ticker
-        deployed = self._position_value(state)
+        # 3-6) PM → Strategy → Risk → Execution → Treasurer, per ticker.
+        # The deployed cap gates on GROSS exposure so shorts consume budget too.
+        deployed = self._gross_exposure(state)
         executed: List[Dict] = []
         for idx, r in enumerate(research):
             sym, snap, verdict = r["symbol"], r["snap"], r["verdict"]
             try:
                 strat = self.pm.assign_strategy(sym, idx)
-                conviction, risk_mult, budget = self.pm.effective(verdict, brain, equity)
                 pos = state.get("positions", {}).get(sym)
-                if strat == "wheel":
+                # Position-first routing: an open trade always finishes under the desk
+                # that opened it, even if the assignment rotation changes over time.
+                if pos and pos.get("strategy") in ("wheel", "ladder", "spread"):
+                    strat = pos["strategy"]
+                # A pairs leg belongs to the Pairs Desk (6d) — core desks hands off.
+                pairs_owned = bool(pos) and pos.get("strategy") == "pairs"
+                if pairs_owned:
+                    strat = "pairs"
+                alt_tilt = alt_signals[sym].tilt if sym in alt_signals else 0.0
+                board_tilt = board[sym].tilt if sym in board else 0.0
+                hermes_tilt = hermes.tilt.get(sym, 0.0)
+                if hermes_tilt <= -1.0:      # data quarantine always wins outright
+                    tilt = hermes_tilt
+                else:                        # advisory layers stack, but stay bounded
+                    tilt = max(-0.20, min(0.20, alt_tilt + board_tilt + hermes_tilt))
+                conviction, risk_mult, budget = self.pm.effective(verdict, brain, equity, tilt)
+                # Hermes strategy calibration: budget leans toward desks with a proven
+                # realized edge (bounded 0.70–1.15; hard risk ceilings still apply).
+                budget *= hermes.strategy_weights.get(strat, 1.0) * vol_scale
+                if pairs_owned:
+                    intents = []
+                elif strat == "wheel":
                     chain = self.client.get_option_chain(sym, snap.price, self.cfg.wheel_dte_min,
                                                          self.cfg.wheel_dte_max, snap.vol)
                     intents = self.wheel.decide(sym, snap, pos, verdict, budget, chain)
+                elif strat == "spread":
+                    chain = self.client.get_option_chain(sym, snap.price, self.cfg.wheel_dte_min,
+                                                         self.cfg.wheel_dte_max, snap.vol,
+                                                         kinds=("put",))
+                    intents = self.spread.decide(sym, snap, pos, verdict, budget, chain)
                 else:
                     intents = self.ladder.decide(sym, snap, pos, verdict, budget)
                 if trade:
@@ -356,7 +462,8 @@ class Firm:
                     snap, verdict = self.research.research(sym, bench)
                     pos = state.get("positions", {}).get(sym)
                     conv = 0.70   # technical-signal desk; risk engine still gates size
-                    budget = self.risk.position_budget(equity, conv, 1.0)
+                    budget = self.risk.position_budget(equity, conv, 1.0) \
+                        * hermes.strategy_weights.get("daytrade", 1.0) * vol_scale
                     intents = self.dayts.decide(sym, snap, pos, budget, today)
                     done, deployed = self.execution.execute(intents, state, cycle, equity,
                                                             deployed, conv, allow_new_risk)
@@ -373,11 +480,46 @@ class Firm:
             if self.cfg.day_trading_enabled:
                 log.info("DAY/FOREX desk ran %d symbol(s)", len(universe))
 
+        # 6d) Pairs / StatArb desk — market-neutral spreads on cointegrated pairs
+        # (long the cheap leg, short the rich leg). Both legs are risk-gated; an
+        # orphan leg is closed immediately. Uses core research when available.
+        if trade and self.cfg.pairs_enabled:
+            from intelligence import engines
+            snaps = {r["symbol"]: r["snap"] for r in research}
+            for pair in self.cfg.pairs:
+                try:
+                    if ":" not in pair:
+                        continue
+                    sym_a, sym_b = (p.strip() for p in pair.split(":", 1))
+                    snap_a = snaps.get(sym_a) or self.research.research(sym_a, bench)[0]
+                    snap_b = snaps.get(sym_b) or self.research.research(sym_b, bench)[0]
+                    coint = engines.cointegration(snap_a.closes, snap_b.closes)
+                    pos_a = state.get("positions", {}).get(sym_a)
+                    pos_b = state.get("positions", {}).get(sym_b)
+                    conv = 0.70   # signal desk; the Risk Officer still gates size
+                    budget = self.risk.position_budget(equity, conv, 1.0) \
+                        * hermes.strategy_weights.get("pairs", 1.0) * vol_scale
+                    intents = self.pairs_desk.decide(sym_a, sym_b, snap_a.price, snap_b.price,
+                                                     pos_a, pos_b, budget, coint)
+                    done, deployed = self.execution.execute(intents, state, cycle, equity,
+                                                            deployed, conv, allow_new_risk)
+                    executed += done
+                    if done:
+                        log.info("PAIRS desk %s/%s: %d order(s), z=%+.2f",
+                                 sym_a, sym_b, len(done), coint.get("spread_z", 0.0))
+                except Exception as exc:
+                    log.error("pairs desk %s failed: %s", pair, exc)
+
         # 7) Treasurer — equity curve
         acct = self.client.get_account()
-        self.db.log_equity(cycle, acct["equity"], acct["cash"], self._position_value(state),
+        if self.cfg.trading_capital and self.cfg.trading_capital > 0:
+            eq_now, cash_now = self._sleeve(state)
+        else:
+            eq_now, cash_now = acct["equity"], acct["cash"]
+        self.db.log_equity(cycle, eq_now, cash_now, self._position_value(state),
                            state.get("realized_pnl", 0.0), state.get("premium_collected", 0.0), mode)
 
-        return {"cycle": cycle, "equity": acct["equity"], "cash": acct["cash"],
+        return {"cycle": cycle, "equity": eq_now, "cash": cash_now,
                 "research": research, "brain": brain, "executed": executed,
-                "deployed": self._position_value(state), "halt": halt}
+                "deployed": self._position_value(state), "halt": halt,
+                "hermes": hermes, "board": board, "vol_scale": round(vol_scale, 3)}

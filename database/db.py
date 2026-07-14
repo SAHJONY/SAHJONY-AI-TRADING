@@ -295,6 +295,32 @@ class Database:
             " ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
         return [dict(r) for r in reversed(rows)]
 
+    def equity_history_regime(self, limit: int = 500,
+                              jump_threshold: float = 0.5) -> List[Dict[str, Any]]:
+        """Equity history trimmed to the CURRENT capital regime.
+
+        A ``TRADING_CAPITAL`` change re-anchors the baseline (e.g. a $100k desk
+        switched to a $50 crypto sleeve), leaving a synthetic >``jump_threshold``
+        single-cycle step in the curve that is NOT trading P&L. Under the risk
+        caps here a real cycle can't move total equity by 50% (per-position ≤15%),
+        so such a step is unambiguously a re-anchor. Left in, those cliffs poison
+        every downstream stat — Sharpe/Sortino/drawdown, vol-targeting (a −94%
+        fake return read as 1400%+ annual vol → budgets halved), and the dashboard
+        chart. Drop everything up to and including the last re-anchor so consumers
+        see only the current regime; fall back to the full curve if there is none."""
+        rows = self.equity_history(500)
+        start = 0
+        for i in range(1, len(rows)):
+            try:
+                prev = float(rows[i - 1].get("equity") or 0)
+                cur = float(rows[i].get("equity") or 0)
+            except (TypeError, ValueError):
+                continue
+            if prev > 0 and abs(cur - prev) / prev > jump_threshold:
+                start = i
+        regime = rows[start:]
+        return regime[-limit:] if limit else regime
+
     def latest_council(self, cycle: Optional[int] = None) -> List[Dict[str, Any]]:
         if cycle is None:
             row = self.conn.execute("SELECT MAX(cycle) m FROM council_log").fetchone()

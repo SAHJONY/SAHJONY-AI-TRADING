@@ -6,7 +6,8 @@ queries each provider's public *models* endpoint, picks the newest model in the
 preferred tier, and caches the answer so we don't re-query every cycle.
 
 Hierarchy preserved (CLAUDE.md): Claude is the PRIMARY brain (we prefer the
-latest **Opus**), OpenAI (GPT) and Grok (xAI) are counsellors (latest flagship).
+latest **Fable**, Anthropic's most capable line, then fall back through Opus),
+OpenAI (GPT) and Grok (xAI) are counsellors (latest flagship).
 
 Fault isolation: every lookup is wrapped. No key, no network, a slow/odd API —
 any failure falls back to the configured default model. The trading loop never
@@ -29,9 +30,19 @@ from utils.logger import get_logger
 log = get_logger("model_registry")
 
 _DEFAULT_TTL_HOURS = 24.0
-# substrings that mark a NON-chat / non-flagship variant we never want to pick
+# substrings that mark a variant we never want as a chat counsellor — non-chat
+# utility models (embeddings, audio, image, moderation, …). Applies to every
+# provider.
 _EXCLUDE = ("embed", "whisper", "tts", "audio", "realtime", "moderation",
             "dall-e", "image", "vision-only", "search", "transcribe", "instruct")
+# "-pro" tier models: OpenAI's gpt-*-pro are Responses-API-only and 404 on
+# v1/chat/completions, so they're excluded for every provider EXCEPT Gemini,
+# whose stable *-pro IS the flagship we want (and is what the prefer-list below
+# and the owner directive ask for). Our counsellors speak only chat/completions.
+_PRO_EXCLUDE = ("-pro",)
+# Gemini-only: its *-pro-preview / *-exp variants carry a tiny free quota (429),
+# so we keep steering away from those while still allowing the stable flagship.
+_GEMINI_EXCLUDE = ("preview", "-exp", "-thinking")
 
 
 def _refresh_hours() -> float:
@@ -41,16 +52,20 @@ def _refresh_hours() -> float:
         return _DEFAULT_TTL_HOURS
 
 
-def _ok_id(model_id: str) -> bool:
+def _ok_id(model_id: str, provider: str = "") -> bool:
     mid = model_id.lower()
-    return not any(x in mid for x in _EXCLUDE)
+    if any(x in mid for x in _EXCLUDE):
+        return False
+    if provider == "gemini":
+        return not any(x in mid for x in _GEMINI_EXCLUDE)
+    return not any(x in mid for x in _PRO_EXCLUDE)
 
 
-def _pick_latest(models: List[Dict], prefer: Tuple[str, ...]) -> Optional[str]:
+def _pick_latest(models: List[Dict], prefer: Tuple[str, ...], provider: str = "") -> Optional[str]:
     """models: [{'id','created'}] with created as a sortable number (epoch).
     Prefer the newest id whose name contains any 'prefer' keyword; if none match,
     the newest acceptable chat id overall."""
-    usable = [m for m in models if m.get("id") and _ok_id(m["id"])]
+    usable = [m for m in models if m.get("id") and _ok_id(m["id"], provider)]
     if not usable:
         return None
     usable.sort(key=lambda m: m.get("created", 0), reverse=True)
@@ -98,7 +113,7 @@ def _openai_compatible_models(key: str, url: str) -> List[Dict]:
 # Google/Gemini exposes an OpenAI-compatible surface, so it reuses the same lister.
 _GEMINI_MODELS_URL = "https://generativelanguage.googleapis.com/v1beta/openai/models"
 _PROVIDERS: Dict[str, Tuple[Callable[[str], List[Dict]], Tuple[str, ...]]] = {
-    "anthropic": (lambda k: _anthropic_models(k), ("opus", "sonnet", "haiku")),
+    "anthropic": (lambda k: _anthropic_models(k), ("fable", "opus", "sonnet", "haiku")),
     "openai":    (lambda k: _openai_compatible_models(k, "https://api.openai.com/v1/models"),
                   ("gpt-5", "gpt-4.1", "gpt-4o", "gpt-4", "gpt")),
     "xai":       (lambda k: _openai_compatible_models(k, "https://api.x.ai/v1/models"),
@@ -133,19 +148,23 @@ def resolve(provider: str, key: str, default: str, *, force: bool = False) -> st
         return default
     cache = _load_cache()
     entry = cache.get(provider) or {}
-    fresh = (not force and entry.get("model")
+    # A cached pick that a newer exclusion rule now rejects (e.g. a "-pro" model
+    # that 404s/429s on the chat endpoint) must NOT be served just because it's
+    # fresh — re-query so the fix takes effect without waiting out the 24h TTL.
+    cached_ok = entry.get("model") and _ok_id(entry["model"], provider)
+    fresh = (not force and cached_ok
              and (time.time() - entry.get("ts", 0)) < _refresh_hours() * 3600)
     if fresh:
         return entry["model"]
 
     lister, prefer = _PROVIDERS[provider]
     try:
-        latest = _pick_latest(lister(key), prefer)
+        latest = _pick_latest(lister(key), prefer, provider)
     except Exception as exc:  # network/API/parse — never break the brain
         log.warning("%s model lookup failed (%s) → using %s", provider, exc, default)
-        return entry.get("model") or default
+        return (entry["model"] if cached_ok else "") or default
     if not latest:
-        return entry.get("model") or default
+        return (entry["model"] if cached_ok else "") or default
 
     if latest != entry.get("model"):
         log.info("%s latest model: %s%s", provider, latest,

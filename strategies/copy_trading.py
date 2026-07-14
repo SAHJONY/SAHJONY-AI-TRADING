@@ -96,15 +96,23 @@ class CopyTrader:
                 if price <= 0:
                     continue
                 qty = size_qty(sym, budget_each * min(1.0, s.get("weight", 1.0)), price,
-                               int(budget_each // price) if price else 0)
+                               int(budget_each // price) if price else 0, self.cfg.allow_fractional)
                 if qty <= 0:
                     continue
+                # Weighted-average the cost basis when adding to an existing copy
+                # position — using the new fill price alone would erase the basis
+                # of the shares already held and corrupt copy_exit's realized P&L.
+                new_shares = shares_held + qty
+                prior_basis = float(held.get("cost_basis", 0.0) or 0.0)
+                new_basis = ((prior_basis * shares_held) + (price * qty)) / new_shares \
+                    if new_shares else price
                 intents.append(OrderIntent(
                     sym, "copy", "equity", "copy_buy", side="buy",
                     reason=f"mirror {s.get('source','filing')} buy {qty} @ {price:.2f}",
                     qty=qty, est_notional=qty * price, risk_check=True,
-                    set_position={"strategy": "copy", "shares": shares_held + qty,
-                                  "entry_price": price, "cost_basis": price}))
+                    set_position={"strategy": "copy", "shares": new_shares,
+                                  "entry_price": float(held.get("entry_price", price) or price),
+                                  "cost_basis": new_basis}))
             elif s["side"] == "sell" and shares_held > 0:
                 intents.append(OrderIntent(
                     sym, "copy", "equity", "copy_exit", side="sell",

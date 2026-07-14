@@ -36,10 +36,14 @@ AGENT_ROSTER = [
 ]
 WORKFORCE = [
     ("Research Desk", "Convenes the 12-agent council per ticker"),
+    ("Advisory Board", "Buffett/Munger/Macro/Growth/Quant + risk gate"),
+    ("Hermes Guardian", "Data integrity, Sharpe scorecard, self-calibration"),
     ("Chief Strategist (AI Brain)", "Claude — synthesizes council + counsellors"),
     ("Counsellors", "OpenAI (GPT) + Grok (xAI) — advisory"),
     ("Portfolio Manager", "Strategy assignment + conviction sizing"),
     ("Wheel Options Desk", "Cash-secured puts → covered calls"),
+    ("Credit Spread Desk", "Defined-risk bull put spreads (capped max loss)"),
+    ("Pairs / StatArb Desk", "Market-neutral cointegrated spreads (long/short)"),
     ("Equity Ladder Desk", "Trailing ratchet + averaging-in"),
     ("Risk Officer", "Hard allocation & total-deployed gatekeeper"),
     ("Execution Trader", "Routes orders to Alpaca paper / sim"),
@@ -59,7 +63,7 @@ ENV_CATALOG = [
     ("MARKET_HOURS", "Universe", False, "us | 24_7 (crypto auto-24/7)"),
     ("SAHJONY_HOME", "Ops", False, "per-account data home (isolation)"),
     ("ANTHROPIC_API_KEY", "AI Brain", True, "Claude — PRIMARY brain"),
-    ("ANTHROPIC_MODEL", "AI Brain", False, "default claude-opus-4-8"),
+    ("ANTHROPIC_MODEL", "AI Brain", False, "default claude-fable-5"),
     ("OPENAI_API_KEY", "AI Counsellor", True, "OpenAI (GPT) counsellor"),
     ("OPENAI_MODEL", "AI Counsellor", False, "default gpt-4o"),
     ("XAI_API_KEY", "AI Counsellor", True, "Grok (xAI) counsellor"),
@@ -70,6 +74,17 @@ ENV_CATALOG = [
     ("NVIDIA_MODEL", "AI Counsellor", False, "default openai/gpt-oss-120b"),
     ("AI_BRAIN_ENABLED", "AI Brain", False, "true to enable LLM overlay"),
     ("AUTO_UPDATE_MODELS", "AI Brain", False, "true = always latest model"),
+    ("QUIVER_API_KEY", "Alt-Data", True, "QuiverQuant insider/congress alt-data"),
+    ("QUIVER_ENABLED", "Alt-Data", False, "auto-on with a key; false to disable"),
+    ("ADVISORS_ENABLED", "Advisory Board", False, "6-agent council overlay (default on)"),
+    ("HERMES_ENABLED", "Hermes", False, "background guardian agent (default on)"),
+    ("HERMES_GOAL", "Hermes", False, "the desk's well-defined objective"),
+    ("CREDIT_SPREADS_ENABLED", "Options", False, "defined-risk put-spread desk (default on)"),
+    ("PAIRS_ENABLED", "Pairs / StatArb", False, "market-neutral pairs desk (default on)"),
+    ("PAIRS", "Pairs / StatArb", False, "pairs, e.g. SPY:QQQ,GLD:SLV"),
+    ("PAIRS_ENTRY_Z", "Pairs / StatArb", False, "spread z-score to enter (default 2.0)"),
+    ("SPREAD_SHORT_OTM_PCT", "Options", False, "short put distance below spot"),
+    ("SPREAD_WIDTH_PCT", "Options", False, "hedge width (caps max loss)"),
     ("VOICE_API_KEY", "Voice (Bland.ai)", True, "Bland.ai API key"),
     ("VOICE_FROM_NUMBER", "Voice (Bland.ai)", False, "outbound caller ID"),
     ("OWNER_PHONE", "Voice (Bland.ai)", False, "owner phone for alerts (+1…)"),
@@ -79,6 +94,7 @@ ENV_CATALOG = [
     ("MIN_COUNCIL_CONVICTION", "Risk", False, "min conviction to trade"),
     ("MAX_DAILY_DRAWDOWN_PCT", "Risk", False, "daily-loss halt (≤0.25)"),
     ("TRADING_HALT", "Risk", False, "true = kill switch (suspend new risk)"),
+    ("VOL_TARGET_ANNUAL", "Risk", False, "vol targeting (0.20 = 20%; 0 disables)"),
     ("DAY_TRADING_ENABLED", "Day Trading / Forex", False, "intraday FX desk on/off"),
     ("FOREX_PAIRS", "Day Trading / Forex", False, "FX universe, e.g. EUR/USD,GBP/USD"),
     ("DAY_TRADE_SYMBOLS", "Day Trading / Forex", False, "extra intraday symbols"),
@@ -121,6 +137,30 @@ def _capital_block(db, equity: float, equity_start: float) -> Dict[str, Any]:
         "trading_pnl": round(trading_pnl, 2),
         "trading_return_pct": round(ret, 3),
     }
+
+
+def _hermes_block(firm, db, cycle_result: Dict[str, Any]) -> Dict[str, Any]:
+    """Hermes guardian status: goal, this cycle's data quality + calibration, and the
+    honest Sharpe/Sortino scorecard off the equity curve. Secret-free, fault-isolated."""
+    hermes = getattr(firm, "hermes", None)
+    if hermes is None:
+        return {"enabled": False}
+    out: Dict[str, Any] = dict(hermes.status)
+    rep = cycle_result.get("hermes")
+    if rep is not None:
+        out.update({
+            "used": getattr(rep, "used", False),
+            "data_ok_pct": getattr(rep, "data_ok_pct", 1.0),
+            "quarantined": list(getattr(rep, "quarantined", [])),
+            "issues": dict(getattr(rep, "issues", {})),
+            "hit_rates": dict(getattr(rep, "hit_rates", {})),
+            "strategy_weights": dict(getattr(rep, "strategy_weights", {})),
+        })
+    try:
+        out["scorecard"] = hermes.scorecard(db.equity_history_regime(150))
+    except Exception:
+        out["scorecard"] = {}
+    return out
 
 
 def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[str, Any]) -> Dict[str, Any]:
@@ -213,11 +253,28 @@ def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[st
             "counsellors": brain.counsellors,
         })
 
+    # Benchmark (buy-and-hold SPY) anchored at the desk's first cycle, persisted in
+    # state — gives an HONEST alpha-vs-market number instead of a bare return.
+    bench = {}
+    try:
+        bsym = (cfg.benchmark or "SPY").upper()
+        bpx = float(client.get_price(bsym))
+        if bpx > 0:
+            b0 = state.get("benchmark_start") or bpx
+            state["benchmark_start"] = b0           # anchor once; main.py persists state
+            bret = (bpx / b0 - 1.0) * 100 if b0 else 0.0
+            total_ret = (eq / eq0 - 1.0) * 100 if eq0 else 0.0
+            bench = {"symbol": bsym, "start_price": round(b0, 2), "last_price": round(bpx, 2),
+                     "return_pct": round(bret, 3), "alpha_pct": round(total_ret - bret, 3)}
+    except Exception:  # benchmark is informational — never break the cycle
+        bench = {}
+
     return {
         "firm": cfg.firm_name,
         "tagline": f"Autonomous multi-agent quant trading — {_tag_mode}",
         "mode": mode,
         "broker": cfg.broker,
+        "benchmark": bench,
         "ts": _now(),
         "cycle": state.get("cycle", 0),
         "account": {
@@ -241,10 +298,20 @@ def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[st
                           "total_deployed_pct": cfg.max_total_deployed_pct,
                           "min_conviction": cfg.min_council_conviction,
                           "daily_drawdown_pct": cfg.max_daily_drawdown_pct},
+            "vol_targeting": {"target_annual": getattr(cfg, "vol_target_annual", 0.0),
+                              "scale": cycle_result.get("vol_scale", 1.0)},
             "circuit_breaker": cycle_result.get("halt", {"halted": False, "reason": ""}),
             "ai_brain": firm.brain.status,
+            "alt_data": getattr(firm, "alt", None).status if getattr(firm, "alt", None) else {"enabled": False},
+            "hermes": _hermes_block(firm, db, cycle_result),
+            "advisory_board": getattr(firm, "board", None).status if getattr(firm, "board", None) else {"enabled": False},
             "voice": firm.notifier.status,
         },
+        "advisors": [
+            {"symbol": v.symbol, "scores": v.scores, "gate": v.gate,
+             "composite": v.composite, "tilt": v.tilt, "rationale": v.rationale}
+            for v in (cycle_result.get("board") or {}).values()
+        ],
         "council": council,
         "brain": brain_block,
         "positions": positions,
@@ -252,7 +319,7 @@ def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[st
         "accounts": accounts_block,
         "crm": db.fund_summary(),
         "recent_trades": db.recent_trades(15),
-        "equity_curve": db.equity_history(150),
+        "equity_curve": db.equity_history_regime(150),
         "decisions": list(reversed(state.get("history", [])[-25:])),
         "agents_roster": [{"name": n, "role": role} for n, role in AGENT_ROSTER],
         "workforce": [{"role": n, "mandate": m} for n, m in WORKFORCE],

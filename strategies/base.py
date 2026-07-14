@@ -15,14 +15,20 @@ def is_crypto(symbol: str) -> bool:
     return "/" in symbol
 
 
-def size_qty(symbol: str, budget: float, price: float, max_units: int) -> float:
-    """Position size in units: whole shares for equities (capped at max_units),
-    fractional coins for crypto (sized purely by the risk-approved budget)."""
+def size_qty(symbol: str, budget: float, price: float, max_units: int,
+             fractional: bool = False) -> float:
+    """Position size in units. Crypto is always fractional. Equities are whole
+    shares unless `fractional` is set (dollar-based investing), which lets a small
+    account buy a slice of an expensive name instead of rounding down to zero.
+    A positive `max_units` caps the size; a non-positive one means 'no unit cap'."""
     if price <= 0 or budget <= 0:
         return 0.0
-    if is_crypto(symbol):
-        return round(budget / price, 6)
-    return float(min(max_units, int(budget // price)))
+    raw = budget / price
+    if max_units and max_units > 0:
+        raw = min(raw, float(max_units))
+    if is_crypto(symbol) or fractional:
+        return round(raw, 6)
+    return float(int(raw))
 
 
 @dataclass

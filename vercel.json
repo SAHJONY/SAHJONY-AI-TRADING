@@ -4,8 +4,14 @@
   "buildCommand": "echo 'SAHJONY CAPITAL LLC — static owner dashboard, no build'",
   "outputDirectory": "public",
   "cleanUrls": true,
+  "git": {
+    "deploymentEnabled": {
+      "master": false
+    }
+  },
   "headers": [
     { "source": "/status.json", "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }] },
+    { "source": "/robinhood.json", "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }] },
     { "source": "/", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] }
   ]
 }

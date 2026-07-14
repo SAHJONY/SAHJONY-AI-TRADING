@@ -1,19 +1,11 @@
 name: SAHJONY desk (scheduled)
 
-# Runs the autonomous desk on a schedule in the cloud, so the public dashboard
-# (sahjonycapital.com) stays fresh without an always-on machine. Each run advances
-# one cycle and commits the secret-free public/status.json — Vercel then redeploys.
-#
-# Modes (safety first — see SCHEDULING.md):
-#   • No secrets        → offline-sim (zero orders); the dashboard simply stays alive.
-#   • Alpaca paper keys → trades the real market on Alpaca PAPER (fake money).
-#   • Real money is NEVER enabled here (LIVE_TRADING_ACK is intentionally unset).
-
 on:
   schedule:
-    # Every 15 min during the US cash session (≈13:00–21:00 UTC), Mon–Fri.
-    - cron: '*/15 13-20 * * 1-5'
-  workflow_dispatch:        # manual "Run workflow" button
+    # 24/7 desk: every 15 min, all hours, every day. Crypto trades round-the-clock;
+    # equities simply queue while their market is closed.
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
     inputs:
       force:
         description: 'Run even if the market is closed'
@@ -29,36 +21,92 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: write           # to commit the refreshed public/status.json
+  contents: write
 
 jobs:
   run:
     runs-on: ubuntu-latest
     timeout-minutes: 12
     env:
-      # Paper-trading keys (optional). Add these as repo secrets to go from
-      # offline-sim to Alpaca PAPER. Leave unset to keep pure simulation.
+      # ── Broker selection ──────────────────────────────────────────────────────
+      # Default 'alpaca' (paper) keeps the desk 100% paper. Set repo Variable
+      # BROKER=robinhood_crypto to route the LIVE 24/7 crypto engine instead.
+      BROKER: ${{ vars.BROKER || 'alpaca' }}
       ALPACA_API_KEY: ${{ secrets.ALPACA_API_KEY }}
       ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
-      ALPACA_PAPER: 'true'                 # PAPER only — never live from CI
-      # AI brain + counsellors (advisory overlay). Add only the keys you want as
-      # repo secrets — each provider activates automatically when its key exists.
-      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}   # Claude — primary brain
-      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}         # GPT (OpenAI) — counsellor
-      XAI_API_KEY: ${{ secrets.XAI_API_KEY }}               # Grok (xAI) — counsellor
-      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}         # Gemini (Google) — counsellor
-      NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}         # NVIDIA NIM — free counsellor + fallback brain
-      NVIDIA_MODEL: ${{ vars.NVIDIA_MODEL }}                # optional override; default openai/gpt-oss-120b
-      # Master switch — keys can sit loaded without spending. Defaults ON once a
-      # Claude OR NVIDIA key exists; set repo Variable AI_BRAIN_ENABLED=false to keep
-      # the brain OFF (no LLM calls / no cost) until you're ready to "go and pay".
-      # (NVIDIA NIM is free, so it's safe to test with even while OFF for paid models.)
+      ALPACA_PAPER: 'true'
+      # ── Robinhood Crypto (REAL MONEY, official Ed25519 API) ───────────────────
+      # HARD-GATED: real orders place ONLY when the adapter is armed — i.e. ALL of
+      #   BROKER=robinhood_crypto  +  ROBINHOOD_API_KEY  +  ROBINHOOD_PRIVATE_KEY
+      #   +  ROBINHOOD_LIVE=true  +  LIVE_TRADING_ACK=I_UNDERSTAND_REAL_MONEY.
+      # Missing any → dry-run (prices live, places nothing). Per-order notional is
+      # capped by ROBINHOOD_MAX_ORDER_USD and the risk engine still gates size.
+      ROBINHOOD_API_KEY: ${{ secrets.ROBINHOOD_API_KEY }}
+      ROBINHOOD_PRIVATE_KEY: ${{ secrets.ROBINHOOD_PRIVATE_KEY }}
+      ROBINHOOD_LIVE: ${{ vars.ROBINHOOD_LIVE || 'false' }}
+      ROBINHOOD_MAX_ORDER_USD: ${{ vars.ROBINHOOD_MAX_ORDER_USD || '10' }}
+      LIVE_TRADING_ACK: ${{ secrets.LIVE_TRADING_ACK }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      XAI_API_KEY: ${{ secrets.XAI_API_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+      NVIDIA_MODEL: ${{ vars.NVIDIA_MODEL }}
       AI_BRAIN_ENABLED: ${{ vars.AI_BRAIN_ENABLED || secrets.AI_BRAIN_ENABLED || ((secrets.ANTHROPIC_API_KEY != '' || secrets.NVIDIA_API_KEY != '') && 'true' || 'false') }}
-      AUTO_UPDATE_MODELS: 'true'           # always resolve each provider's latest model
-      # Optional desk config overrides. Default universe broadened to more markets
-      # (mega-cap equities + index ETFs). Override anytime via repo Variable TICKERS
-      # (e.g. add crypto: "...,BTC/USD,ETH/USD").
-      TICKERS: ${{ vars.TICKERS || 'AAPL,MSFT,NVDA,GOOGL,AMZN,TSLA,META,SPY,QQQ,DIA' }}
+      AUTO_UPDATE_MODELS: 'true'
+      # Universe spans asset classes: mega-cap equities, index ETFs, commodities
+      # (GLD/SLV), bonds (TLT), international (EEM) and 24/7 crypto. When BROKER=
+      # robinhood_crypto, set Variable TICKERS to crypto-only, e.g.
+      # 'BTC/USD,ETH/USD,SOL/USD,LTC/USD' (stock symbols can't price on a crypto venue).
+      TICKERS: ${{ vars.TICKERS || 'AAPL,MSFT,NVDA,GOOGL,AMZN,TSLA,META,SPY,QQQ,DIA,GLD,SLV,TLT,EEM,BTC/USD,ETH/USD,SOL/USD,LTC/USD' }}
+      MARKET_HOURS: ${{ vars.MARKET_HOURS || '24_7' }}
+      CYCLE_MINUTES: ${{ vars.CYCLE_MINUTES || '15' }}
+      MAX_ALLOCATION_PCT: ${{ vars.MAX_ALLOCATION_PCT || '0.12' }}
+      MAX_TOTAL_DEPLOYED_PCT: ${{ vars.MAX_TOTAL_DEPLOYED_PCT || '0.70' }}
+      MIN_COUNCIL_CONVICTION: ${{ vars.MIN_COUNCIL_CONVICTION || '0.52' }}
+      MAX_DAILY_DRAWDOWN_PCT: ${{ vars.MAX_DAILY_DRAWDOWN_PCT || '0.10' }}
+      DAY_TRADING_ENABLED: ${{ vars.DAY_TRADING_ENABLED || 'true' }}
+      LADDER_ENABLE_AVERAGING: ${{ vars.LADDER_ENABLE_AVERAGING || 'true' }}
+      COPY_TRADING_ENABLED: ${{ vars.COPY_TRADING_ENABLED || 'false' }}
+      COPY_TRADING_SOURCE_URL: ${{ vars.COPY_TRADING_SOURCE_URL || '' }}
+      VOICE_ALERTS: ${{ vars.VOICE_ALERTS || 'false' }}
+      VOICE_API_KEY: ${{ secrets.VOICE_API_KEY }}
+      OWNER_PHONE: ${{ secrets.OWNER_PHONE }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      WHATSAPP_TOKEN: ${{ secrets.WHATSAPP_TOKEN }}
+      WHATSAPP_PHONE_NUMBER_ID: ${{ secrets.WHATSAPP_PHONE_NUMBER_ID }}
+      WHATSAPP_TO: ${{ vars.WHATSAPP_TO || secrets.OWNER_PHONE }}
+      WHATSAPP_TEMPLATE: ${{ vars.WHATSAPP_TEMPLATE }}
+      SEC_USER_AGENT: 'SAHJONY Capital research contact@sahjonycapital.com'
+      BENCHMARK: ${{ vars.BENCHMARK || 'SPY' }}
+      LOG_LEVEL: ${{ vars.LOG_LEVEL || 'INFO' }}
+      ANTHROPIC_MODEL: ${{ vars.ANTHROPIC_MODEL || 'claude-fable-5' }}
+      OPENAI_MODEL: ${{ vars.OPENAI_MODEL || 'gpt-4o' }}
+      XAI_MODEL: ${{ vars.XAI_MODEL || 'grok-4' }}
+      GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-2.5-pro' }}
+      TRADING_HALT: ${{ vars.TRADING_HALT || 'false' }}
+      VOL_TARGET_ANNUAL: ${{ vars.VOL_TARGET_ANNUAL || '0.20' }}
+      TRADING_CAPITAL: ${{ vars.TRADING_CAPITAL || '0' }}
+      FOREX_PAIRS: ${{ vars.FOREX_PAIRS || 'EUR/USD,GBP/USD,USD/JPY,AUD/USD' }}
+      DAY_TRADE_SYMBOLS: ${{ vars.DAY_TRADE_SYMBOLS || '' }}
+      DAY_TRADE_TARGET_PCT: ${{ vars.DAY_TRADE_TARGET_PCT || '0.015' }}
+      DAY_TRADE_STOP_PCT: ${{ vars.DAY_TRADE_STOP_PCT || '0.01' }}
+      # Alt-data overlay (QuiverQuant insider + congressional trading). Add repo
+      # secret QUIVER_API_KEY to activate; auto-on when present. The desk runs HERE
+      # (GitHub Actions), not on Vercel — a Vercel env var can't reach it.
+      QUIVER_API_KEY: ${{ secrets.QUIVER_API_KEY }}
+      # Hermes guardian — background agent (data integrity, Sharpe scorecard,
+      # bounded self-calibration). On by default; set Variable HERMES_ENABLED=false to disable.
+      HERMES_ENABLED: ${{ vars.HERMES_ENABLED || 'true' }}
+      HERMES_GOAL: ${{ vars.HERMES_GOAL || '' }}
+      # Credit Spread Desk — defined-risk bull put spreads (max loss known at entry).
+      CREDIT_SPREADS_ENABLED: ${{ vars.CREDIT_SPREADS_ENABLED || 'true' }}
+      # Advisory Board — 6-agent council (Buffett/Munger/Macro/Growth/Quant + gate).
+      ADVISORS_ENABLED: ${{ vars.ADVISORS_ENABLED || 'true' }}
+      # Pairs / StatArb desk — market-neutral cointegrated spreads (long/short).
+      PAIRS_ENABLED: ${{ vars.PAIRS_ENABLED || 'true' }}
+      PAIRS: ${{ vars.PAIRS || 'SPY:QQQ,GLD:SLV' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -72,9 +120,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # Restore desk continuity (state + SQLite DB) from the previous run. These
-      # are gitignored runtime artifacts; the cache keeps the equity curve, ledger
-      # and positions consistent across scheduled runs (best-effort).
       - name: Restore desk state
         uses: actions/cache@v4
         with:
@@ -82,9 +127,39 @@ jobs:
             state.json
             model_cache.json
             data
+            desks
           key: sahjony-state-${{ github.run_id }}
           restore-keys: |
             sahjony-state-
+
+      - name: Refresh copy-trading signals (SEC Form 4 insider buys)
+        run: python -m scripts.build_copy_signals || true
+
+      # Paper "trainer" desk — Alpaca crypto, SAME universe as the live bot but
+      # more capital + a looser conviction gate, so it explores more setups. It
+      # trades zero real money and feeds realized outcomes into public/knowledge.json.
+      # Runs BEFORE the live desk so the live desk reads the freshest pool this cycle.
+      # Gated: does nothing until Variable PAPER_TRAINER_ENABLED=true. Isolated via
+      # SAHJONY_HOME=desks/paper (own state/db/status). Step env overrides job env;
+      # BROKER=alpaca + cleared live gates make real-money placement impossible here.
+      - name: Run paper trainer cycle (Alpaca crypto — shared-knowledge sandbox)
+        if: ${{ vars.PAPER_TRAINER_ENABLED == 'true' }}
+        env:
+          SAHJONY_HOME: desks/paper
+          BROKER: alpaca
+          ALPACA_PAPER: 'true'
+          LIVE_TRADING_ACK: ''
+          ROBINHOOD_LIVE: 'false'
+          TICKERS: ${{ vars.PAPER_TICKERS || vars.TICKERS || 'BTC/USD,ETH/USD,SOL/USD,LTC/USD' }}
+          TRADING_CAPITAL: ${{ vars.PAPER_TRADING_CAPITAL || '2000' }}
+          MIN_COUNCIL_CONVICTION: ${{ vars.PAPER_MIN_CONVICTION || '0.40' }}
+          KNOWLEDGE_ROLE: alpaca-paper-trainer
+          # Alpaca crypto uses the slash form (BTC/USD); BTC-USD 400s there.
+          BENCHMARK: ${{ vars.PAPER_BENCHMARK || 'BTC/USD' }}
+          # Keep the trainer crypto-focused so its calibration transfers to the live
+          # crypto bot — SEC-insider copy signals are equities (off-mission noise here).
+          COPY_TRADING_ENABLED: 'false'
+        run: python main.py --once --force || true
 
       - name: Run one trading cycle
         run: python main.py --once --force
@@ -97,17 +172,15 @@ jobs:
         run: |
           git config user.name  "sahjony-desk[bot]"
           git config user.email "noreply@anthropic.com"
-          if ! git diff --quiet -- public/status.json; then
-            git add public/status.json
+          git add public/status.json public/copy_signals.json public/knowledge.json 2>/dev/null || true
+          git add desks/paper/public/status.json 2>/dev/null || true
+          if ! git diff --cached --quiet; then
             git commit -m "Desk snapshot: cycle ${{ github.run_number }} update"
             for i in 1 2 3 4; do git push && break || sleep $((2**i)); done
           else
-            echo "No change in public/status.json — nothing to commit."
+            echo "No snapshot changes — nothing to commit."
           fi
 
-      # Reliable production deploy independent of the Git integration: if a Vercel
-      # Deploy Hook URL is set as secret VERCEL_DEPLOY_HOOK, ping it each cycle so
-      # the dashboard always publishes the latest commit. No-op if unset.
       - name: Trigger Vercel production deploy (if hook configured)
         env:
           HOOK: ${{ github.event.inputs.deploy_hook || secrets.VERCEL_DEPLOY_HOOK }}
@@ -115,5 +188,5 @@ jobs:
           if [ -n "$HOOK" ]; then
             curl -fsS -X POST "$HOOK" >/dev/null && echo "Vercel deploy hook fired ✓" || echo "deploy hook call failed"
           else
-            echo "VERCEL_DEPLOY_HOOK not set — skipping (add it to auto-publish the dashboard)."
+            echo "VERCEL_DEPLOY_HOOK not set — skipping."
           fi

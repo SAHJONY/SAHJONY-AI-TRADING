@@ -38,6 +38,20 @@ function navClick(win, label) {
 }
 const viewText = (win) => win.document.getElementById('view').textContent;
 
+// jsdom (without pretendToBeVisual) has no requestAnimationFrame. Stub it to invoke
+// the callback synchronously with a far-advanced timestamp so time-based count-up
+// animations settle to their final value in a single frame. The dashboard's only
+// rAF user (animateCounts) self-terminates at progress>=1, so this cannot recurse
+// forever, and running synchronously means the final value is present the instant a
+// render returns — no waiting on a timer before assertions. Applied to every window.
+const installRaf = (w) => {
+  w.requestAnimationFrame = (cb) => {
+    cb(((w.performance && w.performance.now) ? w.performance.now() : Date.now()) + 100000);
+    return 0;
+  };
+  w.cancelAnimationFrame = () => {};
+};
+
 async function main() {
   const state = { session: null, desks: [], updates: [] };
   const vc = new VirtualConsole();
@@ -68,6 +82,7 @@ async function main() {
     if (/finnhub.*\/quote/.test(url)) return { ok: true, json: async () => ({ c: 540.2, d: 3.1, dp: 0.58, h: 541, l: 537 }) };
     return { ok: true, json: async () => statusJson };
   };
+  installRaf(win);
   win.eval(appScript);
   await new Promise(r => setTimeout(r, 60));
 
@@ -89,9 +104,10 @@ async function main() {
   navClick(win, 'Workforce'); check(viewText(win).toLowerCase().includes('workforce'), 'Workforce tab renders');
   navClick(win, 'Env'); check(viewText(win).includes('ALPACA'), 'Env tab renders env catalog');
 
-  navClick(win, 'Controls');
-  check(/owner sign-in/i.test(viewText(win)), 'Controls shows sign-in when logged out');
-  check(win.document.getElementById('lbtn'), 'sign-in button present');
+  // Controls is owner-only: the nav hides it from read-only viewers (family/friends),
+  // so a logged-out visitor can never land on it.
+  check(![...win.document.querySelectorAll('#nav button')].some(b => /Controls/i.test(b.textContent)),
+    'Controls tab hidden from the nav when logged out (owner-only)');
 
   state.session = { user: { email: 'owner@sahjony.test' } };
   state.desks = [{ id: 'desk-1', name: 'My Desk', mode: 'paper', active: true, halt: false,
@@ -149,6 +165,7 @@ async function main() {
   w2.supabase = { createClient: () => makeClient(st2) };
   w2.WebSocket = FakeWS;
   w2.fetch = win.fetch;
+  installRaf(w2);
   w2.eval(appScript);
   await new Promise(r => setTimeout(r, 60));
   await w2.fetchIntel(true);

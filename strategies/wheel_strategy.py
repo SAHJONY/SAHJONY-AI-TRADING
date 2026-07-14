@@ -95,10 +95,11 @@ class WheelStrategy:
                               "shares": 100 * contracts, "cost_basis": strike,
                               "contract": "", "strike": 0.0, "cycles_remaining": 0,
                               "premium_open": 0.0})]
-        # expired worthless → premium becomes realized, back to flat
+        # Expired worthless → back to flat. The premium was already banked into
+        # premium_collected when the CSP opened (open_csp.premium_delta); do NOT
+        # also add it to realized_pnl here or _sleeve would count it twice.
         return [OrderIntent(symbol, "wheel", "state", "csp_expired",
                             reason=f"put expired worthless, kept ${pos.get('premium_open',0):,.0f}",
-                            realized_delta=float(pos.get("premium_open", 0.0)),
                             clear_position=True)]
 
     # Stage 2 — covered call
@@ -132,15 +133,17 @@ class WheelStrategy:
         strike = float(pos.get("strike", snap.price))
         cost = float(pos.get("cost_basis", snap.price))
         if snap.price > strike:  # called away
-            gain = (strike - cost) * shares + float(pos.get("premium_open", 0.0))
+            # Equity gain only — the call premium is already in premium_collected
+            # (open_cc.premium_delta); adding premium_open here would double-count it.
+            gain = (strike - cost) * shares
             return [OrderIntent(symbol, "wheel", "equity", "called_away", side="sell",
                                 reason=f"called away {shares} sh @ {strike:.2f}, realize ${gain:,.0f}",
                                 qty=shares, est_notional=0.0, risk_check=False,
                                 realized_delta=gain, clear_position=True)]
-        # expired → keep premium, sell another call next cycle
+        # Expired → keep premium (already in premium_collected), sell another call
+        # next cycle. No realized_delta here — see csp_expired for the rationale.
         return [OrderIntent(symbol, "wheel", "state", "cc_expired",
                             reason=f"call expired, kept ${pos.get('premium_open',0):,.0f}",
-                            realized_delta=float(pos.get("premium_open", 0.0)),
                             merge_position={"stage": "long_assigned", "contract": "",
                                             "strike": 0.0, "cycles_remaining": 0,
                                             "premium_open": 0.0})]

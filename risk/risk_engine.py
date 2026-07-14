@@ -59,3 +59,36 @@ class RiskEngine:
         if entry_price <= 0:
             return False
         return (current_price / entry_price - 1.0) <= -abs(floor_pct)
+
+    # Vol targeting can trim budgets to at most half — it de-risks, never leverages
+    # up (scale is capped at 1.0), and the hard ceilings above still apply on top.
+    VOL_SCALE_MIN = 0.50
+    _CYCLES_PER_YEAR = 6552.0   # 15-min cycles across the US cash session (~26/day × 252)
+
+    def vol_scalar(self, equity_values) -> float:
+        """Volatility targeting: when the desk's REALIZED portfolio vol runs above
+        VOL_TARGET_ANNUAL, scale every new-position budget down proportionally
+        (target/realized, clamped to [0.5, 1.0]). Classic institutional practice:
+        risk is sized to the environment, not just to conviction. Neutral (1.0)
+        when disabled (target 0), on short history, or on any data problem."""
+        target = float(getattr(self.cfg, "vol_target_annual", 0.0) or 0.0)
+        if target <= 0:
+            return 1.0
+        try:
+            ys = [float(v) for v in (equity_values or []) if v and float(v) > 0]
+            if len(ys) < 12:
+                return 1.0
+            ys = ys[-60:]
+            rets = [ys[i] / ys[i - 1] - 1.0 for i in range(1, len(ys))]
+            n = len(rets)
+            mean = sum(rets) / n
+            var = sum((r - mean) ** 2 for r in rets) / max(1, n - 1)
+            realized = (var ** 0.5) * (self._CYCLES_PER_YEAR ** 0.5)
+            if realized <= target or realized <= 0:
+                return 1.0
+            scale = max(self.VOL_SCALE_MIN, min(1.0, target / realized))
+            log.info("vol targeting: realized %.0f%% > target %.0f%% → budgets ×%.2f",
+                     realized * 100, target * 100, scale)
+            return scale
+        except Exception:   # any data problem degrades to neutral, never crashes
+            return 1.0

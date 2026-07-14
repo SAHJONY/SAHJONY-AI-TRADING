@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>SAHJONY CAPITAL — Parquet</title>
-<meta name="theme-color" content="#05070b" />
+<meta name="theme-color" content="#070a10" />
 <meta name="description" content="Autonomous multi-agent quant trading parquet — live markets, council intelligence & risk controls." />
 <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
 <link rel="icon" href="./favicon-64.png" sizes="64x64" type="image/png" />
@@ -27,34 +27,40 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#04060a; --bg2:#070a10; --panel:#0c1119; --panel2:#0a0e16; --line:#18202f;
-    --line2:#222d45; --txt:#eef3ff; --mut:#8595b2; --dim:#5a6783;
-    --amber:#ffb000; --amber2:#ffcd5c; --cyan:#2ad8f0; --violet:#9b8cff; --up:#34e3a8; --down:#ff5c6c;
-    --grid:rgba(120,150,200,.045); --glow:rgba(42,216,240,.5);
+    /* Refined institutional palette: deep blue-ink surfaces, disciplined gold + teal
+       accents, calmer semantic colours. Token names are unchanged so the whole app
+       recolours from here without touching a single component rule. */
+    --bg:#070a10; --bg2:#0a0e16; --panel:#0f151f; --panel2:#0b0f18; --line:#1b2433;
+    --line2:#27324a; --txt:#e9eff9; --mut:#8a99b6; --dim:#5b6885;
+    --amber:#e7b64a; --amber2:#f4d288; --cyan:#43bdd6; --violet:#8f9bce; --up:#37d69a; --down:#f0647c;
+    --grid:rgba(122,150,200,.038); --glow:rgba(67,189,214,.4);
     --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
     --sans:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+    --shadow:0 8px 26px rgba(0,0,0,.4); --radius:14px;
   }
   *{box-sizing:border-box}
   html,body{margin:0}
   body{
     background:
-      linear-gradient(var(--grid) 1px,transparent 1px) 0 0/100% 30px,
-      linear-gradient(90deg,var(--grid) 1px,transparent 1px) 0 0/30px 100%,
-      radial-gradient(1200px 560px at 82% -14%,#10243a 0%,transparent 62%),
-      radial-gradient(1000px 520px at 8% 4%,#160f2e 0%,transparent 55%),
+      linear-gradient(var(--grid) 1px,transparent 1px) 0 0/100% 32px,
+      linear-gradient(90deg,var(--grid) 1px,transparent 1px) 0 0/32px 100%,
+      radial-gradient(1300px 620px at 84% -18%,#0e1c2e 0%,transparent 60%),
+      radial-gradient(1100px 560px at 6% 2%,#111528 0%,transparent 52%),
       var(--bg);
     color:var(--txt);font-family:var(--sans);font-size:13px;line-height:1.45;min-height:100vh;
     -webkit-font-smoothing:antialiased;letter-spacing:.1px}
   body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
-    background:radial-gradient(900px 480px at 50% -10%,rgba(42,216,240,.05),transparent 60%)}
-  body::after{content:"";position:fixed;inset:-20%;pointer-events:none;z-index:0;opacity:.55;
+    background:radial-gradient(960px 500px at 50% -12%,rgba(67,189,214,.035),transparent 62%)}
+  body::after{content:"";position:fixed;inset:-20%;pointer-events:none;z-index:0;opacity:.4;
     background:
-      radial-gradient(40% 38% at 20% 22%,rgba(42,216,240,.10),transparent 60%),
-      radial-gradient(38% 40% at 80% 30%,rgba(155,140,255,.10),transparent 60%),
-      radial-gradient(45% 42% at 62% 86%,rgba(255,176,0,.07),transparent 60%);
-    animation:aurora 28s ease-in-out infinite}
-  @keyframes aurora{0%{transform:translate3d(-4%,-2%,0) scale(1)}50%{transform:translate3d(4%,3%,0) scale(1.14)}100%{transform:translate3d(-4%,-2%,0) scale(1)}}
-  @media(prefers-reduced-motion:reduce){body::after{animation:none}}
+      radial-gradient(42% 40% at 18% 20%,rgba(67,189,214,.07),transparent 60%),
+      radial-gradient(40% 42% at 82% 28%,rgba(143,155,206,.055),transparent 60%),
+      radial-gradient(46% 44% at 62% 88%,rgba(231,182,74,.045),transparent 60%);
+    animation:aurora 44s ease-in-out infinite}
+  @keyframes aurora{0%{transform:translate3d(-3%,-1.5%,0) scale(1)}50%{transform:translate3d(3%,2%,0) scale(1.08)}100%{transform:translate3d(-3%,-1.5%,0) scale(1)}}
+  @media(prefers-reduced-motion:reduce){
+    body::after,.tape .track,.dot.live,#voiceBtn.listening{animation:none!important}
+  }
   main,header,nav,footer,.tape{position:relative;z-index:1}
   .mono{font-family:var(--mono)}
   .up{color:var(--up)} .down{color:var(--down)} .mut{color:var(--mut)} .amber{color:var(--amber)}
@@ -64,16 +70,16 @@
   ::-webkit-scrollbar-thumb:hover{background:var(--cyan)}
 
   /* command bar */
-  header{display:flex;align-items:center;gap:13px;padding:11px 18px;border-bottom:1px solid var(--line2);
-    background:linear-gradient(180deg,rgba(9,13,21,.92),rgba(7,10,16,.82));backdrop-filter:blur(14px) saturate(140%);
-    position:sticky;top:0;z-index:20;flex-wrap:wrap;box-shadow:0 1px 0 rgba(42,216,240,.08),0 8px 30px rgba(0,0,0,.5)}
-  .brand{display:flex;align-items:center;gap:11px;min-width:0}
-  .logo{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;font-weight:800;font-size:18px;
-    background:linear-gradient(135deg,var(--amber),#ff7a00);color:#1a1200;
-    box-shadow:0 0 22px rgba(255,176,0,.4),inset 0 0 0 1px rgba(255,255,255,.15);position:relative}
-  .brand h1{font-size:14.5px;margin:0;font-weight:800;letter-spacing:.6px;white-space:nowrap;
-    background:linear-gradient(90deg,#fff,#bcd4ff);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
-  .brand .sub{font-size:9.5px;color:var(--amber);letter-spacing:2.6px;text-transform:uppercase;font-weight:600}
+  header{display:flex;align-items:center;gap:13px;padding:12px 20px;border-bottom:1px solid var(--line2);
+    background:linear-gradient(180deg,rgba(11,15,24,.94),rgba(8,11,18,.86));backdrop-filter:blur(16px) saturate(130%);
+    position:sticky;top:0;z-index:20;flex-wrap:wrap;box-shadow:0 1px 0 rgba(255,255,255,.03),0 6px 26px rgba(0,0,0,.5)}
+  .brand{display:flex;align-items:center;gap:12px;min-width:0}
+  .logo{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;font-weight:800;font-size:18px;
+    background:linear-gradient(140deg,var(--amber2),var(--amber) 55%,#b9862b);color:#20160a;
+    box-shadow:0 4px 16px rgba(231,182,74,.28),inset 0 0 0 1px rgba(255,255,255,.18);position:relative}
+  .brand h1{font-size:15px;margin:0;font-weight:800;letter-spacing:.4px;white-space:nowrap;
+    background:linear-gradient(90deg,#fff,#c3d3ee);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+  .brand .sub{font-size:9.5px;color:var(--amber);letter-spacing:2.8px;text-transform:uppercase;font-weight:600;margin-top:1px}
   .spacer{flex:1}
   .badge{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;
     padding:4px 9px;border-radius:6px;color:var(--cyan);border:1px solid rgba(42,216,240,.35);
@@ -83,6 +89,9 @@
     transition:border-color .2s}
   .stat:hover{border-color:var(--line2)}
   .stat b{color:var(--txt);font-weight:600}
+  /* data-freshness badge: green (live) → amber (aging) → red (stale/frozen worker) */
+  .stat.warn{color:var(--amber);border-color:rgba(255,176,0,.4);background:rgba(255,176,0,.07)}
+  .stat.stale{color:var(--down);border-color:rgba(255,92,108,.5);background:rgba(255,92,108,.09)}
   .dot{width:7px;height:7px;border-radius:50%;background:var(--dim);box-shadow:0 0 0 0 rgba(0,0,0,0)}
   .dot.g{background:var(--up);box-shadow:0 0 9px var(--up)} .dot.r{background:var(--down);box-shadow:0 0 9px var(--down)} .dot.a{background:var(--amber);box-shadow:0 0 9px var(--amber)}
   .dot.live{background:var(--up);animation:pulse 1.4s infinite}
@@ -122,9 +131,9 @@
     cursor:pointer;padding:7px 14px;border-radius:8px;font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:.5px;transition:all .16s}
   nav button .fk{font-size:9px;color:var(--dim);border:1px solid var(--line2);border-radius:4px;padding:1px 4px}
   nav button:hover{color:var(--txt);background:rgba(255,255,255,.03)}
-  nav button.active{color:#04121a;background:linear-gradient(135deg,var(--amber),var(--amber2));border-color:transparent;
-    box-shadow:0 0 18px rgba(255,176,0,.3),0 2px 8px rgba(0,0,0,.4)}
-  nav button.active .fk{color:#04121a;border-color:rgba(0,0,0,.25);background:rgba(255,255,255,.25)}
+  nav button.active{color:#1c1408;background:linear-gradient(135deg,var(--amber2),var(--amber));border-color:transparent;
+    box-shadow:0 2px 10px rgba(231,182,74,.22),0 1px 4px rgba(0,0,0,.4)}
+  nav button.active .fk{color:#1c1408;border-color:rgba(0,0,0,.25);background:rgba(255,255,255,.3)}
 
   main{padding:16px;max-width:1680px;margin:0 auto}
   .grid{display:grid;gap:13px}
@@ -133,16 +142,16 @@
   .span3{grid-column:span 3} .span5{grid-column:span 5} .span7{grid-column:span 7}
   @media(max-width:1100px){.span8,.span7,.span6,.span5,.span4,.span3{grid-column:span 12}}
 
-  .panel{background:linear-gradient(180deg,rgba(18,24,36,.72),rgba(10,14,22,.72));border:1px solid var(--line2);
-    border-radius:14px;overflow:hidden;backdrop-filter:blur(10px);
-    box-shadow:0 10px 30px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.03);transition:border-color .2s,transform .2s,box-shadow .2s}
-  .panel:hover{border-color:#2c3a58;box-shadow:0 14px 40px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.05)}
-  .ph{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 14px;border-bottom:1px solid var(--line);
-    background:linear-gradient(180deg,rgba(255,255,255,.025),transparent)}
-  .ph h3{margin:0;font-family:var(--mono);font-size:10.5px;letter-spacing:1.7px;text-transform:uppercase;color:#aab8d6;font-weight:700;
+  .panel{background:linear-gradient(180deg,rgba(16,22,33,.78),rgba(11,15,24,.78));border:1px solid var(--line);
+    border-radius:var(--radius);overflow:hidden;backdrop-filter:blur(10px);
+    box-shadow:var(--shadow),inset 0 1px 0 rgba(255,255,255,.028);transition:border-color .2s,transform .2s,box-shadow .2s}
+  .panel:hover{border-color:var(--line2);box-shadow:0 12px 34px rgba(0,0,0,.46),inset 0 1px 0 rgba(255,255,255,.045)}
+  .ph{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:11px 15px;border-bottom:1px solid var(--line);
+    background:linear-gradient(180deg,rgba(255,255,255,.022),transparent)}
+  .ph h3{margin:0;font-family:var(--mono);font-size:10.5px;letter-spacing:1.8px;text-transform:uppercase;color:#b1bfdb;font-weight:700;
     display:flex;align-items:center;gap:9px}
   .ph h3::before{content:"";width:3px;height:13px;border-radius:2px;
-    background:linear-gradient(180deg,var(--amber),var(--cyan));display:inline-block;box-shadow:0 0 8px rgba(42,216,240,.4)}
+    background:linear-gradient(180deg,var(--amber),var(--cyan));display:inline-block;box-shadow:0 0 6px rgba(67,189,214,.32)}
   .ph .x{font-family:var(--mono);font-size:10.5px;color:var(--dim)}
   .pb{padding:14px}
 
@@ -155,12 +164,12 @@
     box-shadow:0 8px 24px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.03);transition:transform .2s,box-shadow .2s}
   .kpi:hover{transform:translateY(-3px);box-shadow:0 16px 38px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.06)}
   .kpi::before{content:"";position:absolute;top:0;left:0;right:0;height:1px;
-    background:linear-gradient(90deg,transparent,var(--accent,var(--amber)),transparent);opacity:.7}
+    background:linear-gradient(90deg,transparent,var(--accent,var(--amber)),transparent);opacity:.55}
   .kpi::after{content:"";position:absolute;inset:0 auto 0 0;width:3px;
-    background:var(--accent,var(--amber));box-shadow:0 0 14px var(--accent,var(--amber));opacity:.85}
-  .kpi .l{font-family:var(--mono);font-size:9.5px;letter-spacing:1.2px;text-transform:uppercase;color:var(--mut)}
+    background:var(--accent,var(--amber));box-shadow:0 0 8px var(--accent,var(--amber));opacity:.7}
+  .kpi .l{font-family:var(--mono);font-size:9.5px;letter-spacing:1.3px;text-transform:uppercase;color:var(--mut)}
   .kpi .v{font-family:var(--mono);font-size:23px;font-weight:700;margin-top:5px;letter-spacing:-.4px;
-    text-shadow:0 0 22px rgba(255,255,255,.06)}
+    text-shadow:0 0 18px rgba(255,255,255,.05)}
   .kpi .d{font-family:var(--mono);font-size:11px;margin-top:2px}
   .kpi .spark{position:absolute;right:9px;bottom:8px;width:64px;height:26px;opacity:.85}
 
@@ -172,10 +181,11 @@
 
   table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12px}
   th,td{text-align:left;padding:7px 9px;border-bottom:1px solid var(--line);white-space:nowrap}
-  th{color:var(--dim);font-size:9.5px;text-transform:uppercase;letter-spacing:1px;font-weight:600;position:sticky;top:0}
+  th{color:var(--dim);font-size:9.5px;text-transform:uppercase;letter-spacing:1px;font-weight:600;position:sticky;top:0;
+    background:rgba(11,15,24,.6)}
   td.n,th.n{text-align:right}
   tbody tr{transition:background .15s}
-  tbody tr:hover{background:linear-gradient(90deg,rgba(255,176,0,.07),rgba(42,216,240,.04))}
+  tbody tr:hover{background:linear-gradient(90deg,rgba(231,182,74,.05),rgba(67,189,214,.03))}
   .scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
 
   /* council heatmap */
@@ -194,11 +204,38 @@
   .hchip{font-family:var(--mono);font-size:9.5px;color:#04121a;font-weight:700;border-radius:6px;padding:4px 7px;display:flex;align-items:center;justify-content:space-between;gap:5px}
   .hchip b{font-weight:800;opacity:.85}
   @media(max-width:680px){.heat-wide{display:none}.heat-cards{display:grid;gap:10px}}
-  /* phones: denser tables so the few-column blotters fit without awkward scroll */
+  /* phones: legibility + comfortable touch targets so every device reads clearly */
   @media(max-width:560px){
     main{padding:11px}.pb{padding:11px}
-    table{font-size:11px} th,td{padding:5px 6px}
-    .scroll{scrollbar-width:thin}
+    table{font-size:12.5px} th,td{padding:7px 7px} th{font-size:10.5px}
+    /* Show EVERY column on phones — nothing hidden. Wide tables already sit in
+       horizontally-scrollable wrappers, so all data stays reachable on any screen. */
+    .scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:thin}
+    .scroll table{min-width:max-content}
+    /* lift the tiny 9–10.5px labels into a readable range on small screens */
+    body{font-size:14px}
+    .brand h1{font-size:16px}
+    .brand .sub{font-size:10.5px;letter-spacing:1.8px}
+    .badge{font-size:10.5px}
+    .stat,.mpill{font-size:12px}
+    .ph h3{font-size:12px;letter-spacing:1.1px} .ph .x{font-size:11px}
+    .kpi .l{font-size:11px} .kpi .v{font-size:21px} .kpi .d{font-size:12px}
+    .tag{font-size:11px} .pill{font-size:11px}
+    .feed{font-size:12.5px} .feed .k{min-width:72px}
+    .heat th{font-size:10.5px} footer{font-size:11px}
+    /* touch targets ≥44px (Apple/Material guidance) */
+    header{gap:9px;padding:11px 13px}
+    nav{gap:5px;padding:9px 11px}
+    nav button{padding:11px 14px;font-size:13px;min-height:44px}
+    .btn{padding:10px 13px;font-size:12px;min-height:42px}
+    .act,.ghost{padding:11px 15px;min-height:44px}
+    /* Controls/trade-ticket inputs: ignore desktop inline max-width caps, go full width */
+    input.f,select.f,input[style*="max-width"],select[style*="max-width"]{max-width:100%!important;width:100%!important}
+  }
+  /* very small phones (~360px): keep KPIs 2-up and trim the largest type */
+  @media(max-width:400px){
+    .kpis{grid-template-columns:repeat(2,1fr)}
+    .brand h1{font-size:15px} .kpi .v{font-size:19px}
   }
 
   .cb{display:flex;align-items:center;gap:10px;padding:11px 13px;border-radius:10px;border:1px solid var(--line2);font-size:12px;margin-bottom:11px}
@@ -268,14 +305,15 @@
   <span class="stat">CYC <b id="cycTxt">—</b></span>
   <span class="stat"><span class="dot" id="dStream"></span>STREAM</span>
   <span class="stat mono" id="clock">--:--:-- UTC</span>
+  <span class="stat mono" id="freshStat" title="Data freshness — time since the desk last updated this snapshot" style="display:none"><span class="dot" id="dFresh"></span><span id="freshTxt">—</span></span>
   <span class="badge" id="viewerBadge" style="display:none" title="Shareable read-only view — no changes can be made from here">◇ VIEW ONLY</span>
   <span class="mpill" id="mode">—</span>
   <button class="btn" id="killBtn" style="display:none" title="Kill switch — suspend all new orders instantly (exits still allowed)">⛔ STOP</button>
   <a class="btn" id="account" href="./login.html">SIGN IN</a>
-  <button class="btn" id="voiceLang" title="Voice language — English / Español">🌐 EN</button>
-  <button class="btn" id="voiceWake" title="Hands-free — say “Hey Sahjony …” to command">👂 WAKE</button>
-  <button class="btn" id="voiceBtn" title="Voice control — click and speak (English / Español)" aria-label="Voice control">🎙️ VOICE</button>
-  <button class="btn" onclick="load()">↻</button>
+  <button class="btn" id="voiceLang" title="Voice language — English / Español" aria-label="Toggle voice language, English or Spanish">🌐 EN</button>
+  <button class="btn" id="voiceWake" title="Hands-free — say “Hey Sahjony …” to command" aria-label="Toggle hands-free wake word">👂 WAKE</button>
+  <button class="btn" id="voiceBtn" title="Voice control — click and speak (English / Español)" aria-label="Voice control — click and speak">🎙️ VOICE</button>
+  <button class="btn" onclick="load()" title="Refresh data now" aria-label="Refresh data now">↻</button>
 </header>
 <div id="liveBanner" style="display:none">⚠ LIVE — REAL MONEY ARMED · orders use real funds on <b id="liveVenue">—</b> · hard risk ceilings enforced</div>
 <div id="haltBanner" style="display:none">⛔ TRADING HALTED · new risk suspended (kill switch) · exits still allowed · tap RESUME to trade again</div>
@@ -291,7 +329,7 @@
 <script src="./config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const TABS = ["Parquet","Markets","Macro","News","Council","Book","Brain","Controls","Workforce","Env"];
+const TABS = ["Parquet","Perf","Markets","Macro","News","Council","Book","Brain","Controls","Workforce","Env"];
 let DATA=null, TAB="Parquet", SESSION=null, DESK=null, CREDS=[];
 let MARKETS={list:[],err:null,ts:0};            // CoinGecko crypto (no key)
 let NEWS={list:[],err:null,ts:0,src:''};        // Finnhub (key) or GDELT (no key)
@@ -300,6 +338,16 @@ let INTEL={fng:null,global:null,trending:null,fx:null,indices:null,earnings:null
 
 const CFG=(window.SAHJONY_CONFIG||{});
 const FINNHUB=(CFG.FINNHUB_API_KEY||"").trim();
+// Owner-device gate: shared/public links show a clean view-only page with NO
+// sign-in entry point. A device proves ownership by visiting once with #owner
+// (or signing in) — that sets a persistent local flag. /login.html still works
+// directly for the owner; it is simply never advertised to visitors.
+function OWNER_DEVICE(){
+  try{
+    if(/[?#&]owner\b/.test(location.hash+location.search)) localStorage.setItem('sahjony_owner','1');
+    return localStorage.getItem('sahjony_owner')==='1';
+  }catch(_){return false;}
+}
 const LIVE_OK=!!(CFG.SUPABASE_URL && CFG.SUPABASE_ANON_KEY && window.supabase);
 const SB=LIVE_OK ? window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY) : null;
 
@@ -310,7 +358,27 @@ const pct=(n)=>(Number(n||0)>=0?"+":"")+Number(n||0).toFixed(2)+"%";
 const num=(n,d=2)=>Number(n||0).toLocaleString(undefined,{maximumFractionDigits:d});
 
 // ── clock ──
-setInterval(()=>{const el=document.getElementById('clock');if(el)el.textContent=new Date().toISOString().slice(11,19)+" UTC";},1000);
+// The clock keeps ticking even if the worker dies, so a frozen board can look
+// "live". updateFreshness() flags a stale snapshot (worker stopped / deploy frozen).
+function tsMs(ts){const d=ts?Date.parse(ts):NaN;return isNaN(d)?null:d;}
+function relAge(ms){const s=Math.max(0,Math.round(ms/1000));
+  if(s<60)return s+"s ago";const m=Math.round(s/60);
+  if(m<60)return m+"m ago";const h=Math.round(m/60);
+  if(h<48)return h+"h ago";return Math.round(h/24)+"d ago";}
+const FRESH_WARN_MS=20*60*1000, FRESH_STALE_MS=45*60*1000;  // snapshot cadence ~15min
+function updateFreshness(){
+  const stat=document.getElementById('freshStat');if(!stat)return;
+  const t=(typeof DATA!=='undefined'&&DATA&&DATA.ts)?tsMs(DATA.ts):null;
+  if(t==null){stat.style.display='none';return;}
+  stat.style.display='';
+  const age=Date.now()-t,dot=document.getElementById('dFresh'),txt=document.getElementById('freshTxt');
+  txt.textContent='updated '+relAge(age);
+  stat.classList.remove('warn','stale');
+  if(age>=FRESH_STALE_MS){stat.classList.add('stale');dot.className='dot r';stat.title='STALE — the desk has not updated this snapshot recently. The worker may be stopped.';}
+  else if(age>=FRESH_WARN_MS){stat.classList.add('warn');dot.className='dot a';stat.title='Aging — snapshot older than one update cycle.';}
+  else{dot.className='dot g';stat.title='Fresh — snapshot within the normal update cadence.';}
+}
+setInterval(()=>{const el=document.getElementById('clock');if(el)el.textContent=new Date().toISOString().slice(11,19)+" UTC";updateFreshness();},1000);
 
 // ── Supabase live-control plane ──
 async function refreshDesk(){
@@ -328,17 +396,39 @@ async function refreshCreds(){
   try{ const {data}=await SB.from('broker_credentials').select('name').eq('desk_id',DESK.id);
     CREDS=(data||[]).map(r=>r.name); }catch(e){ CREDS=[]; }
 }
+// Live data straight from GitHub (raw) so the dashboard is always current and never
+// frozen by Vercel deploy limits; falls back to the co-located snapshot if needed.
+const STATUS_REMOTE='https://raw.githubusercontent.com/SAHJONY/SAHJONY-AI-TRADING/master/public/status.json';
 async function load(){
   try{
     await refreshDesk();
     if(DESK && DESK.last_status){ DATA=DESK.last_status; }
-    else { const r=await fetch('./status.json?_='+Date.now()); DATA=await r.json(); }
+    else {
+      try{ const r=await fetch(STATUS_REMOTE+'?_='+Date.now(),{cache:'no-store'}); if(!r.ok)throw 0; DATA=await r.json(); }
+      catch(_){ const r=await fetch('./status.json?_='+Date.now()); DATA=await r.json(); }
+    }
   }catch(e){
     try{const r=await fetch('./status.json?_='+Date.now());DATA=await r.json();}catch(_){DATA={_error:String(e)};}
   }
+  await fetchRobinhood();                       // live real-money account (read-only)
   buildNav(); render();
   fetchMarkets(); fetchNews(); fetchIntel();   // free REST snapshots (self-cached)
   startStreams(); subscribeRealtime();         // realtime: Binance/Finnhub WS + Supabase
+}
+
+// Live real-money Robinhood snapshot (managed via the Robinhood MCP, written to
+// public/robinhood.json). Read-only on the dashboard — displayed alongside, and
+// kept strictly separate from, the paper desk. Absent file = panel hidden.
+// Fetch from GitHub raw FIRST (same as status.json): a fresh MCP snapshot is
+// published the instant it's committed to master, with no Vercel deploy needed
+// (the free tier caps deploys/day, and the 15-min desk commits burn that quota).
+const RH_REMOTE='https://raw.githubusercontent.com/SAHJONY/SAHJONY-AI-TRADING/master/public/robinhood.json';
+let RH=null;
+async function fetchRobinhood(){
+  try{ const r=await fetch(RH_REMOTE+'?_='+Date.now(),{cache:'no-store'}); if(!r.ok)throw 0; RH=await r.json(); return; }
+  catch(_){}
+  try{ const r=await fetch('./robinhood.json?_='+Date.now(),{cache:'no-store'}); RH=r.ok?await r.json():null; }
+  catch(_){ RH=null; }
 }
 
 // ── free live market & news feeds (run in the browser) ──────────────────────
@@ -554,9 +644,9 @@ function Macro(v){
   // earnings this week
   let eb;
   if(INTEL.earnings && INTEL.earnings.length){ const w=$(`<div class="scroll"></div>`);
-    const t=$(`<table><thead><tr><th>SYM</th><th>DATE</th><th>HOUR</th><th class="n">EPS EST</th></tr></thead><tbody></tbody></table>`);
+    const t=$(`<table><thead><tr><th>SYM</th><th>DATE</th><th class="opt">HOUR</th><th class="n">EPS EST</th></tr></thead><tbody></tbody></table>`);
     INTEL.earnings.forEach(e=>t.querySelector('tbody').appendChild($(`<tr><td class="amber">${esc(e.symbol)}</td><td>${esc(e.date)}</td>
-      <td class="mut">${esc(e.hour||'')}</td><td class="n">${e.epsEstimate!=null?num(e.epsEstimate):'—'}</td></tr>`)));
+      <td class="mut opt">${esc(e.hour||'')}</td><td class="n">${e.epsEstimate!=null?num(e.epsEstimate):'—'}</td></tr>`)));
     w.appendChild(t); eb=w; }
   else eb = FINNHUB ? `<div class="empty">no earnings in the next 7 days</div>` : `<div class="empty">add FINNHUB_API_KEY for the earnings calendar</div>`;
   g.appendChild(panel('Earnings · Next 7 Days', eb, 'Finnhub', 'span8'));
@@ -583,12 +673,12 @@ function Markets(v){
   else if(!(MARKETS.list||[]).length) cbody='<div class="empty">loading live crypto…</div>';
   else{
     const w=$(`<div class="scroll"></div>`);
-    const t=$(`<table><thead><tr><th>#</th><th>COIN</th><th class="n">PRICE</th><th class="n">24H</th><th>7D TREND</th><th class="n">MKT CAP</th><th class="n">VOL 24H</th></tr></thead><tbody></tbody></table>`);
+    const t=$(`<table><thead><tr><th>#</th><th>COIN</th><th class="n">PRICE</th><th class="n">24H</th><th class="opt">7D TREND</th><th class="n opt">MKT CAP</th><th class="n opt">VOL 24H</th></tr></thead><tbody></tbody></table>`);
     MARKETS.list.forEach((m,i)=>{const up=(m.price_change_percentage_24h||0)>=0;
       const spark=cellSpark((m.sparkline_in_7d||{}).price, up?'#34e3a8':'#ff5c6c');
       t.querySelector('tbody').appendChild($(`<tr><td class="mut">${i+1}</td><td><b class="amber">${esc((m.symbol||'').toUpperCase())}</b> <span class="mut">${esc(m.name)}</span></td>
         <td class="n">${money(m.current_price)}</td><td class="n ${up?'up':'down'}">${pct(m.price_change_percentage_24h)}</td>
-        <td>${spark}</td><td class="n">$${num(m.market_cap,0)}</td><td class="n">$${num(m.total_volume,0)}</td></tr>`));});
+        <td class="opt">${spark}</td><td class="n opt">$${num(m.market_cap,0)}</td><td class="n opt">$${num(m.total_volume,0)}</td></tr>`));});
     w.appendChild(t); cbody=w;
   }
   g.appendChild(panel('Crypto · Live (CoinGecko, no key)', cbody, (MARKETS.list||[]).length+' assets', 'span12'));
@@ -598,11 +688,14 @@ function Markets(v){
     const sb=$(`<div class="empty">loading live quotes…</div>`);
     g.appendChild(panel('Equities · Live (Finnhub)', sb, syms.length+' symbols', 'span12'));
     fetchStockQuotes(syms).then(rows=>{
+      const valid=(rows||[]).filter(q=>q && q.c);   // drop empty/zero quotes (bad key / rate limit)
+      if(!valid.length){ sb.textContent='live quotes unavailable — check FINNHUB_API_KEY (free tier 60/min)'; return; }
       const w=$(`<div class="scroll"></div>`);
-      const t=$(`<table><thead><tr><th>SYM</th><th class="n">PRICE</th><th class="n">CHG</th><th class="n">%</th><th class="n">HIGH</th><th class="n">LOW</th></tr></thead><tbody></tbody></table>`);
-      rows.forEach(q=>{const up=(q.dp||0)>=0; t.querySelector('tbody').appendChild($(`<tr><td class="amber">${esc(q.sym)}</td><td class="n">${money(q.c)}</td>
-        <td class="n ${up?'up':'down'}">${(q.d>=0?'+':'')}${num(q.d)}</td><td class="n ${up?'up':'down'}">${pct(q.dp)}</td><td class="n">${money(q.h)}</td><td class="n">${money(q.l)}</td></tr>`));});
-      sb.replaceWith(w); g.querySelector('.panel:last-child .pb').appendChild(w);
+      const t=$(`<table><thead><tr><th>SYM</th><th class="n">PRICE</th><th class="n opt">CHG</th><th class="n">%</th><th class="n opt">HIGH</th><th class="n opt">LOW</th></tr></thead><tbody></tbody></table>`);
+      valid.forEach(q=>{const up=(q.dp||0)>=0; t.querySelector('tbody').appendChild($(`<tr><td class="amber">${esc(q.sym)}</td><td class="n">${money(q.c)}</td>
+        <td class="n opt ${up?'up':'down'}">${(q.d>=0?'+':'')}${num(q.d)}</td><td class="n ${up?'up':'down'}">${pct(q.dp)}</td><td class="n opt">${money(q.h)}</td><td class="n opt">${money(q.l)}</td></tr>`));});
+      w.appendChild(t);            // attach the table (was missing → panel rendered empty)
+      sb.replaceWith(w);
     }).catch(()=>{ sb.textContent='live quotes unavailable'; });
   } else {
     g.appendChild(panel('Equities · Live',
@@ -805,9 +898,15 @@ function setStatus(){
   document.getElementById('cycTxt').textContent = (DATA&&DATA.cycle)||'0';
   const acc=document.getElementById('account');
   const vb=document.getElementById('viewerBadge');
-  if(SESSION&&SESSION.user){acc.textContent='⏻ '+String(SESSION.user.email).split('@')[0];acc.removeAttribute('href');acc.onclick=()=>sbLogout();
+  if(SESSION&&SESSION.user){acc.style.display='';acc.textContent='⏻ '+String(SESSION.user.email).split('@')[0];acc.removeAttribute('href');acc.onclick=()=>sbLogout();
+    try{localStorage.setItem('sahjony_owner','1');}catch(_){}
     if(vb)vb.style.display='none';}
-  else{acc.textContent='SIGN IN';acc.setAttribute('href','./login.html');acc.onclick=null;
+  else{
+    // Shared/public links get a clean view-only page: the owner entry point is
+    // hidden unless this device has proven ownership (signed in before, or
+    // visited once with #owner). Owner can always go to /login.html directly.
+    acc.style.display=OWNER_DEVICE()?'':'none';
+    acc.textContent='SIGN IN';acc.setAttribute('href','./login.html');acc.onclick=null;
     if(vb)vb.style.display='';}
   setStreamDot();
 }
@@ -827,13 +926,75 @@ function render(){
   const v=document.getElementById('view');
   if(!SESSION && OWNER_TABS.includes(TAB)) TAB="Parquet";   // viewers never land on owner tabs
   if(!DATA||DATA._error){v.innerHTML=`<div class="panel"><div class="pb empty">No data feed. Run the desk or sign in. ${esc(DATA&&DATA._error||'')}</div></div>`;
-    document.getElementById('foot').textContent='no feed'; return;}
+    document.getElementById('foot').textContent='no feed'; updateFreshness(); return;}
   document.getElementById('firm').textContent=(DATA.firm||'SAHJONY CAPITAL').replace(/ LLC$/,'');
   setStatus(); buildTape();
+  const _tms=tsMs(DATA.ts), _when=_tms!=null?`${new Date(_tms).toLocaleString()} (${relAge(Date.now()-_tms)})`:'time unknown';
   document.getElementById('foot').textContent =
-    `cycle ${DATA.cycle} · ${new Date(DATA.ts).toLocaleString()} · ${DESK?'LIVE via Supabase':'static snapshot'} · auto-refresh 30s`;
+    `cycle ${DATA.cycle} · ${_when} · ${DESK?'LIVE via Supabase':'static snapshot'} · auto-refresh 30s`;
+  updateFreshness();
   v.innerHTML="";
-  ({Parquet,Markets,Macro,News,Council,Book,Brain,Controls,Workforce,Env}[TAB]||Parquet)(v);
+  ({Parquet,Perf,Markets,Macro,News,Council,Book,Brain,Controls,Workforce,Env}[TAB]||Parquet)(v);
+}
+
+// ── Performance: honest, data-driven scorecard (proves or disproves the desk) ──
+function Perf(v){
+  const cur=(DATA.equity_curve||[]), acc=DATA.account||{}, p=DATA.pnl||{}, b=DATA.benchmark||{};
+  const rets=[]; for(let i=1;i<cur.length;i++){const a=+cur[i-1].equity||0,c=+cur[i].equity||0; if(a>0)rets.push(c/a-1);}
+  const mean=rets.length?rets.reduce((s,x)=>s+x,0)/rets.length:0;
+  const sd=rets.length>1?Math.sqrt(rets.reduce((s,x)=>s+(x-mean)*(x-mean),0)/(rets.length-1)):0;
+  const sharpe=sd>0?mean/sd:0, wins=rets.filter(x=>x>0).length, winRate=rets.length?wins/rets.length*100:0;
+  const dd=ddSeries(cur), maxDD=dd.length?Math.min(...dd):0;
+  const totRet=(p.total_return_pct!=null)?p.total_return_pct:(acc.equity_start?((acc.equity/acc.equity_start-1)*100):0);
+  const g=$(`<div class="grid c12"></div>`);
+  const gp=goalPanel(cur,b,maxDD); if(gp) g.appendChild(gp);
+  if(cur.length<30) g.appendChild($(`<div class="span12"><div class="cb" style="border-color:var(--amber);background:linear-gradient(90deg,rgba(255,176,0,.12),transparent);color:#ffe9b0">⚠ Only ${cur.length} cycles of history — these numbers are <b>noise, not skill</b>. They mean little until ~30+ cycles across different market conditions. A few good cycles ≠ an edge.</div></div>`));
+  const kw=$(`<div class="span12"><div class="kpis"></div></div>`), k=kw.querySelector('.kpis');
+  const tile=(l,val,cls,acc2)=>k.appendChild($(`<div class="kpi" style="--accent:${acc2||'var(--amber)'}"><div class="l">${l}</div><div class="v ${cls||''}">${val}</div></div>`));
+  tile('Total Return',(totRet>=0?'+':'')+totRet.toFixed(2)+'%',totRet>=0?'up':'down');
+  if(b&&b.alpha_pct!=null){ tile('Alpha vs '+(b.symbol||'SPY'),(b.alpha_pct>=0?'+':'')+b.alpha_pct.toFixed(2)+'%',b.alpha_pct>=0?'up':'down','var(--cyan)');
+    tile((b.symbol||'SPY')+' buy&hold',(b.return_pct>=0?'+':'')+b.return_pct.toFixed(2)+'%',b.return_pct>=0?'up':'down'); }
+  else tile('Alpha vs SPY','— (gathering)','mut');
+  tile('Max Drawdown',maxDD.toFixed(2)+'%','down','var(--down)');
+  tile('Volatility / cycle',(sd*100).toFixed(2)+'%','');
+  tile('Sharpe / cycle',sharpe.toFixed(2),sharpe>=0?'up':'down','var(--violet)');
+  tile('Cycle Win Rate',winRate.toFixed(0)+'%','');
+  tile('Cycles Tracked',String(cur.length),'mut');
+  g.appendChild(kw);
+  g.appendChild(panel('Drawdown · Underwater',drawdownChart(cur,160),'peak-to-trough %','span12'));
+  g.appendChild(panel('Reality Check', `<div class="commentary"><b>Alpha vs SPY is the only number that matters.</b> It must stay positive across many cycles and different market regimes before it means anything — beating the market briefly is usually luck. The council uses transparent public-domain signals, not a proven edge; this panel exists to <b>prove or disprove</b> the desk with data, not to flatter it. Keep it on paper until the track record earns trust.</div>`,'','span12'));
+  v.appendChild(g);
+}
+
+// ── Goal · Progress: scores the live HERMES_GOAL against its measurable gates ──
+// (beat buy&hold / drawdown<15% / track-record toward 90 days) — honest north star.
+function goalPanel(cur,b,maxDD){
+  const goal=((((DATA.health||{}).hermes)||{}).goal)||'';
+  if(!goal) return null;
+  const alpha=(b&&b.alpha_pct!=null)?b.alpha_pct:null;
+  const DD_LIMIT=15, TARGET_DAYS=90;
+  const ddOk=Math.abs(maxDD)<DD_LIMIT, alphaOk=(alpha!=null&&alpha>0);
+  let days=0;
+  if(cur.length>=2){const t0=Date.parse(cur[0].ts||''),t1=Date.parse(cur[cur.length-1].ts||'');if(t1>t0)days=(t1-t0)/86400000;}
+  let verdict,vcls,vmsg;
+  if(alpha==null){verdict='GATHERING DATA';vcls='amber';vmsg='Alpha vs benchmark is still anchoring — no verdict yet.';}
+  else if(!ddOk){verdict='DRAWDOWN LIMIT HIT';vcls='off';vmsg='Max drawdown breached the 15% mandate — de-risk before anything else.';}
+  else if(!alphaOk){verdict='NO EDGE YET';vcls='off';vmsg='Not beating buy-and-hold. Stay on paper; do not scale live capital.';}
+  else if(days<TARGET_DAYS){verdict='PROMISING · BUILDING';vcls='amber';vmsg='Beating buy-and-hold within risk limits — keep compounding the track record before scaling.';}
+  else {verdict='EDGE HOLDING';vcls='on';vmsg='Positive alpha within risk limits over a meaningful window — candidate for a deliberate capital scale-up.';}
+  const gate=(label,val,ok,detail)=>`<div style="margin:7px 0">
+    <div class="row"><span class="mut">${label}</span><span class="tag ${ok?'on':'off'}">${val}</span></div>
+    <div class="mut mono" style="font-size:10px;margin-top:2px">${detail}</div></div>`;
+  const bh=(b&&b.return_pct!=null)?((b.return_pct>=0?'+':'')+b.return_pct.toFixed(1)+'%'):'—';
+  const body=`
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px">
+      <span class="tag ${vcls}" style="font-size:13px;padding:6px 13px;letter-spacing:1px">${verdict}</span>
+      <span class="commentary" style="flex:1;min-width:220px">${vmsg}</span></div>
+    ${gate('① Beat buy &amp; hold (alpha vs '+((b&&b.symbol)||'BTC')+')', alpha==null?'—':(alpha>=0?'+':'')+alpha.toFixed(2)+'%', alphaOk, 'goal: stay positive · '+((b&&b.symbol)||'BTC')+' buy&hold '+bh)}
+    ${gate('② Max drawdown under 15%', maxDD.toFixed(1)+'%', ddOk, 'mandate: keep shallower than -15% · currently using '+(Math.min(999,Math.abs(maxDD)/DD_LIMIT*100)).toFixed(0)+'% of the limit')}
+    ${gate('③ Track record toward 90 days', days.toFixed(1)+' days', days>=TARGET_DAYS, 'prove it is edge, not luck · '+(Math.min(100,days/TARGET_DAYS*100)).toFixed(0)+'% there')}
+    <div class="commentary" style="margin-top:9px;font-size:11px;opacity:.85"><b>Goal:</b> ${goal}</div>`;
+  return panel('🎯 Goal · Progress', body, 'north star', 'span12');
 }
 
 // ── panels helper ──
@@ -1020,10 +1181,10 @@ function positionsTable(){
   const pos=DATA.positions||[];
   if(!pos.length) return '<div class="empty">flat — no open positions</div>';
   const wrap=$(`<div class="scroll"></div>`);
-  const t=$(`<table><thead><tr><th>SYM</th><th>DESK</th><th>STATE</th><th class="n">QTY</th><th class="n">COST</th><th class="n">LAST</th><th class="n">uPnL</th></tr></thead><tbody></tbody></table>`);
+  const t=$(`<table><thead><tr><th>SYM</th><th class="opt">DESK</th><th class="opt">STATE</th><th class="n">QTY</th><th class="n opt">COST</th><th class="n opt">LAST</th><th class="n">uPnL</th></tr></thead><tbody></tbody></table>`);
   const tb=t.querySelector('tbody');
-  pos.forEach(p=>tb.appendChild($(`<tr><td class="amber">${esc(p.symbol)}</td><td class="mut">${esc(p.strategy)}</td><td class="mut">${esc(p.state)}</td>
-    <td class="n">${num(p.shares,6)}</td><td class="n">${money(p.cost_basis)}</td><td class="n">${money(p.price)}</td>
+  pos.forEach(p=>tb.appendChild($(`<tr><td class="amber">${esc(p.symbol)}</td><td class="mut opt">${esc(p.strategy)}</td><td class="mut opt">${esc(p.state)}</td>
+    <td class="n">${num(p.shares,6)}</td><td class="n opt">${money(p.cost_basis)}</td><td class="n opt">${money(p.price)}</td>
     <td class="n ${p.unrealized>=0?'up':'down'}">${money(p.unrealized)}</td></tr>`)));
   wrap.appendChild(t); return wrap;
 }
@@ -1088,6 +1249,21 @@ function activityFeed(){
 function Council(v){
   const g=$(`<div class="grid c12"></div>`);
   g.appendChild(panel('Intelligence Council · Heatmap', councilHeat(), 'score −1…+1', 'span12'));
+  // Advisory Board — the six-agent council (Buffett/Munger/Macro/Growth/Quant + risk gate)
+  const adv=DATA.advisors||[];
+  if(adv.length){
+    const w=$(`<div class="scroll"></div>`);
+    const t=$(`<table><thead><tr><th>SYM</th><th class="n">BUFFETT</th><th class="n">MUNGER</th><th class="n">MACRO</th><th class="n">GROWTH</th><th class="n">QUANT</th><th class="n">GATE</th><th class="n">TILT</th></tr></thead><tbody></tbody></table>`);
+    const tb=t.querySelector('tbody');
+    const cell=(x)=>`<td class="n ${x>=0?'up':'down'}">${x>=0?'+':''}${(+x).toFixed(2)}</td>`;
+    adv.forEach(a=>{const s=a.scores||{};
+      tb.appendChild($(`<tr title="${esc(Object.entries(a.rationale||{}).map(([k,r])=>`${k}: ${r}`).join('\n'))}">
+        <td><b>${esc(a.symbol)}</b></td>${cell(s.buffett||0)}${cell(s.munger||0)}${cell(s.macro||0)}${cell(s.growth||0)}${cell(s.quant||0)}
+        <td class="n ${a.gate>=.7?'up':(a.gate>=.35?'amber':'down')}">${(+a.gate).toFixed(2)}</td>${cell(a.tilt||0)}</tr>`));});
+    w.appendChild(t);
+    g.appendChild(panel('Advisory Board · Buffett / Munger / Macro / Growth / Quant', w,
+      'advisory tilt ±0.10 · risk gate 0–1 · hover for rationale', 'span12'));
+  }
   (DATA.council||[]).forEach(c=>{
     const body=$(`<div></div>`);
     (c.agents||[]).forEach(a=>{const w=Math.min(100,Math.abs(a.score)*100), col=a.score>=0?'var(--up)':'var(--down)';
@@ -1171,8 +1347,52 @@ function accountsPanel(){
   box.appendChild($(`<div class="empty" style="margin-top:8px">Numbers are masked (***last4). The engine's live connection is the Venue Account panel; MONITOR ONLY accounts are tracked but never traded.</div>`));
   return box;
 }
+// ── LIVE real-money Robinhood account (read-only mirror of the MCP account) ──
+function robinhoodPanel(){
+  const r=RH||{}, pos=r.positions||[], ord=r.orders||[];
+  const updTs=tsMs(r.updated), upd=updTs!=null?`${new Date(updTs).toLocaleString()} (${relAge(Date.now()-updTs)})`:'—';
+  const body=$(`<div></div>`);
+  body.innerHTML=`
+    <div class="cb" style="border-color:var(--down);background:linear-gradient(90deg,rgba(255,92,108,.13),transparent);color:#ffd0d5;margin-bottom:10px">
+      🔴 <b>REAL MONEY</b> — live ${esc(r.broker||'Robinhood')} account ${esc(r.account_mask||'')}${r.nickname?` · “${esc(r.nickname)}”`:''}.
+      Managed autonomously via the Robinhood MCP. This is <b>separate from the paper desk</b> above and is shown read-only.
+    </div>
+    <div class="kpis" style="margin-bottom:10px">
+      <div class="kpi" style="--accent:var(--down)"><div class="l">Account Value</div><div class="v">${money(r.total_value)}</div></div>
+      <div class="kpi" style="--accent:var(--cyan)"><div class="l">Buying Power</div><div class="v">${money(r.buying_power)}</div></div>
+      <div class="kpi"><div class="l">Cash</div><div class="v">${money(r.cash)}</div></div>
+      <div class="kpi" style="--accent:var(--amber)"><div class="l">In Open Orders</div><div class="v">${money(r.committed_open_orders)}</div></div>
+    </div>`;
+  // holdings
+  if(pos.length){
+    const w=$(`<div class="scroll" style="margin-bottom:8px"></div>`);
+    const t=$(`<table><thead><tr><th>SYM</th><th class="n">SHARES</th><th class="n">AVG</th><th class="n">PX</th><th class="n">VALUE</th><th class="n">P&L</th></tr></thead><tbody></tbody></table>`);
+    pos.forEach(p=>{const up=(p.unrealized||0)>=0;
+      t.querySelector('tbody').appendChild($(`<tr><td class="amber" title="${esc(p.name||'')}">${esc(p.symbol)}</td>
+        <td class="n">${num(p.shares,6)}</td><td class="n">${p.avg_cost!=null?money(p.avg_cost):'—'}</td>
+        <td class="n">${money(p.price)}</td><td class="n">${money(p.market_value)}</td>
+        <td class="n ${up?'up':'down'}">${p.shares?((up?'+':'')+money(p.unrealized)):'<span class="mut">'+esc(p.note||'—')+'</span>'}</td></tr>`));});
+    w.appendChild(t); body.appendChild(w);
+  }
+  // open / recent orders
+  if(ord.length){
+    const w=$(`<div class="scroll"></div>`);
+    const t=$(`<table><thead><tr><th>SYM</th><th>SIDE</th><th class="opt">TYPE</th><th class="n">AMOUNT</th><th>STATE</th><th class="opt">SRC</th></tr></thead><tbody></tbody></table>`);
+    ord.forEach(o=>{const amt=o.dollar_amount!=null?money(o.dollar_amount):num(o.qty,6);
+      const stCls=/fill/i.test(o.state)?'up':(/(cancel|reject|fail|void)/i.test(o.state)?'down':'amber');
+      t.querySelector('tbody').appendChild($(`<tr><td class="amber">${esc(o.symbol)}</td>
+        <td class="${/buy/i.test(o.side)?'up':'down'}">${esc(o.side)}</td><td class="mut opt">${esc(o.type)}</td>
+        <td class="n">${amt}</td><td><span class="tag ${stCls}">${esc(o.state)}</span></td>
+        <td class="mut opt">${esc(o.placed_agent||'')}</td></tr>`));});
+    w.appendChild(t); body.appendChild(w);
+  }
+  if(!pos.length&&!ord.length) body.appendChild($(`<div class="empty">no holdings or orders</div>`));
+  return panel('🔴 LIVE · Robinhood (real money)', body, 'updated '+upd, 'span12');
+}
+
 function Book(v){
   const g=$(`<div class="grid c12"></div>`);
+  if(RH&&RH.live) g.appendChild(robinhoodPanel());
   const bh=(DATA.broker_account&&DATA.broker_account.holdings||[]).length;
   g.appendChild(panel('Robinhood Accounts · roster', accountsPanel(),
     (((DATA.accounts||{}).accounts)||[]).length+' accounts', 'span12'));
@@ -1184,9 +1404,9 @@ function Book(v){
   const tr=DATA.recent_trades||[]; let tbl;
   if(!tr.length) tbl='<div class="empty">no trades yet</div>';
   else{ const w=$(`<div class="scroll"></div>`);
-    const t=$(`<table><thead><tr><th>SYM</th><th>SIDE</th><th>PURPOSE</th><th class="n">QTY</th><th class="n">PX</th></tr></thead><tbody></tbody></table>`);
+    const t=$(`<table><thead><tr><th>SYM</th><th>SIDE</th><th class="opt">PURPOSE</th><th class="n">QTY</th><th class="n">PX</th></tr></thead><tbody></tbody></table>`);
     tr.forEach(x=>t.querySelector('tbody').appendChild($(`<tr><td class="amber">${esc(x.symbol)}</td><td class="${/buy/i.test(x.side)?'up':'down'}">${esc(x.side)}</td>
-      <td class="mut">${esc(x.purpose)}</td><td class="n">${num(x.qty,6)}</td><td class="n">${money(x.price)}</td></tr>`)));
+      <td class="mut opt">${esc(x.purpose)}</td><td class="n">${num(x.qty,6)}</td><td class="n">${money(x.price)}</td></tr>`)));
     w.appendChild(t); tbl=w; }
   g.appendChild(panel('Recent Trades', tbl, '', 'span7'));
   const crm=DATA.crm||{};
@@ -1211,10 +1431,10 @@ function Book(v){
   const flows=DATA.capital_flows||[]; let fb;
   if(!flows.length) fb='<div class="empty">no deposits/withdrawals recorded yet</div>';
   else{ const w=$(`<div class="scroll"></div>`);
-    const t=$(`<table><thead><tr><th>DATE</th><th>TYPE</th><th class="n">AMOUNT</th><th>METHOD</th></tr></thead><tbody></tbody></table>`);
+    const t=$(`<table><thead><tr><th>DATE</th><th>TYPE</th><th class="n">AMOUNT</th><th class="opt">METHOD</th></tr></thead><tbody></tbody></table>`);
     flows.forEach(f=>t.querySelector('tbody').appendChild($(`<tr><td class="mut">${esc((f.ts||'').slice(0,10))}</td>
       <td class="${f.amount>=0?'up':'down'}">${esc(f.kind)}</td><td class="n ${f.amount>=0?'up':'down'}">${money(f.amount)}</td>
-      <td class="mut">${esc(f.method||'')}</td></tr>`)));
+      <td class="mut opt">${esc(f.method||'')}</td></tr>`)));
     w.appendChild(t); fb=w; }
   g.appendChild(panel('Capital Flows', fb, '', 'span5'));
   v.appendChild(g);
@@ -1224,11 +1444,25 @@ function Brain(v){
   const b=DATA.brain||{};
   const g=$(`<div class="grid c12"></div>`);
   const s=$(`<div></div>`);
-  s.innerHTML=`<div class="row"><span class="mut">Primary brain</span><span class="tag amber">Claude · ${esc(b.brain_model||'claude-opus-4-8')}</span></div>
+  s.innerHTML=`<div class="row"><span class="mut">Primary brain</span><span class="tag amber">Claude · ${esc(b.brain_model||'claude-fable-5')}</span></div>
     <div class="row"><span class="mut">Status</span><span class="tag ${b.used?'on':'off'}">${b.used?'active this cycle':(b.enabled?'enabled (idle)':'disabled')}</span></div>
     <div class="row"><span class="mut">Posture</span><span class="tag ${b.posture==='risk_off'?'off':(b.posture==='risk_on'?'on':'amber')}">${esc(b.posture||'neutral')}</span></div>
-    <div class="row"><span class="mut">Global risk multiplier</span><span class="tag">×${(b.global_risk_multiplier||1).toFixed(2)}</span></div>`;
+    <div class="row"><span class="mut">Global risk multiplier</span><span class="tag">×${(b.global_risk_multiplier||1).toFixed(2)}</span></div>
+    <div class="row"><span class="mut">Alt-data (QuiverQuant)</span><span class="tag ${(((DATA.health||{}).alt_data||{}).enabled)?'on':'off'}">${(((DATA.health||{}).alt_data||{}).enabled)?'insider + congress · on':'off'}</span></div>`;
   g.appendChild(panel('Chief Strategist', s, '', 'span5'));
+  // Hermes guardian — background agent: data integrity, honest scores, self-calibration
+  const hm=((DATA.health||{}).hermes)||{}; const sc=hm.scorecard||{};
+  const hs=$(`<div></div>`);
+  hs.innerHTML=`<div class="row"><span class="mut">Status</span><span class="tag ${hm.enabled?'on':'off'}">${hm.enabled?'guarding':'off'}</span></div>
+    <div class="row"><span class="mut">Goal</span><span class="tag amber" title="${esc(hm.goal||'')}">${esc((hm.goal||'—').split('—')[0].trim())}</span></div>
+    <div class="row"><span class="mut">Data quality (this cycle)</span><span class="tag ${(hm.data_ok_pct??1)>=1?'on':((hm.data_ok_pct??1)>=.8?'amber':'off')}">${Math.round((hm.data_ok_pct??1)*100)}% clean${(hm.quarantined||[]).length?` · ${hm.quarantined.length} quarantined`:''}</span></div>
+    <div class="row"><span class="mut">Sharpe (annualized est.)</span><span class="tag ${sc.sharpe>0?'on':(sc.sharpe<0?'off':'')}">${sc.sharpe!=null?sc.sharpe:'—'}</span></div>
+    <div class="row"><span class="mut">Sortino</span><span class="tag">${sc.sortino!=null?sc.sortino:'—'}</span></div>
+    <div class="row"><span class="mut">Max drawdown</span><span class="tag ${sc.max_drawdown_pct<-5?'off':''}">${sc.max_drawdown_pct!=null?sc.max_drawdown_pct+'%':'—'}</span></div>
+    ${(()=>{const vt=((DATA.health||{}).vol_targeting)||{};return vt.target_annual?`<div class="row"><span class="mut">Vol targeting (${Math.round(vt.target_annual*100)}% target)</span><span class="tag ${(vt.scale??1)>=1?'on':'amber'}">budgets ×${(vt.scale??1).toFixed(2)}</span></div>`:''})()}
+    ${Object.keys(hm.hit_rates||{}).length?`<div class="row"><span class="mut">Council hit-rate</span><span class="tag">${Object.entries(hm.hit_rates).map(([k,v])=>`${esc(k)} ${Math.round(v*100)}%`).join(' · ')}</span></div>`:''}
+    ${Object.keys(hm.strategy_weights||{}).length?`<div class="row"><span class="mut">Desk calibration (learned)</span><span class="tag">${Object.entries(hm.strategy_weights).map(([k,v])=>`${esc(k)} ×${v}`).join(' · ')}</span></div>`:''}`;
+  g.appendChild(panel('Hermes Guardian', hs, 'background agent', 'span7'));
   // autonomous model updater — show the live model each provider is pinned to
   const ai=((DATA.health||{}).ai_brain)||{}; const mdl=ai.models||{};
   const ms=$(`<div></div>`);

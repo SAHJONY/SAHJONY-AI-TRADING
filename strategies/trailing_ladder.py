@@ -39,7 +39,7 @@ class TrailingLadder:
         price = snap.price
         if price <= 0 or budget <= 0:
             return []
-        qty = size_qty(symbol, budget, price, self.cfg.ladder_base_qty)
+        qty = size_qty(symbol, budget, price, self.cfg.ladder_base_qty, self.cfg.allow_fractional)
         if qty <= 0:
             return [OrderIntent(symbol, "ladder", "state", "ladder_skip",
                                 reason=f"budget ${budget:,.0f} too small @ {price:.2f}")]
@@ -56,6 +56,11 @@ class TrailingLadder:
 
     def _manage(self, symbol, snap, pos, budget) -> List[OrderIntent]:
         price = snap.price
+        # A missing/zero quote (transient data outage) must NEVER drive an exit:
+        # price 0 would read as a -100% move and fire the catastrophic floor,
+        # booking a fake total loss and clearing a healthy position. Hold instead.
+        if price <= 0:
+            return []
         entry = float(pos.get("entry_price", price))
         shares = float(pos.get("shares", 0) or 0)   # fractional for crypto
         cost = float(pos.get("cost_basis", entry))
@@ -89,13 +94,19 @@ class TrailingLadder:
                                 realized_delta=realized, clear_position=True)]
 
         # --- LADDER-IN averaging on the downside ---
+        # Each add carries its OWN share/cost/rung update on the risk-checked buy,
+        # so the averaged basis and rung flags persist ONLY when that buy is
+        # actually approved and filled. (Previously the shares were written by the
+        # unconditional state intent below, so a risk-blocked add still recorded
+        # phantom shares the desk never bought.) Snapshots are cumulative and
+        # applied in order, so a partially-approved pair of rungs stays consistent.
         intents: List[OrderIntent] = []
         new_shares, new_cost = shares, cost
         if self.cfg.ladder_enable_averaging and not ratcheted:
             adds = [(-0.20, 0, self.cfg.ladder_base_qty), (-0.30, 1, 2 * self.cfg.ladder_base_qty)]
             for threshold, idx, add_qty in adds:
                 if gain <= threshold and not rungs[idx] and price > 0:
-                    q = size_qty(symbol, budget, price, add_qty)
+                    q = size_qty(symbol, budget, price, add_qty, self.cfg.allow_fractional)
                     if q > 0:
                         new_cost = (new_cost * new_shares + price * q) / (new_shares + q)
                         new_shares += q
@@ -103,14 +114,17 @@ class TrailingLadder:
                         intents.append(OrderIntent(
                             symbol, "ladder", "equity", "ladder_add", side="buy",
                             reason=f"rung {idx+1}: +{q} sh @ {price:.2f} (dd {gain:+.0%})",
-                            qty=q, est_notional=q * price, risk_check=True))
+                            qty=q, est_notional=q * price, risk_check=True,
+                            merge_position={"shares": new_shares, "cost_basis": new_cost,
+                                            "rungs_hit": list(rungs)}))
 
-        # --- persist bookkeeping (peak / ratchet / trailing / rungs / averaged basis) ---
+        # --- persist non-fill bookkeeping (peak / ratchet / trailing) only ---
+        # Shares / cost_basis / rungs are updated by the ladder_add buys above so
+        # they never diverge from what was actually executed.
         intents.append(OrderIntent(
             symbol, "ladder", "state", "ladder_update",
             reason=f"px {price:.2f} peak {peak:.2f} gain {gain:+.0%}"
                    + (f" trail {float(trailing_floor):.2f}" if ratcheted else ""),
-            merge_position={"shares": new_shares, "cost_basis": new_cost, "peak_price": peak,
-                            "ratcheted": ratcheted, "trailing_floor": trailing_floor,
-                            "rungs_hit": rungs}))
+            merge_position={"peak_price": peak, "ratcheted": ratcheted,
+                            "trailing_floor": trailing_floor}))
         return intents

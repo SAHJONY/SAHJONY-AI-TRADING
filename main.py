@@ -147,6 +147,42 @@ def confirm_live(cfg, client) -> bool:
     return True
 
 
+def _seed_shared_knowledge(firm: Firm, state) -> None:
+    """Overwrite this desk's Hermes strategy pool with the shared cross-desk pool
+    before the cycle, so its bounded capital weights reflect the COMBINED (paper +
+    live) realized outcomes. The pool is canonical (both desks write back after
+    adding their own events), so overwriting on load avoids double-counting.
+    Fully fault-isolated — a miss just leaves the desk on its own local memory."""
+    if not getattr(firm.cfg, "shared_knowledge", False):
+        return
+    try:
+        from intelligence import knowledge
+        pool = knowledge.load_strat()
+        if pool:
+            state.setdefault("hermes", {})["strat"] = pool
+            log.info("Shared knowledge: seeded %d strategy record(s) from the pool.", len(pool))
+    except Exception as exc:   # never let knowledge sharing break the loop
+        log.warning("shared knowledge load skipped: %s", exc)
+
+
+def _save_shared_knowledge(firm: Firm, state) -> None:
+    """Persist the updated strategy pool (this desk's cycle added its realized
+    outcomes) back to the shared file for the other desk to read next."""
+    if not getattr(firm.cfg, "shared_knowledge", False):
+        return
+    try:
+        from intelligence import knowledge
+        mem = state.get("hermes") or {}
+        hits = mem.get("hits") or {}
+        hit_summary = {s: round(d["h"] / d["n"], 3) for s, d in hits.items()
+                       if isinstance(d, dict) and d.get("n", 0) >= 8 and d.get("n")}
+        knowledge.save(mem.get("strat") or {}, hit_summary,
+                       role=firm.cfg.knowledge_role, cycle=int(state.get("cycle", 0) or 0),
+                       ts=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()))
+    except Exception as exc:
+        log.warning("shared knowledge save skipped: %s", exc)
+
+
 def run_once(firm: Firm, state, force: bool) -> dict:
     # Remote kill switch (opt-in via REMOTE_HALT_URL): let a dashboard STOP on any
     # device reach this local desk by toggling the HALT file before we evaluate risk.
@@ -158,16 +194,21 @@ def run_once(firm: Firm, state, force: bool) -> dict:
     trade = market_open or force
     if not trade:
         log.info("Market closed — research/report only (use --force to override).")
+    _seed_shared_knowledge(firm, state)
     result = firm.run_cycle(state, trade=trade)
+    _save_shared_knowledge(firm, state)
     status = build_status(firm, firm.cfg, state, result)
     write_status(status, status_path())
     shared = write_investor_views(firm.db, status)  # token-keyed read-only investor snapshots
     if shared:
         log.info("Refreshed %d investor share view(s).", shared)
-    save_state(state)
     alert = firm.notifier.maybe_alert(status)
     if alert:
-        log.info("Voice alert: %s", alert)
+        log.info("Alert sent: %s", alert)
+    weekly = firm.notifier.maybe_weekly_summary(status, state)  # self-gates to once/7 days
+    if weekly:
+        log.info("Weekly performance summary sent to Telegram.")
+    save_state(state)   # after weekly so last_weekly_report persists
     print(console_board(status))
     return result
 

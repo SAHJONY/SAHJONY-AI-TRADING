@@ -1,7 +1,7 @@
 """AI Brain & Counsellors — the firm's LLM advisory layer.
 
 Hierarchy (as directed by the owner):
-  • PRIMARY ENGINE / BRAIN  — Claude (Anthropic, `claude-opus-4-8`) via the
+  • PRIMARY ENGINE / BRAIN  — Claude (Anthropic, `claude-fable-5`) via the
     official `anthropic` SDK. Acts as Chief Investment Strategist: it reads the
     quant council's per-symbol verdicts AND the two counsellors' opinions, then
     issues the authoritative advisory overlay.
@@ -197,8 +197,17 @@ class AIBrain:
             "required": ["posture", "global_risk_multiplier", "commentary", "per_symbol_adjust"],
             "additionalProperties": False,
         }
-        resp = client.messages.create(
+        # Claude Fable 5 (the primary brain) keeps thinking always on — we pass
+        # {type:"adaptive"} (any other explicit config 400s) and steer depth via
+        # output_config.effort. Safety classifiers can decline a request with
+        # stop_reason=="refusal"; we opt into the server-side fallback beta so a
+        # decline is transparently re-served by Opus 4.8 inside the same call
+        # (false positives on benign quant work do happen). This is forward-
+        # compatible: Opus-tier models accept the same request shape.
+        resp = client.beta.messages.create(
             model=self.brain_model,
+            betas=["server-side-fallback-2026-06-01"],
+            fallbacks=[{"model": "claude-opus-4-8"}],
             # headroom for adaptive thinking: thinking tokens count toward max_tokens,
             # so a tight cap can truncate the JSON overlay and degrade the brain to neutral.
             max_tokens=8000,
@@ -207,7 +216,11 @@ class AIBrain:
             system=_SYSTEM.format(firm=self.cfg.firm_name),
             messages=[{"role": "user", "content": question + "\n\nCounsellor opinions:\n" + counsel_text}],
         )
-        text = next((b.text for b in resp.content if b.type == "text"), "{}")
+        # Always inspect stop_reason before reading content: a refusal carries an
+        # empty content array, so parsing it blind would look like a broken brain.
+        if getattr(resp, "stop_reason", None) == "refusal":
+            raise RuntimeError("Claude declined the request (stop_reason=refusal)")
+        text = next((b.text for b in resp.content if getattr(b, "type", "") == "text"), "{}")
         data = json.loads(text)
         adj = {s: _clamp(data.get("per_symbol_adjust", {}).get(s, 0.0), -_MAX_ADJ, _MAX_ADJ)
                for s in symbols}
@@ -303,21 +316,34 @@ class AIBrain:
         """OpenAI-compatible chat endpoint (both OpenAI and xAI speak it)."""
         try:
             import requests
-            r = requests.post(url, timeout=30,
-                              headers={"Authorization": "Bearer " + key,
-                                       "Content-Type": "application/json"},
-                              json={"model": model, "max_tokens": 400, "temperature": 0.3,
-                                    "messages": [
-                                        {"role": "system", "content":
-                                         f"You are a counsellor to the Chief Strategist of "
-                                         f"{self.cfg.firm_name}. Give a concise (<120 words) risk-"
-                                         f"aware view on the portfolio. You advise; you do not decide."},
-                                        {"role": "user", "content": question}]})
+            headers = {"Authorization": "Bearer " + key, "Content-Type": "application/json"}
+            payload = {"model": model, "max_tokens": 400, "temperature": 0.3,
+                       "messages": [
+                           {"role": "system", "content":
+                            f"You are a counsellor to the Chief Strategist of "
+                            f"{self.cfg.firm_name}. Give a concise (<120 words) risk-"
+                            f"aware view on the portfolio. You advise; you do not decide."},
+                           {"role": "user", "content": question}]}
+            r = requests.post(url, timeout=45, headers=headers, json=payload)
+            # GPT-5-family reasoning models reject the classic chat params: they want
+            # 'max_completion_tokens' (not 'max_tokens') and only the default
+            # temperature. The API reports these ONE AT A TIME, so a single-param
+            # retry just trips the next complaint — apply BOTH known fixes together
+            # when a 400 names either, then retry once.
+            if r.status_code == 400 and ("max_tokens" in (r.text or "").lower()
+                                         or "temperature" in (r.text or "").lower()):
+                payload["max_completion_tokens"] = payload.pop("max_tokens", 400)
+                payload.pop("temperature", None)
+                r = requests.post(url, timeout=45, headers=headers, json=payload)
             if not r.ok:
-                log.warning("%s counsellor HTTP %s", label, r.status_code)
+                # Log the model tried AND the provider's error body: a 4xx body says
+                # exactly why (model_not_found vs invalid_api_key vs quota), which the
+                # bare status code hides — this is what makes the failure diagnosable.
+                log.warning("%s counsellor HTTP %s (model=%s): %s",
+                            label, r.status_code, model, (r.text or "")[:200].replace("\n", " "))
                 return None
             data = r.json()
             return data["choices"][0]["message"]["content"].strip()
         except Exception as exc:
-            log.warning("%s counsellor failed: %s", label, exc)
+            log.warning("%s counsellor failed (model=%s): %s", label, model, exc)
             return None

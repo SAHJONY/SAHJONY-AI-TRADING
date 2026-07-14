@@ -101,12 +101,29 @@ class Config:
     max_daily_drawdown_pct: float = 0.06
     # Kill switch: hard-stop all new risk regardless of P&L (env or a HALT file).
     trading_halt: bool = False
+    # Volatility targeting: when realized portfolio vol (annualized, from the
+    # equity curve) exceeds this, new-position budgets scale down proportionally
+    # (never below ×0.5, never above ×1.0 — it de-risks, never levers up).
+    # 0 disables. Hard ceilings still apply on top.
+    vol_target_annual: float = 0.20
+    # Virtual capital cap: trade as if the account were this many dollars, even when
+    # the broker balance is larger (e.g. keep $100k paper but only risk $500). 0 =
+    # use the full broker equity. All sizing/risk and the equity curve scale to this.
+    trading_capital: float = 0.0
+    # Dollar-based (fractional) equity orders — lets a small account buy a slice of
+    # an expensive stock instead of rounding to 0 shares. Crypto is always fractional.
+    allow_fractional: bool = True
 
     # wheel
     wheel_put_otm_pct: float = 0.10
     wheel_call_otm_pct: float = 0.10
     wheel_dte_min: int = 14
     wheel_dte_max: int = 28
+
+    # credit spreads (defined-risk options desk — bull put spreads)
+    credit_spreads_enabled: bool = True
+    spread_short_otm_pct: float = 0.05   # short put this far below spot
+    spread_width_pct: float = 0.05       # long (hedge) put this much further down
 
     # trailing ladder
     ladder_hard_floor_pct: float = 0.10
@@ -124,6 +141,14 @@ class Config:
     copy_trading_source_url: str = ""
     copy_trading_api_key: str = ""
     copy_trading_max_symbols: int = 10
+
+    # pairs / statistical arbitrage (market-neutral desk)
+    pairs_enabled: bool = True
+    pairs: List[str] = field(default_factory=lambda: ["SPY:QQQ", "GLD:SLV"])
+    pairs_entry_z: float = 2.0
+    pairs_exit_z: float = 0.5
+    pairs_stop_z: float = 4.0
+    pairs_max_hold: int = 96      # cycles (~4 trading days at 15-min cadence)
 
     # day-trading / forex (intraday desk — never holds overnight)
     day_trading_enabled: bool = True
@@ -148,15 +173,22 @@ class Config:
     # AI brain & counsellors (advisory overlay on the quant council)
     ai_brain_enabled: bool = False
     # These are FALLBACK defaults. With auto_update_models on (default), the brain
-    # autonomously resolves each provider's latest model at run time (latest Opus
+    # autonomously resolves each provider's latest model at run time (latest Fable
     # for Claude, latest flagship GPT / Grok for the counsellors) and only falls
     # back to these IDs when the lookup can't run (no key / offline / API error).
-    anthropic_model: str = "claude-opus-4-8"   # PRIMARY brain (Claude)
+    anthropic_model: str = "claude-fable-5"    # PRIMARY brain (Claude Fable 5)
     openai_model: str = "gpt-4o"               # counsellor (OpenAI / GPT)
-    xai_model: str = "grok-2-latest"           # counsellor (Grok / xAI)
+    xai_model: str = "grok-4"                  # counsellor (Grok / xAI); grok-2 retired
     gemini_model: str = "gemini-2.5-pro"       # counsellor (Gemini / Google)
     # Autonomously keep every provider on its newest model (owner directive).
     auto_update_models: bool = True
+
+    # Cross-desk shared knowledge: pool Hermes strategy-calibration across a paper
+    # "trainer" desk and the live desk (both trading the same universe). Bounded by
+    # Hermes' existing [0.70,1.15] weight clamp, so it's a safe nudge. role labels
+    # the writer in knowledge.json (informational).
+    shared_knowledge: bool = True
+    knowledge_role: str = "desk"
 
     # scheduler / ops
     cycle_minutes: int = 15
@@ -227,10 +259,16 @@ def load_config() -> Config:
         min_council_conviction=_clamp(_f("MIN_COUNCIL_CONVICTION", 0.55), HARD_MIN_CONVICTION, 1.0),
         max_daily_drawdown_pct=_clamp(_f("MAX_DAILY_DRAWDOWN_PCT", 0.06), 0.01, HARD_MAX_DAILY_DRAWDOWN_PCT),
         trading_halt=_b("TRADING_HALT", False),
+        vol_target_annual=_clamp(_f("VOL_TARGET_ANNUAL", 0.20), 0.0, 2.0),
+        trading_capital=max(0.0, _f("TRADING_CAPITAL", 0.0)),
+        allow_fractional=_b("ALLOW_FRACTIONAL", True),
         wheel_put_otm_pct=_clamp(_f("WHEEL_PUT_OTM_PCT", 0.10), 0.01, 0.40),
         wheel_call_otm_pct=_clamp(_f("WHEEL_CALL_OTM_PCT", 0.10), 0.01, 0.40),
         wheel_dte_min=max(1, _i("WHEEL_DTE_MIN", 14)),
         wheel_dte_max=max(2, _i("WHEEL_DTE_MAX", 28)),
+        credit_spreads_enabled=_b("CREDIT_SPREADS_ENABLED", True),
+        spread_short_otm_pct=_clamp(_f("SPREAD_SHORT_OTM_PCT", 0.05), 0.02, 0.20),
+        spread_width_pct=_clamp(_f("SPREAD_WIDTH_PCT", 0.05), 0.02, 0.20),
         ladder_hard_floor_pct=_clamp(_f("LADDER_HARD_FLOOR_PCT", 0.10), 0.02, 0.50),
         ladder_ratchet_trigger_pct=_clamp(_f("LADDER_RATCHET_TRIGGER_PCT", 0.10), 0.02, 1.0),
         ladder_trail_pct=_clamp(_f("LADDER_TRAIL_PCT", 0.05), 0.01, 0.50),
@@ -241,6 +279,12 @@ def load_config() -> Config:
         copy_trading_source_url=(os.getenv("COPY_TRADING_SOURCE_URL", "") or "").strip(),
         copy_trading_api_key=os.getenv("COPY_TRADING_API_KEY", "").strip(),
         copy_trading_max_symbols=max(1, _i("COPY_TRADING_MAX_SYMBOLS", 10)),
+        pairs_enabled=_b("PAIRS_ENABLED", True),
+        pairs=_list("PAIRS", "SPY:QQQ,GLD:SLV"),
+        pairs_entry_z=_clamp(_f("PAIRS_ENTRY_Z", 2.0), 1.0, 5.0),
+        pairs_exit_z=_clamp(_f("PAIRS_EXIT_Z", 0.5), 0.1, 2.0),
+        pairs_stop_z=_clamp(_f("PAIRS_STOP_Z", 4.0), 2.0, 8.0),
+        pairs_max_hold=max(4, _i("PAIRS_MAX_HOLD", 96)),
         day_trading_enabled=_b("DAY_TRADING_ENABLED", True),
         forex_pairs=_list("FOREX_PAIRS", "EUR/USD,GBP/USD,USD/JPY,AUD/USD"),
         day_trade_symbols=_list("DAY_TRADE_SYMBOLS", ""),
@@ -254,11 +298,13 @@ def load_config() -> Config:
         voice_language=(os.getenv("VOICE_LANGUAGE", "en") or "en").strip(),
         voice_name=(os.getenv("VOICE_NAME", "june") or "june").strip(),
         ai_brain_enabled=_b("AI_BRAIN_ENABLED", False),
-        anthropic_model=(os.getenv("ANTHROPIC_MODEL", "claude-opus-4-8") or "claude-opus-4-8").strip(),
+        anthropic_model=(os.getenv("ANTHROPIC_MODEL", "claude-fable-5") or "claude-fable-5").strip(),
         openai_model=(os.getenv("OPENAI_MODEL", "gpt-4o") or "gpt-4o").strip(),
-        xai_model=(os.getenv("XAI_MODEL", "grok-2-latest") or "grok-2-latest").strip(),
+        xai_model=(os.getenv("XAI_MODEL", "grok-4") or "grok-4").strip(),
         gemini_model=(os.getenv("GEMINI_MODEL", "gemini-2.5-pro") or "gemini-2.5-pro").strip(),
         auto_update_models=_b("AUTO_UPDATE_MODELS", True),
+        shared_knowledge=_b("SHARED_KNOWLEDGE", True),
+        knowledge_role=(os.getenv("KNOWLEDGE_ROLE", "") or os.getenv("BROKER", "desk") or "desk").strip().lower(),
         cycle_minutes=max(1, _i("CYCLE_MINUTES", 15)),
         log_level=(os.getenv("LOG_LEVEL", "INFO") or "INFO").strip().upper(),
     )
