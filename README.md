@@ -53,8 +53,9 @@ The board's verdicts render live on the dashboard's Council tab.
   `intelligence/alt_data.py` adds QuiverQuant insider/congress disclosures;
   `intelligence/hermes.py` guards data quality and self-improves the desk.
 - **AI brain:** `intelligence/ai_brain.py` — Claude (`claude-fable-5`) via the
-  official Anthropic SDK is the primary engine; OpenAI + Grok + Gemini + NVIDIA
-  NIM are counsellors (NVIDIA doubles as the free fallback brain). It nudges
+  official Anthropic SDK is the primary engine; OpenAI GPT-5.6 uses the Responses
+  API as a strict-JSON co-strategist and fallback brain; Grok, Gemini, and NVIDIA
+  NIM are counsellors (NVIDIA remains the last-resort brain). It nudges
   conviction and a global risk posture; it never invents trades.
 - **Database/CRM:** `database/db.py` (native SQLite) + `crm/crm.py`.
 - **Dashboard:** `public/index.html` — static, zero-build, reads `status.json`.

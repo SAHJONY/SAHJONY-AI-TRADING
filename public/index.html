@@ -329,7 +329,7 @@
 <script src="./config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const TABS = ["Parquet","Perf","Markets","Macro","News","Council","Book","Brain","War Room","Controls","Workforce","Env"];
+const TABS = ["Parquet","Perf","Markets","Macro","News","Council","Book","Brain","War Room","Operations","Controls","Workforce","Env"];
 let DATA=null, TAB="Parquet", SESSION=null, DESK=null, CREDS=[];
 let MARKETS={list:[],err:null,ts:0};            // CoinGecko crypto (no key)
 let NEWS={list:[],err:null,ts:0,src:''};        // Finnhub (key) or GDELT (no key)
@@ -934,7 +934,7 @@ function render(){
     `cycle ${DATA.cycle} · ${_when} · ${DESK?'LIVE via Supabase':'static snapshot'} · auto-refresh 30s`;
   updateFreshness();
   v.innerHTML="";
-  ({Parquet,Perf,Markets,Macro,News,Council,Book,Brain,"War Room":WarRoom,Controls,Workforce,Env}[TAB]||Parquet)(v);
+  ({Parquet,Perf,Markets,Macro,News,Council,Book,Brain,"War Room":WarRoom,Operations,Controls,Workforce,Env}[TAB]||Parquet)(v);
 }
 
 // ── AI War Room: permanent shadow-learning leaderboard ──
@@ -948,6 +948,21 @@ function WarRoom(v){
       </div>
       <iframe src="./ai-war-room.html" title="SAHJONY AI War Room" loading="eager"
         style="display:block;width:100%;height:clamp(620px,78vh,1050px);border:0;background:#070a10"></iframe>
+    </div>`;
+  v.appendChild(wrap);
+}
+
+// ── Operations: account, broker, workforce, risk, and execution command center ──
+function Operations(v){
+  const wrap=$(`<div class="panel span12"></div>`);
+  wrap.innerHTML=`<div class="ph"><h3>Operations Command Center</h3><span class="x">read-only operational visibility</span></div>
+    <div class="pb" style="padding:0;overflow:hidden">
+      <div class="row" style="padding:10px 14px;border-bottom:1px solid var(--line2)">
+        <span class="commentary">Broker identity, funding readiness, AI workforce, risk controls, strategies, and execution pipeline.</span>
+        <a class="btn" href="./operations" target="_blank" rel="noopener">OPEN FULL SCREEN ↗</a>
+      </div>
+      <iframe src="./operations.html" title="SAHJONY Operations Command Center" loading="eager"
+        style="display:block;width:100%;height:clamp(680px,82vh,1150px);border:0;background:#070a10"></iframe>
     </div>`;
   v.appendChild(wrap);
 }

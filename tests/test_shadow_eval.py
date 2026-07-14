@@ -43,3 +43,14 @@ def test_adjustments_are_clamped_for_shadow_pnl():
     normal = score_provider("claude", [obs("claude", 0.01, adj=0.15) for _ in range(120)], min_sharpe=0.0)
     extreme = score_provider("openai", [obs("openai", 0.01, adj=99.0) for _ in range(120)], min_sharpe=0.0)
     assert abs(normal.net_return - extreme.net_return) < 1e-12
+
+
+def test_war_room_score_requires_evidence_and_is_bounded():
+    empty = score_provider("claude", [], min_observations=1)
+    strong = score_provider(
+        "openai", [obs("openai", 0.01, latency=50) for _ in range(120)],
+        min_observations=100, min_sharpe=0.0,
+    )
+    assert empty.score == 0.0
+    assert 0.0 <= strong.score <= 100.0
+    assert strong.score > empty.score

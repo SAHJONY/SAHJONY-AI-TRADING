@@ -25,11 +25,15 @@ class ShadowObservation:
     latency_ms: float = 0.0
     schema_valid: bool = True
     fallback_used: bool = False
+    direction: str = "long"
+    asset_class: str = "equity"
+    market_regime: str = "unknown"
 
 
 @dataclass(frozen=True)
 class ProviderScore:
     provider: str
+    score: float
     observations: int
     net_return: float
     annualized_sharpe: float
@@ -73,7 +77,10 @@ def _signal_return(obs: ShadowObservation) -> float:
     """
     adj = _clamp(obs.adjustment, -0.15, 0.15)
     risk = _clamp(obs.risk_multiplier, 0.5, 1.2)
-    gross = adj * risk * float(obs.forward_return)
+    direction = str(obs.direction).lower()
+    sign = -1.0 if direction in {"short", "bearish", "sell"} else 1.0
+    directional_return = sign * float(obs.forward_return)
+    gross = adj * risk * directional_return
     cost = abs(adj) * max(0.0, float(obs.turnover_cost_bps)) / 10_000.0
     return gross - cost
 
@@ -102,12 +109,22 @@ def score_provider(
 
     # Calibration: conviction should align with realized positive outcomes.
     calibration = mean([
-        abs(_clamp(o.base_conviction + o.adjustment, 0.0, 1.0) - (1.0 if o.forward_return > 0 else 0.0))
+        abs(_clamp(o.base_conviction + o.adjustment, 0.0, 1.0) -
+            (1.0 if ((-o.forward_return if str(o.direction).lower() in {"short", "bearish", "sell"}
+                      else o.forward_return) > 0) else 0.0))
         for o in rows
     ]) if rows else 1.0
     schema_rate = mean([1.0 if o.schema_valid else 0.0 for o in rows]) if rows else 0.0
     fallback_rate = mean([1.0 if o.fallback_used else 0.0 for o in rows]) if rows else 0.0
     dd = _max_drawdown(returns)
+    avg_latency = mean([o.latency_ms for o in rows]) if rows else 0.0
+    # Operational score, not a profitability forecast. Zero observations means
+    # zero evidence and therefore a zero score.
+    score = _clamp(
+        50.0 + sharpe * 10.0 + (hit - 0.5) * 30.0 - dd * 100.0
+        - calibration * 10.0 - min(20.0, avg_latency / 500.0),
+        0.0, 100.0,
+    ) if rows else 0.0
 
     blockers: list[str] = []
     if n < min_observations:
@@ -123,6 +140,7 @@ def score_provider(
 
     return ProviderScore(
         provider=provider,
+        score=round(score, 2),
         observations=n,
         net_return=round(net, 8),
         annualized_sharpe=round(sharpe, 4),
@@ -130,7 +148,7 @@ def score_provider(
         hit_rate=round(hit, 4),
         calibration_error=round(calibration, 4),
         average_turnover_cost_bps=round(mean([o.turnover_cost_bps for o in rows]), 3) if rows else 0.0,
-        average_latency_ms=round(mean([o.latency_ms for o in rows]), 2) if rows else 0.0,
+        average_latency_ms=round(avg_latency, 2),
         schema_valid_rate=round(schema_rate, 4),
         fallback_rate=round(fallback_rate, 4),
         promotion_eligible=not blockers,
@@ -141,7 +159,8 @@ def score_provider(
 def evaluate_all(
     observations: Iterable[ShadowObservation],
     *,
-    providers: Sequence[str] = ("claude", "openai", "nvidia", "neutral"),
+    providers: Sequence[str] = ("claude", "openai", "gemini", "grok", "nvidia",
+                                "consensus", "neutral"),
     **thresholds,
 ) -> dict:
     rows = list(observations)

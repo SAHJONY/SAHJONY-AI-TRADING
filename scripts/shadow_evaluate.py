@@ -8,9 +8,17 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 
+# Support both `python -m scripts.shadow_evaluate` and the documented direct
+# invocation `python scripts/shadow_evaluate.py` from the repository.
+_ROOT = Path(__file__).resolve().parents[1]
+if str(_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ROOT))
+
 from intelligence.shadow_eval import evaluate_all, observations_from_dicts
+from intelligence.autonomous_learning import AutonomousLearningPipeline
 
 
 def load_jsonl(path: Path) -> list[dict]:
@@ -46,6 +54,11 @@ def main() -> int:
     )
     report["observations"] = len(rows)
     report["source"] = args.input
+    report["leaders"] = AutonomousLearningPipeline(
+        min_observations=max(1, args.min_observations),
+        min_sharpe=args.min_sharpe,
+        max_drawdown=args.max_drawdown,
+    )._leaders(load_jsonl(Path(args.input)))
 
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)

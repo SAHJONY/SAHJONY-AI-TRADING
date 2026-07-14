@@ -107,6 +107,21 @@ CREATE TABLE IF NOT EXISTS events (
     kind          TEXT,
     detail        TEXT
 );
+CREATE TABLE IF NOT EXISTS ai_shadow_observations (
+    id                INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts                TEXT NOT NULL,
+    provider          TEXT NOT NULL,
+    symbol            TEXT NOT NULL,
+    base_conviction   REAL,
+    adjustment        REAL,
+    risk_multiplier   REAL,
+    forward_return    REAL,
+    turnover_cost_bps REAL,
+    latency_ms        REAL,
+    schema_valid      INTEGER,
+    fallback_used     INTEGER,
+    direction         TEXT
+);
 CREATE TABLE IF NOT EXISTS capital_ledger (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
     ts            TEXT NOT NULL,
@@ -187,6 +202,21 @@ class Database:
     def log_event(self, kind: str, detail: Dict[str, Any]) -> None:
         self.conn.execute("INSERT INTO events (ts,kind,detail) VALUES (?,?,?)",
                           (_now(), kind, json.dumps(detail)))
+        self.conn.commit()
+
+    def log_ai_shadow_observations(self, rows: List[Dict[str, Any]]) -> None:
+        self.conn.executemany(
+            """INSERT INTO ai_shadow_observations
+               (ts,provider,symbol,base_conviction,adjustment,risk_multiplier,
+                forward_return,turnover_cost_bps,latency_ms,schema_valid,
+                fallback_used,direction) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
+            [(row.get("ts"), row.get("provider"), row.get("symbol"),
+              row.get("base_conviction"), row.get("adjustment"), row.get("risk_multiplier"),
+              row.get("forward_return"), row.get("turnover_cost_bps"), row.get("latency_ms"),
+              1 if row.get("schema_valid", True) else 0,
+              1 if row.get("fallback_used", False) else 0, row.get("direction"))
+             for row in rows],
+        )
         self.conn.commit()
 
     # ── CRM ledger ───────────────────────────────────────────────────────────
@@ -291,7 +321,7 @@ class Database:
 
     def equity_history(self, limit: int = 500) -> List[Dict[str, Any]]:
         rows = self.conn.execute(
-            "SELECT ts,cycle,equity,cash,realized_pnl,premium FROM equity_curve"
+            "SELECT ts,cycle,equity,cash,deployed,realized_pnl,premium FROM equity_curve"
             " ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
         return [dict(r) for r in reversed(rows)]
 

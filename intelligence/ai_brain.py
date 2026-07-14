@@ -5,9 +5,10 @@ Hierarchy (as directed by the owner):
     official `anthropic` SDK. Acts as Chief Investment Strategist: it reads the
     quant council's per-symbol verdicts AND the two counsellors' opinions, then
     issues the authoritative advisory overlay.
-  • SECONDARY ENGINES / COUNSELLORS — OpenAI (GPT), Grok (xAI) and Gemini
-    (Google), each queried over its (OpenAI-compatible) REST API. Their views are
-    inputs to the brain, not the final say.
+  • CO-STRATEGIST / FALLBACK — OpenAI's frontier GPT model through the Responses
+    API with strict structured output. Its view advises Claude and it can produce
+    the same bounded overlay if Claude is unavailable.
+  • SECONDARY COUNSELLORS — Grok (xAI), Gemini (Google), and NVIDIA NIM.
 
 This layer is an ADVISORY OVERLAY on the deterministic quant council — it nudges
 conviction and a global risk posture; it never invents trades. It is fully
@@ -19,8 +20,9 @@ from __future__ import annotations
 
 import json
 import os
+import time
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from config import Config
 from utils.logger import get_logger
@@ -39,6 +41,48 @@ _SYSTEM = (
 _MAX_ADJ = 0.15
 
 
+def _overlay_schema(symbols: List[str]) -> Dict:
+    return {
+        "type": "object",
+        "properties": {
+            "posture": {"type": "string", "enum": ["risk_on", "neutral", "risk_off"]},
+            "global_risk_multiplier": {"type": "number"},
+            "commentary": {"type": "string"},
+            "per_symbol_adjust": {
+                "type": "object", "properties": {s: {"type": "number"} for s in symbols},
+                "required": symbols, "additionalProperties": False,
+            },
+        },
+        "required": ["posture", "global_risk_multiplier", "commentary", "per_symbol_adjust"],
+        "additionalProperties": False,
+    }
+
+
+def _estimated_cost(provider: str, model: str, input_tokens: int, output_tokens: int) -> float:
+    """Estimated USD cost from published per-million-token rates.
+
+    Raw token counts are retained in telemetry so reports can be repriced later.
+    Environment overrides allow rate updates without a code deployment.
+    """
+    model_lower = model.lower()
+    defaults = (0.0, 0.0)
+    if provider == "anthropic" and "fable-5" in model_lower:
+        defaults = (10.0, 50.0)
+    elif provider == "openai" and ("5.6-sol" in model_lower or model_lower == "gpt-5.6"):
+        defaults = (5.0, 30.0)
+    elif provider == "openai" and "5.6-terra" in model_lower:
+        defaults = (2.5, 15.0)
+    elif provider == "openai" and "5.6-luna" in model_lower:
+        defaults = (1.0, 6.0)
+    prefix = provider.upper()
+    try:
+        input_rate = float(os.getenv(f"{prefix}_INPUT_USD_PER_MTOK", defaults[0]))
+        output_rate = float(os.getenv(f"{prefix}_OUTPUT_USD_PER_MTOK", defaults[1]))
+    except (TypeError, ValueError):
+        input_rate, output_rate = defaults
+    return round((input_tokens * input_rate + output_tokens * output_rate) / 1_000_000, 8)
+
+
 @dataclass
 class BrainVerdict:
     used: bool = False
@@ -48,6 +92,7 @@ class BrainVerdict:
     commentary: str = ""
     brain_model: str = ""
     counsellors: Dict[str, str] = field(default_factory=dict)
+    telemetry: Dict[str, Any] = field(default_factory=dict)
 
     def adjust_for(self, symbol: str) -> float:
         return float(self.per_symbol_adjust.get(symbol, 0.0))
@@ -75,6 +120,7 @@ class AIBrain:
                             or "https://integrate.api.nvidia.com/v1").strip().rstrip("/")
         self.nvidia_model = (os.getenv("NVIDIA_MODEL", "openai/gpt-oss-120b")
                              or "openai/gpt-oss-120b").strip()
+        self._last_openai_meta: Dict[str, Any] = {}
         # Autonomously resolve each provider's latest model (cached ~daily). Falls
         # back to the configured defaults whenever the lookup can't run.
         self.brain_model = cfg.anthropic_model
@@ -101,7 +147,9 @@ class AIBrain:
     def enabled(self) -> bool:
         # NVIDIA NIM can serve as the brain on its own (free testing / fallback),
         # so the overlay is live with either a Claude key or an NVIDIA key.
-        return self.cfg.ai_brain_enabled and (bool(self.anthropic_key) or bool(self.nvidia_key))
+        return self.cfg.ai_brain_enabled and bool(
+            self.anthropic_key or self.openai_key or self.nvidia_key
+        )
 
     @property
     def status(self) -> Dict[str, object]:
@@ -109,6 +157,7 @@ class AIBrain:
             "enabled": self.cfg.ai_brain_enabled,
             "brain_claude": bool(self.anthropic_key),
             "counsellor_openai": bool(self.openai_key),
+            "openai_fallback": bool(self.openai_key),
             "counsellor_grok": bool(self.xai_key),
             "counsellor_gemini": bool(self.gemini_key),
             "counsellor_nvidia": bool(self.nvidia_key),
@@ -148,6 +197,14 @@ class AIBrain:
                 return _wrap(self._ask_claude(question, counsellors, symbols))
             except Exception as exc:
                 log.error("AI brain (Claude) failed: %s", exc)
+                if self.openai_key:
+                    try:
+                        log.warning("falling back to OpenAI Responses brain")
+                        return _wrap(self._ask_openai_brain(
+                            question, counsellors, symbols, fallback_used=True
+                        ))
+                    except Exception as exc2:
+                        log.error("OpenAI fallback failed: %s", exc2)
                 if self.nvidia_key:
                     try:
                         log.warning("falling back to NVIDIA NIM brain")
@@ -156,7 +213,16 @@ class AIBrain:
                         log.error("NVIDIA NIM fallback failed: %s", exc2)
                         return _wrap(BrainVerdict(used=False, commentary=f"brain error: {exc2}"))
                 return _wrap(BrainVerdict(used=False, commentary=f"brain error: {exc}"))
-        # No Claude key → NVIDIA NIM is the brain (free testing / last resort).
+        if self.openai_key:
+            try:
+                return _wrap(self._ask_openai_brain(
+                    question, counsellors, symbols, fallback_used=False
+                ))
+            except Exception as exc:
+                log.error("OpenAI brain failed: %s", exc)
+                if not self.nvidia_key:
+                    return _wrap(BrainVerdict(used=False, commentary=f"brain error: {exc}"))
+        # No working Claude/OpenAI → NVIDIA NIM is the last-resort brain.
         if self.nvidia_key:
             try:
                 return _wrap(self._ask_nim_brain(question, counsellors, symbols))
@@ -174,6 +240,62 @@ class AIBrain:
                   "conviction adjustment in [-0.15, 0.15] (positive = more constructive). "
                   "Flag any symbol where the quant signal looks fragile.")
 
+    def shadow_advise(self, portfolio: List[Dict], selected: BrainVerdict) -> Dict[str, Dict]:
+        """Produce comparable hypothetical overlays; never used for execution."""
+        question = self._build_question(portfolio)
+        symbols = [row["symbol"] for row in portfolio]
+        outputs: Dict[str, BrainVerdict] = {}
+        selected_provider = str(selected.telemetry.get("provider", ""))
+        if selected_provider == "anthropic":
+            selected_provider = "claude"
+        if selected.used and selected_provider:
+            outputs[selected_provider] = selected
+        candidates = (
+            ("claude", bool(self.anthropic_key),
+             lambda: self._ask_claude(question, {}, symbols)),
+            ("openai", bool(self.openai_key),
+             lambda: self._ask_openai_brain(question, {}, symbols)),
+            ("gemini", bool(self.gemini_key),
+             lambda: self._shadow_compatible_brain(
+                 "gemini", "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+                 self.gemini_key, self.gemini_model, question, symbols)),
+            ("grok", bool(self.xai_key),
+             lambda: self._shadow_compatible_brain(
+                 "grok", "https://api.x.ai/v1/chat/completions",
+                 self.xai_key, self.grok_model, question, symbols)),
+            ("nvidia", bool(self.nvidia_key),
+             lambda: self._ask_nim_brain(question, {}, symbols)),
+        )
+        for provider, available, call in candidates:
+            if not available or provider in outputs:
+                continue
+            try:
+                outputs[provider] = call()
+            except Exception as exc:
+                log.warning("shadow provider %s failed: %s", provider, exc)
+        return {
+            provider: {
+                "per_symbol_adjust": verdict.per_symbol_adjust,
+                "risk_multiplier": verdict.global_risk_multiplier,
+                "telemetry": verdict.telemetry,
+            }
+            for provider, verdict in outputs.items()
+        }
+
+    def _shadow_compatible_brain(self, provider: str, url: str, key: str, model: str,
+                                 question: str, symbols: List[str]) -> BrainVerdict:
+        started = time.perf_counter()
+        verdict = self._oai_brain(url, key, model, question, {}, symbols, label=provider)
+        verdict.telemetry = {
+            "provider": provider, "requested_model": model, "resolved_model": model,
+            "fallback_used": False, "schema_valid": True,
+            "latency_ms": round((time.perf_counter() - started) * 1000),
+            "input_tokens": 0, "output_tokens": 0, "estimated_cost_usd": 0.0,
+            "conviction_adjustment": verdict.per_symbol_adjust,
+            "risk_multiplier": verdict.global_risk_multiplier, "clamp_applied": False,
+        }
+        return verdict
+
     # ── PRIMARY: Claude (official anthropic SDK) ──────────────────────────────
     def _ask_claude(self, question: str, counsellors: Dict[str, str],
                     symbols: List[str]) -> BrainVerdict:
@@ -181,22 +303,7 @@ class AIBrain:
         client = anthropic.Anthropic(api_key=self.anthropic_key)
         counsel_text = "\n".join(f"- {name.upper()} counsellor says: {op}"
                                  for name, op in counsellors.items() if op) or "(no counsellors)"
-        schema = {
-            "type": "object",
-            "properties": {
-                "posture": {"type": "string", "enum": ["risk_on", "neutral", "risk_off"]},
-                "global_risk_multiplier": {"type": "number"},
-                "commentary": {"type": "string"},
-                "per_symbol_adjust": {
-                    "type": "object",
-                    "properties": {s: {"type": "number"} for s in symbols},
-                    "required": symbols,
-                    "additionalProperties": False,
-                },
-            },
-            "required": ["posture", "global_risk_multiplier", "commentary", "per_symbol_adjust"],
-            "additionalProperties": False,
-        }
+        schema = _overlay_schema(symbols)
         # Claude Fable 5 (the primary brain) keeps thinking always on — we pass
         # {type:"adaptive"} (any other explicit config 400s) and steer depth via
         # output_config.effort. Safety classifiers can decline a request with
@@ -204,6 +311,7 @@ class AIBrain:
         # decline is transparently re-served by Opus 4.8 inside the same call
         # (false positives on benign quant work do happen). This is forward-
         # compatible: Opus-tier models accept the same request shape.
+        started = time.perf_counter()
         resp = client.beta.messages.create(
             model=self.brain_model,
             betas=["server-side-fallback-2026-06-01"],
@@ -222,22 +330,128 @@ class AIBrain:
             raise RuntimeError("Claude declined the request (stop_reason=refusal)")
         text = next((b.text for b in resp.content if getattr(b, "type", "") == "text"), "{}")
         data = json.loads(text)
-        adj = {s: _clamp(data.get("per_symbol_adjust", {}).get(s, 0.0), -_MAX_ADJ, _MAX_ADJ)
-               for s in symbols}
+        raw_adj = {s: data.get("per_symbol_adjust", {}).get(s, 0.0) for s in symbols}
+        adj = {s: _clamp(raw_adj[s], -_MAX_ADJ, _MAX_ADJ) for s in symbols}
+        raw_risk = data.get("global_risk_multiplier", 1.0)
+        risk = _clamp(raw_risk, 0.5, 1.2)
+        usage = getattr(resp, "usage", None)
+        input_tokens = int(getattr(usage, "input_tokens", 0) or 0)
+        output_tokens = int(getattr(usage, "output_tokens", 0) or 0)
         return BrainVerdict(
             used=True,
             posture=data.get("posture", "neutral"),
-            global_risk_multiplier=_clamp(data.get("global_risk_multiplier", 1.0), 0.5, 1.2),
+            global_risk_multiplier=risk,
             per_symbol_adjust=adj,
             commentary=str(data.get("commentary", ""))[:600],
             brain_model=self.brain_model,
+            telemetry={
+                "provider": "anthropic", "requested_model": self.cfg.anthropic_model,
+                "resolved_model": self.brain_model, "fallback_used": False,
+                "schema_valid": True,
+                "latency_ms": round((time.perf_counter() - started) * 1000),
+                "input_tokens": input_tokens, "output_tokens": output_tokens,
+                "estimated_cost_usd": _estimated_cost(
+                    "anthropic", self.brain_model, input_tokens, output_tokens
+                ),
+                "conviction_adjustment": adj, "risk_multiplier": risk,
+                "clamp_applied": risk != raw_risk or any(adj[s] != raw_adj[s] for s in symbols),
+            },
         )
 
     # ── SECONDARY: OpenAI (GPT) counsellor ────────────────────────────────────
     def _ask_openai(self, question: str) -> Optional[str]:
-        return self._chat_completions(
-            "https://api.openai.com/v1/chat/completions", self.openai_key,
-            self.openai_model, question, label="openai")
+        try:
+            schema = {
+                "type": "object",
+                "properties": {
+                    "risk_summary": {"type": "string"},
+                    "fragilities": {"type": "array", "items": {"type": "string"}},
+                    "confidence": {"type": "number"},
+                },
+                "required": ["risk_summary", "fragilities", "confidence"],
+                "additionalProperties": False,
+            }
+            data = self._openai_response_json(question, schema, "portfolio_risk_counsel")
+            data["confidence"] = _clamp(data.get("confidence", 0.0), 0.0, 1.0)
+            return json.dumps(data, separators=(",", ":"))
+        except Exception as exc:
+            log.warning("openai counsellor failed (model=%s): %s", self.openai_model, exc)
+            return None
+
+    def _openai_response_json(self, prompt: str, schema: Dict, schema_name: str) -> Dict:
+        """Use the OpenAI Responses API with strict structured output."""
+        import requests
+        payload = {
+            "model": self.openai_model,
+            "instructions": _SYSTEM.format(firm=self.cfg.firm_name),
+            "input": prompt,
+            "max_output_tokens": 2000,
+            "reasoning": {"effort": "high"},
+            "text": {"format": {"type": "json_schema", "name": schema_name,
+                                 "strict": True, "schema": schema}},
+        }
+        started = time.perf_counter()
+        response = requests.post(
+            "https://api.openai.com/v1/responses", timeout=60,
+            headers={"Authorization": "Bearer " + self.openai_key,
+                     "Content-Type": "application/json"}, json=payload,
+        )
+        if not response.ok:
+            raise RuntimeError(f"OpenAI HTTP {response.status_code}: {response.text[:200]}")
+        body = response.json()
+        usage = body.get("usage") or {}
+        input_tokens = int(usage.get("input_tokens", 0) or 0)
+        output_tokens = int(usage.get("output_tokens", 0) or 0)
+        resolved_model = body.get("model") or self.openai_model
+        self._last_openai_meta = {
+            "provider": "openai", "requested_model": self.cfg.openai_model,
+            "resolved_model": resolved_model,
+            "latency_ms": round((time.perf_counter() - started) * 1000),
+            "input_tokens": input_tokens, "output_tokens": output_tokens,
+            "estimated_cost_usd": _estimated_cost(
+                "openai", resolved_model, input_tokens, output_tokens
+            ),
+        }
+        text = body.get("output_text") or ""
+        if not text:
+            for item in body.get("output", []):
+                for content in item.get("content", []):
+                    if content.get("type") == "output_text":
+                        text += content.get("text", "")
+        if not text:
+            raise RuntimeError("OpenAI Responses returned no output_text")
+        return self._extract_json(text)
+
+    def _ask_openai_brain(self, question: str, counsellors: Dict[str, str],
+                          symbols: List[str], fallback_used: bool = False) -> BrainVerdict:
+        counsel_text = "\n".join(f"- {n.upper()}: {op}" for n, op in counsellors.items()
+                                 if n != "openai" and op) or "(no other counsellors)"
+        data = self._openai_response_json(
+            question + "\n\nOther counsellor opinions:\n" + counsel_text,
+            _overlay_schema(symbols), "portfolio_risk_overlay",
+        )
+        posture = str(data.get("posture", "neutral"))
+        if posture not in {"risk_on", "neutral", "risk_off"}:
+            posture = "neutral"
+        raw_adj = {s: data.get("per_symbol_adjust", {}).get(s, 0.0) for s in symbols}
+        adjusted = {s: _clamp(raw_adj[s], -_MAX_ADJ, _MAX_ADJ) for s in symbols}
+        raw_risk = data.get("global_risk_multiplier", 1.0)
+        risk = _clamp(raw_risk, 0.5, 1.2)
+        telemetry = dict(self._last_openai_meta)
+        telemetry.update({
+            "fallback_used": fallback_used, "schema_valid": True,
+            "conviction_adjustment": adjusted, "risk_multiplier": risk,
+            "clamp_applied": risk != raw_risk or any(
+                adjusted[s] != raw_adj[s] for s in symbols
+            ),
+        })
+        return BrainVerdict(
+            used=True, posture=posture,
+            global_risk_multiplier=risk, per_symbol_adjust=adjusted,
+            commentary=str(data.get("commentary", ""))[:600],
+            brain_model=f"openai:{self.openai_model}",
+            telemetry=telemetry,
+        )
 
     # ── SECONDARY: Grok (xAI) counsellor ──────────────────────────────────────
     def _ask_grok(self, question: str) -> Optional[str]:

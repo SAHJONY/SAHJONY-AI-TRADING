@@ -251,7 +251,9 @@ def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[st
             "posture": brain.posture, "global_risk_multiplier": round(brain.global_risk_multiplier, 3),
             "commentary": brain.commentary, "brain_model": brain.brain_model,
             "counsellors": brain.counsellors,
+            "telemetry": brain.telemetry,
         })
+    brain_block["shadow_evaluation"] = cycle_result.get("ai_shadow") or {}
 
     # Benchmark (buy-and-hold SPY) anchored at the desk's first cycle, persisted in
     # state — gives an HONEST alpha-vs-market number instead of a bare return.
@@ -269,6 +271,14 @@ def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[st
     except Exception:  # benchmark is informational — never break the cycle
         bench = {}
 
+    from intelligence.strategy_ranking import rank_strategies
+    from intelligence.global_performance import global_performance
+    from intelligence.self_improvement import self_improvement_score
+    strategy_ranking = rank_strategies(state, cycle_result.get("ai_shadow") or {})
+    performance = global_performance(db.equity_history_regime(500))
+    improvement = self_improvement_score(
+        state, cycle_result.get("ai_shadow") or {}, cfg.ai_shadow_min_observations
+    )
     return {
         "firm": cfg.firm_name,
         "tagline": f"Autonomous multi-agent quant trading — {_tag_mode}",
@@ -277,6 +287,9 @@ def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[st
         "benchmark": bench,
         "ts": _now(),
         "cycle": state.get("cycle", 0),
+        "strategy_ranking": strategy_ranking,
+        "global_performance": performance,
+        "self_improvement": improvement,
         "account": {
             "equity": round(eq, 2), "equity_start": round(eq0, 2),
             "cash": round(cycle_result.get("cash", 0.0), 2),

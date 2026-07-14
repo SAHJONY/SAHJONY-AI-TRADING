@@ -115,7 +115,8 @@ _GEMINI_MODELS_URL = "https://generativelanguage.googleapis.com/v1beta/openai/mo
 _PROVIDERS: Dict[str, Tuple[Callable[[str], List[Dict]], Tuple[str, ...]]] = {
     "anthropic": (lambda k: _anthropic_models(k), ("fable", "opus", "sonnet", "haiku")),
     "openai":    (lambda k: _openai_compatible_models(k, "https://api.openai.com/v1/models"),
-                  ("gpt-5", "gpt-4.1", "gpt-4o", "gpt-4", "gpt")),
+                  ("gpt-5.6-sol", "gpt-5.6", "gpt-5.5", "gpt-5.4",
+                   "gpt-5", "gpt-4.1", "gpt-4o", "gpt")),
     "xai":       (lambda k: _openai_compatible_models(k, "https://api.x.ai/v1/models"),
                   ("grok-4", "grok-3", "grok-2", "grok")),
     "gemini":    (lambda k: _openai_compatible_models(k, _GEMINI_MODELS_URL),

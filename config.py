@@ -174,14 +174,16 @@ class Config:
     ai_brain_enabled: bool = False
     # These are FALLBACK defaults. With auto_update_models on (default), the brain
     # autonomously resolves each provider's latest model at run time (latest Fable
-    # for Claude, latest flagship GPT / Grok for the counsellors) and only falls
+    # for Claude, latest frontier GPT / Grok for the co-strategists) and only falls
     # back to these IDs when the lookup can't run (no key / offline / API error).
     anthropic_model: str = "claude-fable-5"    # PRIMARY brain (Claude Fable 5)
-    openai_model: str = "gpt-4o"               # counsellor (OpenAI / GPT)
+    openai_model: str = "gpt-5.6"              # frontier co-strategist + fallback brain
     xai_model: str = "grok-4"                  # counsellor (Grok / xAI); grok-2 retired
     gemini_model: str = "gemini-2.5-pro"       # counsellor (Gemini / Google)
     # Autonomously keep every provider on its newest model (owner directive).
     auto_update_models: bool = True
+    ai_shadow_enabled: bool = True
+    ai_shadow_min_observations: int = 100
 
     # Cross-desk shared knowledge: pool Hermes strategy-calibration across a paper
     # "trainer" desk and the live desk (both trading the same universe). Bounded by
@@ -299,10 +301,12 @@ def load_config() -> Config:
         voice_name=(os.getenv("VOICE_NAME", "june") or "june").strip(),
         ai_brain_enabled=_b("AI_BRAIN_ENABLED", False),
         anthropic_model=(os.getenv("ANTHROPIC_MODEL", "claude-fable-5") or "claude-fable-5").strip(),
-        openai_model=(os.getenv("OPENAI_MODEL", "gpt-4o") or "gpt-4o").strip(),
+        openai_model=(os.getenv("OPENAI_MODEL", "gpt-5.6") or "gpt-5.6").strip(),
         xai_model=(os.getenv("XAI_MODEL", "grok-4") or "grok-4").strip(),
         gemini_model=(os.getenv("GEMINI_MODEL", "gemini-2.5-pro") or "gemini-2.5-pro").strip(),
         auto_update_models=_b("AUTO_UPDATE_MODELS", True),
+        ai_shadow_enabled=_b("AI_SHADOW_ENABLED", True),
+        ai_shadow_min_observations=max(20, _i("AI_SHADOW_MIN_OBSERVATIONS", 100)),
         shared_knowledge=_b("SHARED_KNOWLEDGE", True),
         knowledge_role=(os.getenv("KNOWLEDGE_ROLE", "") or os.getenv("BROKER", "desk") or "desk").strip().lower(),
         cycle_minutes=max(1, _i("CYCLE_MINUTES", 15)),

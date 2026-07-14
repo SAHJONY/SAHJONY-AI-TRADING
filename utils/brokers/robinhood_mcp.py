@@ -11,22 +11,15 @@ Required environment:
   ROBINHOOD_MCP_GATEWAY_TOKEN=<random local bearer token>
   ROBINHOOD_MCP_EXPECTED_LAST4=1131
 
-Real orders are triple-locked and fail closed. All must be true:
-  ROBINHOOD_MCP_LIVE=true
-  LIVE_TRADING_ACK=I_UNDERSTAND_REAL_MONEY
-  the gateway reports the authenticated Agentic account ending in EXPECTED_LAST4
-
 Gateway contract:
   GET  /health
   GET  /account
   GET  /positions
   GET  /quotes/{symbol}
   GET  /history/{symbol}?days=N       optional
-  POST /orders/preview               required before every live order
-  POST /orders                       submits an approved preview
 
-No option orders are supported by this adapter until the gateway explicitly
-implements and advertises them.
+The bundled gateway is deliberately read-only and has no order routes. This
+adapter therefore rejects all Robinhood MCP order submissions locally.
 """
 from __future__ import annotations
 
@@ -50,10 +43,10 @@ class RobinhoodMCPBroker:
         self.base_url = os.getenv("ROBINHOOD_MCP_GATEWAY_URL", "").strip().rstrip("/")
         self.token = os.getenv("ROBINHOOD_MCP_GATEWAY_TOKEN", "").strip()
         self.expected_last4 = os.getenv("ROBINHOOD_MCP_EXPECTED_LAST4", "1131").strip()
-        self.live_requested = os.getenv("ROBINHOOD_MCP_LIVE", "false").strip().lower() in {
-            "1", "true", "yes", "on"
-        }
-        self.live_ack = os.getenv("LIVE_TRADING_ACK", "").strip() == "I_UNDERSTAND_REAL_MONEY"
+        self.timeout_seconds = max(
+            15,
+            int(os.getenv("ROBINHOOD_MCP_TIMEOUT_SECONDS", "45")),
+        )
         self._online = False
         self._identity_verified = False
         self._account: Dict[str, Any] = {}
@@ -66,7 +59,9 @@ class RobinhoodMCPBroker:
 
     @property
     def trading_armed(self) -> bool:
-        return self._online and self._identity_verified and self.live_requested and self.live_ack
+        # The local MCP gateway is intentionally data-only. Keep this false even
+        # if legacy live-trading environment variables are accidentally present.
+        return False
 
     def _headers(self) -> Dict[str, str]:
         headers = {"Accept": "application/json", "Content-Type": "application/json"}
@@ -83,7 +78,7 @@ class RobinhoodMCPBroker:
                 f"{self.base_url}{path}",
                 headers=self._headers(),
                 json=payload,
-                timeout=15,
+                timeout=self.timeout_seconds,
             )
             response.raise_for_status()
             return response.json() if response.content else {}
@@ -182,24 +177,11 @@ class RobinhoodMCPBroker:
         return []
 
     def submit_equity_order(self, symbol: str, qty: float, side: str) -> Dict:
-        if not self.trading_armed:
-            return {
-                "status": "rejected",
-                "simulated": False,
-                "reason": "Robinhood MCP live trading is not armed or identity is unverified",
-            }
-        order = {"symbol": symbol.upper(), "qty": float(qty), "side": side.lower(), "type": "market"}
-        preview = self._request("POST", "/orders/preview", payload=order)
-        if not isinstance(preview, dict) or not preview.get("approved"):
-            return {"status": "rejected", "simulated": False, "reason": "order preview rejected"}
-        preview_id = preview.get("preview_id")
-        if not preview_id:
-            return {"status": "rejected", "simulated": False, "reason": "missing preview_id"}
-        result = self._request("POST", "/orders", payload={"preview_id": preview_id})
-        if not isinstance(result, dict):
-            return {"status": "rejected", "simulated": False, "reason": "gateway submission failed"}
-        result.setdefault("simulated", False)
-        return result
+        return {
+            "status": "rejected",
+            "simulated": False,
+            "reason": "Robinhood MCP gateway is read-only; live trading is disabled",
+        }
 
     def submit_option_order(self, contract: str, qty: int, side: str, premium: float = 0.0) -> Dict:
         return {

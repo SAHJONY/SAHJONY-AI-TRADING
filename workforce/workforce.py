@@ -30,6 +30,7 @@ from intelligence.agents import Council, CouncilVerdict, MarketSnapshot
 from intelligence.advisors import AdvisoryBoard
 from intelligence.ai_brain import AIBrain, BrainVerdict
 from intelligence.alt_data import AltData
+from intelligence.autonomous_learning import AutonomousLearningPipeline
 from intelligence.hermes import Hermes, HermesReport
 from risk.risk_engine import RiskEngine
 from strategies.base import OrderIntent
@@ -370,13 +371,28 @@ class Firm:
             "alpha": round(r["verdict"].metrics.get("alpha", 0.0), 4),
             "beta": round(r["verdict"].metrics.get("beta", 1.0), 3),
             "vol": round(r["verdict"].metrics.get("vol", 0.0), 3),
+            "market_regime": ("stressed" if r["verdict"].metrics.get("stressed_prob", 0.0) >= 0.5
+                              else "normal"),
+            "asset_class": ("crypto" if "/" in r["symbol"] or r["symbol"].endswith("-USD")
+                            else "options" if self.pm.assign_strategy(r["symbol"], idx) in {"wheel", "spread"}
+                            else "equity"),
             "alt_tilt": round(alt_signals[r["symbol"]].tilt, 3) if r["symbol"] in alt_signals else 0.0,
             "alt_note": alt_signals[r["symbol"]].summary if r["symbol"] in alt_signals else "",
-        } for r in research]
+        } for idx, r in enumerate(research)]
         brain = self.brain.advise(portfolio)
         if brain.used:
             log.info("AI BRAIN posture=%s risk_mult=%.2f — %s",
                      brain.posture, brain.global_risk_multiplier, brain.commentary[:120])
+        learning = {}
+        if self.cfg.ai_shadow_enabled and portfolio:
+            try:
+                overlays = self.brain.shadow_advise(portfolio, brain)
+                learning = AutonomousLearningPipeline(
+                    min_observations=self.cfg.ai_shadow_min_observations,
+                    database=self.db,
+                ).run_cycle(cycle, portfolio, overlays)
+            except Exception as exc:
+                log.error("autonomous learning pipeline failed: %s", exc)
 
         # 3-6) PM → Strategy → Risk → Execution → Treasurer, per ticker.
         # The deployed cap gates on GROSS exposure so shorts consume budget too.
@@ -521,5 +537,6 @@ class Firm:
 
         return {"cycle": cycle, "equity": eq_now, "cash": cash_now,
                 "research": research, "brain": brain, "executed": executed,
+                "ai_shadow": learning,
                 "deployed": self._position_value(state), "halt": halt,
                 "hermes": hermes, "board": board, "vol_scale": round(vol_scale, 3)}

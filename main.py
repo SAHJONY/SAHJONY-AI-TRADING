@@ -46,20 +46,27 @@ def preflight(cfg, client) -> int:
     print(bar)
 
     # connection
+    
+        # connection
     if mode == "offline-sim":
-        print(f"  • {cfg.broker}: OFFLINE-SIM (no real orders). Add credentials/connection "
-              f"for paper/live.")
-        if cfg.venue_configured:
-            print("  ✗ credentials/connection configured but broker did not connect (see logs).")
-            ok = False
+        print(
+            f"  • {cfg.broker}: OFFLINE-SIM (no real orders). "
+            "Add credentials/connection for paper/live."
+        )
+        print("  ✗ broker is offline; balances and prices below are simulated.")
+        ok = False
     else:
         print(f"  ✓ Connected to {cfg.broker} ({mode}).")
 
-    # account
+ # account
+
     acct = client.get_account()
     print(f"  Equity ${acct['equity']:,.2f} | Cash ${acct['cash']:,.2f} | "
           f"Buying power ${acct['buying_power']:,.2f}")
-    trading_ready = True
+
+
+
+    trading_ready = mode != "offline-sim" and bool(getattr(client, "online", False))
 
     if acct["equity"] <= 0:
         print("  • DATA READY — account and market data are reachable.")
