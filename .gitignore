@@ -2,6 +2,9 @@
 .env
 .env.*
 !.env.template
+# per-desk env files (scripts/desk.sh) hold real keys — only *.env.example is committed
+desks/*.env
+desks/homes/
 # keep committed templates/examples (they hold NO secrets, only blank keys)
 !.env.example
 !**/.env.example
