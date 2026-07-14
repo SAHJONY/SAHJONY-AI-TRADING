@@ -3,7 +3,7 @@
 // APIs / Supabase / WebSockets are never cached.
 const C = 'sahjony-v2';
 const SHELL = ['./','./index.html','./login.html','./config.js','./manifest.webmanifest',
-  './favicon.svg','./icon-192.png','./icon-512.png','./apple-touch-icon.png'];
+  './ai-war-room.html','./favicon.svg','./icon-192.png','./icon-512.png','./apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(C).then(c => c.addAll(SHELL).catch(() => {})).then(() => self.skipWaiting()));

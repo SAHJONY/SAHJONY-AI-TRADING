@@ -329,7 +329,7 @@
 <script src="./config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const TABS = ["Parquet","Perf","Markets","Macro","News","Council","Book","Brain","Controls","Workforce","Env"];
+const TABS = ["Parquet","Perf","Markets","Macro","News","Council","Book","Brain","War Room","Controls","Workforce","Env"];
 let DATA=null, TAB="Parquet", SESSION=null, DESK=null, CREDS=[];
 let MARKETS={list:[],err:null,ts:0};            // CoinGecko crypto (no key)
 let NEWS={list:[],err:null,ts:0,src:''};        // Finnhub (key) or GDELT (no key)
@@ -934,7 +934,22 @@ function render(){
     `cycle ${DATA.cycle} · ${_when} · ${DESK?'LIVE via Supabase':'static snapshot'} · auto-refresh 30s`;
   updateFreshness();
   v.innerHTML="";
-  ({Parquet,Perf,Markets,Macro,News,Council,Book,Brain,Controls,Workforce,Env}[TAB]||Parquet)(v);
+  ({Parquet,Perf,Markets,Macro,News,Council,Book,Brain,"War Room":WarRoom,Controls,Workforce,Env}[TAB]||Parquet)(v);
+}
+
+// ── AI War Room: permanent shadow-learning leaderboard ──
+function WarRoom(v){
+  const wrap=$(`<div class="panel span12"></div>`);
+  wrap.innerHTML=`<div class="ph"><h3>AI War Room</h3><span class="x">shadow evaluation · no order authority</span></div>
+    <div class="pb" style="padding:0;overflow:hidden">
+      <div class="row" style="padding:10px 14px;border-bottom:1px solid var(--line2)">
+        <span class="commentary">Live model leaderboard, promotion gates, calibration, latency, and learning progress.</span>
+        <a class="btn" href="./ai-war-room" target="_blank" rel="noopener">OPEN FULL SCREEN ↗</a>
+      </div>
+      <iframe src="./ai-war-room.html" title="SAHJONY AI War Room" loading="eager"
+        style="display:block;width:100%;height:clamp(620px,78vh,1050px);border:0;background:#070a10"></iframe>
+    </div>`;
+  v.appendChild(wrap);
 }
 
 // ── Performance: honest, data-driven scorecard (proves or disproves the desk) ──
