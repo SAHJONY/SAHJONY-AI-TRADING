@@ -9,6 +9,14 @@ const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 const statusJson = JSON.parse(fs.readFileSync(path.join(ROOT, 'status.json'), 'utf8'));
 const appScript = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m => m[1]).filter(s => s.trim()).pop();
 
+// Derive the expected signed-out nav-tab count from the dashboard's own TABS /
+// OWNER_TABS definitions so this test self-adjusts when tabs are added/removed
+// (owner-only tabs are hidden until sign-in — see visibleTabs() in index.html).
+const countStrs = s => (s.match(/"[^"]*"|'[^']*'/g) || []).length;
+const tabDefs   = (html.match(/const\s+TABS\s*=\s*\[([^\]]*)\]/) || [])[1] || '';
+const ownerDefs = (html.match(/const\s+OWNER_TABS\s*=\s*\[([^\]]*)\]/) || [])[1] || '';
+const expectedTabs = countStrs(tabDefs) - countStrs(ownerDefs);
+
 let passed = 0;
 const check = (c, m) => { if (!c) { console.log('✗ FAIL:', m); process.exit(1); } console.log('✓', m); passed++; };
 
@@ -86,7 +94,8 @@ async function main() {
   win.eval(appScript);
   await new Promise(r => setTimeout(r, 60));
 
-  check(win.document.querySelectorAll('#nav button').length === 11, 'all 11 function tabs present');
+  check(expectedTabs >= 8 && win.document.querySelectorAll('#nav button').length === expectedTabs,
+    `all ${expectedTabs} function tabs present (signed-out)`);
   check(win.document.getElementById('tape').textContent.length > 0, 'ticker tape populated');
   check(viewText(win).includes('Equity'), 'Parquet cockpit renders (Equity/NAV)');
   check(viewText(win).includes('Council Heatmap') || viewText(win).includes('Heatmap'), 'Parquet shows council heatmap');
