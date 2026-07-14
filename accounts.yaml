@@ -26,7 +26,7 @@ accounts:
     account_type: RHS
     account_number_last4: "1131"
     enabled: true
-    broker: robinhood_brokerage
+    broker: robinhood_mcp
     asset_class: equity
     strategy: growth
     execution_mode: monitor_only
@@ -40,6 +40,8 @@ accounts:
     max_risk: 0.015
     max_position: 0.12
     max_daily_loss: 0.04
+    # Switch to execution_mode: api, adapter_ready: true, paper: false only after
+    # the local MCP gateway verifies the dedicated Agentic account ending 1131.
     paper: true
 
   - id: robinhood_crypto
@@ -63,5 +65,5 @@ accounts:
     max_daily_loss: 0.02
     # Live-intent for the roster/audit only. Real orders are still hard-gated by
     # the adapter's double-lock (LIVE_TRADING_ACK + ROBINHOOD_LIVE=true); this flag
-    # places nothing by itself. Equity accounts stay paper:true (no RH stock API).
+    # places nothing by itself. Equity accounts stay paper:true until verified.
     paper: false
