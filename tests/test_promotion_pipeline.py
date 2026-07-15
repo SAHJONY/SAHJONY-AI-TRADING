@@ -173,4 +173,12 @@ def test_verified_threshold_breach_automatically_demotes(tmp_path, metric, value
     assert any(reason in blocker for blocker in result["breaches"])
     assert result["demotion"]["to_stage"] == "paper"
     assert p.database.promotion_candidate("pairs")["stage"] == "paper"
+    artifact_event = next(x for x in p.snapshot()["audit"]
+                          if x["action"] == "artifact_ingestion")
+    assert artifact_event["detail"]["artifact_id"] == "pairs-shadow-001"
+    assert artifact_event["detail"]["demoted_to"] == "paper"
+    assert any(reason in item for item in artifact_event["detail"]["breaches"])
+    demotion_event = next(x for x in p.snapshot()["audit"] if x["action"] == "demotion")
+    assert demotion_event["detail"]["artifact_id"] == "pairs-shadow-001"
+    assert demotion_event["detail"]["triggering_metrics"]
     assert p.snapshot()["execution_authority"] is False

@@ -99,7 +99,8 @@ class PromotionPipeline:
                 "promoted": result.allowed, "blockers": list(result.blockers)}
 
     def demote(self, key: str, *, actor: str, reason: str,
-               target_stage: str | None = None) -> Dict[str, Any]:
+               target_stage: str | None = None,
+               detail: Mapping[str, Any] | None = None) -> Dict[str, Any]:
         candidate = self._candidate(key)
         current = candidate["stage"]
         current_index = STAGES.index(current)
@@ -107,7 +108,7 @@ class PromotionPipeline:
         if target not in STAGES or STAGES.index(target) >= current_index:
             raise ValueError("demotion target must be lower than the current stage")
         self.database.log_promotion_event(
-            key, current, target, "demotion", actor, True, reason, {},
+            key, current, target, "demotion", actor, True, reason, dict(detail or {}),
         )
         self.database.update_promotion_candidate(key, stage=target)
         return {"key": key, "from_stage": current, "to_stage": target, "demoted": True}
@@ -179,12 +180,13 @@ class PromotionPipeline:
             demotion = self.demote(
                 key, actor="automatic-risk-monitor",
                 reason="; ".join(breaches),
+                detail={"artifact_id": stored["artifact_id"], "triggering_metrics": breaches},
             )
         self.database.log_promotion_event(
             key, candidate["stage"], candidate["stage"], "artifact_ingestion", actor,
             not breaches, "verified evidence artifact ingested",
             {"artifact_id": stored["artifact_id"], "stage": stage, "signed": signed,
-             "breaches": breaches},
+             "breaches": breaches, "demoted_to": demotion["to_stage"] if demotion else None},
         )
         return {"artifact_id": stored["artifact_id"], "verified": True, "signed": signed,
                 "duplicate": False,
