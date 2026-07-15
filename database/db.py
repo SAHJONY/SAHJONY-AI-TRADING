@@ -153,6 +153,19 @@ CREATE TABLE IF NOT EXISTS promotion_events (
     reason        TEXT NOT NULL,
     detail        TEXT NOT NULL DEFAULT '{}'
 );
+CREATE TABLE IF NOT EXISTS promotion_artifacts (
+    artifact_id   TEXT PRIMARY KEY,
+    candidate_key TEXT NOT NULL,
+    stage         TEXT NOT NULL,
+    created_at    TEXT NOT NULL,
+    source        TEXT NOT NULL,
+    payload       TEXT NOT NULL,
+    payload_hash  TEXT NOT NULL,
+    signature     TEXT,
+    signer        TEXT,
+    verified      INTEGER NOT NULL,
+    ingested_at   TEXT NOT NULL
+);
 """
 
 
@@ -310,6 +323,44 @@ class Database:
             item["detail"] = json.loads(item.get("detail") or "{}")
             result.append(item)
         return result
+
+    def promotion_artifact(self, artifact_id: str) -> Optional[Dict[str, Any]]:
+        row = self.conn.execute(
+            "SELECT * FROM promotion_artifacts WHERE artifact_id=?", (artifact_id,)
+        ).fetchone()
+        if row is None:
+            return None
+        item = dict(row)
+        item["payload"] = json.loads(item["payload"])
+        item["verified"] = bool(item["verified"])
+        return item
+
+    def record_promotion_artifact(self, artifact: Dict[str, Any]) -> Dict[str, Any]:
+        """Append an artifact once; an artifact id can never be mutated."""
+        existing = self.promotion_artifact(artifact["artifact_id"])
+        if existing:
+            if existing["payload_hash"] != artifact["payload_hash"]:
+                raise ValueError("artifact id already exists with different content")
+            return existing
+        self.conn.execute(
+            """INSERT INTO promotion_artifacts
+               (artifact_id,candidate_key,stage,created_at,source,payload,payload_hash,
+                signature,signer,verified,ingested_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+            (artifact["artifact_id"], artifact["candidate_key"], artifact["stage"],
+             artifact["created_at"], artifact["source"], json.dumps(artifact["payload"],
+             sort_keys=True, separators=(",", ":")), artifact["payload_hash"],
+             artifact.get("signature"), artifact.get("signer"),
+             1 if artifact.get("verified") else 0, _now()),
+        )
+        self.conn.commit()
+        return self.promotion_artifact(artifact["artifact_id"])
+
+    def promotion_artifacts(self, limit: int = 100) -> List[Dict[str, Any]]:
+        rows = self.conn.execute(
+            "SELECT artifact_id FROM promotion_artifacts ORDER BY ingested_at DESC LIMIT ?",
+            (max(1, int(limit)),),
+        ).fetchall()
+        return [self.promotion_artifact(row["artifact_id"]) for row in rows]
 
     # ── CRM ledger ───────────────────────────────────────────────────────────
     def upsert_investor(self, name, email=None, phone=None, kind="lead", notes=None) -> int:

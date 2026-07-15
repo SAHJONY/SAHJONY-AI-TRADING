@@ -1,4 +1,5 @@
 import pytest
+from datetime import datetime, timezone
 
 from database.db import Database
 from intelligence.promotion_pipeline import PromotionPipeline, STAGES
@@ -89,3 +90,87 @@ def test_unknown_candidate_and_invalid_demotion_fail_closed(tmp_path):
     p.register("x", "X")
     with pytest.raises(ValueError):
         p.demote("x", actor="x", reason="x", target_stage="research")
+
+
+def artifact(p, key="pairs", stage="shadow", **metric_overrides):
+    metrics = {
+        "observations": 150, "sharpe": 0.8, "max_drawdown": 0.05,
+        "data_quality": 0.995, "operational_health": 0.99,
+        "calibration_error": 0.08,
+    }
+    metrics.update(metric_overrides)
+    body = {
+        "artifact_id": f"{key}-{stage}-001", "candidate_key": key, "stage": stage,
+        "created_at": datetime.now(timezone.utc).isoformat(), "source": "test-harness",
+        "payload": {"metrics": metrics},
+    }
+    body["payload_hash"] = p.artifact_hash(body)
+    return body
+
+
+def test_immutable_artifact_ingestion_updates_evidence(tmp_path):
+    p = pipeline(tmp_path)
+    p.register("pairs", "Pairs")
+    item = artifact(p)
+    result = p.ingest_artifact(item)
+    assert result["verified"] is True
+    assert result["signed"] is False
+    assert result["breaches"] == []
+    saved = p.snapshot()["artifacts"][0]
+    assert saved["payload_hash"] == item["payload_hash"]
+    assert p.database.promotion_candidate("pairs")["evidence"]["shadow_observations"] == 150
+    event_count = len(p.snapshot()["audit"])
+    replay = p.ingest_artifact(item)
+    assert replay["duplicate"] is True
+    assert replay["demotion"] is None
+    assert len(p.snapshot()["audit"]) == event_count
+
+    changed = dict(item)
+    changed["payload"] = {"metrics": {**item["payload"]["metrics"], "sharpe": 9.0}}
+    changed["payload_hash"] = p.artifact_hash({k: changed[k] for k in
+        ("artifact_id", "candidate_key", "stage", "created_at", "source", "payload")})
+    with pytest.raises(ValueError, match="different content"):
+        p.ingest_artifact(changed)
+
+
+def test_tampered_or_unsigned_required_artifact_is_rejected(tmp_path):
+    p = pipeline(tmp_path, artifact_signing_key="secret", require_signatures=True)
+    p.register("pairs", "Pairs")
+    item = artifact(p)
+    with pytest.raises(ValueError, match="signature required"):
+        p.ingest_artifact(item)
+    item["signature"] = "bad"
+    with pytest.raises(ValueError, match="signature verification failed"):
+        p.ingest_artifact(item)
+
+
+def test_signed_artifact_covers_envelope_and_is_accepted(tmp_path):
+    p = pipeline(tmp_path, artifact_signing_key="secret", require_signatures=True)
+    p.register("pairs", "Pairs")
+    item = artifact(p)
+    content = {k: item[k] for k in
+               ("artifact_id", "candidate_key", "stage", "created_at", "source", "payload")}
+    item["signature"] = p.sign_artifact(content, "secret")
+    item["signer"] = "research-ci"
+    assert p.ingest_artifact(item)["signed"] is True
+    tampered = dict(item, source="unknown")
+    tampered["payload_hash"] = p.artifact_hash({k: tampered[k] for k in content})
+    with pytest.raises(ValueError, match="signature verification failed"):
+        p.ingest_artifact(tampered)
+
+
+@pytest.mark.parametrize("metric,value,reason", [
+    ("max_drawdown", 0.20, "drawdown"),
+    ("calibration_error", 0.30, "calibration"),
+    ("data_quality", 0.80, "data quality"),
+    ("operational_health", 0.70, "operational health"),
+])
+def test_verified_threshold_breach_automatically_demotes(tmp_path, metric, value, reason):
+    p = pipeline(tmp_path)
+    p.register("pairs", "Pairs")
+    p.database.update_promotion_candidate("pairs", stage="shadow")
+    result = p.ingest_artifact(artifact(p, **{metric: value}))
+    assert any(reason in blocker for blocker in result["breaches"])
+    assert result["demotion"]["to_stage"] == "paper"
+    assert p.database.promotion_candidate("pairs")["stage"] == "paper"
+    assert p.snapshot()["execution_authority"] is False

@@ -8,10 +8,16 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
+import hashlib
+import hmac
+import json
 from typing import Any, Dict, Iterable, Mapping
 
 
 STAGES = ("research", "backtest", "walk_forward", "paper", "shadow", "canary", "production")
+ARTIFACT_STAGES = ("backtest", "walk_forward", "paper", "shadow", "canary")
+MAX_DRAWDOWN = {"backtest": 0.25, "walk_forward": 0.20, "paper": 0.15,
+                "shadow": 0.10, "canary": 0.05}
 
 
 def _now() -> str:
@@ -28,10 +34,14 @@ class PromotionPipeline:
     """Sequential promotion controller backed by the firm's SQLite database."""
 
     def __init__(self, database, *, allow_canary: bool = False,
-                 allow_production: bool = False) -> None:
+                 allow_production: bool = False, artifact_signing_key: str | bytes | None = None,
+                 require_signatures: bool = False) -> None:
         self.database = database
         self.allow_canary = bool(allow_canary)
         self.allow_production = bool(allow_production)
+        self.artifact_signing_key = (artifact_signing_key.encode() if isinstance(artifact_signing_key, str)
+                                     else artifact_signing_key)
+        self.require_signatures = bool(require_signatures)
 
     def register(self, key: str, name: str, kind: str = "strategy") -> Dict[str, Any]:
         return self.database.upsert_promotion_candidate(key, name, kind)
@@ -102,17 +112,128 @@ class PromotionPipeline:
         self.database.update_promotion_candidate(key, stage=target)
         return {"key": key, "from_stage": current, "to_stage": target, "demoted": True}
 
+    @staticmethod
+    def artifact_hash(artifact_content: Mapping[str, Any]) -> str:
+        canonical = json.dumps(dict(artifact_content), sort_keys=True, separators=(",", ":"),
+                               allow_nan=False).encode()
+        return hashlib.sha256(canonical).hexdigest()
+
+    @staticmethod
+    def sign_artifact(artifact_content: Mapping[str, Any], signing_key: str | bytes) -> str:
+        key = signing_key.encode() if isinstance(signing_key, str) else signing_key
+        return hmac.new(key, PromotionPipeline.artifact_hash(artifact_content).encode(),
+                        hashlib.sha256).hexdigest()
+
+    def ingest_artifact(self, artifact: Mapping[str, Any], *, actor: str = "evidence-ingestor") -> Dict[str, Any]:
+        """Verify, append, merge metrics, and apply fail-closed demotion checks."""
+        required = {"artifact_id", "candidate_key", "stage", "created_at", "source",
+                    "payload", "payload_hash"}
+        missing = sorted(required - set(artifact))
+        if missing:
+            raise ValueError(f"artifact missing fields: {', '.join(missing)}")
+        key, stage = str(artifact["candidate_key"]), str(artifact["stage"])
+        self._candidate(key)
+        if stage not in ARTIFACT_STAGES:
+            raise ValueError(f"unsupported evidence stage: {stage}")
+        payload = dict(artifact["payload"])
+        content = {name: artifact[name] for name in
+                   ("artifact_id", "candidate_key", "stage", "created_at", "source", "payload")}
+        expected_hash = self.artifact_hash(content)
+        if not hmac.compare_digest(str(artifact["payload_hash"]), expected_hash):
+            raise ValueError("artifact payload hash mismatch")
+        signature = artifact.get("signature")
+        signed = False
+        if signature:
+            if not self.artifact_signing_key:
+                raise ValueError("signed artifact cannot be verified without a signing key")
+            expected_signature = self.sign_artifact(content, self.artifact_signing_key)
+            if not hmac.compare_digest(str(signature), expected_signature):
+                raise ValueError("artifact signature verification failed")
+            signed = True
+        elif self.require_signatures:
+            raise ValueError("artifact signature required by host policy")
+        existing = self.database.promotion_artifact(str(artifact["artifact_id"]))
+        if existing:
+            if existing["payload_hash"] != expected_hash:
+                raise ValueError("artifact id already exists with different content")
+            return {"artifact_id": existing["artifact_id"], "verified": True,
+                    "signed": bool(existing.get("signature")), "duplicate": True,
+                    "breaches": [], "demotion": None, "execution_authority": False}
+        metrics = payload.get("metrics")
+        if not isinstance(metrics, Mapping):
+            raise ValueError("artifact payload.metrics must be an object")
+        normalized = self._validate_metrics(stage, metrics)
+        stored = self.database.record_promotion_artifact({
+            **dict(artifact), "candidate_key": key, "stage": stage, "payload": payload,
+            "payload_hash": expected_hash, "verified": True, "signature": signature,
+            "signer": artifact.get("signer") if signed else None,
+        })
+        evidence = {f"{stage}_{name}": value for name, value in normalized.items()}
+        if stage in ("backtest", "walk_forward"):
+            evidence[f"{stage}_passed"] = not self._metric_breaches(stage, normalized)
+        self.update_evidence(key, evidence, actor=actor)
+        breaches = self._metric_breaches(stage, normalized)
+        demotion = None
+        candidate = self._candidate(key)
+        if breaches and STAGES.index(candidate["stage"]) > 0:
+            demotion = self.demote(
+                key, actor="automatic-risk-monitor",
+                reason="; ".join(breaches),
+            )
+        self.database.log_promotion_event(
+            key, candidate["stage"], candidate["stage"], "artifact_ingestion", actor,
+            not breaches, "verified evidence artifact ingested",
+            {"artifact_id": stored["artifact_id"], "stage": stage, "signed": signed,
+             "breaches": breaches},
+        )
+        return {"artifact_id": stored["artifact_id"], "verified": True, "signed": signed,
+                "duplicate": False,
+                "breaches": breaches, "demotion": demotion, "execution_authority": False}
+
     def snapshot(self, audit_limit: int = 50) -> Dict[str, Any]:
         rows = self.database.promotion_candidates()
         return {
             "stages": list(STAGES),
             "candidates": rows,
             "audit": self.database.promotion_events(audit_limit),
+            "artifacts": self.database.promotion_artifacts(audit_limit),
             "canary_enabled": self.allow_canary,
             "production_enabled": self.allow_production,
             "execution_authority": False,
             "policy": "sequential evidence gates and explicit human approval; no execution authority",
         }
+
+    @staticmethod
+    def _validate_metrics(stage: str, metrics: Mapping[str, Any]) -> Dict[str, Any]:
+        required = {"observations", "sharpe", "max_drawdown", "data_quality",
+                    "operational_health"}
+        if stage in ("shadow", "canary"):
+            required.add("calibration_error")
+        missing = sorted(name for name in required if name not in metrics)
+        if missing:
+            raise ValueError(f"artifact metrics missing: {', '.join(missing)}")
+        values = {name: float(metrics[name]) for name in required}
+        if values["observations"] < 0:
+            raise ValueError("artifact observations cannot be negative")
+        for name in ("max_drawdown", "data_quality", "operational_health"):
+            if not 0.0 <= values[name] <= 1.0:
+                raise ValueError(f"artifact {name} must be between 0 and 1")
+        if "calibration_error" in values and not 0.0 <= values["calibration_error"] <= 1.0:
+            raise ValueError("artifact calibration_error must be between 0 and 1")
+        return values
+
+    @staticmethod
+    def _metric_breaches(stage: str, metrics: Mapping[str, float]) -> list[str]:
+        breaches = []
+        if metrics["max_drawdown"] > MAX_DRAWDOWN[stage]:
+            breaches.append(f"{stage} drawdown exceeds {MAX_DRAWDOWN[stage]:.0%}")
+        if metrics["data_quality"] < 0.98:
+            breaches.append("data quality below 98%")
+        if metrics["operational_health"] < 0.95:
+            breaches.append("operational health below 95%")
+        if stage in ("shadow", "canary") and metrics["calibration_error"] > 0.15:
+            breaches.append("calibration error exceeds 15%")
+        return breaches
 
     def _candidate(self, key: str) -> Dict[str, Any]:
         candidate = self.database.promotion_candidate(key)
