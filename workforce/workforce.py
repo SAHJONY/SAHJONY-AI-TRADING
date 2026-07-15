@@ -33,6 +33,7 @@ from intelligence.ai_brain import AIBrain, BrainVerdict
 from intelligence.alt_data import AltData
 from intelligence.autonomous_learning import AutonomousLearningPipeline
 from intelligence.hermes import Hermes, HermesReport
+from intelligence.institutional_research import InstitutionalResearchFabric
 from risk.risk_engine import RiskEngine
 from strategies.base import OrderIntent
 from strategies.copy_trading import CopyTrader
@@ -417,6 +418,16 @@ class Firm:
             except Exception as exc:
                 log.error("research failed %s: %s", sym, exc)
 
+        # Cross-asset institutional research fabric. This is point-in-time and
+        # advisory-only: it enriches AI/research context and can never invent an order.
+        try:
+            institutional_intelligence = InstitutionalResearchFabric().analyze(
+                [row["snap"] for row in research]
+            )
+        except Exception as exc:
+            log.error("institutional research fabric failed: %s", exc)
+            institutional_intelligence = InstitutionalResearchFabric().analyze([])
+
         # 1b) Alt-data overlay — QuiverQuant insider/congress disclosures per symbol
         # (fault-isolated; empty when disabled). Feeds the brain's view and conviction.
         try:
@@ -446,6 +457,8 @@ class Firm:
             hermes = HermesReport(used=False)
 
         # 2) Chief Strategist — AI brain advisory overlay
+        institutional_factors = institutional_intelligence.get("factors", {})
+        institutional_market = institutional_intelligence.get("market", {})
         portfolio = [{
             "symbol": r["symbol"], "price": round(r["snap"].price, 2),
             "conviction": round(r["verdict"].conviction, 3), "direction": r["verdict"].direction,
@@ -460,6 +473,15 @@ class Firm:
                             else "equity"),
             "alt_tilt": round(alt_signals[r["symbol"]].tilt, 3) if r["symbol"] in alt_signals else 0.0,
             "alt_note": alt_signals[r["symbol"]].summary if r["symbol"] in alt_signals else "",
+            "institutional_factor_score": (institutional_factors.get(r["symbol"]) or {}).get(
+                "composite_factor_score", 0.0),
+            "liquidity_rank": (institutional_factors.get(r["symbol"]) or {}).get(
+                "liquidity_rank", 0.0),
+            "expected_shortfall_95": (institutional_factors.get(r["symbol"]) or {}).get(
+                "expected_shortfall_95", 0.0),
+            "cross_asset_regime": institutional_market.get("regime", "unknown"),
+            "institutional_advisory_risk": institutional_market.get(
+                "advisory_risk_multiplier", 0.5),
         } for idx, r in enumerate(research)]
         brain = self.brain.advise(portfolio)
         if brain.used:
@@ -480,6 +502,9 @@ class Firm:
         # The deployed cap gates on GROSS exposure so shorts consume budget too.
         deployed = self._gross_exposure(state)
         executed: List[Dict] = []
+        institutional_risk = max(.5, min(1.0, float(
+            institutional_market.get("advisory_risk_multiplier", .5) or .5
+        )))
         for idx, r in enumerate(research):
             sym, snap, verdict = r["symbol"], r["snap"], r["verdict"]
             try:
@@ -503,7 +528,7 @@ class Firm:
                 conviction, risk_mult, budget = self.pm.effective(verdict, brain, equity, tilt)
                 # Hermes strategy calibration: budget leans toward desks with a proven
                 # realized edge (bounded 0.70–1.15; hard risk ceilings still apply).
-                budget *= hermes.strategy_weights.get(strat, 1.0) * vol_scale
+                budget *= hermes.strategy_weights.get(strat, 1.0) * vol_scale * institutional_risk
                 if pairs_owned:
                     intents = []
                 elif strat == "wheel":
@@ -561,7 +586,7 @@ class Firm:
                     pos = state.get("positions", {}).get(sym)
                     conv = 0.70   # technical-signal desk; risk engine still gates size
                     budget = self.risk.position_budget(equity, conv, 1.0) \
-                        * hermes.strategy_weights.get("daytrade", 1.0) * vol_scale
+                        * hermes.strategy_weights.get("daytrade", 1.0) * vol_scale * institutional_risk
                     intents = self.dayts.decide(sym, snap, pos, budget, today)
                     done, deployed = self.execution.execute(intents, state, cycle, equity,
                                                             deployed, conv, allow_new_risk)
@@ -596,7 +621,7 @@ class Firm:
                     pos_b = state.get("positions", {}).get(sym_b)
                     conv = 0.70   # signal desk; the Risk Officer still gates size
                     budget = self.risk.position_budget(equity, conv, 1.0) \
-                        * hermes.strategy_weights.get("pairs", 1.0) * vol_scale
+                        * hermes.strategy_weights.get("pairs", 1.0) * vol_scale * institutional_risk
                     intents = self.pairs_desk.decide(sym_a, sym_b, snap_a.price, snap_b.price,
                                                      pos_a, pos_b, budget, coint)
                     done, deployed = self.execution.execute(intents, state, cycle, equity,
@@ -622,4 +647,5 @@ class Firm:
                 "ai_shadow": learning,
                 "deployed": self._position_value(state), "halt": halt,
                 "reconciliation": reconciliation,
+                "institutional_intelligence": institutional_intelligence,
                 "hermes": hermes, "board": board, "vol_scale": round(vol_scale, 3)}

@@ -371,6 +371,11 @@ def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[st
         },
         "audit_chain": audit_chain,
         "institutional_health": institutional_health,
+        "institutional_intelligence": cycle_result.get("institutional_intelligence") or {
+            "execution_authority": False, "coverage": 0.0,
+            "market": {"regime": "unknown", "advisory_risk_multiplier": 0.5},
+            "factors": {},
+        },
         "accounts": accounts_block,
         "crm": db.fund_summary(),
         "recent_trades": db.recent_trades(15),
