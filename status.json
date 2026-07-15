@@ -510,6 +510,36 @@
     "differences": [],
     "error": "offline simulation is not broker reconciliation evidence"
   },
+  "audit_chain": {
+    "valid": false,
+    "entries": 0,
+    "error": "snapshot predates the institutional audit ledger"
+  },
+  "institutional_health": {
+    "score": 60,
+    "execution_authority": false,
+    "controls": {
+      "audit_integrity": false,
+      "data_quality": true,
+      "cost_model": true,
+      "evidence_delivery": true,
+      "broker_connection": false,
+      "position_reconciliation": null,
+      "shadow_coverage": false,
+      "pnl_broker_verified": false
+    },
+    "incidents": [
+      {"severity": "critical", "code": "audit_chain_unverified"},
+      {"severity": "warning", "code": "insufficient_shadow_evidence"},
+      {"severity": "warning", "code": "pnl_not_broker_verified"}
+    ],
+    "stages": {
+      "research_ready": false,
+      "paper_ready": false,
+      "canary_ready": false,
+      "production_ready": false
+    }
+  },
   "accounts": {
     "count": 3,
     "enabled": 3,
