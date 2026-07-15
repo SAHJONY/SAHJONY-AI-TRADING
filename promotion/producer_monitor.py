@@ -131,6 +131,15 @@ def send_webhook(payload: Mapping[str, Any], url: str, *, timeout: int = 10) -> 
             raise RuntimeError(f"alert webhook returned HTTP {response.status}")
 
 
+def publish_hosted_status(payload: Mapping[str, Any], url: str, token: str, *, timeout: int = 10) -> None:
+    body = json.dumps(dict(payload), sort_keys=True).encode()
+    req = request.Request(url, data=body, method="POST", headers={
+        "Content-Type": "application/json", "Authorization": f"Bearer {token}"})
+    with request.urlopen(req, timeout=timeout) as response:
+        if response.status < 200 or response.status >= 300:
+            raise RuntimeError(f"hosted status returned HTTP {response.status}")
+
+
 def publish_status(
     *,
     queue_dir: str | Path = "data/promotion_queue",

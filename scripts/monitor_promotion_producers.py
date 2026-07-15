@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from promotion.producer_monitor import publish_status, send_webhook
+from promotion.producer_monitor import publish_hosted_status, publish_status, send_webhook
 
 
 def main() -> int:
@@ -41,6 +41,12 @@ def main() -> int:
             max_freshness_seconds=max(60, args.max_freshness_seconds),
             max_delivery_lag_seconds=max(60, args.max_delivery_lag_seconds),
         )
+        hosted_url = os.getenv("PROMOTION_STATUS_URL", "").strip()
+        hosted_token = os.getenv("PROMOTION_STATUS_PUBLISH_TOKEN", "").strip()
+        if hosted_url:
+            if not hosted_token:
+                raise RuntimeError("PROMOTION_STATUS_PUBLISH_TOKEN is required")
+            publish_hosted_status(payload, hosted_url, hosted_token)
     except Exception as exc:
         print(json.dumps({"healthy": False, "error": f"{type(exc).__name__}: {exc}",
                           "execution_authority": False}, indent=2))
