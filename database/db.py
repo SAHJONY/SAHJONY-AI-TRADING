@@ -131,6 +131,28 @@ CREATE TABLE IF NOT EXISTS capital_ledger (
     equity_after  REAL,                                -- account equity right after the flow
     note          TEXT
 );
+CREATE TABLE IF NOT EXISTS promotion_candidates (
+    key           TEXT PRIMARY KEY,
+    name          TEXT NOT NULL,
+    kind          TEXT NOT NULL DEFAULT 'strategy',
+    stage         TEXT NOT NULL DEFAULT 'research',
+    evidence      TEXT NOT NULL DEFAULT '{}',
+    approvals     TEXT NOT NULL DEFAULT '{}',
+    created_at    TEXT NOT NULL,
+    updated_at    TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS promotion_events (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts            TEXT NOT NULL,
+    candidate_key TEXT NOT NULL,
+    from_stage    TEXT NOT NULL,
+    to_stage      TEXT NOT NULL,
+    action        TEXT NOT NULL,
+    actor         TEXT NOT NULL,
+    allowed       INTEGER NOT NULL,
+    reason        TEXT NOT NULL,
+    detail        TEXT NOT NULL DEFAULT '{}'
+);
 """
 
 
@@ -218,6 +240,76 @@ class Database:
              for row in rows],
         )
         self.conn.commit()
+
+    # ── governed research / strategy promotion pipeline ─────────────────────
+    @staticmethod
+    def _promotion_row(row) -> Optional[Dict[str, Any]]:
+        if row is None:
+            return None
+        item = dict(row)
+        item["evidence"] = json.loads(item.get("evidence") or "{}")
+        item["approvals"] = json.loads(item.get("approvals") or "{}")
+        return item
+
+    def upsert_promotion_candidate(self, key: str, name: str,
+                                   kind: str = "strategy") -> Dict[str, Any]:
+        now = _now()
+        self.conn.execute(
+            """INSERT INTO promotion_candidates
+               (key,name,kind,stage,evidence,approvals,created_at,updated_at)
+               VALUES (?,?,?,'research','{}','{}',?,?)
+               ON CONFLICT(key) DO UPDATE SET name=excluded.name, kind=excluded.kind,
+                 updated_at=excluded.updated_at""",
+            (key, name, kind, now, now),
+        )
+        self.conn.commit()
+        return self.promotion_candidate(key)
+
+    def update_promotion_candidate(self, key: str, *, stage: str = None,
+                                   evidence: Dict[str, Any] = None,
+                                   approvals: Dict[str, Any] = None) -> None:
+        current = self.promotion_candidate(key)
+        if current is None:
+            raise KeyError(key)
+        self.conn.execute(
+            """UPDATE promotion_candidates SET stage=?, evidence=?, approvals=?, updated_at=?
+               WHERE key=?""",
+            (stage or current["stage"], json.dumps(evidence if evidence is not None else current["evidence"]),
+             json.dumps(approvals if approvals is not None else current["approvals"]), _now(), key),
+        )
+        self.conn.commit()
+
+    def promotion_candidate(self, key: str) -> Optional[Dict[str, Any]]:
+        row = self.conn.execute("SELECT * FROM promotion_candidates WHERE key=?", (key,)).fetchone()
+        return self._promotion_row(row)
+
+    def promotion_candidates(self) -> List[Dict[str, Any]]:
+        rows = self.conn.execute("SELECT * FROM promotion_candidates ORDER BY name").fetchall()
+        return [self._promotion_row(row) for row in rows]
+
+    def log_promotion_event(self, candidate_key: str, from_stage: str, to_stage: str,
+                            action: str, actor: str, allowed: bool, reason: str,
+                            detail: Dict[str, Any]) -> None:
+        self.conn.execute(
+            """INSERT INTO promotion_events
+               (ts,candidate_key,from_stage,to_stage,action,actor,allowed,reason,detail)
+               VALUES (?,?,?,?,?,?,?,?,?)""",
+            (_now(), candidate_key, from_stage, to_stage, action, actor,
+             1 if allowed else 0, reason, json.dumps(detail)),
+        )
+        self.conn.commit()
+
+    def promotion_events(self, limit: int = 50) -> List[Dict[str, Any]]:
+        rows = self.conn.execute(
+            "SELECT * FROM promotion_events ORDER BY id DESC LIMIT ?", (max(1, int(limit)),)
+        ).fetchall()
+        result = []
+        for row in rows:
+            item = dict(row)
+            item["allowed"] = bool(item["allowed"])
+            item["detail"] = json.loads(item.get("detail") or "{}")
+            result.append(item)
+        return result
 
     # ── CRM ledger ───────────────────────────────────────────────────────────
     def upsert_investor(self, name, email=None, phone=None, kind="lead", notes=None) -> int:

@@ -275,6 +275,14 @@ def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[st
     from intelligence.global_performance import global_performance
     from intelligence.self_improvement import self_improvement_score
     strategy_ranking = rank_strategies(state, cycle_result.get("ai_shadow") or {})
+    from intelligence.promotion_pipeline import PromotionPipeline
+    promotion_engine = PromotionPipeline(db)  # Canary and Production remain disabled.
+    promotion_engine.sync({"key": row["key"], "name": row["name"], "kind": "strategy"}
+                          for row in strategy_ranking)
+    promotion = promotion_engine.snapshot()
+    promotion_by_key = {row["key"]: row for row in promotion["candidates"]}
+    for row in strategy_ranking:
+        row["promotion_stage"] = promotion_by_key[row["key"]]["stage"]
     performance = global_performance(db.equity_history_regime(500))
     improvement = self_improvement_score(
         state, cycle_result.get("ai_shadow") or {}, cfg.ai_shadow_min_observations
@@ -288,6 +296,7 @@ def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[st
         "ts": _now(),
         "cycle": state.get("cycle", 0),
         "strategy_ranking": strategy_ranking,
+        "promotion_pipeline": promotion,
         "global_performance": performance,
         "self_improvement": improvement,
         "account": {
