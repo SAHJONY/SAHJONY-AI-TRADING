@@ -153,6 +153,9 @@ class ExecutionTrader:
                     log.warning("order not filled %s: %s", intent.symbol, res)
                     continue
                 self._apply(intent, state)
+                transaction_cost = max(0.0, float(res.get("transaction_cost", 0.0) or 0.0))
+                state["transaction_costs"] = state.get("transaction_costs", 0.0) + transaction_cost
+                state["realized_pnl"] = state.get("realized_pnl", 0.0) - transaction_cost
                 # Consume deployed budget for: equity buys, risk-gated equity shorts,
                 # and cash-secured puts (sell_to_open carries collateral in
                 # est_notional; covered calls are sell_to_open with est_notional 0,
@@ -300,6 +303,7 @@ class Firm:
                 state["positions"] = {}               # start the sleeve FLAT (drop prior-size positions)
                 state["realized_pnl"] = 0.0
                 state["premium_collected"] = 0.0
+                state["transaction_costs"] = 0.0
                 state.pop("benchmark_start", None)    # re-anchor SPY alpha to the sleeve start
                 state.pop("equity_day_start", None)
                 log.info("Capital sleeve set to $%.0f — baseline + positions reset for a clean test.",
@@ -311,9 +315,29 @@ class Firm:
             state["equity_start"] = equity
         state["equity_last"] = equity
 
+        # A LIVE venue must reconcile broker positions before adding any risk.
+        # Mismatches fail closed while exits remain available downstream.
+        from observability.reconciliation import reconcile_positions, unavailable_reconciliation
+        reconciliation = unavailable_reconciliation("not required outside LIVE mode")
+        if mode == "LIVE":
+            try:
+                reconciliation = reconcile_positions(
+                    state.get("positions", {}), self.client.get_broker_positions() or {}
+                )
+            except Exception as exc:
+                reconciliation = unavailable_reconciliation(
+                    f"broker snapshot failed: {type(exc).__name__}"
+                )
+
         # Circuit breaker / kill switch — suspends NEW risk this cycle if tripped.
         halt = self._halt_check(state, equity)
         allow_new_risk = trade and not halt["halted"]
+        if mode == "LIVE" and not reconciliation["reconciled"]:
+            allow_new_risk = False
+            reason = "broker position reconciliation failed"
+            halt = {**halt, "halted": True,
+                    "reason": f"{halt.get('reason')}; {reason}".strip("; ")}
+            log.error("NEW RISK HALTED: %s", reason)
 
         # Volatility targeting — realized portfolio vol above target scales every
         # new-position budget down ([0.5, 1.0]); fault-isolated, neutral on failure.
@@ -539,4 +563,5 @@ class Firm:
                 "research": research, "brain": brain, "executed": executed,
                 "ai_shadow": learning,
                 "deployed": self._position_value(state), "halt": halt,
+                "reconciliation": reconciliation,
                 "hermes": hermes, "board": board, "vol_scale": round(vol_scale, 3)}

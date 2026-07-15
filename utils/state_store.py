@@ -32,6 +32,7 @@ def default_state() -> Dict[str, Any]:
         "equity_last": None,
         "premium_collected": 0.0,     # cumulative option premium (wheel)
         "realized_pnl": 0.0,          # cumulative realized P&L (equity + options)
+        "transaction_costs": 0.0,     # cumulative simulated/broker-reported costs
         "positions": {},              # symbol -> position record (see strategies)
         "history": [],                # rolling event log (most recent last)
     }

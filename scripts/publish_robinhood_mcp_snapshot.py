@@ -97,6 +97,19 @@ def main() -> int:
         tmp.write("\n")
         temp_path = Path(tmp.name)
     temp_path.replace(output)
+    runtime_url = os.getenv("RUNTIME_STATUS_URL", "").strip()
+    runtime_token = os.getenv("RUNTIME_STATUS_PUBLISH_TOKEN", "").strip()
+    if runtime_url or runtime_token:
+        if not runtime_url or not runtime_token:
+            raise RuntimeError("both RUNTIME_STATUS_URL and RUNTIME_STATUS_PUBLISH_TOKEN are required")
+        hosted = {**snapshot, "execution_authority": False}
+        request = Request(runtime_url, data=json.dumps(hosted).encode(), method="POST", headers={
+            "Accept": "application/json", "Content-Type": "application/json",
+            "Authorization": f"Bearer {runtime_token}",
+        })
+        with urlopen(request, timeout=args.timeout) as response:  # noqa: S310 - configured endpoint
+            if response.status != 202:
+                raise RuntimeError(f"runtime publisher returned HTTP {response.status}")
     print(f"Published read-only snapshot for Agentic ••••{snapshot['agentic']['account_number_last4']}")
     return 0
 

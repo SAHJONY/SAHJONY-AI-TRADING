@@ -314,6 +314,7 @@ def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[st
         },
         "pnl": {
             "realized": round(realized, 2), "premium_collected": round(premium, 2),
+            "transaction_costs": round(float(state.get("transaction_costs", 0.0) or 0.0), 2),
             "total_return_pct": round((eq / eq0 - 1.0) * 100, 3) if eq0 > 0.0 else 0.0,
             "source": pnl_source, "broker_verified": pnl_broker_verified,
         },
@@ -347,6 +348,10 @@ def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[st
         "brain": brain_block,
         "positions": positions,
         "broker_account": broker_account,
+        "reconciliation": cycle_result.get("reconciliation") or {
+            "status": "unavailable", "reconciled": False,
+            "execution_blocked": True, "error": "no reconciliation evidence",
+        },
         "accounts": accounts_block,
         "crm": db.fund_summary(),
         "recent_trades": db.recent_trades(15),

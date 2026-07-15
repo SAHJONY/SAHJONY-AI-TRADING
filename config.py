@@ -113,6 +113,11 @@ class Config:
     # Dollar-based (fractional) equity orders — lets a small account buy a slice of
     # an expensive stock instead of rounding to 0 shares. Crypto is always fractional.
     allow_fractional: bool = True
+    # Conservative simulation costs. These affect research accounting only and
+    # cannot change broker execution permissions.
+    sim_slippage_bps: float = 5.0
+    sim_commission_per_share: float = 0.005
+    sim_option_fee_per_contract: float = 0.65
 
     # wheel
     wheel_put_otm_pct: float = 0.10
@@ -294,6 +299,9 @@ def load_config() -> Config:
         day_trade_stop_pct=_clamp(_f("DAY_TRADE_STOP_PCT", 0.01), 0.002, 0.10),
         day_trade_max_units=max(1, _i("DAY_TRADE_MAX_UNITS", 100)),
         day_trade_min_signal=_clamp(_f("DAY_TRADE_MIN_SIGNAL", 0.55), 0.50, 0.95),
+        sim_slippage_bps=_clamp(_f("SIM_SLIPPAGE_BPS", 5.0), 0.0, 100.0),
+        sim_commission_per_share=_clamp(_f("SIM_COMMISSION_PER_SHARE", 0.005), 0.0, 1.0),
+        sim_option_fee_per_contract=_clamp(_f("SIM_OPTION_FEE_PER_CONTRACT", 0.65), 0.0, 10.0),
         firm_name=(os.getenv("FIRM_NAME", "SAHJONY CAPITAL LLC") or "SAHJONY CAPITAL LLC").strip(),
         public_base_url=(os.getenv("PUBLIC_BASE_URL", "") or "").strip().rstrip("/"),
         voice_alerts=_b("VOICE_ALERTS", False),
