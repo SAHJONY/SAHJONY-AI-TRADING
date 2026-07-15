@@ -14,6 +14,7 @@ connection, and typed helpers. Uses WAL for safe concurrent reads.
 from __future__ import annotations
 
 import json
+import hashlib
 import os
 import sqlite3
 from datetime import datetime, timezone
@@ -106,6 +107,24 @@ CREATE TABLE IF NOT EXISTS events (
     ts            TEXT NOT NULL,
     kind          TEXT,
     detail        TEXT
+);
+CREATE TABLE IF NOT EXISTS execution_intents (
+    intent_id     TEXT PRIMARY KEY,
+    created_at    TEXT NOT NULL,
+    updated_at    TEXT NOT NULL,
+    cycle         INTEGER,
+    payload       TEXT NOT NULL,
+    status        TEXT NOT NULL,
+    broker_ref    TEXT,
+    detail        TEXT NOT NULL DEFAULT '{}'
+);
+CREATE TABLE IF NOT EXISTS audit_ledger (
+    sequence      INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts            TEXT NOT NULL,
+    kind          TEXT NOT NULL,
+    payload       TEXT NOT NULL,
+    prev_hash     TEXT NOT NULL,
+    entry_hash    TEXT NOT NULL UNIQUE
 );
 CREATE TABLE IF NOT EXISTS ai_shadow_observations (
     id                INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -238,6 +257,71 @@ class Database:
         self.conn.execute("INSERT INTO events (ts,kind,detail) VALUES (?,?,?)",
                           (_now(), kind, json.dumps(detail)))
         self.conn.commit()
+
+    def reserve_execution_intent(self, intent_id: str, cycle: int,
+                                 payload: Dict[str, Any]) -> bool:
+        """Atomically reserve an intent. False means it was already seen."""
+        now = _now()
+        try:
+            self.conn.execute(
+                """INSERT INTO execution_intents
+                   (intent_id,created_at,updated_at,cycle,payload,status,detail)
+                   VALUES (?,?,?,?,?,'reserved','{}')""",
+                (intent_id, now, now, cycle,
+                 json.dumps(payload, sort_keys=True, separators=(",", ":"))),
+            )
+            self.conn.commit()
+            return True
+        except sqlite3.IntegrityError:
+            self.conn.rollback()
+            return False
+
+    def update_execution_intent(self, intent_id: str, status: str, *,
+                                broker_ref: str = "", detail: Dict[str, Any] | None = None) -> None:
+        allowed = {"reserved", "submitted", "filled", "failed", "reconciled"}
+        if status not in allowed:
+            raise ValueError("invalid execution intent status")
+        cursor = self.conn.execute(
+            """UPDATE execution_intents SET updated_at=?,status=?,broker_ref=?,detail=?
+               WHERE intent_id=?""",
+            (_now(), status, broker_ref,
+             json.dumps(detail or {}, sort_keys=True, separators=(",", ":")), intent_id),
+        )
+        if cursor.rowcount != 1:
+            self.conn.rollback()
+            raise KeyError("execution intent is not reserved")
+        self.conn.commit()
+
+    def append_audit(self, kind: str, payload: Dict[str, Any]) -> str:
+        """Append a canonical hash-chained audit entry and return its digest."""
+        ts = _now()
+        canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+        row = self.conn.execute(
+            "SELECT entry_hash FROM audit_ledger ORDER BY sequence DESC LIMIT 1"
+        ).fetchone()
+        previous = row["entry_hash"] if row else "0" * 64
+        digest = hashlib.sha256(
+            f"{previous}\n{ts}\n{kind}\n{canonical}".encode("utf-8")
+        ).hexdigest()
+        self.conn.execute(
+            """INSERT INTO audit_ledger (ts,kind,payload,prev_hash,entry_hash)
+               VALUES (?,?,?,?,?)""", (ts, kind, canonical, previous, digest),
+        )
+        self.conn.commit()
+        return digest
+
+    def verify_audit_chain(self) -> Dict[str, Any]:
+        previous = "0" * 64
+        count = 0
+        for row in self.conn.execute("SELECT * FROM audit_ledger ORDER BY sequence"):
+            expected = hashlib.sha256(
+                f"{previous}\n{row['ts']}\n{row['kind']}\n{row['payload']}".encode("utf-8")
+            ).hexdigest()
+            if row["prev_hash"] != previous or row["entry_hash"] != expected:
+                return {"valid": False, "entries": count,
+                        "failed_sequence": row["sequence"]}
+            previous, count = row["entry_hash"], count + 1
+        return {"valid": True, "entries": count, "head": previous}
 
     def log_ai_shadow_observations(self, rows: List[Dict[str, Any]]) -> None:
         self.conn.executemany(

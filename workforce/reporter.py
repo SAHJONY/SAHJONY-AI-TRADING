@@ -295,6 +295,23 @@ def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[st
     improvement = self_improvement_score(
         state, cycle_result.get("ai_shadow") or {}, cfg.ai_shadow_min_observations
     )
+    try:
+        audit_chain = db.verify_audit_chain()
+    except Exception as exc:
+        audit_chain = {"valid": False, "entries": 0, "error": type(exc).__name__}
+    from observability.firm_health import assess_firm_health
+    hermes_report = cycle_result.get("hermes")
+    institutional_health = assess_firm_health(
+        mode=mode, audit_chain=audit_chain,
+        reconciliation=cycle_result.get("reconciliation") or {},
+        producer_health=promotion.get("producer_health") or {},
+        quarantined=list(getattr(hermes_report, "quarantined", []) or []),
+        shadow_observations=int(improvement.get("observation_count", 0) or 0),
+        shadow_minimum=cfg.ai_shadow_min_observations,
+        cost_model_enabled=(cfg.sim_slippage_bps > 0),
+        broker_online=bool(client.online), pnl_broker_verified=pnl_broker_verified,
+        production_policy_enabled=bool(promotion.get("production_enabled", False)),
+    )
     return {
         "firm": cfg.firm_name,
         "tagline": f"Autonomous multi-agent quant trading — {_tag_mode}",
@@ -352,6 +369,8 @@ def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[st
             "status": "unavailable", "reconciled": False,
             "execution_blocked": True, "error": "no reconciliation evidence",
         },
+        "audit_chain": audit_chain,
+        "institutional_health": institutional_health,
         "accounts": accounts_block,
         "crm": db.fund_summary(),
         "recent_trades": db.recent_trades(15),

@@ -26,6 +26,7 @@ from typing import Any, Dict, List
 
 from config import Config
 from database import Database
+from execution.idempotency import execution_intent_id
 from intelligence.agents import Council, CouncilVerdict, MarketSnapshot
 from intelligence.advisors import AdvisoryBoard
 from intelligence.ai_brain import AIBrain, BrainVerdict
@@ -126,6 +127,7 @@ class ExecutionTrader:
         always reduce exposure."""
         done = []
         for intent in intents:
+            intent_id = ""
             try:
                 if intent.kind == "state":
                     self._apply(intent, state)
@@ -135,6 +137,8 @@ class ExecutionTrader:
                     log.info("HALT BLOCK %s %s — new risk suspended", intent.symbol, intent.purpose)
                     record_event(state, "halt_block",
                                  {"symbol": intent.symbol, "purpose": intent.purpose})
+                    self.db.append_audit("risk_block", {"cycle": cycle, "symbol": intent.symbol,
+                                         "purpose": intent.purpose, "reason": "new risk suspended"})
                     continue
                 if intent.risk_check:
                     dec = self.risk.approve(equity, deployed, intent.est_notional, conviction, intent.symbol)
@@ -142,7 +146,24 @@ class ExecutionTrader:
                         log.info("RISK BLOCK %s %s: %s", intent.symbol, intent.purpose, dec.reason)
                         record_event(state, "risk_block",
                                      {"symbol": intent.symbol, "purpose": intent.purpose, "reason": dec.reason})
+                        self.db.append_audit("risk_block", {"cycle": cycle, "symbol": intent.symbol,
+                                             "purpose": intent.purpose, "reason": dec.reason})
                         continue
+                intent_id, payload = execution_intent_id(intent, cycle)
+                if not self.db.reserve_execution_intent(intent_id, cycle, payload):
+                    log.error("DUPLICATE INTENT BLOCKED %s %s id=%s",
+                              intent.symbol, intent.purpose, intent_id[:12])
+                    record_event(state, "duplicate_intent_block",
+                                 {"symbol": intent.symbol, "purpose": intent.purpose,
+                                  "intent_id": intent_id})
+                    self.db.append_audit("duplicate_intent_block", {
+                        "cycle": cycle, "symbol": intent.symbol,
+                        "purpose": intent.purpose, "intent_id": intent_id,
+                    })
+                    continue
+                self.db.append_audit("execution_reserved", {
+                    "cycle": cycle, "intent_id": intent_id, "payload": payload,
+                })
                 if intent.kind == "equity":
                     res = self.client.submit_equity_order(intent.symbol, intent.qty, intent.side)
                     price = res.get("fill_price", self.client.get_price(intent.symbol))
@@ -150,6 +171,12 @@ class ExecutionTrader:
                     res = self.client.submit_option_order(intent.contract, intent.qty, intent.side, intent.premium)
                     price = intent.premium
                 if res.get("status") not in ("filled", "submitted"):
+                    self.db.update_execution_intent(intent_id, "failed",
+                                                    detail={"status": str(res.get("status", "rejected"))})
+                    self.db.append_audit("execution_failed", {
+                        "cycle": cycle, "intent_id": intent_id,
+                        "status": str(res.get("status", "rejected")),
+                    })
                     log.warning("order not filled %s: %s", intent.symbol, res)
                     continue
                 self._apply(intent, state)
@@ -173,10 +200,31 @@ class ExecutionTrader:
                     "mode": getattr(self.client, "mode", self.cfg.mode),
                     "simulated": res.get("simulated", True),
                 })
+                execution_status = "filled" if res.get("status") == "filled" else "submitted"
+                broker_ref = str(res.get("order_id") or res.get("id") or "")
+                self.db.update_execution_intent(
+                    intent_id, execution_status, broker_ref=broker_ref,
+                    detail={"transaction_cost": transaction_cost},
+                )
+                self.db.append_audit("execution_result", {
+                    "cycle": cycle, "intent_id": intent_id, "status": execution_status,
+                    "broker_ref": broker_ref, "transaction_cost": transaction_cost,
+                })
                 record_event(state, intent.purpose, {"symbol": intent.symbol, "reason": intent.reason})
                 done.append({"symbol": intent.symbol, "purpose": intent.purpose, "reason": intent.reason})
                 log.info("EXEC %s %s — %s", intent.symbol, intent.purpose, intent.reason)
             except Exception as exc:  # one bad intent never sinks the cycle
+                if intent_id:
+                    try:
+                        self.db.update_execution_intent(
+                            intent_id, "failed", detail={"error": type(exc).__name__}
+                        )
+                        self.db.append_audit("execution_exception", {
+                            "cycle": cycle, "intent_id": intent_id,
+                            "error": type(exc).__name__,
+                        })
+                    except Exception:
+                        pass
                 log.error("execute intent failed (%s %s): %s", intent.symbol, intent.purpose, exc)
         return done, deployed
 
@@ -327,6 +375,16 @@ class Firm:
             except Exception as exc:
                 reconciliation = unavailable_reconciliation(
                     f"broker snapshot failed: {type(exc).__name__}"
+                )
+            try:
+                self.db.append_audit("position_reconciliation", {
+                    "cycle": cycle, "status": reconciliation["status"],
+                    "reconciled": reconciliation["reconciled"],
+                    "differences": reconciliation.get("differences", []),
+                })
+            except Exception as exc:
+                reconciliation = unavailable_reconciliation(
+                    f"audit ledger unavailable: {type(exc).__name__}"
                 )
 
         # Circuit breaker / kill switch — suspends NEW risk this cycle if tripped.
