@@ -102,6 +102,7 @@ def test_adapter_cannot_be_armed_or_submit_orders(monkeypatch):
     called = []
     broker._request = lambda *args, **kwargs: called.append((args, kwargs))
     assert broker.trading_armed is False
+    assert broker.execution_authority is False
     result = broker.submit_equity_order("VTI", 1, "buy")
     assert result["status"] == "rejected"
     assert "read-only" in result["reason"]

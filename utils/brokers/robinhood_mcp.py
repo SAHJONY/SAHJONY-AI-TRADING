@@ -63,6 +63,14 @@ class RobinhoodMCPBroker:
         # if legacy live-trading environment variables are accidentally present.
         return False
 
+    @property
+    def execution_authority(self) -> bool:
+        return False
+
+    @property
+    def identity_verified(self) -> bool:
+        return self._identity_verified
+
     def _headers(self) -> Dict[str, str]:
         headers = {"Accept": "application/json", "Content-Type": "application/json"}
         if self.token:

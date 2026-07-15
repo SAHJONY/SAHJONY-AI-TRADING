@@ -32,6 +32,19 @@ from workforce.reporter import build_status, console_board, write_investor_views
 log = get_logger("main")
 
 
+def readiness_states(*, client_online: bool, identity_verified: bool,
+                     quote_coverage_complete: bool, market_data_fresh: bool,
+                     buying_power: float, equity: float, positions_reconciled: bool,
+                     trading_armed: bool, execution_authority: bool) -> dict:
+    data_ready = bool(client_online and identity_verified
+                      and quote_coverage_complete and market_data_fresh)
+    funding_ready = bool(buying_power > 0 and equity > 0)
+    trading_ready = bool(data_ready and funding_ready and positions_reconciled
+                         and trading_armed and execution_authority)
+    return {"data_ready": data_ready, "funding_ready": funding_ready,
+            "trading_ready": trading_ready}
+
+
 def preflight(cfg, client) -> int:
     """Read-only readiness report — places NO orders. Returns 0 when ready.
 
@@ -66,19 +79,12 @@ def preflight(cfg, client) -> int:
 
 
 
-    trading_ready = mode != "offline-sim" and bool(getattr(client, "online", False))
-
     if acct["equity"] <= 0:
         print("  • DATA READY — account and market data are reachable.")
         print("  ✗ TRADING NOT READY — account equity is zero.")
-        trading_ready = False
 
     if acct["buying_power"] <= 0:
         print("  ✗ TRADING NOT READY — buying power is zero.")
-        trading_ready = False
-
-    if mode == "LIVE" and not trading_ready:
-        ok = False
 
     # market clock + data feed
     try:
@@ -109,6 +115,50 @@ def preflight(cfg, client) -> int:
             + ". No trading readiness should be inferred."
         )
 
+    # Broker positions must reconcile with persisted internal state. An empty
+    # broker snapshot cannot be accepted when account equity exceeds cash.
+    positions_reconciled = False
+    reconciliation_reason = "position snapshot unavailable"
+    try:
+        from observability.reconciliation import reconcile_positions
+        internal_positions = (load_state().get("positions") or {})
+        broker_positions = client.get_broker_positions()
+        reconciliation = reconcile_positions(internal_positions, broker_positions)
+        positions_reconciled = bool(reconciliation["reconciled"])
+        if not broker_positions and float(acct["equity"]) > float(acct["cash"]) + 0.01:
+            positions_reconciled = False
+            reconciliation_reason = "equity exceeds cash but broker returned no positions"
+        elif not positions_reconciled:
+            reconciliation_reason = f"{len(reconciliation.get('differences', []))} difference(s)"
+        else:
+            reconciliation_reason = "broker and internal positions agree"
+    except Exception as exc:
+        reconciliation_reason = f"unavailable ({type(exc).__name__})"
+
+    online = bool(getattr(client, "online", False))
+    identity_verified = bool(getattr(client, "identity_verified", online))
+    trading_armed = bool(getattr(
+        client, "trading_armed",
+        mode == "paper" or (mode == "LIVE" and cfg.live_trading_ack),
+    ))
+    execution_authority = bool(getattr(
+        client, "execution_authority", mode in {"paper", "LIVE"},
+    ))
+    readiness = readiness_states(
+        client_online=online,
+        identity_verified=identity_verified,
+        quote_coverage_complete=not quote_failures,
+        market_data_fresh=not quote_failures,
+        buying_power=float(acct["buying_power"]),
+        equity=float(acct["equity"]),
+        positions_reconciled=positions_reconciled,
+        trading_armed=trading_armed,
+        execution_authority=execution_authority,
+    )
+    print(f"  Position reconciliation: {'PASS' if positions_reconciled else 'INCOMPLETE'}"
+          f" — {reconciliation_reason}")
+    print(f"  Order authority: {'ENABLED' if execution_authority and trading_armed else 'DISABLED'}")
+
     # risk envelope
     print(f"  Caps: per-position {cfg.max_allocation_pct:.0%} (hard {HARD_MAX_ALLOCATION_PCT:.0%}) | "
           f"total-deployed {cfg.max_total_deployed_pct:.0%} (hard {HARD_MAX_TOTAL_DEPLOYED_PCT:.0%}) | "
@@ -126,14 +176,11 @@ def preflight(cfg, client) -> int:
             print("  • LIVE venue connected but NOT armed — set LIVE_TRADING_ACK to trade real money.")
 
     print(bar)
-    if ok and trading_ready:
-        print("  DATA READY ✓ | TRADING READY ✓")
-    elif mode != "offline-sim" and not trading_ready:
-        print("  DATA READY ✓ | TRADING READY ✗")
-    else:
-        print("  NOT READY ✗ — resolve the ✗ items above.")
+    print(f"  DATA READY {'✓' if readiness['data_ready'] else '✗'} | "
+          f"FUNDING READY {'✓' if readiness['funding_ready'] else '✗'} | "
+          f"TRADING READY {'✓' if readiness['trading_ready'] else '✗'}")
     print(bar)
-    return 0 if ok else 1
+    return 0 if readiness["trading_ready"] else 1
 
 
 def confirm_live(cfg, client) -> bool:
