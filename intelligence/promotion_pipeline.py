@@ -312,15 +312,17 @@ class PromotionPipeline:
 
     @staticmethod
     def _validate_metrics(stage: str, metrics: Mapping[str, Any]) -> Dict[str, Any]:
-        required = {"observations", "sharpe", "max_drawdown", "data_quality",
-                    "operational_health"}
+        required = {"max_drawdown", "data_quality", "operational_health"}
         if stage in ("shadow", "canary"):
             required.add("calibration_error")
         missing = sorted(name for name in required if name not in metrics)
         if missing:
             raise ValueError(f"artifact metrics missing: {', '.join(missing)}")
         values = {name: float(metrics[name]) for name in required}
-        if values["observations"] < 0:
+        for optional in ("observations", "sharpe"):
+            if optional in metrics:
+                values[optional] = float(metrics[optional])
+        if values.get("observations", 0.0) < 0:
             raise ValueError("artifact observations cannot be negative")
         for name in ("max_drawdown", "data_quality", "operational_health"):
             if not 0.0 <= values[name] <= 1.0:

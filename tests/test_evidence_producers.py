@@ -91,3 +91,11 @@ def test_stale_and_non_monotonic_artifacts_are_rejected(tmp_path):
 def test_all_stage_producers_have_no_execution_authority(tmp_path):
     assert BacktestEvidenceProducer(queue_dir=tmp_path / "b").health()["execution_authority"] is False
     assert CanaryEvidenceProducer(queue_dir=tmp_path / "c").health()["execution_authority"] is False
+
+
+def test_risk_health_artifact_does_not_require_promotion_performance_metrics(tmp_path):
+    metrics = {name: METRICS[name] for name in (
+        "max_drawdown", "calibration_error", "data_quality", "operational_health")}
+    item = ShadowEvidenceProducer(queue_dir=tmp_path / "q").emit("model", metrics)
+    result = pipeline(tmp_path).ingest_artifact(item)
+    assert result["verified"] is True

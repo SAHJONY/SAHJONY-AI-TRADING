@@ -24,19 +24,37 @@ PRODUCERS = {"backtest": BacktestEvidenceProducer,
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Produce broker-free promotion evidence")
-    parser.add_argument("stage", choices=sorted(PRODUCERS))
-    parser.add_argument("candidate_id")
-    parser.add_argument("metrics_json", type=Path)
+    parser.add_argument("stage_pos", nargs="?", choices=sorted(PRODUCERS))
+    parser.add_argument("candidate_pos", nargs="?")
+    parser.add_argument("metrics_json", nargs="?", type=Path)
+    parser.add_argument("--stage", choices=sorted(PRODUCERS))
+    parser.add_argument("--candidate")
+    parser.add_argument("--source")
+    parser.add_argument("--metric", action="append", default=[], metavar="NAME=VALUE")
     parser.add_argument("--queue", default="data/promotion_queue")
     args = parser.parse_args()
-    metrics = json.loads(args.metrics_json.read_text())
+    stage, candidate = args.stage or args.stage_pos, args.candidate or args.candidate_pos
+    if not stage or not candidate:
+        parser.error("stage and candidate are required (flags or positional arguments)")
+    metrics = json.loads(args.metrics_json.read_text()) if args.metrics_json else {}
+    for item in args.metric:
+        if "=" not in item:
+            parser.error(f"invalid --metric {item!r}; expected NAME=VALUE")
+        name, raw = item.split("=", 1)
+        if not name:
+            parser.error("metric name cannot be empty")
+        try:
+            metrics[name] = json.loads(raw)
+        except json.JSONDecodeError:
+            metrics[name] = raw
     key, key_id = os.getenv("PROMOTION_ARTIFACT_SIGNING_KEY"), os.getenv("PROMOTION_ARTIFACT_KEY_ID", "primary")
-    producer = PRODUCERS[args.stage](
-        queue_dir=Path(args.queue) / args.stage,
+    producer = PRODUCERS[stage](
+        queue_dir=Path(args.queue) / stage,
+        source=args.source,
         signing_keys={key_id: key} if key else None,
         active_key_id=key_id if key else "unsigned",
     )
-    artifact = producer.emit(args.candidate_id, metrics)
+    artifact = producer.emit(candidate, metrics)
     print(json.dumps(artifact, indent=2))
     return 0
 
