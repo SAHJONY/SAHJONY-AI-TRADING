@@ -85,13 +85,29 @@ def preflight(cfg, client) -> int:
         print(f"  Market open: {client.is_market_open()}")
     except Exception:
         pass
+    quote_failures = []
+
     for sym in cfg.tickers:
-        px = client.get_price(sym)
-        if px and px > 0:
-            print(f"  ✓ data {sym}: ${px:,.2f}")
-        else:
-            print(f"  ✗ data {sym}: no price")
+        try:
+            px = client.get_price(sym)
+            if px and px > 0:
+                print(f"  ✓ data {sym}: ${px:,.2f}")
+            else:
+                print(f"  ✗ data {sym}: no valid price")
+                quote_failures.append(sym)
+                ok = False
+        except Exception as exc:
+            print(f"  ✗ data {sym}: unavailable ({type(exc).__name__})")
+            log.warning("Preflight quote failed for %s: %s", sym, exc)
+            quote_failures.append(sym)
             ok = False
+
+    if quote_failures:
+        print(
+            "  ✗ Quote coverage incomplete: "
+            + ", ".join(quote_failures)
+            + ". No trading readiness should be inferred."
+        )
 
     # risk envelope
     print(f"  Caps: per-position {cfg.max_allocation_pct:.0%} (hard {HARD_MAX_ALLOCATION_PCT:.0%}) | "

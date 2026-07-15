@@ -10,8 +10,11 @@ Bind to loopback only and protect every request with a random bearer token.
 from __future__ import annotations
 
 import argparse
+from datetime import datetime, timezone
 import hmac
 import json
+import logging
+import math
 import os
 import re
 import subprocess
@@ -27,6 +30,7 @@ from urllib.parse import unquote, urlsplit
 
 
 _SYMBOL = re.compile(r"^[A-Z0-9][A-Z0-9.\-]{0,14}$")
+_LOG = logging.getLogger("robinhood_mcp_gateway")
 _READ_ONLY_PROMPT = """\
 Use only the robinhood-trading MCP and only its read tools. Never call any tool
 whose name starts with review_, place_, cancel_, replace_, create_, update_,
@@ -50,7 +54,7 @@ Return JSON only, matching this shape:
     {{"symbol": "string", "qty": 0.0, "market_value": 0.0,
       "avg_entry_price": 0.0, "asset_type": "string"}}
   ],
-  "quote": {{"symbol": "string", "price": 0.0}}
+  "quote": {{"symbol": "string", "price": 0.0, "as_of": "ISO-8601 timestamp"}}
 }}
 
 For account_snapshot: call get_accounts, select only the account with
@@ -59,10 +63,25 @@ that account and leave positions/quote empty.
 For positions: first select the agentic_allowed account with get_accounts, then
 read its nonzero equity and option positions. Never read order history. Include
 normalized positions and the selected account identity; leave quote empty.
-For quote: call get_equity_quotes for the exact supplied symbol. Put the current
-trade price, or mark/last price when the trade price is unavailable, in price;
-leave account empty and positions empty.
+For quote: call get_equity_quotes for the exact supplied symbol and preserve its
+documented data.results array exactly. Do not rename, flatten, summarize, or
+invent quote fields; leave account empty and positions empty.
 Never expose a full account number, OAuth token, bearer token, or credential.
+"""
+
+_QUOTE_READ_ONLY_PROMPT = """\
+Use only the robinhood-trading MCP get_equity_quotes read tool. Never call any
+tool whose name starts with review_, place_, cancel_, replace_, create_, update_,
+add_, remove_, delete_, follow_, or unfollow_. Do not preview, submit, modify, or
+cancel orders. Do not change the account in any way.
+
+Request get_equity_quotes for exactly this one symbol: {symbol}
+
+Return JSON only. Preserve the tool's documented data object exactly, including
+data.results, each result.quote object, and each result.close object when present.
+Do not flatten, rename, summarize, calculate, or invent fields. Do not wrap the
+response in account, positions, or a synthetic quote object. Never expose an
+OAuth token, bearer token, credential, or account information.
 """
 
 
@@ -81,10 +100,13 @@ class CodexRobinhoodBridge:
     def call(self, operation: str, **parameters: Any) -> dict[str, Any]:
         if operation not in {"account_snapshot", "positions", "quote"}:
             raise GatewayError("operation is not allowlisted")
-        prompt = _READ_ONLY_PROMPT.format(
-            operation=operation,
-            parameters=json.dumps(parameters, separators=(",", ":")),
-        )
+        if operation == "quote":
+            prompt = _QUOTE_READ_ONLY_PROMPT.format(symbol=str(parameters.get("symbol", "")))
+        else:
+            prompt = _READ_ONLY_PROMPT.format(
+                operation=operation,
+                parameters=json.dumps(parameters, separators=(",", ":")),
+            )
         output_path: str | None = None
         try:
             with tempfile.NamedTemporaryFile(prefix="rh-mcp-", suffix=".json", delete=False) as output:
@@ -158,19 +180,80 @@ def _number(value: Any, field: str) -> float:
         raise GatewayError(f"invalid numeric field: {field}") from exc
 
 
+def _response_shape(value: Any, depth: int = 0) -> Any:
+    """Return key/type structure only, never values or private account data."""
+    if depth >= 4:
+        return type(value).__name__
+    if isinstance(value, dict):
+        return {str(key): _response_shape(child, depth + 1) for key, child in value.items()}
+    if isinstance(value, list):
+        return [(_response_shape(value[0], depth + 1) if value else "empty")]
+    return type(value).__name__
+
+
+def _timestamp(value: Any, field: str) -> datetime:
+    if not isinstance(value, str) or not value.strip():
+        raise GatewayError(f"quote timestamp is missing: {field}")
+    try:
+        parsed = datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise GatewayError(f"quote timestamp is invalid: {field}") from exc
+    if parsed.tzinfo is None:
+        raise GatewayError(f"quote timestamp has no timezone: {field}")
+    return parsed.astimezone(timezone.utc)
+
+
+def _normalize_equity_quote(payload: dict[str, Any], requested: str) -> dict[str, Any]:
+    """Normalize the documented get_equity_quotes response, failing closed."""
+    _LOG.warning("Robinhood MCP quote response shape: %s", _response_shape(payload))
+    container: Any = payload
+    if isinstance(container.get("structuredContent"), dict):
+        container = container["structuredContent"]
+    data = container.get("data") if isinstance(container, dict) else None
+    results = data.get("results") if isinstance(data, dict) else container.get("results")
+    if not isinstance(results, list):
+        raise GatewayError("quote response data.results is missing")
+    if len(results) != 1:
+        raise GatewayError("quote response is ambiguous; expected exactly one result")
+    result = results[0]
+    quote = result.get("quote") if isinstance(result, dict) else None
+    if not isinstance(quote, dict):
+        raise GatewayError("quote result is missing quote data")
+    returned = str(quote.get("symbol", "")).strip().upper()
+    if returned != requested:
+        raise GatewayError("quote symbol does not match the requested symbol")
+    if quote.get("has_traded") is not True or str(quote.get("state", "")).lower() != "active":
+        raise GatewayError("quote instrument is not active and traded")
+
+    candidates = []
+    for price_field, time_field in (
+        ("last_trade_price", "venue_last_trade_time"),
+        ("last_non_reg_trade_price", "venue_last_non_reg_trade_time"),
+    ):
+        if quote.get(price_field) in (None, "") or quote.get(time_field) in (None, ""):
+            continue
+        price = _number(quote[price_field], price_field)
+        if not math.isfinite(price) or price <= 0:
+            continue
+        candidates.append((_timestamp(quote[time_field], time_field), price, str(quote[time_field])))
+    if not candidates:
+        raise GatewayError("quote has no positive timestamped trade price")
+    observed_at, price, raw_timestamp = max(candidates, key=lambda item: item[0])
+    now = datetime.now(timezone.utc)
+    max_age = max(1, int(os.getenv("ROBINHOOD_MCP_MAX_QUOTE_AGE_SECONDS", "900")))
+    age = (now - observed_at).total_seconds()
+    if age > max_age or age < -300:
+        raise GatewayError("quote timestamp is stale or implausibly future-dated")
+    return {"symbol": returned, "price": price, "as_of": raw_timestamp,
+            "source": "robinhood-trading-mcp"}
+
+
 def _validate_upstream_payload(
     operation: str, payload: dict[str, Any], parameters: dict[str, Any]
 ) -> dict[str, Any]:
     if operation == "quote":
-        quote = payload.get("quote")
-        if not isinstance(quote, dict):
-            raise GatewayError("quote response is missing")
         requested = str(parameters.get("symbol", "")).upper()
-        returned = str(quote.get("symbol", "")).upper()
-        price = _number(quote.get("price"), "price")
-        if returned != requested or price <= 0:
-            raise GatewayError("quote identity or price is invalid")
-        return {"symbol": returned, "price": price}
+        return _normalize_equity_quote(payload, requested)
 
     account = payload.get("account")
     if not isinstance(account, dict):

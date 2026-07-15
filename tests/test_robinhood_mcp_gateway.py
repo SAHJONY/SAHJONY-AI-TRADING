@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import json
 import threading
+from datetime import datetime, timedelta, timezone
 from http.client import HTTPConnection
 
 import pytest
 
 from config import load_config
-from scripts.robinhood_mcp_gateway import GatewayError, GatewayService, make_handler
+from scripts.robinhood_mcp_gateway import (GatewayError, GatewayService,
+                                           _validate_upstream_payload, make_handler)
 from utils.brokers.robinhood_mcp import RobinhoodMCPBroker
 from http.server import ThreadingHTTPServer
 
@@ -32,7 +34,8 @@ class FakeBridge:
         if operation == "positions":
             return {"account": account, "positions": [{"symbol": "VTI", "qty": 1.0}]}
         if operation == "quote":
-            return {"symbol": parameters["symbol"], "price": 321.45}
+            return {"symbol": parameters["symbol"], "price": 321.45,
+                    "as_of": "2026-07-15T06:00:00Z", "source": "robinhood-trading-mcp"}
         raise AssertionError(operation)
 
 
@@ -42,7 +45,8 @@ def test_service_verifies_identity_and_normalizes_contract():
     assert service.health()["market_open"] is False
     assert service.account()["account_number_last4"] == "1131"
     assert service.positions()["positions"][0]["symbol"] == "VTI"
-    assert service.quote("vti") == {"symbol": "VTI", "price": 321.45}
+    assert service.quote("vti")["price"] == 321.45
+    assert service.quote("vti")["source"] == "robinhood-trading-mcp"
 
 
 def test_identity_mismatch_fails_closed():
@@ -57,6 +61,37 @@ def test_invalid_quote_symbol_is_rejected_before_bridge_call():
     with pytest.raises(ValueError, match="invalid symbol"):
         service.quote("../../orders")
     assert bridge.calls == []
+
+
+def raw_quote(symbol="NVDA", *, age_seconds=0):
+    stamp = (datetime.now(timezone.utc) - timedelta(seconds=age_seconds)).isoformat()
+    regular_stamp = (datetime.now(timezone.utc) - timedelta(seconds=age_seconds + 60)).isoformat()
+    return {"data": {"results": [{"quote": {
+        "symbol": symbol, "last_trade_price": "211.79",
+        "venue_last_trade_time": regular_stamp, "last_non_reg_trade_price": "212.79",
+        "venue_last_non_reg_trade_time": stamp, "has_traded": True, "state": "active",
+    }}]}}
+
+
+def test_documented_equity_quote_shape_is_normalized():
+    result = _validate_upstream_payload("quote", raw_quote(), {"symbol": "NVDA"})
+    assert result["symbol"] == "NVDA"
+    assert result["price"] == 212.79
+    assert result["as_of"]
+    assert result["source"] == "robinhood-trading-mcp"
+    top_level = raw_quote()["data"]
+    assert _validate_upstream_payload("quote", top_level, {"symbol": "NVDA"})["price"] == 212.79
+
+
+def test_quote_identity_ambiguity_and_freshness_fail_closed():
+    with pytest.raises(GatewayError, match="does not match"):
+        _validate_upstream_payload("quote", raw_quote("MSFT"), {"symbol": "NVDA"})
+    ambiguous = raw_quote()
+    ambiguous["data"]["results"].append(ambiguous["data"]["results"][0])
+    with pytest.raises(GatewayError, match="ambiguous"):
+        _validate_upstream_payload("quote", ambiguous, {"symbol": "NVDA"})
+    with pytest.raises(GatewayError, match="stale"):
+        _validate_upstream_payload("quote", raw_quote(age_seconds=3600), {"symbol": "NVDA"})
 
 
 def test_adapter_cannot_be_armed_or_submit_orders(monkeypatch):
