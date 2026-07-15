@@ -1096,6 +1096,7 @@ function treemap(positions,H=300){
 
 function kpis(){
   const a=DATA.account||{},p=DATA.pnl||{}; const ret=p.total_return_pct||0;
+  const verified=p.broker_verified===true;
   const CY='#2ad8f0',VI='#9b8cff',AM='#ffb000',UP='#34e3a8',DN='#ff5c6c';
   const eqVals=(DATA.equity_curve||[]).map(x=>+x.equity||0);
   // [label, numericValue, fmt, cssClass, accentColor, sparkSVG]
@@ -1104,7 +1105,7 @@ function kpis(){
     ['Total Return',ret,'pct',ret>=0?'up':'down', ret>=0?UP:DN, ''],
     ['Cash',a.cash,'money','',VI,''],
     ['Deployed',a.deployed,'money','',AM,''],
-    ['Realized P&L',p.realized,'money',(p.realized||0)>=0?'up':'down',(p.realized||0)>=0?UP:DN,''],
+    [verified?'Broker-verified Realized P&L':'Simulated Realized P&L',p.realized,'money',(p.realized||0)>=0?'up':'down',(p.realized||0)>=0?UP:DN,''],
     ['Premium',p.premium_collected,'money','',AM,''],
   ];
   const g=$(`<div class="kpis"></div>`);
@@ -1120,12 +1121,14 @@ function kpis(){
 
 function cbBanner(){
   const cb=(DATA.health&&DATA.health.circuit_breaker)||{};
+  if(DATA.mode!=='LIVE') return `<div class="cb" style="border-color:var(--amber);background:linear-gradient(90deg,rgba(255,176,0,.12),transparent);color:#ffe9b0">⚠ <b>SIMULATION / RESEARCH ACCOUNTING</b> — P&amp;L is not reconciled to Robinhood fills or statements.</div>`;
   if(cb.halted) return `<div class="cb halt">⛔ <b>NEW RISK HALTED</b> — ${esc(cb.reason||'')}</div>`;
   return `<div class="cb ok">● TRADING ACTIVE · day P&L ${pct((cb.day_return||0)*100)} · auto-halt at −${((cb.limit_pct||0)*100).toFixed(0)}%</div>`;
 }
 
 function Parquet(v){
   const root=$(`<div></div>`);
+  root.appendChild($(cbBanner()));
   root.appendChild(kpis());
   const g=$(`<div class="grid c12" style="margin-top:12px"></div>`);
 
@@ -1388,7 +1391,7 @@ function robinhoodPanel(){
       <div class="kpi" style="--accent:var(--down)"><div class="l">Account Value</div><div class="v">${money(r.total_value)}</div></div>
       <div class="kpi" style="--accent:var(--cyan)"><div class="l">Buying Power</div><div class="v">${money(r.buying_power)}</div></div>
       <div class="kpi"><div class="l">Cash</div><div class="v">${money(r.cash)}</div></div>
-      <div class="kpi" style="--accent:var(--amber)"><div class="l">In Open Orders</div><div class="v">${money(r.committed_open_orders)}</div></div>
+      <div class="kpi" style="--accent:var(--amber)"><div class="l">Robinhood Realized P&amp;L</div><div class="v">Unavailable</div></div>
     </div>`;
   // holdings
   if(pos.length){
