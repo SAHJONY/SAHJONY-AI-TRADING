@@ -164,7 +164,11 @@ class RobinhoodMCPBroker:
         payload = self._request("GET", f"/history/{symbol.upper()}?days={int(days)}") or {}
         closes = np.asarray(payload.get("closes", []), dtype=float)
         volumes = np.asarray(payload.get("volumes", []), dtype=float)
-        return {"closes": closes, "volumes": volumes}
+        return {"closes": closes, "volumes": volumes,
+                "timestamps": np.asarray(payload.get("timestamps", []), dtype=object),
+                "retrieved_at": payload.get("retrieved_at"),
+                "feed_timestamp": payload.get("feed_timestamp"),
+                "exchange_timestamp": payload.get("exchange_timestamp")}
 
     def is_market_open(self) -> bool:
         if not self.online:

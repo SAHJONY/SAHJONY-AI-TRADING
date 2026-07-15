@@ -19,6 +19,7 @@ Ports: paper TWS 7497 / Gateway 4002 ; live TWS 7496 / Gateway 4001.
 """
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from typing import Dict, List
 
 import numpy as np
@@ -146,7 +147,11 @@ class IBKRBroker:
                 useRTH=True, formatDate=1)
             closes = np.array([b.close for b in bars], dtype=float)
             vols = np.array([float(getattr(b, "volume", 0) or 0) for b in bars], dtype=float)
-            return {"closes": closes[-days:], "volumes": vols[-days:]}
+            timestamps = np.array([b.date for b in bars], dtype=object)
+            return {"closes": closes[-days:], "volumes": vols[-days:],
+                    "timestamps": timestamps[-days:],
+                    "retrieved_at": datetime.now(timezone.utc).isoformat(),
+                    "exchange_timestamp": timestamps[-1] if timestamps.size else None}
         except Exception as exc:
             log.error("get_history(%s) failed: %s", symbol, exc)
             return {"closes": np.array([]), "volumes": np.array([])}

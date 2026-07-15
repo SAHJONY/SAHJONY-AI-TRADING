@@ -33,7 +33,12 @@ from intelligence.ai_brain import AIBrain, BrainVerdict
 from intelligence.alt_data import AltData
 from intelligence.autonomous_learning import AutonomousLearningPipeline
 from intelligence.hermes import Hermes, HermesReport
-from intelligence.institutional_research import InstitutionalResearchFabric
+from intelligence.institutional_research import (
+    PROMOTION_KEY,
+    InstitutionalResearchFabric,
+    applied_multiplier,
+    multiplier_enabled,
+)
 from risk.risk_engine import RiskEngine
 from strategies.base import OrderIntent
 from strategies.copy_trading import CopyTrader
@@ -58,7 +63,13 @@ class ResearchDesk:
     def research(self, symbol: str, bench_closes) -> (MarketSnapshot, CouncilVerdict):
         hist = self.client.get_history(symbol, 250)
         price = self.client.get_price(symbol)
-        snap = MarketSnapshot(symbol, price, hist["closes"], hist["volumes"], bench_closes)
+        snap = MarketSnapshot(
+            symbol, price, hist["closes"], hist["volumes"], bench_closes,
+            bar_timestamps=hist.get("timestamps", []),
+            retrieved_at=hist.get("retrieved_at"),
+            feed_timestamp=hist.get("feed_timestamp"),
+            exchange_timestamp=hist.get("exchange_timestamp"),
+        )
         return snap, self.council.deliberate(snap)
 
 
@@ -422,7 +433,10 @@ class Firm:
         # advisory-only: it enriches AI/research context and can never invent an order.
         try:
             institutional_intelligence = InstitutionalResearchFabric().analyze(
-                [row["snap"] for row in research]
+                [row["snap"] for row in research],
+                requested_symbols=self.cfg.tickers,
+                max_age_seconds=self.cfg.institutional_max_data_age_seconds,
+                require_timestamps=True,
             )
         except Exception as exc:
             log.error("institutional research fabric failed: %s", exc)
@@ -459,6 +473,18 @@ class Firm:
         # 2) Chief Strategist — AI brain advisory overlay
         institutional_factors = institutional_intelligence.get("factors", {})
         institutional_market = institutional_intelligence.get("market", {})
+        institutional_promotion_stage = "research"
+        try:
+            candidate = self.db.upsert_promotion_candidate(
+                PROMOTION_KEY, "Institutional Research Multiplier", "risk_overlay"
+            )
+            institutional_promotion_stage = str(candidate.get("stage") or "research")
+        except Exception as exc:
+            log.warning("institutional promotion state unavailable: %s", exc)
+        institutional_multiplier_active = multiplier_enabled(
+            institutional_promotion_stage,
+            self.cfg.institutional_multiplier_enabled,
+        )
         portfolio = [{
             "symbol": r["symbol"], "price": round(r["snap"].price, 2),
             "conviction": round(r["verdict"].conviction, 3), "direction": r["verdict"].direction,
@@ -502,9 +528,22 @@ class Firm:
         # The deployed cap gates on GROSS exposure so shorts consume budget too.
         deployed = self._gross_exposure(state)
         executed: List[Dict] = []
-        institutional_risk = max(.5, min(1.0, float(
+        proposed_institutional_risk = max(.5, min(1.0, float(
             institutional_market.get("advisory_risk_multiplier", .5) or .5
         )))
+        institutional_risk = applied_multiplier(
+            proposed_institutional_risk,
+            institutional_promotion_stage,
+            self.cfg.institutional_multiplier_enabled,
+        )
+        institutional_intelligence["promotion"] = {
+            "key": PROMOTION_KEY,
+            "stage": institutional_promotion_stage,
+            "feature_flag_enabled": self.cfg.institutional_multiplier_enabled,
+            "multiplier_active": institutional_multiplier_active,
+            "proposed_multiplier": proposed_institutional_risk,
+            "applied_multiplier": institutional_risk,
+        }
         for idx, r in enumerate(research):
             sym, snap, verdict = r["symbol"], r["snap"], r["verdict"]
             try:

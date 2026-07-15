@@ -9,7 +9,7 @@ has a working, side-effect-free backend instead of crashing (fault isolation).
 from __future__ import annotations
 
 import hashlib
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Dict, List
 
 import numpy as np
@@ -72,8 +72,16 @@ class SimBroker:
     def get_history(self, symbol: str, days: int = 120) -> Dict[str, np.ndarray]:
         self._ensure_path(symbol)
         lo = max(0, self._step - days)
+        count = self._step - lo
+        end = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        timestamps = np.array([
+            (end - timedelta(days=count - 1 - index)).isoformat()
+            for index in range(count)
+        ], dtype=object)
         return {"closes": self._paths[symbol][lo:self._step].copy(),
-                "volumes": self._vols[symbol][lo:self._step].copy()}
+                "volumes": self._vols[symbol][lo:self._step].copy(),
+                "timestamps": timestamps, "retrieved_at": datetime.now(timezone.utc).isoformat(),
+                "exchange_timestamp": timestamps[-1] if timestamps.size else None}
 
     def get_price(self, symbol: str) -> float:
         self._ensure_path(symbol)

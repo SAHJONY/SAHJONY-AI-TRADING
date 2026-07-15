@@ -13,6 +13,7 @@ Set CCXT_SANDBOX=true to use the exchange's testnet where supported.
 """
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from typing import Dict, List
 
 import numpy as np
@@ -112,7 +113,10 @@ class CCXTBroker:
             ohlcv = self._ex.fetch_ohlcv(symbol, timeframe="1d", limit=days)
             closes = np.array([row[4] for row in ohlcv], dtype=float)
             vols = np.array([float(row[5]) for row in ohlcv], dtype=float)
-            return {"closes": closes, "volumes": vols}
+            timestamps = np.array([row[0] for row in ohlcv], dtype=object)
+            return {"closes": closes, "volumes": vols, "timestamps": timestamps,
+                    "retrieved_at": datetime.now(timezone.utc).isoformat(),
+                    "exchange_timestamp": timestamps[-1] if timestamps.size else None}
         except Exception as exc:
             log.error("get_history(%s) failed: %s", symbol, exc)
             return {"closes": np.array([]), "volumes": np.array([])}

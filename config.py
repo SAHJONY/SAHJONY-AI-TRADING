@@ -189,6 +189,8 @@ class Config:
     auto_update_models: bool = True
     ai_shadow_enabled: bool = True
     ai_shadow_min_observations: int = 100
+    institutional_multiplier_enabled: bool = False
+    institutional_max_data_age_seconds: int = 345600
 
     # Cross-desk shared knowledge: pool Hermes strategy-calibration across a paper
     # "trainer" desk and the live desk (both trading the same universe). Bounded by
@@ -315,6 +317,10 @@ def load_config() -> Config:
         auto_update_models=_b("AUTO_UPDATE_MODELS", True),
         ai_shadow_enabled=_b("AI_SHADOW_ENABLED", True),
         ai_shadow_min_observations=max(20, _i("AI_SHADOW_MIN_OBSERVATIONS", 100)),
+        institutional_multiplier_enabled=_b("INSTITUTIONAL_MULTIPLIER_ENABLED", False),
+        institutional_max_data_age_seconds=max(
+            60, _i("INSTITUTIONAL_MAX_DATA_AGE_SECONDS", 345600)
+        ),
         shared_knowledge=_b("SHARED_KNOWLEDGE", True),
         knowledge_role=(os.getenv("KNOWLEDGE_ROLE", "") or os.getenv("BROKER", "desk") or "desk").strip().lower(),
         cycle_minutes=max(1, _i("CYCLE_MINUTES", 15)),

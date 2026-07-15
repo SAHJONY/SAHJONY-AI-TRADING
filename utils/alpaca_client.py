@@ -109,7 +109,11 @@ class AlpacaClient:
                 bars = self._data.get_stock_bars(req).data.get(symbol, [])
             closes = np.array([b.close for b in bars], dtype=float)
             vols = np.array([float(b.volume) for b in bars], dtype=float)
-            return {"closes": closes[-days:], "volumes": vols[-days:]}
+            timestamps = np.array([b.timestamp for b in bars], dtype=object)
+            retrieved_at = datetime.now(timezone.utc).isoformat()
+            return {"closes": closes[-days:], "volumes": vols[-days:],
+                    "timestamps": timestamps[-days:], "retrieved_at": retrieved_at,
+                    "exchange_timestamp": (timestamps[-1].isoformat() if timestamps.size else None)}
         except Exception as exc:
             log.error("get_history(%s) failed: %s", symbol, exc)
             return {"closes": np.array([]), "volumes": np.array([])}

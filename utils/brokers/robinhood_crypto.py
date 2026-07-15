@@ -28,6 +28,7 @@ API shape (official): host https://trading.robinhood.com
 from __future__ import annotations
 
 import base64
+from datetime import datetime, timezone
 import json
 import os
 import time
@@ -212,14 +213,18 @@ class RobinhoodCryptoBroker:
                 log.warning("CoinGecko %s → HTTP %s; using flat fallback", cid, r.status_code)
                 return None
             data = r.json() or {}
-            closes = np.array([p[1] for p in (data.get("prices") or []) if p and p[1] is not None],
-                              dtype=float)
+            prices = [(p[0], p[1]) for p in (data.get("prices") or [])
+                      if p and len(p) >= 2 and p[1] is not None and np.isfinite(float(p[1]))]
+            closes = np.array([p[1] for p in prices], dtype=float)
+            timestamps = np.array([p[0] for p in prices], dtype=object)
             vols = np.array([v[1] for v in (data.get("total_volumes") or []) if v and v[1] is not None],
                             dtype=float)
-            closes = closes[np.isfinite(closes)]
             if closes.size < 2:
                 return None
-            return {"closes": closes, "volumes": vols[np.isfinite(vols)]}
+            return {"closes": closes, "volumes": vols[np.isfinite(vols)],
+                    "timestamps": timestamps,
+                    "retrieved_at": datetime.now(timezone.utc).isoformat(),
+                    "feed_timestamp": timestamps[-1] if timestamps.size else None}
         except Exception as exc:  # network / parse / rate-limit — degrade, don't crash
             log.warning("CoinGecko history(%s) failed: %s — using flat fallback", symbol, exc)
             return None
