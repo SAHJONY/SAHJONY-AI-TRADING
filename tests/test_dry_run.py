@@ -65,6 +65,8 @@ def main() -> int:
     _check(all(len(c["agents"]) == 12 for c in st["council"]), "all 12 agents voted per ticker")
     _check(len(st["env_catalog"]) >= 17, "env catalog exposed for dashboard")
     _check(st["health"]["voice"] is not None, "voice comms status reported")
+    _check(st["pnl"]["source"] == "offline-sim", "P&L source identifies simulation")
+    _check(st["pnl"]["broker_verified"] is False, "simulation P&L is not broker-verified")
 
     _check(len(db.equity_history()) == 8, "equity curve has 8 points in DB")
     _check(len(db.recent_trades()) >= 0, "trades table queryable")

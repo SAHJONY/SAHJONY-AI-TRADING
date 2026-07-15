@@ -179,6 +179,12 @@ def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[st
     eq0 = raw_eq0 if raw_eq0 > 0.0 else eq
     realized = state.get("realized_pnl", 0.0)
     premium = state.get("premium_collected", 0.0)
+    # Internal strategy-book P&L is not broker-verified unless a future
+    # reconciliation process explicitly attests it against venue records.
+    pnl_source = str(state.get("pnl_source") or mode)
+    pnl_broker_verified = bool(
+        state.get("pnl_broker_verified", False) and mode == "LIVE" and live_armed
+    )
 
     council = []
     for r in cycle_result.get("research", []):
@@ -309,6 +315,7 @@ def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[st
         "pnl": {
             "realized": round(realized, 2), "premium_collected": round(premium, 2),
             "total_return_pct": round((eq / eq0 - 1.0) * 100, 3) if eq0 > 0.0 else 0.0,
+            "source": pnl_source, "broker_verified": pnl_broker_verified,
         },
         "capital": _capital_block(db, eq, eq0),
         "capital_flows": db.capital_ledger(20),
