@@ -280,6 +280,8 @@ def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[st
     promotion_engine.sync({"key": row["key"], "name": row["name"], "kind": "strategy"}
                           for row in strategy_ranking)
     promotion = promotion_engine.snapshot()
+    from promotion import producer_health
+    promotion["producer_health"] = producer_health()
     promotion_by_key = {row["key"]: row for row in promotion["candidates"]}
     for row in strategy_ranking:
         row["promotion_stage"] = promotion_by_key[row["key"]]["stage"]

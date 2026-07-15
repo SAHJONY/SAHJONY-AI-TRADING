@@ -7,11 +7,14 @@ host application explicitly opts in at construction time.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import hashlib
 import hmac
 import json
 from typing import Any, Dict, Iterable, Mapping
+
+from promotion.artifacts import (ARTIFACT_SCHEMA_VERSION, DEFAULT_SOURCES,
+                                 artifact_digest, artifact_signature)
 
 
 STAGES = ("research", "backtest", "walk_forward", "paper", "shadow", "canary", "production")
@@ -35,13 +38,22 @@ class PromotionPipeline:
 
     def __init__(self, database, *, allow_canary: bool = False,
                  allow_production: bool = False, artifact_signing_key: str | bytes | None = None,
-                 require_signatures: bool = False) -> None:
+                 artifact_signing_keys: Mapping[str, str | bytes] | None = None,
+                 require_signatures: bool = False,
+                 allowed_sources: Iterable[str] | None = None,
+                 max_artifact_age_seconds: int = 7 * 24 * 60 * 60) -> None:
         self.database = database
         self.allow_canary = bool(allow_canary)
         self.allow_production = bool(allow_production)
         self.artifact_signing_key = (artifact_signing_key.encode() if isinstance(artifact_signing_key, str)
                                      else artifact_signing_key)
+        self.artifact_signing_keys = {
+            str(key_id): (key.encode() if isinstance(key, str) else key)
+            for key_id, key in (artifact_signing_keys or {}).items()
+        }
         self.require_signatures = bool(require_signatures)
+        self.allowed_sources = set(allowed_sources or DEFAULT_SOURCES.values())
+        self.max_artifact_age_seconds = max(1, int(max_artifact_age_seconds))
 
     def register(self, key: str, name: str, kind: str = "strategy") -> Dict[str, Any]:
         return self.database.upsert_promotion_candidate(key, name, kind)
@@ -127,6 +139,8 @@ class PromotionPipeline:
 
     def ingest_artifact(self, artifact: Mapping[str, Any], *, actor: str = "evidence-ingestor") -> Dict[str, Any]:
         """Verify, append, merge metrics, and apply fail-closed demotion checks."""
+        if "schema_version" in artifact or "candidate_id" in artifact:
+            return self._ingest_canonical_artifact(artifact, actor=actor)
         required = {"artifact_id", "candidate_key", "stage", "created_at", "source",
                     "payload", "payload_hash"}
         missing = sorted(required - set(artifact))
@@ -191,6 +205,97 @@ class PromotionPipeline:
         return {"artifact_id": stored["artifact_id"], "verified": True, "signed": signed,
                 "duplicate": False,
                 "breaches": breaches, "demotion": demotion, "execution_authority": False}
+
+    def _ingest_canonical_artifact(self, artifact: Mapping[str, Any], *, actor: str) -> Dict[str, Any]:
+        required = {"schema_version", "artifact_id", "candidate_id", "stage", "timestamp",
+                    "source", "metrics", "digest", "key_id"}
+        missing = sorted(required - set(artifact))
+        if missing:
+            raise ValueError(f"artifact missing fields: {', '.join(missing)}")
+        if str(artifact["schema_version"]) != ARTIFACT_SCHEMA_VERSION:
+            raise ValueError("unsupported artifact schema version")
+        source = str(artifact["source"])
+        if source not in self.allowed_sources:
+            raise ValueError(f"artifact source is not allowlisted: {source}")
+        key, stage = str(artifact["candidate_id"]), str(artifact["stage"])
+        self._candidate(key)
+        if stage not in ARTIFACT_STAGES:
+            raise ValueError(f"unsupported evidence stage: {stage}")
+        if not isinstance(artifact["metrics"], Mapping):
+            raise ValueError("artifact metrics must be an object")
+        expected_digest = artifact_digest(artifact)
+        if not hmac.compare_digest(str(artifact["digest"]), expected_digest):
+            raise ValueError("artifact digest mismatch")
+        signature, key_id = artifact.get("signature"), str(artifact["key_id"])
+        signed = False
+        if signature:
+            signing_key = self.artifact_signing_keys.get(key_id)
+            if not signing_key:
+                raise ValueError("artifact signing key id is unknown or retired")
+            if not hmac.compare_digest(str(signature), artifact_signature(expected_digest, signing_key)):
+                raise ValueError("artifact signature verification failed")
+            signed = True
+        elif self.require_signatures:
+            raise ValueError("artifact signature required by host policy")
+        try:
+            created = datetime.fromisoformat(str(artifact["timestamp"]).replace("Z", "+00:00"))
+            if created.tzinfo is None:
+                raise ValueError
+            created = created.astimezone(timezone.utc)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("artifact timestamp must be timezone-aware ISO-8601") from exc
+        now = datetime.now(timezone.utc)
+        if created < now - timedelta(seconds=self.max_artifact_age_seconds):
+            raise ValueError("artifact is stale")
+        if created > now + timedelta(minutes=5):
+            raise ValueError("artifact timestamp is too far in the future")
+        existing = self.database.promotion_artifact(str(artifact["artifact_id"]))
+        if existing:
+            if existing["payload_hash"] != expected_digest:
+                raise ValueError("artifact id already exists with different content")
+            return {"artifact_id": existing["artifact_id"], "verified": True,
+                    "signed": bool(existing.get("signature")), "duplicate": True,
+                    "breaches": [], "demotion": None, "execution_authority": False}
+        # A source/candidate/stage stream must move forward. Duplicate delivery was
+        # handled above, so an equal or older timestamp is a replay.
+        for prior in self.database.promotion_artifacts(10000):
+            if (prior["candidate_key"] == key and prior["stage"] == stage and
+                    prior["source"] == source):
+                prior_time = datetime.fromisoformat(str(prior["created_at"]).replace("Z", "+00:00"))
+                if created <= prior_time:
+                    raise ValueError("artifact timestamp is not monotonic (replay rejected)")
+                break
+        normalized = self._validate_metrics(stage, artifact["metrics"])
+        legacy = {
+            "artifact_id": artifact["artifact_id"], "candidate_key": key, "stage": stage,
+            "created_at": artifact["timestamp"], "source": source,
+            "payload": {"metrics": dict(artifact["metrics"]),
+                        "schema_version": artifact["schema_version"], "key_id": key_id},
+            "payload_hash": expected_digest, "signature": signature,
+            "signer": key_id if signed else None, "verified": True,
+        }
+        stored = self.database.record_promotion_artifact(legacy)
+        evidence = {f"{stage}_{name}": value for name, value in normalized.items()}
+        breaches = self._metric_breaches(stage, normalized)
+        if stage in ("backtest", "walk_forward"):
+            evidence[f"{stage}_passed"] = not breaches
+        self.update_evidence(key, evidence, actor=actor)
+        demotion = None
+        candidate = self._candidate(key)
+        if breaches and STAGES.index(candidate["stage"]) > 0:
+            demotion = self.demote(key, actor="automatic-risk-monitor", reason="; ".join(breaches),
+                                   detail={"artifact_id": stored["artifact_id"],
+                                           "triggering_metrics": breaches})
+        self.database.log_promotion_event(
+            key, candidate["stage"], candidate["stage"], "artifact_ingestion", actor,
+            not breaches, "verified canonical evidence artifact ingested",
+            {"artifact_id": stored["artifact_id"], "stage": stage, "signed": signed,
+             "schema_version": ARTIFACT_SCHEMA_VERSION, "key_id": key_id,
+             "breaches": breaches, "demoted_to": demotion["to_stage"] if demotion else None},
+        )
+        return {"artifact_id": stored["artifact_id"], "verified": True, "signed": signed,
+                "duplicate": False, "breaches": breaches, "demotion": demotion,
+                "execution_authority": False}
 
     def snapshot(self, audit_limit: int = 50) -> Dict[str, Any]:
         rows = self.database.promotion_candidates()

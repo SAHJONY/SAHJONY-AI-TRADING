@@ -25,9 +25,17 @@ def main() -> int:
     artifact = json.loads(args.artifact.read_text(encoding="utf-8"))
     database = Database()
     try:
+        active_key = os.getenv("PROMOTION_ARTIFACT_SIGNING_KEY") or None
+        key_id = os.getenv("PROMOTION_ARTIFACT_KEY_ID", "primary")
+        rotated = json.loads(os.getenv("PROMOTION_ARTIFACT_KEYS_JSON", "{}"))
+        if active_key:
+            rotated[key_id] = active_key
+        allowed = os.getenv("PROMOTION_ARTIFACT_ALLOWED_SOURCES")
         pipeline = PromotionPipeline(
             database,
-            artifact_signing_key=os.getenv("PROMOTION_ARTIFACT_SIGNING_KEY") or None,
+            artifact_signing_key=active_key,
+            artifact_signing_keys=rotated,
+            allowed_sources=allowed.split(",") if allowed else None,
             require_signatures=args.require_signature,
         )
         result = pipeline.ingest_artifact(artifact, actor=args.actor)

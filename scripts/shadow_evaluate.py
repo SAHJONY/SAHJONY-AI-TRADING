@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -19,6 +20,7 @@ if str(_ROOT) not in sys.path:
 
 from intelligence.shadow_eval import evaluate_all, observations_from_dicts
 from intelligence.autonomous_learning import AutonomousLearningPipeline
+from promotion import ShadowEvidenceProducer
 
 
 def load_jsonl(path: Path) -> list[dict]:
@@ -43,6 +45,9 @@ def main() -> int:
     parser.add_argument("--min-observations", type=int, default=100)
     parser.add_argument("--min-sharpe", type=float, default=0.25)
     parser.add_argument("--max-drawdown", type=float, default=0.10)
+    parser.add_argument("--evidence-queue", default="data/promotion_queue/shadow")
+    parser.add_argument("--no-evidence", action="store_true",
+                        help="Do not enqueue canonical promotion evidence")
     args = parser.parse_args()
 
     rows = observations_from_dicts(load_jsonl(Path(args.input)))
@@ -63,6 +68,26 @@ def main() -> int:
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(report, indent=2) + "\n")
+    if not args.no_evidence:
+        key = os.getenv("PROMOTION_ARTIFACT_SIGNING_KEY")
+        key_id = os.getenv("PROMOTION_ARTIFACT_KEY_ID", "primary")
+        producer = ShadowEvidenceProducer(
+            queue_dir=args.evidence_queue,
+            signing_keys={key_id: key} if key else None,
+            active_key_id=key_id if key else "unsigned",
+        )
+        report["evidence_artifacts"] = []
+        for score in report["providers"]:
+            artifact = producer.emit(score["provider"], {
+                "observations": score["observations"],
+                "sharpe": score["annualized_sharpe"],
+                "max_drawdown": score["max_drawdown"],
+                "calibration_error": score["calibration_error"],
+                "data_quality": score["schema_valid_rate"],
+                "operational_health": max(0.0, 1.0 - score["fallback_rate"]),
+            })
+            report["evidence_artifacts"].append(artifact["artifact_id"])
+        output.write_text(json.dumps(report, indent=2) + "\n")
     print(json.dumps(report, indent=2))
     return 0
 
