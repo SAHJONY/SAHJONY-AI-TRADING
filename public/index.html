@@ -396,16 +396,15 @@ async function refreshCreds(){
   try{ const {data}=await SB.from('broker_credentials').select('name').eq('desk_id',DESK.id);
     CREDS=(data||[]).map(r=>r.name); }catch(e){ CREDS=[]; }
 }
-// Live data straight from GitHub (raw) so the dashboard is always current and never
-// frozen by Vercel deploy limits; falls back to the co-located snapshot if needed.
+// Prefer the snapshot shipped with this deployment. GitHub is only a fallback.
 const STATUS_REMOTE='https://raw.githubusercontent.com/SAHJONY/SAHJONY-AI-TRADING/master/public/status.json';
 async function load(){
   try{
     await refreshDesk();
     if(DESK && DESK.last_status){ DATA=DESK.last_status; }
     else {
-      try{ const r=await fetch(STATUS_REMOTE+'?_='+Date.now(),{cache:'no-store'}); if(!r.ok)throw 0; DATA=await r.json(); }
-      catch(_){ const r=await fetch('./status.json?_='+Date.now()); DATA=await r.json(); }
+      try{ const r=await fetch('./status.json?_='+Date.now(),{cache:'no-store'}); if(!r.ok)throw 0; DATA=await r.json(); }
+      catch(_){ const r=await fetch(STATUS_REMOTE+'?_='+Date.now(),{cache:'no-store'}); DATA=await r.json(); }
     }
   }catch(e){
     try{const r=await fetch('./status.json?_='+Date.now());DATA=await r.json();}catch(_){DATA={_error:String(e)};}
@@ -419,15 +418,13 @@ async function load(){
 // Live real-money Robinhood snapshot (managed via the Robinhood MCP, written to
 // public/robinhood.json). Read-only on the dashboard — displayed alongside, and
 // kept strictly separate from, the paper desk. Absent file = panel hidden.
-// Fetch from GitHub raw FIRST (same as status.json): a fresh MCP snapshot is
-// published the instant it's committed to master, with no Vercel deploy needed
-// (the free tier caps deploys/day, and the 15-min desk commits burn that quota).
+// Prefer the snapshot deployed with this dashboard, then fall back to GitHub.
 const RH_REMOTE='https://raw.githubusercontent.com/SAHJONY/SAHJONY-AI-TRADING/master/public/robinhood.json';
 let RH=null;
 async function fetchRobinhood(){
-  try{ const r=await fetch(RH_REMOTE+'?_='+Date.now(),{cache:'no-store'}); if(!r.ok)throw 0; RH=await r.json(); return; }
+  try{ const r=await fetch('./robinhood.json?_='+Date.now(),{cache:'no-store'}); if(!r.ok)throw 0; RH=await r.json(); return; }
   catch(_){}
-  try{ const r=await fetch('./robinhood.json?_='+Date.now(),{cache:'no-store'}); RH=r.ok?await r.json():null; }
+  try{ const r=await fetch(RH_REMOTE+'?_='+Date.now(),{cache:'no-store'}); RH=r.ok?await r.json():null; }
   catch(_){ RH=null; }
 }
 
@@ -1385,7 +1382,7 @@ function robinhoodPanel(){
   body.innerHTML=`
     <div class="cb" style="border-color:var(--down);background:linear-gradient(90deg,rgba(255,92,108,.13),transparent);color:#ffd0d5;margin-bottom:10px">
       🔴 <b>REAL MONEY</b> — live ${esc(r.broker||'Robinhood')} account ${esc(r.account_mask||'')}${r.nickname?` · “${esc(r.nickname)}”`:''}.
-      Managed autonomously via the Robinhood MCP. This is <b>separate from the paper desk</b> above and is shown read-only.
+      Authenticated through the Robinhood MCP. This is <b>separate from the paper desk</b> above and is strictly read-only.
     </div>
     <div class="kpis" style="margin-bottom:10px">
       <div class="kpi" style="--accent:var(--down)"><div class="l">Account Value</div><div class="v">${money(r.total_value)}</div></div>
