@@ -9,6 +9,7 @@ import pytest
 
 from config import load_config
 from scripts.robinhood_mcp_gateway import (GatewayError, GatewayService,
+                                           TransientQuoteError,
                                            _validate_upstream_payload, make_handler)
 from utils.brokers.robinhood_mcp import RobinhoodMCPBroker
 from http.server import ThreadingHTTPServer
@@ -63,6 +64,67 @@ def test_invalid_quote_symbol_is_rejected_before_bridge_call():
     assert bridge.calls == []
 
 
+class ScriptedQuoteBridge:
+    def __init__(self, outcomes):
+        self.outcomes = iter(outcomes)
+        self.calls = []
+
+    def call(self, operation, **parameters):
+        self.calls.append((operation, parameters))
+        outcome = next(self.outcomes)
+        if isinstance(outcome, Exception):
+            raise outcome
+        return outcome
+
+
+def normalized_quote(symbol="NVDA"):
+    return {"symbol": symbol, "price": 212.79,
+            "as_of": datetime.now(timezone.utc).isoformat(),
+            "source": "robinhood-trading-mcp"}
+
+
+def test_quote_first_attempt_success_has_no_backoff():
+    bridge = ScriptedQuoteBridge([normalized_quote()])
+    sleeps = []
+    service = GatewayService(
+        bridge, expected_last4="1131", cache_seconds=0, sleep=sleeps.append
+    )
+    assert service.quote("NVDA")["price"] == 212.79
+    assert len(bridge.calls) == 1
+    assert sleeps == []
+
+
+def test_transient_quote_failure_then_success_retries_with_backoff():
+    bridge = ScriptedQuoteBridge([TransientQuoteError("upstream 502"), normalized_quote()])
+    sleeps = []
+    service = GatewayService(
+        bridge, expected_last4="1131", cache_seconds=0, sleep=sleeps.append
+    )
+    assert service.quote("NVDA")["symbol"] == "NVDA"
+    assert len(bridge.calls) == 2
+    assert sleeps == [1]
+
+
+def test_three_consecutive_transient_quote_failures_stop_after_three_attempts():
+    bridge = ScriptedQuoteBridge([TransientQuoteError("timeout") for _ in range(3)])
+    sleeps = []
+    service = GatewayService(
+        bridge, expected_last4="1131", cache_seconds=0, sleep=sleeps.append
+    )
+    with pytest.raises(TransientQuoteError, match="timeout"):
+        service.quote("NVDA")
+    assert len(bridge.calls) == 3
+    assert sleeps == [1, 2]
+
+
+def test_quote_failure_has_no_simulated_fallback():
+    bridge = ScriptedQuoteBridge([TransientQuoteError("non-JSON") for _ in range(3)])
+    service = GatewayService(bridge, expected_last4="1131", cache_seconds=0, sleep=lambda _: None)
+    with pytest.raises(TransientQuoteError, match="non-JSON"):
+        service.quote("NVDA")
+    assert len(bridge.calls) == 3
+
+
 def raw_quote(symbol="NVDA", *, age_seconds=0):
     stamp = (datetime.now(timezone.utc) - timedelta(seconds=age_seconds)).isoformat()
     regular_stamp = (datetime.now(timezone.utc) - timedelta(seconds=age_seconds + 60)).isoformat()
@@ -83,13 +145,19 @@ def test_documented_equity_quote_shape_is_normalized():
     assert _validate_upstream_payload("quote", top_level, {"symbol": "NVDA"})["price"] == 212.79
 
 
-def test_quote_identity_ambiguity_and_freshness_fail_closed():
+def test_wrong_symbol_response_is_rejected():
     with pytest.raises(GatewayError, match="does not match"):
         _validate_upstream_payload("quote", raw_quote("MSFT"), {"symbol": "NVDA"})
+
+
+def test_ambiguous_quote_response_is_rejected():
     ambiguous = raw_quote()
     ambiguous["data"]["results"].append(ambiguous["data"]["results"][0])
     with pytest.raises(GatewayError, match="ambiguous"):
         _validate_upstream_payload("quote", ambiguous, {"symbol": "NVDA"})
+
+
+def test_stale_quote_response_is_rejected():
     with pytest.raises(GatewayError, match="stale"):
         _validate_upstream_payload("quote", raw_quote(age_seconds=3600), {"symbol": "NVDA"})
 

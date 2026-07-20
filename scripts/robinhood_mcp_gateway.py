@@ -89,6 +89,10 @@ class GatewayError(RuntimeError):
     """An upstream or validation failure safe to report as a gateway error."""
 
 
+class TransientQuoteError(GatewayError):
+    """A quote transport/encoding failure that is safe to retry."""
+
+
 class CodexRobinhoodBridge:
     """Invoke the already-authenticated Codex MCP session for read operations."""
 
@@ -138,12 +142,15 @@ class CodexRobinhoodBridge:
                 )
             if completed.returncode != 0:
                 detail = completed.stderr.strip().splitlines()[-1:] or ["unknown failure"]
+                if operation == "quote" and re.search(r"\b502\b", completed.stderr):
+                    raise TransientQuoteError(f"authenticated MCP call failed: {detail[0]}")
                 raise GatewayError(f"authenticated MCP call failed: {detail[0]}")
             raw = Path(output_path).read_text(encoding="utf-8").strip()
-            payload = _parse_json_object(raw)
+            payload = _parse_json_object(raw, transient_non_json=operation == "quote")
             return _validate_upstream_payload(operation, payload, parameters)
         except subprocess.TimeoutExpired as exc:
-            raise GatewayError("authenticated MCP call timed out") from exc
+            error = TransientQuoteError if operation == "quote" else GatewayError
+            raise error("authenticated MCP call timed out") from exc
         except OSError as exc:
             raise GatewayError(f"could not run Codex: {exc}") from exc
         finally:
@@ -160,14 +167,15 @@ def _minimal_environment() -> dict[str, str]:
     return {key: value for key, value in os.environ.items() if key in allowed}
 
 
-def _parse_json_object(raw: str) -> dict[str, Any]:
+def _parse_json_object(raw: str, *, transient_non_json: bool = False) -> dict[str, Any]:
     if raw.startswith("```"):
         lines = raw.splitlines()
         raw = "\n".join(lines[1:-1])
     try:
         value = json.loads(raw)
     except json.JSONDecodeError as exc:
-        raise GatewayError("Codex returned a non-JSON response") from exc
+        error = TransientQuoteError if transient_non_json else GatewayError
+        raise error("Codex returned a non-JSON response") from exc
     if not isinstance(value, dict):
         raise GatewayError("Codex response was not an object")
     return value
@@ -304,12 +312,14 @@ class GatewayService:
         *,
         expected_last4: str,
         cache_seconds: float = 10.0,
+        sleep: Callable[[float], None] = time.sleep,
     ) -> None:
         if not re.fullmatch(r"\d{4}", expected_last4):
             raise ValueError("expected_last4 must contain exactly four digits")
         self.bridge = bridge
         self.expected_last4 = expected_last4
         self.cache_seconds = cache_seconds
+        self._sleep = sleep
         self._cache: dict[str, _CacheEntry] = {}
         self._cache_lock = threading.Lock()
 
@@ -340,9 +350,19 @@ class GatewayService:
             raise ValueError("invalid symbol")
         return self._cached(
             f"quote:{normalized}",
-            lambda: self.bridge.call("quote", symbol=normalized),
+            lambda: self._quote_with_retry(normalized),
             ttl=min(self.cache_seconds, 2.0),
         )
+
+    def _quote_with_retry(self, symbol: str) -> dict[str, Any]:
+        for attempt in range(3):
+            try:
+                return self.bridge.call("quote", symbol=symbol)
+            except TransientQuoteError:
+                if attempt == 2:
+                    raise
+                self._sleep(2 ** attempt)
+        raise AssertionError("unreachable")
 
     def health(self) -> dict[str, Any]:
         account = self.account()
