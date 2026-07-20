@@ -158,13 +158,19 @@ class RobinhoodMCPBroker:
         return result
 
     def get_price(self, symbol: str) -> float:
+        return float(self.get_quote_snapshot(symbol)["price"])
+
+    def get_quote_snapshot(self, symbol: str) -> Dict[str, Any]:
+        """Return the quote plus provenance used by read-only freshness gates."""
         if not self.online:
-            return self._sim.get_price(symbol)
+            return {"price": self._sim.get_price(symbol)}
         payload = self._request("GET", f"/quotes/{symbol.upper()}") or {}
         price = float(payload.get("price", payload.get("last", 0.0)) or 0.0)
         if price <= 0:
             raise RuntimeError(f"No valid MCP quote for {symbol}")
-        return price
+        return {"price": price, "retrieved_at": payload.get("retrieved_at"),
+                "feed_timestamp": payload.get("feed_timestamp"),
+                "exchange_timestamp": payload.get("exchange_timestamp")}
 
     def get_history(self, symbol: str, days: int = 120) -> Dict[str, np.ndarray]:
         if not self.online:
