@@ -200,6 +200,35 @@ def test_cli_malformed_positions_payload_fails_closed(monkeypatch):
     assert blockers == ["authenticated MCP positions evidence is invalid"]
 
 
+def test_hosted_publisher_is_optional_and_never_leaks_token(monkeypatch):
+    monkeypatch.delenv("BROKER_EVIDENCE_API_URL", raising=False)
+    monkeypatch.delenv("RUNTIME_STATUS_URL", raising=False)
+    monkeypatch.delenv("BROKER_EVIDENCE_PUBLISH_TOKEN", raising=False)
+    monkeypatch.delenv("RUNTIME_STATUS_PUBLISH_TOKEN", raising=False)
+    assert cli.publish_hosted({"execution_authority": False}) is False
+
+    monkeypatch.setenv("BROKER_EVIDENCE_API_URL", "https://example.test/api/broker-evidence")
+    monkeypatch.setenv("BROKER_EVIDENCE_PUBLISH_TOKEN", "publisher-secret")
+    seen = {}
+
+    class Response:
+        status = 202
+        def __enter__(self): return self
+        def __exit__(self, *args): return None
+
+    def open_request(request, timeout):
+        seen["url"] = request.full_url
+        seen["authorization"] = request.headers["Authorization"]
+        seen["body"] = json.loads(request.data)
+        return Response()
+
+    monkeypatch.setattr(cli, "urlopen", open_request)
+    assert cli.publish_hosted({"execution_authority": False}) is True
+    assert seen["url"].endswith("/api/broker-evidence")
+    assert seen["authorization"] == "Bearer publisher-secret"
+    assert "publisher-secret" not in json.dumps(seen["body"])
+
+
 def test_operations_dashboard_panel_javascript_parses(tmp_path):
     from pathlib import Path
     import subprocess

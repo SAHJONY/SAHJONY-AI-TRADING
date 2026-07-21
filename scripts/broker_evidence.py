@@ -10,6 +10,7 @@ from pathlib import Path
 import sys
 import tempfile
 from typing import Any
+from urllib.request import Request, urlopen
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -102,6 +103,27 @@ def produce(*, ui_path: Path | None = None, public_path: Path | None = None,
     return public
 
 
+def publish_hosted(report: dict[str, Any], *, timeout: int = 30) -> bool:
+    url = os.getenv("BROKER_EVIDENCE_API_URL", "").strip()
+    if not url:
+        runtime_url = os.getenv("RUNTIME_STATUS_URL", "").strip()
+        if runtime_url.endswith("/runtime-status"):
+            url = runtime_url.removesuffix("/runtime-status") + "/broker-evidence"
+    token = (os.getenv("BROKER_EVIDENCE_PUBLISH_TOKEN", "").strip()
+             or os.getenv("RUNTIME_STATUS_PUBLISH_TOKEN", "").strip())
+    if not url and not token:
+        return False
+    if not url or not token:
+        raise RuntimeError("broker evidence publication URL and token must both be configured")
+    req = Request(url, data=json.dumps(report, separators=(",", ":")).encode(), method="POST",
+                  headers={"Accept": "application/json", "Content-Type": "application/json",
+                           "Authorization": f"Bearer {token}"})
+    with urlopen(req, timeout=timeout) as response:  # noqa: S310 - configured hosted endpoint
+        if response.status != 202:
+            raise RuntimeError(f"broker evidence publisher returned HTTP {response.status}")
+    return True
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Produce read-only dual-source broker evidence")
     parser.add_argument("--ui-observation", type=Path)
@@ -119,6 +141,7 @@ def main() -> int:
     report = produce(ui_path=args.ui_observation, public_path=args.public_output,
                      private_dir=args.private_dir, value_tolerance=args.value_tolerance,
                      max_age_seconds=args.max_age_seconds)
+    publish_hosted(report)
     print(json.dumps(report, indent=2, sort_keys=True))
     return 0 if report["verdict"] == "RECONCILED" else 1
 
