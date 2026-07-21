@@ -56,8 +56,11 @@ class RobinhoodMCPBroker:
         self.expected_last4 = os.getenv("ROBINHOOD_MCP_EXPECTED_LAST4", "1131").strip()
         # The gateway owns the bounded upstream retry workflow.  These HTTP
         # budgets must cover that workflow without adding adapter-side retries.
+        self.health_timeout_seconds = max(
+            1, int(os.getenv("ROBINHOOD_MCP_HEALTH_TIMEOUT_SECONDS", "90"))
+        )
         self.account_timeout_seconds = max(
-            1, int(os.getenv("ROBINHOOD_MCP_ACCOUNT_TIMEOUT_SECONDS", "15"))
+            1, int(os.getenv("ROBINHOOD_MCP_ACCOUNT_TIMEOUT_SECONDS", "90"))
         )
         self.positions_timeout_seconds = max(
             1, int(os.getenv("ROBINHOOD_MCP_POSITIONS_TIMEOUT_SECONDS", "285"))
@@ -113,10 +116,15 @@ class RobinhoodMCPBroker:
             return None
 
     def _timeout_for(self, path: str) -> int:
+        if path == "/health":
+            return self.health_timeout_seconds
+        if path == "/account":
+            return self.account_timeout_seconds
         if path == "/positions":
             return self.positions_timeout_seconds
         if path.startswith("/quotes/"):
             return self.quote_timeout_seconds
+        # Optional/unknown read-only routes stay bounded conservatively.
         return self.account_timeout_seconds
 
     def _connect(self) -> None:

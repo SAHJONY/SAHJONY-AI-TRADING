@@ -295,14 +295,90 @@ def test_adapter_quote_beyond_total_route_budget_fails_closed_without_retry(monk
 
 def test_adapter_uses_explicit_route_specific_timeouts(monkeypatch):
     monkeypatch.setattr(RobinhoodMCPBroker, "_connect", lambda self: None)
+    monkeypatch.setenv("ROBINHOOD_MCP_HEALTH_TIMEOUT_SECONDS", "10")
     monkeypatch.setenv("ROBINHOOD_MCP_ACCOUNT_TIMEOUT_SECONDS", "11")
     monkeypatch.setenv("ROBINHOOD_MCP_POSITIONS_TIMEOUT_SECONDS", "222")
     monkeypatch.setenv("ROBINHOOD_MCP_QUOTE_TIMEOUT_SECONDS", "233")
     broker = RobinhoodMCPBroker(load_config())
-    assert broker._timeout_for("/health") == 11
+    assert broker._timeout_for("/health") == 10
     assert broker._timeout_for("/account") == 11
     assert broker._timeout_for("/positions") == 222
     assert broker._timeout_for("/quotes/VTI") == 233
+
+
+def test_health_and_account_defaults_cover_codex_bridge_budget(monkeypatch):
+    monkeypatch.setattr(RobinhoodMCPBroker, "_connect", lambda self: None)
+    for name in (
+        "ROBINHOOD_MCP_HEALTH_TIMEOUT_SECONDS",
+        "ROBINHOOD_MCP_ACCOUNT_TIMEOUT_SECONDS",
+        "ROBINHOOD_MCP_POSITIONS_TIMEOUT_SECONDS",
+        "ROBINHOOD_MCP_QUOTE_TIMEOUT_SECONDS",
+    ):
+        monkeypatch.delenv(name, raising=False)
+    broker = RobinhoodMCPBroker(load_config())
+    assert broker._timeout_for("/health") == 90
+    assert broker._timeout_for("/account") == 90
+    assert broker._timeout_for("/positions") == 285
+    assert broker._timeout_for("/quotes/VTI") == 285
+
+
+def test_health_and_account_after_15_seconds_succeed_with_one_request_each(monkeypatch):
+    monkeypatch.setenv("ROBINHOOD_MCP_GATEWAY_URL", "http://gateway.test")
+    monkeypatch.setenv("ROBINHOOD_MCP_GATEWAY_TOKEN", "x" * 32)
+    calls = []
+
+    class Response:
+        content = b"{}"
+
+        def __init__(self, payload):
+            self.payload = payload
+
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return self.payload
+
+    account = {
+        "account_number_last4": "1131", "account_type": "Agentic individual cash",
+        "status": "active", "equity": 25.94, "cash": 19.99, "buying_power": 19.99,
+    }
+
+    def request(method, url, **kwargs):
+        path = url.removeprefix("http://gateway.test")
+        calls.append((path, kwargs["timeout"]))
+        # These represent responses arriving after the old 15-second cutoff,
+        # while still inside each new finite 90-second route budget.
+        assert kwargs["timeout"] == 90
+        return Response({"ok": True} if path == "/health" else account)
+
+    monkeypatch.setattr(requests, "request", request)
+    broker = RobinhoodMCPBroker(load_config())
+    assert broker.online is True
+    assert broker.identity_verified is True
+    assert broker.execution_authority is False
+    assert broker.trading_armed is False
+    assert calls == [("/health", 90), ("/account", 90)]
+
+
+def test_health_and_account_beyond_90_seconds_fail_closed_without_retry(monkeypatch):
+    monkeypatch.setenv("ROBINHOOD_MCP_GATEWAY_URL", "http://gateway.test")
+    monkeypatch.setenv("ROBINHOOD_MCP_GATEWAY_TOKEN", "x" * 32)
+    calls = []
+
+    def request(method, url, **kwargs):
+        path = url.removeprefix("http://gateway.test")
+        calls.append((path, kwargs["timeout"]))
+        raise requests.Timeout("route budget exhausted")
+
+    monkeypatch.setattr(requests, "request", request)
+    broker = RobinhoodMCPBroker(load_config())
+    assert broker.online is False
+    assert broker.identity_verified is False
+    assert broker.mode == "offline"
+    assert broker.execution_authority is False
+    assert broker.trading_armed is False
+    assert calls == [("/health", 90), ("/account", 90)]
 
 
 def test_adapter_never_substitutes_sim_quote_when_mcp_offline(monkeypatch):
