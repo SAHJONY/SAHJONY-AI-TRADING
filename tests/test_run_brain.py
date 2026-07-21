@@ -94,6 +94,26 @@ def test_non_cash_value_with_no_visible_positions_fails_reconciliation(tmp_path)
     assert result["reconciliation"]["execution_blocked"] is True
 
 
+def test_unavailable_broker_snapshot_never_reconciles_empty_positions(tmp_path):
+    broker = BrokerTripwire()
+    broker.get_account = lambda: (_ for _ in ()).throw(RuntimeError("gateway timeout"))
+
+    result = run_analysis(
+        config(), broker, state={"positions": {}},
+        historical_provider=HistoryProvider(broker.quote_time),
+        status_path=tmp_path / "brain.json",
+    )
+
+    assert result["positions_reconciled"] is False
+    assert result["reconciliation"]["status"] == "unavailable"
+    assert result["reconciliation"]["execution_blocked"] is True
+    assert result["reconciliation"]["error"] == "broker snapshot unavailable"
+    assert "positions reconciliation unresolved" in result["blockers"]
+    assert result["execution_authority"] is False
+    assert result["trading_armed"] is False
+    assert broker.order_calls == []
+
+
 def test_cash_approximately_equal_to_equity_may_reconcile(tmp_path, monkeypatch):
     monkeypatch.setenv("BRAIN_RECONCILIATION_VALUE_TOLERANCE", "1.00")
     broker = BrokerTripwire(equity=20.49, cash=19.99)

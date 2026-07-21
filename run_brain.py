@@ -148,20 +148,25 @@ def run_analysis(cfg: Config, broker: Any, *, state: dict[str, Any] | None = Non
 
     account: dict[str, Any] = {}
     broker_positions: dict[str, Any] = {}
+    broker_snapshot_available = False
     try:
         account = dict(client.get_account() or {})
         broker_positions = dict(client.get_broker_positions() or {})
+        broker_snapshot_available = True
     except Exception as exc:
         blockers.append(f"broker account data unavailable: {type(exc).__name__}")
 
-    try:
-        reconciliation = reconcile_positions(
-            (state if state is not None else load_state()).get("positions", {}), broker_positions,
-            account_equity=account.get("equity"), account_cash=account.get("cash"),
-            value_tolerance=reconciliation_tolerance,
-        )
-    except Exception as exc:
-        reconciliation = unavailable_reconciliation(type(exc).__name__)
+    if not broker_snapshot_available:
+        reconciliation = unavailable_reconciliation("broker snapshot unavailable")
+    else:
+        try:
+            reconciliation = reconcile_positions(
+                (state if state is not None else load_state()).get("positions", {}), broker_positions,
+                account_equity=account.get("equity"), account_cash=account.get("cash"),
+                value_tolerance=reconciliation_tolerance,
+            )
+        except Exception as exc:
+            reconciliation = unavailable_reconciliation(type(exc).__name__)
     if not reconciliation.get("reconciled"):
         blockers.append("positions reconciliation unresolved")
 
