@@ -3,6 +3,7 @@ from datetime import datetime, timedelta, timezone
 import numpy as np
 import pytest
 
+import run_brain
 from config import Config
 from intelligence.historical_data import HistoricalEquityBars
 from run_brain import ReadOnlyBroker, run_analysis
@@ -197,7 +198,7 @@ def test_mcp_timestamp_and_provenance_propagate_to_status_file(tmp_path):
     assert quote["source"] == "robinhood-trading-mcp"
     assert quote["symbol"] == "AAPL"
     assert quote["price"] == 110.0
-    assert quote["age_seconds"] == 0.0
+    assert 0.0 <= quote["age_seconds"] < 1.0
     assert quote["fresh"] is True
     assert result["execution_authority"] is False
     assert result["trading_armed"] is False
@@ -232,6 +233,61 @@ def test_missing_benchmark_quote_marks_data_not_ready(tmp_path):
 
     assert result["data_ready"] is False
     assert result["quote_freshness"]["SPY"]["fresh"] is False
+    assert broker.order_calls == []
+
+
+def test_analysis_runner_does_not_retry_missing_quotes(tmp_path):
+    broker = BrokerTripwire()
+    quote_calls = []
+
+    def missing_quote(symbol):
+        quote_calls.append(symbol)
+        raise RuntimeError("gateway route budget exhausted")
+
+    broker.get_quote_snapshot = missing_quote
+    result = run_analysis(
+        config(), broker, state={"positions": {}},
+        historical_provider=HistoryProvider(broker.quote_time),
+        status_path=tmp_path / "brain.json",
+    )
+
+    assert quote_calls == ["AAPL", "SPY"]
+    assert "AAPL: missing quote (RuntimeError)" in result["blockers"]
+    assert "SPY: missing quote (RuntimeError)" in result["blockers"]
+    assert result["data_ready"] is False
+    assert result["execution_authority"] is False
+    assert result["trading_armed"] is False
+    assert broker.order_calls == []
+
+
+def test_later_quote_uses_validation_time_and_generated_at_uses_completion_time(
+        tmp_path, monkeypatch):
+    run_started = datetime(2026, 7, 20, 12, 0, tzinfo=timezone.utc)
+    quote_collected = run_started + timedelta(minutes=10)
+    report_completed = quote_collected + timedelta(seconds=30)
+    clock_values = iter([quote_collected, quote_collected, report_completed])
+
+    class AnalysisClock(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            value = next(clock_values)
+            return value if tz is None else value.astimezone(tz)
+
+    monkeypatch.setattr(run_brain, "datetime", AnalysisClock)
+    broker = BrokerTripwire(quote_collected)
+    result = run_analysis(
+        config(), broker, state={"positions": {}}, now=run_started,
+        historical_provider=HistoryProvider(run_started),
+        status_path=tmp_path / "brain.json",
+    )
+
+    assert result["data_ready"] is True
+    assert result["quote_freshness"]["AAPL"]["age_seconds"] == 0.0
+    assert result["quote_freshness"]["SPY"]["age_seconds"] == 0.0
+    assert result["quote_freshness"]["AAPL"]["source_timestamp"] == quote_collected.isoformat()
+    assert result["generated_at"] == report_completed.isoformat()
+    assert result["execution_authority"] is False
+    assert result["trading_armed"] is False
     assert broker.order_calls == []
 
 

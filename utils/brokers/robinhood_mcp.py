@@ -32,7 +32,6 @@ import requests
 
 from config import Config
 from utils.logger import get_logger
-from utils.sim_broker import SimBroker
 
 log = get_logger("robinhood_mcp")
 
@@ -52,18 +51,24 @@ class ReadOnlyQuote:
 class RobinhoodMCPBroker:
     def __init__(self, cfg: Config):
         self.cfg = cfg
-        self._sim = SimBroker(cfg)
         self.base_url = os.getenv("ROBINHOOD_MCP_GATEWAY_URL", "").strip().rstrip("/")
         self.token = os.getenv("ROBINHOOD_MCP_GATEWAY_TOKEN", "").strip()
         self.expected_last4 = os.getenv("ROBINHOOD_MCP_EXPECTED_LAST4", "1131").strip()
-        self.timeout_seconds = max(
-            15,
-            int(os.getenv("ROBINHOOD_MCP_TIMEOUT_SECONDS", "45")),
+        # The gateway owns the bounded upstream retry workflow.  These HTTP
+        # budgets must cover that workflow without adding adapter-side retries.
+        self.account_timeout_seconds = max(
+            1, int(os.getenv("ROBINHOOD_MCP_ACCOUNT_TIMEOUT_SECONDS", "15"))
+        )
+        self.positions_timeout_seconds = max(
+            1, int(os.getenv("ROBINHOOD_MCP_POSITIONS_TIMEOUT_SECONDS", "285"))
+        )
+        self.quote_timeout_seconds = max(
+            1, int(os.getenv("ROBINHOOD_MCP_QUOTE_TIMEOUT_SECONDS", "285"))
         )
         self._online = False
         self._identity_verified = False
         self._account: Dict[str, Any] = {}
-        self.mode = "offline-sim"
+        self.mode = "offline"
         self._connect()
 
     @property
@@ -99,7 +104,7 @@ class RobinhoodMCPBroker:
                 f"{self.base_url}{path}",
                 headers=self._headers(),
                 json=payload,
-                timeout=self.timeout_seconds,
+                timeout=self._timeout_for(path),
             )
             response.raise_for_status()
             return response.json() if response.content else {}
@@ -107,14 +112,21 @@ class RobinhoodMCPBroker:
             log.error("Robinhood MCP gateway %s %s failed: %s", method, path, exc)
             return None
 
+    def _timeout_for(self, path: str) -> int:
+        if path == "/positions":
+            return self.positions_timeout_seconds
+        if path.startswith("/quotes/"):
+            return self.quote_timeout_seconds
+        return self.account_timeout_seconds
+
     def _connect(self) -> None:
         if not self.base_url or not self.token:
-            log.warning("Robinhood MCP gateway not configured -> OFFLINE-SIM (no real orders).")
+            log.warning("Robinhood MCP gateway not configured -> OFFLINE (no fallback data).")
             return
         health = self._request("GET", "/health")
         account = self._request("GET", "/account")
         if not isinstance(health, dict) or not health.get("ok") or not isinstance(account, dict):
-            log.error("Robinhood MCP gateway/account probe failed -> OFFLINE-SIM.")
+            log.error("Robinhood MCP gateway/account probe failed -> OFFLINE.")
             return
         last4 = str(account.get("account_number_last4") or account.get("last4") or "")[-4:]
         account_type = str(account.get("account_type", "")).lower()
@@ -145,8 +157,10 @@ class RobinhoodMCPBroker:
 
     def get_account(self) -> Dict[str, float]:
         if not self.online:
-            return self._sim.get_account()
-        account = self._request("GET", "/account") or self._account
+            raise RuntimeError("authenticated Robinhood MCP account unavailable")
+        account = self._request("GET", "/account")
+        if not isinstance(account, dict):
+            raise RuntimeError("authenticated Robinhood MCP account unavailable")
         return {
             "equity": float(account.get("equity", 0.0) or 0.0),
             "cash": float(account.get("cash", 0.0) or 0.0),
@@ -157,20 +171,29 @@ class RobinhoodMCPBroker:
         if not self.online:
             raise RuntimeError("authenticated Robinhood MCP positions unavailable")
         payload = self._request("GET", "/positions")
-        if not isinstance(payload, (dict, list)):
+        if not isinstance(payload, dict):
             raise RuntimeError("authenticated Robinhood MCP positions unavailable")
-        rows = payload if isinstance(payload, list) else payload.get("positions", [])
+        rows = payload.get("positions")
         if not isinstance(rows, list):
             raise RuntimeError("authenticated Robinhood MCP positions response is invalid")
         result: Dict[str, Dict[str, float]] = {}
         for row in rows or []:
+            if not isinstance(row, dict):
+                raise RuntimeError("authenticated Robinhood MCP position row is invalid")
             symbol = str(row.get("symbol", "")).upper()
             if not symbol:
-                continue
+                raise RuntimeError("authenticated Robinhood MCP position symbol is invalid")
+            qty = float(row.get("qty", row.get("quantity", 0.0)) or 0.0)
+            market_value = float(row.get("market_value", 0.0) or 0.0)
+            avg_entry_price = float(
+                row.get("avg_entry_price", row.get("average_price", 0.0)) or 0.0
+            )
+            if not all(np.isfinite(value) for value in (qty, market_value, avg_entry_price)):
+                raise RuntimeError("authenticated Robinhood MCP position values are invalid")
             result[symbol] = {
-                "qty": float(row.get("qty", row.get("quantity", 0.0)) or 0.0),
-                "market_value": float(row.get("market_value", 0.0) or 0.0),
-                "avg_entry_price": float(row.get("avg_entry_price", row.get("average_price", 0.0)) or 0.0),
+                "qty": qty,
+                "market_value": market_value,
+                "avg_entry_price": avg_entry_price,
             }
         return result
 
@@ -186,13 +209,14 @@ class RobinhoodMCPBroker:
         returned_symbol = str(payload.get("symbol", "")).strip().upper()
         source = str(payload.get("source", "")).strip()
         as_of = payload.get("as_of")
-        if price <= 0 or returned_symbol != symbol.strip().upper():
+        if (not np.isfinite(price) or price <= 0 or returned_symbol != symbol.strip().upper()
+                or source != "robinhood-trading-mcp" or as_of in (None, "")):
             raise RuntimeError(f"No valid MCP quote for {symbol}")
         return ReadOnlyQuote(returned_symbol, price, source, as_of).as_dict()
 
     def get_history(self, symbol: str, days: int = 120) -> Dict[str, np.ndarray]:
         if not self.online:
-            return self._sim.get_history(symbol, days)
+            raise RuntimeError("authenticated Robinhood MCP history unavailable")
         payload = self._request("GET", f"/history/{symbol.upper()}?days={int(days)}") or {}
         closes = np.asarray(payload.get("closes", []), dtype=float)
         volumes = np.asarray(payload.get("volumes", []), dtype=float)
@@ -204,7 +228,7 @@ class RobinhoodMCPBroker:
 
     def is_market_open(self) -> bool:
         if not self.online:
-            return self._sim.is_market_open()
+            return False
         health = self._request("GET", "/health") or {}
         return bool(health.get("market_open", False))
 
@@ -227,5 +251,6 @@ class RobinhoodMCPBroker:
         }
 
     def advance_sim(self, steps: int = 1) -> None:
-        if not self.online:
-            self._sim.advance_sim(steps)
+        # Contract compatibility only. This authenticated adapter never owns a
+        # simulator and cannot advance into synthetic market data.
+        return None

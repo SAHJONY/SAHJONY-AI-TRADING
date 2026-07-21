@@ -172,6 +172,7 @@ def run_analysis(cfg: Config, broker: Any, *, state: dict[str, Any] | None = Non
     market: dict[str, tuple[MarketSnapshot, Any, dict[str, Any]]] = {}
     histories: dict[str, dict[str, Any]] = {}
     quotes: dict[str, dict[str, Any]] = {}
+    quote_freshness: dict[str, dict[str, Any]] = {}
     provider = historical_provider
     if provider is None:
         try:
@@ -204,18 +205,23 @@ def run_analysis(cfg: Config, broker: Any, *, state: dict[str, Any] | None = Non
             if price <= 0:
                 raise ValueError("missing quote")
             quotes[symbol] = {**quote, "price": price}
+            # Validate against the wall clock when this particular quote is
+            # observed, not the timestamp captured when the run began.
+            quote_freshness[symbol] = _freshness(
+                quotes[symbol], datetime.now(timezone.utc), max_age, max_future_skew
+            )
         except Exception as exc:
             blockers.append(f"{symbol}: missing quote ({type(exc).__name__})")
 
     bench = np.asarray(histories.get(cfg.benchmark, {}).get("closes", []), dtype=float)
-    quote_freshness = {
-        symbol: (_freshness(quotes[symbol], now, max_age, max_future_skew) if symbol in quotes else
-                 {"fresh": False, "age_seconds": None, "max_age_seconds": max_age,
-                  "max_future_skew_seconds": max_future_skew,
-                  "symbol": symbol, "price": None, "source": None,
-                  "source_timestamp": None})
-        for symbol in symbols
-    }
+    for symbol in symbols:
+        if symbol not in quote_freshness:
+            quote_freshness[symbol] = {
+                "fresh": False, "age_seconds": None, "max_age_seconds": max_age,
+                "max_future_skew_seconds": max_future_skew,
+                "symbol": symbol, "price": None, "source": None,
+                "source_timestamp": None,
+            }
     for symbol, freshness in quote_freshness.items():
         if symbol in quotes and not freshness["fresh"]:
             blockers.append(f"{symbol}: stale quote")
@@ -308,7 +314,8 @@ def run_analysis(cfg: Config, broker: Any, *, state: dict[str, Any] | None = Non
         "value_tolerance": reconciliation.get("value_tolerance", reconciliation_tolerance),
     }
     status = {
-        "generated_at": now.isoformat(), "mode": "ANALYSIS_ONLY", "broker": cfg.broker,
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "mode": "ANALYSIS_ONLY", "broker": cfg.broker,
         "trading_armed": False, "execution_authority": False,
         "data_ready": data_ready, "funding_ready": funding_ready,
         "positions_reconciled": bool(reconciliation.get("reconciled")),

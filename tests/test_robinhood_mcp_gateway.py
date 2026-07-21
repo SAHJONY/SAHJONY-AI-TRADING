@@ -6,6 +6,7 @@ from datetime import datetime, timedelta, timezone
 from http.client import HTTPConnection
 
 import pytest
+import requests
 
 from config import load_config
 from scripts.robinhood_mcp_gateway import (GatewayError, GatewayService,
@@ -227,10 +228,86 @@ def test_adapter_preserves_authenticated_quote_provenance(monkeypatch):
     }
 
 
+@pytest.mark.parametrize("overrides", [
+    {"source": "synthetic"},
+    {"source": ""},
+    {"as_of": None},
+    {"as_of": ""},
+])
+def test_adapter_rejects_quote_without_authenticated_provenance(monkeypatch, overrides):
+    monkeypatch.setattr(RobinhoodMCPBroker, "_connect", lambda self: None)
+    broker = RobinhoodMCPBroker(load_config())
+    broker._online = True
+    payload = {"symbol": "VTI", "price": 321.45,
+               "as_of": datetime.now(timezone.utc).isoformat(),
+               "source": "robinhood-trading-mcp", **overrides}
+    broker._request = lambda *args, **kwargs: payload
+    with pytest.raises(RuntimeError, match="No valid MCP quote"):
+        broker.get_quote_snapshot("VTI")
+
+
+def test_adapter_quote_after_45_seconds_within_route_budget_succeeds(monkeypatch):
+    monkeypatch.setattr(RobinhoodMCPBroker, "_connect", lambda self: None)
+    monkeypatch.setenv("ROBINHOOD_MCP_QUOTE_TIMEOUT_SECONDS", "60")
+    broker = RobinhoodMCPBroker(load_config())
+    broker.base_url = "http://gateway.test"
+    broker._online = True
+    calls = []
+
+    class Response:
+        content = b"{}"
+
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return normalized_quote("VTI")
+
+    def request(*args, **kwargs):
+        calls.append((args, kwargs))
+        # A 46-second gateway response would exceed the former 45-second
+        # timeout, but remains inside this route's configured 60-second budget.
+        assert kwargs["timeout"] == 60
+        return Response()
+
+    monkeypatch.setattr(requests, "request", request)
+    assert broker.get_quote_snapshot("VTI")["price"] == 212.79
+    assert len(calls) == 1
+
+
+def test_adapter_quote_beyond_total_route_budget_fails_closed_without_retry(monkeypatch):
+    monkeypatch.setattr(RobinhoodMCPBroker, "_connect", lambda self: None)
+    monkeypatch.setenv("ROBINHOOD_MCP_QUOTE_TIMEOUT_SECONDS", "60")
+    broker = RobinhoodMCPBroker(load_config())
+    broker.base_url = "http://gateway.test"
+    broker._online = True
+    calls = []
+
+    def request(*args, **kwargs):
+        calls.append((args, kwargs))
+        raise requests.Timeout("route budget exhausted")
+
+    monkeypatch.setattr(requests, "request", request)
+    with pytest.raises(RuntimeError, match="No valid MCP quote"):
+        broker.get_quote_snapshot("VTI")
+    assert len(calls) == 1
+
+
+def test_adapter_uses_explicit_route_specific_timeouts(monkeypatch):
+    monkeypatch.setattr(RobinhoodMCPBroker, "_connect", lambda self: None)
+    monkeypatch.setenv("ROBINHOOD_MCP_ACCOUNT_TIMEOUT_SECONDS", "11")
+    monkeypatch.setenv("ROBINHOOD_MCP_POSITIONS_TIMEOUT_SECONDS", "222")
+    monkeypatch.setenv("ROBINHOOD_MCP_QUOTE_TIMEOUT_SECONDS", "233")
+    broker = RobinhoodMCPBroker(load_config())
+    assert broker._timeout_for("/health") == 11
+    assert broker._timeout_for("/account") == 11
+    assert broker._timeout_for("/positions") == 222
+    assert broker._timeout_for("/quotes/VTI") == 233
+
+
 def test_adapter_never_substitutes_sim_quote_when_mcp_offline(monkeypatch):
     monkeypatch.setattr(RobinhoodMCPBroker, "_connect", lambda self: None)
     broker = RobinhoodMCPBroker(load_config())
-    broker._sim.get_price = lambda symbol: pytest.fail("simulated quote was requested")
     with pytest.raises(RuntimeError, match="authenticated"):
         broker.get_quote_snapshot("VTI")
 
@@ -238,9 +315,63 @@ def test_adapter_never_substitutes_sim_quote_when_mcp_offline(monkeypatch):
 def test_adapter_never_substitutes_sim_positions_when_mcp_offline(monkeypatch):
     monkeypatch.setattr(RobinhoodMCPBroker, "_connect", lambda self: None)
     broker = RobinhoodMCPBroker(load_config())
-    broker._sim.get_broker_positions = lambda: pytest.fail("simulated positions were requested")
     with pytest.raises(RuntimeError, match="authenticated"):
         broker.get_broker_positions()
+
+
+def test_adapter_never_substitutes_sim_account_or_history_when_offline(monkeypatch):
+    monkeypatch.setattr(RobinhoodMCPBroker, "_connect", lambda self: None)
+    broker = RobinhoodMCPBroker(load_config())
+    assert broker.mode == "offline"
+    with pytest.raises(RuntimeError, match="authenticated.*account"):
+        broker.get_account()
+    with pytest.raises(RuntimeError, match="authenticated.*history"):
+        broker.get_history("VTI")
+    assert broker.is_market_open() is False
+    assert broker.advance_sim() is None
+
+
+def test_online_account_and_positions_fail_closed_on_missing_payload(monkeypatch):
+    monkeypatch.setattr(RobinhoodMCPBroker, "_connect", lambda self: None)
+    broker = RobinhoodMCPBroker(load_config())
+    broker._online = True
+    broker._account = {"equity": 999, "cash": 999, "buying_power": 999}
+    broker._request = lambda *args, **kwargs: None
+    with pytest.raises(RuntimeError, match="authenticated.*account"):
+        broker.get_account()
+    with pytest.raises(RuntimeError, match="authenticated.*positions"):
+        broker.get_broker_positions()
+
+    broker._request = lambda *args, **kwargs: {}
+    with pytest.raises(RuntimeError, match="positions response is invalid"):
+        broker.get_broker_positions()
+
+
+@pytest.mark.parametrize("row", [
+    {"symbol": "", "qty": 1},
+    {"symbol": "VTI", "qty": float("nan")},
+    {"symbol": "VTI", "market_value": float("inf")},
+])
+def test_adapter_rejects_malformed_authenticated_position_rows(monkeypatch, row):
+    monkeypatch.setattr(RobinhoodMCPBroker, "_connect", lambda self: None)
+    broker = RobinhoodMCPBroker(load_config())
+    broker._online = True
+    broker._request = lambda *args, **kwargs: {"positions": [row]}
+    with pytest.raises(RuntimeError, match="position"):
+        broker.get_broker_positions()
+
+
+def test_adapter_rejects_nonfinite_quote(monkeypatch):
+    monkeypatch.setattr(RobinhoodMCPBroker, "_connect", lambda self: None)
+    broker = RobinhoodMCPBroker(load_config())
+    broker._online = True
+    broker._request = lambda *args, **kwargs: {
+        "symbol": "VTI", "price": float("nan"),
+        "as_of": datetime.now(timezone.utc).isoformat(),
+        "source": "robinhood-trading-mcp",
+    }
+    with pytest.raises(RuntimeError, match="No valid MCP quote"):
+        broker.get_quote_snapshot("VTI")
 
 
 def test_http_auth_and_write_methods_are_rejected():
