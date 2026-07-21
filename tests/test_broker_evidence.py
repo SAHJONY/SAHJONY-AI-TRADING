@@ -239,3 +239,9 @@ def test_operations_dashboard_panel_javascript_parses(tmp_path):
     path = tmp_path / "operations.js"
     path.write_text(script, encoding="utf-8")
     subprocess.run(["node", "--check", str(path)], check=True, capture_output=True, text=True)
+
+
+def test_generated_evidence_is_excluded_from_git_and_vercel_deployments():
+    from pathlib import Path
+    assert "public/broker_evidence.json" in Path(".gitignore").read_text(encoding="utf-8")
+    assert "public/broker_evidence.json" in Path(".vercelignore").read_text(encoding="utf-8")
