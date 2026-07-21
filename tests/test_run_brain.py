@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, timezone
 
 import numpy as np
+import pytest
 
 from config import Config
 from intelligence.historical_data import HistoricalEquityBars
@@ -14,21 +15,27 @@ class BrokerTripwire:
     trading_armed = False
     execution_authority = False
 
-    def __init__(self, quote_time=None):
+    def __init__(self, quote_time=None, *, equity=10_000, cash=10_000,
+                 positions=None, quote_overrides=None):
         self.quote_time = quote_time or datetime.now(timezone.utc)
+        self.equity = equity
+        self.cash = cash
+        self.positions = positions or {}
+        self.quote_overrides = quote_overrides or {}
         self.order_calls = []
 
     def get_account(self):
-        return {"equity": 10_000, "cash": 8_000, "buying_power": 8_000}
+        return {"equity": self.equity, "cash": self.cash, "buying_power": self.cash}
 
     def get_broker_positions(self):
-        return {}
+        return self.positions
 
     def get_history(self, symbol, days=250):
         raise AssertionError("Robinhood history must never be used")
 
     def get_quote_snapshot(self, symbol):
-        return {"price": 110.0, "exchange_timestamp": self.quote_time.isoformat()}
+        return {"symbol": symbol, "price": 110.0, "source": "robinhood-trading-mcp",
+                "as_of": self.quote_time.isoformat(), **self.quote_overrides}
 
     def _order(self, *args, **kwargs):
         self.order_calls.append((args, kwargs))
@@ -73,6 +80,45 @@ def test_analysis_runner_never_exposes_or_calls_order_methods(tmp_path):
     assert result["decisions"][0]["action"] == "OBSERVE_ONLY"
     assert result["data_ready"] is True
     assert result["positions_reconciled"] is True
+    assert result["reconciliation"]["execution_blocked"] is True
+
+
+def test_non_cash_value_with_no_visible_positions_fails_reconciliation(tmp_path):
+    broker = BrokerTripwire(equity=25.93, cash=19.99)
+    result = run_analysis(config(), broker, state={"positions": {}},
+                          historical_provider=HistoryProvider(broker.quote_time),
+                          status_path=tmp_path / "brain.json")
+    assert result["positions_reconciled"] is False
+    assert result["reconciliation"]["unexplained_value"] == pytest.approx(5.94)
+    assert result["reconciliation"]["execution_blocked"] is True
+
+
+def test_cash_approximately_equal_to_equity_may_reconcile(tmp_path, monkeypatch):
+    monkeypatch.setenv("BRAIN_RECONCILIATION_VALUE_TOLERANCE", "1.00")
+    broker = BrokerTripwire(equity=20.49, cash=19.99)
+    result = run_analysis(config(), broker, state={"positions": {}},
+                          historical_provider=HistoryProvider(broker.quote_time),
+                          status_path=tmp_path / "brain.json")
+    assert result["positions_reconciled"] is True
+
+
+def test_visible_matching_position_and_value_reconcile(tmp_path):
+    position = {"AAPL": {"qty": 2, "market_value": 220.0}}
+    broker = BrokerTripwire(equity=1_220, cash=1_000, positions=position)
+    result = run_analysis(config(), broker, state={"positions": {"AAPL": {"shares": 2}}},
+                          historical_provider=HistoryProvider(broker.quote_time),
+                          status_path=tmp_path / "brain.json")
+    assert result["positions_reconciled"] is True
+
+
+def test_unexplained_value_above_configured_tolerance_fails(tmp_path, monkeypatch):
+    monkeypatch.setenv("BRAIN_RECONCILIATION_VALUE_TOLERANCE", "0.25")
+    broker = BrokerTripwire(equity=100.26, cash=100.0)
+    result = run_analysis(config(), broker, state={"positions": {}},
+                          historical_provider=HistoryProvider(broker.quote_time),
+                          status_path=tmp_path / "brain.json")
+    assert result["positions_reconciled"] is False
+    assert result["reconciliation"]["value_tolerance"] == 0.25
 
 
 def test_stale_quote_fails_closed_without_order_calls(tmp_path, monkeypatch):
@@ -90,8 +136,75 @@ def test_stale_quote_fails_closed_without_order_calls(tmp_path, monkeypatch):
     assert broker.order_calls == []
 
 
+@pytest.mark.parametrize("quote_overrides", [
+    {"as_of": None},
+    {"as_of": "not-a-timestamp"},
+    {"as_of": "2026-07-20T12:00:00"},
+])
+def test_missing_or_invalid_mcp_timestamp_fails_closed(tmp_path, quote_overrides):
+    now = datetime.now(timezone.utc)
+    broker = BrokerTripwire(now, quote_overrides=quote_overrides)
+    result = run_analysis(config(), broker, state={"positions": {}}, now=now,
+                          historical_provider=HistoryProvider(now),
+                          status_path=tmp_path / "brain.json")
+    assert result["data_ready"] is False
+    assert result["quote_freshness"]["AAPL"]["fresh"] is False
+    assert broker.order_calls == []
+
+
+def test_120_second_future_mcp_timestamp_passes_with_zero_age(tmp_path):
+    now = datetime.now(timezone.utc)
+    broker = BrokerTripwire(now + timedelta(seconds=120))
+    result = run_analysis(config(), broker, state={"positions": {}}, now=now,
+                          historical_provider=HistoryProvider(now),
+                          status_path=tmp_path / "brain.json")
+    assert result["data_ready"] is True
+    assert result["quote_freshness"]["AAPL"]["age_seconds"] == 0.0
+    assert result["quote_freshness"]["AAPL"]["source_timestamp"] == broker.quote_time.isoformat()
+
+
+def test_future_mcp_timestamp_beyond_configured_skew_fails_closed(tmp_path, monkeypatch):
+    now = datetime.now(timezone.utc)
+    monkeypatch.setenv("BRAIN_MAX_FUTURE_QUOTE_SKEW_SECONDS", "60")
+    broker = BrokerTripwire(now + timedelta(seconds=61))
+    result = run_analysis(config(), broker, state={"positions": {}}, now=now,
+                          historical_provider=HistoryProvider(now),
+                          status_path=tmp_path / "brain.json")
+    assert result["data_ready"] is False
+    assert result["quote_freshness"]["AAPL"]["fresh"] is False
+
+
+def test_wrong_symbol_quote_fails_closed(tmp_path):
+    broker = BrokerTripwire(quote_overrides={"symbol": "MSFT"})
+    result = run_analysis(config(), broker, state={"positions": {}},
+                          historical_provider=HistoryProvider(broker.quote_time),
+                          status_path=tmp_path / "brain.json")
+    assert result["data_ready"] is False
+    assert result["quote_freshness"]["AAPL"]["fresh"] is False
+    assert broker.order_calls == []
+
+
+def test_mcp_timestamp_and_provenance_propagate_to_status_file(tmp_path):
+    import json
+    now = datetime.now(timezone.utc)
+    path = tmp_path / "brain.json"
+    broker = BrokerTripwire(now)
+    result = run_analysis(config(), broker, state={"positions": {}}, now=now,
+                          historical_provider=HistoryProvider(now), status_path=path)
+    saved = json.loads(path.read_text())
+    quote = saved["quote_freshness"]["AAPL"]
+    assert quote["source_timestamp"] == now.isoformat()
+    assert quote["source"] == "robinhood-trading-mcp"
+    assert quote["symbol"] == "AAPL"
+    assert quote["price"] == 110.0
+    assert quote["age_seconds"] == 0.0
+    assert quote["fresh"] is True
+    assert result["execution_authority"] is False
+    assert result["trading_armed"] is False
+
+
 def test_identity_and_reconciliation_fail_closed(tmp_path):
-    broker = BrokerTripwire()
+    broker = BrokerTripwire(equity=10_200, cash=10_000)
     broker.identity_verified = False
     broker.get_broker_positions = lambda: {"MSFT": {"qty": 2, "market_value": 200}}
 

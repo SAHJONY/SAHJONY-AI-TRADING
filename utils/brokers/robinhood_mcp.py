@@ -24,6 +24,7 @@ adapter therefore rejects all Robinhood MCP order submissions locally.
 from __future__ import annotations
 
 import os
+from dataclasses import dataclass
 from typing import Any, Dict, List
 
 import numpy as np
@@ -34,6 +35,18 @@ from utils.logger import get_logger
 from utils.sim_broker import SimBroker
 
 log = get_logger("robinhood_mcp")
+
+
+@dataclass(frozen=True)
+class ReadOnlyQuote:
+    symbol: str
+    price: float
+    source: str
+    as_of: str | None
+
+    def as_dict(self) -> Dict[str, Any]:
+        return {"symbol": self.symbol, "price": self.price,
+                "source": self.source, "as_of": self.as_of}
 
 
 class RobinhoodMCPBroker:
@@ -142,9 +155,13 @@ class RobinhoodMCPBroker:
 
     def get_broker_positions(self) -> Dict[str, Dict[str, float]]:
         if not self.online:
-            return self._sim.get_broker_positions()
-        payload = self._request("GET", "/positions") or {}
-        rows = payload.get("positions", payload if isinstance(payload, list) else [])
+            raise RuntimeError("authenticated Robinhood MCP positions unavailable")
+        payload = self._request("GET", "/positions")
+        if not isinstance(payload, (dict, list)):
+            raise RuntimeError("authenticated Robinhood MCP positions unavailable")
+        rows = payload if isinstance(payload, list) else payload.get("positions", [])
+        if not isinstance(rows, list):
+            raise RuntimeError("authenticated Robinhood MCP positions response is invalid")
         result: Dict[str, Dict[str, float]] = {}
         for row in rows or []:
             symbol = str(row.get("symbol", "")).upper()
@@ -163,14 +180,15 @@ class RobinhoodMCPBroker:
     def get_quote_snapshot(self, symbol: str) -> Dict[str, Any]:
         """Return the quote plus provenance used by read-only freshness gates."""
         if not self.online:
-            return {"price": self._sim.get_price(symbol)}
+            raise RuntimeError("authenticated Robinhood MCP quote unavailable")
         payload = self._request("GET", f"/quotes/{symbol.upper()}") or {}
         price = float(payload.get("price", payload.get("last", 0.0)) or 0.0)
-        if price <= 0:
+        returned_symbol = str(payload.get("symbol", "")).strip().upper()
+        source = str(payload.get("source", "")).strip()
+        as_of = payload.get("as_of")
+        if price <= 0 or returned_symbol != symbol.strip().upper():
             raise RuntimeError(f"No valid MCP quote for {symbol}")
-        return {"price": price, "retrieved_at": payload.get("retrieved_at"),
-                "feed_timestamp": payload.get("feed_timestamp"),
-                "exchange_timestamp": payload.get("exchange_timestamp")}
+        return ReadOnlyQuote(returned_symbol, price, source, as_of).as_dict()
 
     def get_history(self, symbol: str, days: int = 120) -> Dict[str, np.ndarray]:
         if not self.online:

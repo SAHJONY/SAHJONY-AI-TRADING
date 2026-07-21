@@ -72,8 +72,8 @@ class ReadOnlyBroker:
         getter = getattr(self._broker, "get_quote_snapshot", None)
         if callable(getter):
             return dict(getter(symbol) or {})
-        return {"price": self._broker.get_price(symbol),
-                "retrieved_at": datetime.now(timezone.utc).isoformat()}
+        return {"symbol": symbol.upper(), "price": self._broker.get_price(symbol),
+                "source": None, "as_of": None}
 
 
 def _timestamp(value: Any) -> datetime | None:
@@ -87,19 +87,25 @@ def _timestamp(value: Any) -> datetime | None:
             return datetime.fromtimestamp(number, tz=timezone.utc)
         text = str(value).strip().replace("Z", "+00:00")
         parsed = datetime.fromisoformat(text)
-        return parsed.replace(tzinfo=timezone.utc) if parsed.tzinfo is None else parsed.astimezone(timezone.utc)
+        return None if parsed.tzinfo is None else parsed.astimezone(timezone.utc)
     except (ValueError, TypeError, OverflowError, OSError):
         return None
 
 
-def _freshness(quote: dict[str, Any], now: datetime, max_age: int) -> dict[str, Any]:
-    source = (quote.get("exchange_timestamp") or quote.get("feed_timestamp")
-              or quote.get("retrieved_at"))
+def _freshness(
+    quote: dict[str, Any], now: datetime, max_age: int, max_future_skew: int
+) -> dict[str, Any]:
+    source = quote.get("as_of")
     observed = _timestamp(source)
-    age = max(0.0, (now - observed).total_seconds()) if observed else None
-    fresh = observed is not None and age is not None and age <= max_age
+    raw_age = (now - observed).total_seconds() if observed else None
+    within_future_skew = raw_age is not None and raw_age >= -max_future_skew
+    age = max(0.0, raw_age) if within_future_skew else raw_age
+    fresh = observed is not None and age is not None and within_future_skew and age <= max_age
     return {"fresh": fresh, "age_seconds": round(age, 3) if age is not None else None,
-            "max_age_seconds": max_age, "source_timestamp": source}
+            "max_age_seconds": max_age, "max_future_skew_seconds": max_future_skew,
+            "symbol": quote.get("symbol"),
+            "price": quote.get("price"), "source": quote.get("source"),
+            "source_timestamp": source}
 
 
 def _safe_number(value: Any) -> float:
@@ -120,6 +126,12 @@ def run_analysis(cfg: Config, broker: Any, *, state: dict[str, Any] | None = Non
     client = ReadOnlyBroker(broker)
     now = now or datetime.now(timezone.utc)
     max_age = max(1, int(os.getenv("BRAIN_MAX_QUOTE_AGE_SECONDS", "300")))
+    max_future_skew = max(
+        0, int(os.getenv("BRAIN_MAX_FUTURE_QUOTE_SKEW_SECONDS", "180"))
+    )
+    reconciliation_tolerance = max(
+        0.0, float(os.getenv("BRAIN_RECONCILIATION_VALUE_TOLERANCE", "1.00"))
+    )
     blockers: list[str] = []
 
     if client.trading_armed:
@@ -144,7 +156,9 @@ def run_analysis(cfg: Config, broker: Any, *, state: dict[str, Any] | None = Non
 
     try:
         reconciliation = reconcile_positions(
-            (state if state is not None else load_state()).get("positions", {}), broker_positions
+            (state if state is not None else load_state()).get("positions", {}), broker_positions,
+            account_equity=account.get("equity"), account_cash=account.get("cash"),
+            value_tolerance=reconciliation_tolerance,
         )
     except Exception as exc:
         reconciliation = unavailable_reconciliation(type(exc).__name__)
@@ -182,6 +196,10 @@ def run_analysis(cfg: Config, broker: Any, *, state: dict[str, Any] | None = Non
             blockers.append(f"{symbol}: invalid history ({type(exc).__name__}: {exc})")
         try:
             quote = client.get_quote_snapshot(symbol)
+            if str(quote.get("symbol", "")).strip().upper() != symbol.upper():
+                raise ValueError("quote symbol mismatch")
+            if is_mcp and quote.get("source") != "robinhood-trading-mcp":
+                raise ValueError("quote source mismatch")
             price = _safe_number(quote.get("price"))
             if price <= 0:
                 raise ValueError("missing quote")
@@ -191,8 +209,10 @@ def run_analysis(cfg: Config, broker: Any, *, state: dict[str, Any] | None = Non
 
     bench = np.asarray(histories.get(cfg.benchmark, {}).get("closes", []), dtype=float)
     quote_freshness = {
-        symbol: (_freshness(quotes[symbol], now, max_age) if symbol in quotes else
+        symbol: (_freshness(quotes[symbol], now, max_age, max_future_skew) if symbol in quotes else
                  {"fresh": False, "age_seconds": None, "max_age_seconds": max_age,
+                  "max_future_skew_seconds": max_future_skew,
+                  "symbol": symbol, "price": None, "source": None,
                   "source_timestamp": None})
         for symbol in symbols
     }
@@ -284,6 +304,8 @@ def run_analysis(cfg: Config, broker: Any, *, state: dict[str, Any] | None = Non
         "broker_position_count": reconciliation.get("broker_position_count", 0),
         "difference_count": len(reconciliation.get("differences", [])),
         "error": reconciliation.get("error"),
+        "unexplained_value": reconciliation.get("unexplained_value"),
+        "value_tolerance": reconciliation.get("value_tolerance", reconciliation_tolerance),
     }
     status = {
         "generated_at": now.isoformat(), "mode": "ANALYSIS_ONLY", "broker": cfg.broker,

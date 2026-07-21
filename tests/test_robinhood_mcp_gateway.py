@@ -9,7 +9,7 @@ import pytest
 
 from config import load_config
 from scripts.robinhood_mcp_gateway import (GatewayError, GatewayService,
-                                           TransientQuoteError,
+                                           TransientPositionsError, TransientQuoteError,
                                            _validate_upstream_payload, make_handler)
 from utils.brokers.robinhood_mcp import RobinhoodMCPBroker
 from http.server import ThreadingHTTPServer
@@ -75,6 +75,41 @@ class ScriptedQuoteBridge:
         if isinstance(outcome, Exception):
             raise outcome
         return outcome
+
+
+def positions_payload():
+    return {"account": {
+        "account_number_last4": "1131", "account_type": "Agentic individual cash",
+        "status": "active",
+    }, "positions": [{"symbol": "VTI", "qty": 1.0}]}
+
+
+def test_positions_first_attempt_success_has_no_backoff():
+    bridge = ScriptedQuoteBridge([positions_payload()])
+    sleeps = []
+    service = GatewayService(bridge, expected_last4="1131", cache_seconds=0, sleep=sleeps.append)
+    assert service.positions()["positions"][0]["symbol"] == "VTI"
+    assert len(bridge.calls) == 1
+    assert sleeps == []
+
+
+def test_positions_timeout_then_success_retries_once():
+    bridge = ScriptedQuoteBridge([TransientPositionsError("timeout"), positions_payload()])
+    sleeps = []
+    service = GatewayService(bridge, expected_last4="1131", cache_seconds=0, sleep=sleeps.append)
+    assert service.positions()["positions"][0]["symbol"] == "VTI"
+    assert len(bridge.calls) == 2
+    assert sleeps == [1]
+
+
+def test_three_positions_timeouts_fail_closed_without_simulated_fallback():
+    bridge = ScriptedQuoteBridge([TransientPositionsError("timeout") for _ in range(3)])
+    sleeps = []
+    service = GatewayService(bridge, expected_last4="1131", cache_seconds=0, sleep=sleeps.append)
+    with pytest.raises(TransientPositionsError, match="timeout"):
+        service.positions()
+    assert len(bridge.calls) == 3
+    assert sleeps == [1, 2]
 
 
 def normalized_quote(symbol="NVDA"):
@@ -175,6 +210,37 @@ def test_adapter_cannot_be_armed_or_submit_orders(monkeypatch):
     assert result["status"] == "rejected"
     assert "read-only" in result["reason"]
     assert called == []
+
+
+def test_adapter_preserves_authenticated_quote_provenance(monkeypatch):
+    monkeypatch.setattr(RobinhoodMCPBroker, "_connect", lambda self: None)
+    broker = RobinhoodMCPBroker(load_config())
+    broker._online = True
+    observed = datetime.now(timezone.utc).isoformat()
+    broker._request = lambda *args, **kwargs: {
+        "symbol": "VTI", "price": 321.45, "as_of": observed,
+        "source": "robinhood-trading-mcp",
+    }
+    assert broker.get_quote_snapshot("VTI") == {
+        "symbol": "VTI", "price": 321.45, "as_of": observed,
+        "source": "robinhood-trading-mcp",
+    }
+
+
+def test_adapter_never_substitutes_sim_quote_when_mcp_offline(monkeypatch):
+    monkeypatch.setattr(RobinhoodMCPBroker, "_connect", lambda self: None)
+    broker = RobinhoodMCPBroker(load_config())
+    broker._sim.get_price = lambda symbol: pytest.fail("simulated quote was requested")
+    with pytest.raises(RuntimeError, match="authenticated"):
+        broker.get_quote_snapshot("VTI")
+
+
+def test_adapter_never_substitutes_sim_positions_when_mcp_offline(monkeypatch):
+    monkeypatch.setattr(RobinhoodMCPBroker, "_connect", lambda self: None)
+    broker = RobinhoodMCPBroker(load_config())
+    broker._sim.get_broker_positions = lambda: pytest.fail("simulated positions were requested")
+    with pytest.raises(RuntimeError, match="authenticated"):
+        broker.get_broker_positions()
 
 
 def test_http_auth_and_write_methods_are_rejected():
