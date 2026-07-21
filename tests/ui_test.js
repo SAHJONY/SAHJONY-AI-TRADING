@@ -97,6 +97,8 @@ async function main() {
   check(expectedTabs >= 8 && win.document.querySelectorAll('#nav button').length === expectedTabs,
     `all ${expectedTabs} function tabs present (signed-out)`);
   check(win.document.getElementById('tape').textContent.length > 0, 'ticker tape populated');
+  check(win.document.getElementById('tape').textContent.includes('ARCHIVE'), 'stale equity tape is marked archival');
+  check(viewText(win).includes('ARCHIVED SIMULATION DATA'), 'stale simulation snapshot has a prominent warning');
   check(viewText(win).includes('Equity'), 'Parquet cockpit renders (Equity/NAV)');
   check(viewText(win).includes('Council Heatmap') || viewText(win).includes('Heatmap'), 'Parquet shows council heatmap');
   await win.fetchMarkets(true); await win.fetchNews(true); await win.fetchIntel(true);

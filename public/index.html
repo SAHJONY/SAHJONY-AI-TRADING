@@ -366,6 +366,11 @@ function relAge(ms){const s=Math.max(0,Math.round(ms/1000));
   if(m<60)return m+"m ago";const h=Math.round(m/60);
   if(h<48)return h+"h ago";return Math.round(h/24)+"d ago";}
 const FRESH_WARN_MS=20*60*1000, FRESH_STALE_MS=45*60*1000;  // snapshot cadence ~15min
+function snapshotAgeMs(){
+  const t=(typeof DATA!=='undefined'&&DATA&&DATA.ts)?tsMs(DATA.ts):null;
+  return t==null?Infinity:Math.max(0,Date.now()-t);
+}
+function snapshotIsFresh(){return snapshotAgeMs()<FRESH_STALE_MS;}
 function updateFreshness(){
   const stat=document.getElementById('freshStat');if(!stat)return;
   const t=(typeof DATA!=='undefined'&&DATA&&DATA.ts)?tsMs(DATA.ts):null;
@@ -425,10 +430,13 @@ let RH=null;
 async function fetchRobinhood(){
   try{ const r=await fetch(RH_RUNTIME+'?_='+Date.now(),{cache:'no-store'}); if(!r.ok)throw 0; RH=await r.json(); return; }
   catch(_){}
-  try{ const r=await fetch('./robinhood.json?_='+Date.now(),{cache:'no-store'}); if(!r.ok)throw 0; RH=await r.json(); return; }
-  catch(_){}
-  try{ const r=await fetch(RH_REMOTE+'?_='+Date.now(),{cache:'no-store'}); RH=r.ok?await r.json():null; }
-  catch(_){ RH=null; }
+  // Local files are useful for development only. In production they are static
+  // deployment artifacts and must never masquerade as current broker evidence.
+  if(/^(localhost|127\.0\.0\.1)$/.test(location.hostname)){
+    try{ const r=await fetch('./robinhood.json?_='+Date.now(),{cache:'no-store'}); if(!r.ok)throw 0; RH=await r.json(); return; }
+    catch(_){}
+  }
+  RH=null;
 }
 
 // ── free live market & news feeds (run in the browser) ──────────────────────
@@ -913,9 +921,10 @@ function setStatus(){
 function buildTape(){
   const t=document.getElementById('tape'); if(!t)return;
   const parts=[];
+  const archive=!snapshotIsFresh();
   ((DATA&&DATA.council)||[]).forEach(c=>{const upd=c.direction==='long';const col=upd?'var(--up)':(c.direction==='short'?'var(--down)':'var(--mut)');
     const arr=upd?'▲':(c.direction==='short'?'▼':'■');
-    parts.push(`<span class="tk"><b>${esc(c.symbol)}</b> ${money(c.price)} <span style="color:${col}">${arr} ${(c.conviction*100).toFixed(0)}%</span></span>`);});
+    parts.push(`<span class="tk" title="${archive?'Archived simulation snapshot':'Current desk snapshot'}"><b>${archive?'ARCHIVE · ':''}${esc(c.symbol)}</b> ${money(c.price)} <span style="color:${col}">${arr} ${(c.conviction*100).toFixed(0)}%</span></span>`);});
   cryptoRows().slice(0,14).forEach(m=>{const up=(m.pct||0)>=0;const col=up?'var(--up)':'var(--down)';
     parts.push(`<span class="tk"><b>${esc(m.sym)}</b> ${money(m.price)} <span style="color:${col}">${up?'▲':'▼'} ${(m.pct||0).toFixed(2)}%</span></span>`);});
   if(!parts.length){t.innerHTML='<span class="tk mut">awaiting market data…</span>';return;}
@@ -930,10 +939,16 @@ function render(){
   document.getElementById('firm').textContent=(DATA.firm||'SAHJONY CAPITAL').replace(/ LLC$/,'');
   setStatus(); buildTape();
   const _tms=tsMs(DATA.ts), _when=_tms!=null?`${new Date(_tms).toLocaleString()} (${relAge(Date.now()-_tms)})`:'time unknown';
+  const _fresh=snapshotIsFresh();
   document.getElementById('foot').textContent =
-    `cycle ${DATA.cycle} · ${_when} · ${DESK?'LIVE via Supabase':'static snapshot'} · auto-refresh 30s`;
+    `cycle ${DATA.cycle} · ${_when} · ${_fresh&&DESK?'LIVE via Supabase':(_fresh?'current snapshot':'ARCHIVED simulation snapshot')} · auto-refresh 30s`;
   updateFreshness();
   v.innerHTML="";
+  if(!_fresh){
+    v.appendChild($(`<div class="cb span12" style="border-color:var(--amber);background:rgba(255,184,77,.08);color:var(--amber)">
+      ⚠ <b>ARCHIVED SIMULATION DATA</b> — equities, NAV, P&amp;L, council signals, positions, and activity below are ${esc(relAge(snapshotAgeMs()))} old and are not real-time broker truth. Live crypto/market widgets are labeled separately. Trading authority remains disabled.
+    </div>`));
+  }
   ({Parquet,Perf,Markets,Macro,News,Council,Book,Brain,"War Room":WarRoom,Operations,Controls,Workforce,Env}[TAB]||Parquet)(v);
 }
 
