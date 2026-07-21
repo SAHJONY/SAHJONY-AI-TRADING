@@ -20,6 +20,10 @@ from config import Config, load_config
 from intelligence.advisors import AdvisoryBoard
 from intelligence.agents import Council, MarketSnapshot
 from intelligence.ai_brain import AIBrain
+from intelligence.historical_data import (
+    HistoricalDataError, HistoricalDataProvider, configured_historical_provider,
+    validate_historical_bars,
+)
 from observability.reconciliation import reconcile_positions, unavailable_reconciliation
 from risk.risk_engine import RiskEngine
 from utils.broker import get_broker
@@ -63,9 +67,6 @@ class ReadOnlyBroker:
 
     def get_broker_positions(self):
         return self._broker.get_broker_positions()
-
-    def get_history(self, symbol: str, days: int = 250):
-        return self._broker.get_history(symbol, days)
 
     def get_quote_snapshot(self, symbol: str) -> dict[str, Any]:
         getter = getattr(self._broker, "get_quote_snapshot", None)
@@ -113,7 +114,8 @@ def _agent_output(verdict: Any) -> dict[str, Any]:
 
 
 def run_analysis(cfg: Config, broker: Any, *, state: dict[str, Any] | None = None,
-                 now: datetime | None = None, status_path: Path | str = STATUS_PATH) -> dict[str, Any]:
+                 now: datetime | None = None, status_path: Path | str = STATUS_PATH,
+                 historical_provider: HistoricalDataProvider | None = None) -> dict[str, Any]:
     """Run one analysis cycle and persist a secret-free status document."""
     client = ReadOnlyBroker(broker)
     now = now or datetime.now(timezone.utc)
@@ -150,19 +152,42 @@ def run_analysis(cfg: Config, broker: Any, *, state: dict[str, Any] | None = Non
         blockers.append("positions reconciliation unresolved")
 
     symbols = list(dict.fromkeys([*cfg.tickers, cfg.benchmark]))
+    lookback_days = max(1, int(os.getenv("HISTORICAL_LOOKBACK_DAYS", "365")))
+    min_bars = max(1, int(os.getenv("HISTORICAL_MIN_BARS", "200")))
+    max_history_age = max(0.0, float(os.getenv("HISTORICAL_MAX_STALENESS_HOURS", "72")))
     market: dict[str, tuple[MarketSnapshot, Any, dict[str, Any]]] = {}
     histories: dict[str, dict[str, Any]] = {}
     quotes: dict[str, dict[str, Any]] = {}
+    provider = historical_provider
+    if provider is None:
+        try:
+            provider = configured_historical_provider()
+        except HistoricalDataError as exc:
+            blockers.append(f"historical data unavailable: {exc}")
     for symbol in symbols:
         try:
-            histories[symbol] = dict(client.get_history(symbol, 250) or {})
+            if provider is None:
+                raise HistoricalDataError("provider unavailable")
+            bars = validate_historical_bars(
+                provider.get_equity_bars(symbol, lookback_days), symbol,
+                min_bars=min_bars, max_staleness_hours=max_history_age, now=now,
+            )
+            histories[symbol] = {
+                "symbol": bars.symbol, "closes": bars.closes, "volumes": bars.volumes,
+                "timestamps": bars.timestamps, "retrieved_at": bars.retrieved_at,
+                "feed_timestamp": bars.feed_timestamp,
+                "exchange_timestamp": bars.exchange_timestamp, "provider": bars.provider,
+            }
+        except Exception as exc:
+            blockers.append(f"{symbol}: invalid history ({type(exc).__name__}: {exc})")
+        try:
             quote = client.get_quote_snapshot(symbol)
             price = _safe_number(quote.get("price"))
             if price <= 0:
                 raise ValueError("missing quote")
             quotes[symbol] = {**quote, "price": price}
         except Exception as exc:
-            blockers.append(f"{symbol}: missing quote or history ({type(exc).__name__})")
+            blockers.append(f"{symbol}: missing quote ({type(exc).__name__})")
 
     bench = np.asarray(histories.get(cfg.benchmark, {}).get("closes", []), dtype=float)
     quote_freshness = {
@@ -262,7 +287,7 @@ def run_analysis(cfg: Config, broker: Any, *, state: dict[str, Any] | None = Non
     }
     status = {
         "generated_at": now.isoformat(), "mode": "ANALYSIS_ONLY", "broker": cfg.broker,
-        "trading_armed": client.trading_armed, "execution_authority": client.execution_authority,
+        "trading_armed": False, "execution_authority": False,
         "data_ready": data_ready, "funding_ready": funding_ready,
         "positions_reconciled": bool(reconciliation.get("reconciled")),
         "reconciliation": public_reconciliation, "blockers": global_blockers,

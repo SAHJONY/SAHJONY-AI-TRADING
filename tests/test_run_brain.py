@@ -3,6 +3,7 @@ from datetime import datetime, timedelta, timezone
 import numpy as np
 
 from config import Config
+from intelligence.historical_data import HistoricalEquityBars
 from run_brain import ReadOnlyBroker, run_analysis
 
 
@@ -24,8 +25,7 @@ class BrokerTripwire:
         return {}
 
     def get_history(self, symbol, days=250):
-        closes = np.linspace(90, 110, 250)
-        return {"closes": closes, "volumes": np.full(250, 1_000.0)}
+        raise AssertionError("Robinhood history must never be used")
 
     def get_quote_snapshot(self, symbol):
         return {"price": 110.0, "exchange_timestamp": self.quote_time.isoformat()}
@@ -46,11 +46,24 @@ def config():
                   ai_brain_enabled=False, auto_update_models=False)
 
 
+class HistoryProvider:
+    def __init__(self, at=None):
+        self.at = at or datetime.now(timezone.utc)
+
+    def get_equity_bars(self, symbol, lookback_days):
+        timestamps = tuple(self.at - timedelta(days=249 - index) for index in range(250))
+        return HistoricalEquityBars(
+            symbol, tuple(np.linspace(90, 110, 250)), tuple(np.full(250, 1_000.0)),
+            timestamps, self.at, timestamps[-1], timestamps[-1], "test",
+        )
+
+
 def test_analysis_runner_never_exposes_or_calls_order_methods(tmp_path):
     broker = BrokerTripwire()
     assert not hasattr(ReadOnlyBroker(broker), "submit_equity_order")
 
     result = run_analysis(config(), broker, state={"positions": {}},
+                          historical_provider=HistoryProvider(broker.quote_time),
                           status_path=tmp_path / "brain.json")
 
     assert broker.order_calls == []
@@ -68,6 +81,7 @@ def test_stale_quote_fails_closed_without_order_calls(tmp_path, monkeypatch):
     monkeypatch.setenv("BRAIN_MAX_QUOTE_AGE_SECONDS", "60")
 
     result = run_analysis(config(), broker, state={"positions": {}}, now=now,
+                          historical_provider=HistoryProvider(now),
                           status_path=tmp_path / "brain.json")
 
     assert result["data_ready"] is False
@@ -82,6 +96,7 @@ def test_identity_and_reconciliation_fail_closed(tmp_path):
     broker.get_broker_positions = lambda: {"MSFT": {"qty": 2, "market_value": 200}}
 
     result = run_analysis(config(), broker, state={"positions": {}},
+                          historical_provider=HistoryProvider(broker.quote_time),
                           status_path=tmp_path / "brain.json")
 
     assert result["data_ready"] is False
@@ -99,8 +114,21 @@ def test_missing_benchmark_quote_marks_data_not_ready(tmp_path):
         if symbol == "SPY" else original(symbol)
 
     result = run_analysis(config(), broker, state={"positions": {}},
+                          historical_provider=HistoryProvider(broker.quote_time),
                           status_path=tmp_path / "brain.json")
 
     assert result["data_ready"] is False
     assert result["quote_freshness"]["SPY"]["fresh"] is False
     assert broker.order_calls == []
+
+
+def test_robinhood_never_falls_back_to_broker_history(tmp_path):
+    broker = BrokerTripwire()
+
+    result = run_analysis(config(), broker, state={"positions": {}},
+                          historical_provider=None, status_path=tmp_path / "brain.json")
+
+    assert result["data_ready"] is False
+    assert result["execution_authority"] is False
+    assert result["trading_armed"] is False
+    assert result["decisions"][0]["action"] == "OBSERVE_ONLY"
