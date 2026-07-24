@@ -17,7 +17,10 @@ def redis(command):
     req = request.Request(url.rstrip("/") + "/pipeline", data=json.dumps(command).encode(),
                           headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"})
     with request.urlopen(req, timeout=8) as response:
-        return json.loads(response.read())["result"]
+        payload = json.loads(response.read())
+        if not isinstance(payload, list):
+            raise ValueError("invalid Upstash pipeline response")
+        return [item.get("result") if isinstance(item, dict) else None for item in payload]
 
 
 def sanitize(payload):

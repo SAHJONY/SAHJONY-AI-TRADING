@@ -1,4 +1,6 @@
 import importlib.util
+import io
+import json
 from pathlib import Path
 
 import pytest
@@ -37,3 +39,40 @@ def test_runtime_payload_requires_verified_identity():
     raw = payload(); raw["agentic"]["identity_verified"] = False
     with pytest.raises(ValueError):
         MODULE.sanitize(raw)
+
+
+def test_redis_normalizes_upstash_pipeline_results(monkeypatch):
+    class Response:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return None
+
+        def read(self):
+            return json.dumps([{"result": "OK"}, {"result": None}]).encode()
+
+    monkeypatch.setenv("UPSTASH_REDIS_REST_URL", "https://redis.example")
+    monkeypatch.setenv("UPSTASH_REDIS_REST_TOKEN", "secret")
+    monkeypatch.setattr(MODULE.request, "urlopen", lambda *_args, **_kwargs: Response())
+
+    assert MODULE.redis([["SET", "key", "value"], ["GET", "missing"]]) == ["OK", None]
+
+
+def test_redis_rejects_non_pipeline_response(monkeypatch):
+    class Response:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return None
+
+        def read(self):
+            return io.BytesIO(b'{"result":"OK"}').read()
+
+    monkeypatch.setenv("UPSTASH_REDIS_REST_URL", "https://redis.example")
+    monkeypatch.setenv("UPSTASH_REDIS_REST_TOKEN", "secret")
+    monkeypatch.setattr(MODULE.request, "urlopen", lambda *_args, **_kwargs: Response())
+
+    with pytest.raises(ValueError, match="pipeline"):
+        MODULE.redis([["GET", "key"]])
