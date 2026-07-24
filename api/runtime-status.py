@@ -93,4 +93,5 @@ class handler(BaseHTTPRequestHandler):
             self._send(202, {"accepted": True, "read_only": True,
                              "execution_authority": False})
         except Exception as exc:
+            print(f"runtime-status POST failed: {type(exc).__name__}: {str(exc)[:160]}")
             self._send(400, {"error": type(exc).__name__, "execution_authority": False})
