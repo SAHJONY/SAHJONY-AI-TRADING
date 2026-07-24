@@ -5,7 +5,8 @@ import json
 import pytest
 
 from observability.broker_evidence import (EvidenceVerdict, build_mcp_evidence,
-                                           evidence_digest, parse_ui_observation,
+                                           evidence_digest, parse_crypto_holding_observation,
+                                           parse_ui_observation,
                                            reconcile_evidence)
 from scripts import broker_evidence as cli
 
@@ -29,6 +30,14 @@ def ui(**overrides):
            "human_notes": "observed in Robinhood UI", **overrides}
     raw["digest"] = evidence_digest(raw)
     return parse_ui_observation(raw)
+
+
+def crypto_observation(**overrides):
+    raw = {"source": "robinhood-ui-agentic", "timestamp": NOW.isoformat(),
+           "account": "***1131", "symbol": "BTC", "quantity": 0.00005,
+           "market_value": 5.91, **overrides}
+    raw["digest"] = evidence_digest(raw)
+    return parse_crypto_holding_observation(raw)
 
 
 def test_unexplained_six_dollars_with_no_positions_is_blocked():
@@ -93,9 +102,36 @@ def test_exact_crypto_position_reconciles_total_value():
                   "asset_type": "crypto"}]
     evidence = build_mcp_evidence(account, positions, observed_at=NOW.isoformat(),
                                   identity_verified=True)
-    report = reconcile_evidence(evidence, now=NOW)
+    report = reconcile_evidence(evidence, crypto_observation=crypto_observation(), now=NOW)
     assert report.verdict is EvidenceVerdict.RECONCILED
+    assert report.crypto_authenticated is True
     assert report.unexplained_value == pytest.approx(0)
+
+
+def test_crypto_candidate_without_authenticated_row_cannot_reconcile():
+    account = {"account_number_last4": "1131", "equity": 25.90, "cash": 19.99,
+               "buying_power": 19.99, "equity_value": 0, "options_value": 0,
+               "crypto_value": 5.91, "total_value": 25.90}
+    evidence = build_mcp_evidence(account, [], observed_at=NOW.isoformat(),
+                                  identity_verified=True)
+    report = reconcile_evidence(evidence, crypto_observation=crypto_observation(), now=NOW)
+    assert report.verdict is EvidenceVerdict.RECONCILIATION_BLOCKED
+    assert report.crypto_authenticated is False
+    assert "crypto observation lacks authenticated position confirmation" in report.blockers
+
+
+def test_crypto_observation_accepts_only_exact_schema_and_agentic_account():
+    raw = {"source": "robinhood-ui-agentic", "timestamp": NOW.isoformat(),
+           "account": "***9999", "symbol": "BTC", "quantity": 0.00005,
+           "market_value": 5.91}
+    raw["digest"] = evidence_digest(raw)
+    with pytest.raises(ValueError, match="Agentic"):
+        parse_crypto_holding_observation(raw)
+    raw["account"] = "***1131"
+    raw["notes"] = "untrusted extra field"
+    raw["digest"] = evidence_digest(raw)
+    with pytest.raises(ValueError, match="incomplete or unsupported"):
+        parse_crypto_holding_observation(raw)
 
 
 def test_manual_digest_and_staleness_fail_closed():

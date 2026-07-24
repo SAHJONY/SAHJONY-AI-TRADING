@@ -16,8 +16,10 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from observability.broker_evidence import (build_mcp_evidence, evidence_digest, parse_ui_observation,
-                                           reconcile_evidence)
+from observability.broker_evidence import (
+    build_mcp_evidence, evidence_digest, parse_crypto_holding_observation,
+    parse_ui_observation, reconcile_evidence,
+)
 from scripts import broker_diagnostics
 
 
@@ -70,19 +72,31 @@ def collect_mcp() -> tuple[Any, list[str]]:
     return evidence, blockers
 
 
-def produce(*, ui_path: Path | None = None, public_path: Path | None = None,
+def produce(*, ui_path: Path | None = None, crypto_path: Path | None = None,
+            public_path: Path | None = None,
             private_dir: Path | None = None, now: datetime | None = None,
             value_tolerance: float = 1.0, max_age_seconds: int = 900) -> dict[str, Any]:
     mcp, collection_blockers = collect_mcp()
     ui = None
     ui_error = None
+    crypto_observation = None
     if ui_path:
         try:
             ui = parse_ui_observation(json.loads(ui_path.read_text(encoding="utf-8")))
         except (OSError, TypeError, ValueError, json.JSONDecodeError) as exc:
             ui_error = f"manual evidence unavailable: {exc}"
-    extra = tuple([*collection_blockers, *([ui_error] if ui_error else [])])
-    report = reconcile_evidence(mcp, ui, now=now, value_tolerance=value_tolerance,
+    crypto_error = None
+    if crypto_path:
+        try:
+            crypto_observation = parse_crypto_holding_observation(
+                json.loads(crypto_path.read_text(encoding="utf-8"))
+            )
+        except (OSError, TypeError, ValueError, json.JSONDecodeError) as exc:
+            crypto_error = f"crypto observation unavailable: {exc}"
+    extra = tuple([*collection_blockers, *([ui_error] if ui_error else []),
+                   *([crypto_error] if crypto_error else [])])
+    report = reconcile_evidence(mcp, ui, crypto_observation=crypto_observation,
+                                now=now, value_tolerance=value_tolerance,
                                 max_age_seconds=max_age_seconds, evidence_blockers=extra)
     private = report.private_dict()
     public = json.loads(json.dumps(private))
@@ -130,6 +144,7 @@ def publish_hosted(report: dict[str, Any], *, timeout: int = 30) -> bool:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Produce read-only dual-source broker evidence")
     parser.add_argument("--ui-observation", type=Path)
+    parser.add_argument("--crypto-observation", type=Path)
     parser.add_argument("--public-output", type=Path)
     parser.add_argument("--private-dir", type=Path)
     parser.add_argument("--value-tolerance", type=float, default=1.0)
@@ -141,7 +156,8 @@ def main() -> int:
         raw = json.loads(args.digest_manual.read_text(encoding="utf-8"))
         print(evidence_digest(raw))
         return 0
-    report = produce(ui_path=args.ui_observation, public_path=args.public_output,
+    report = produce(ui_path=args.ui_observation, crypto_path=args.crypto_observation,
+                     public_path=args.public_output,
                      private_dir=args.private_dir, value_tolerance=args.value_tolerance,
                      max_age_seconds=args.max_age_seconds)
     publish_hosted(report)

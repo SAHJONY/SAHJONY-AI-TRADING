@@ -84,11 +84,24 @@ class UIObservation:
 
 
 @dataclass(frozen=True)
+class CryptoHoldingObservation:
+    source: str
+    observed_at: str
+    account_last4: str
+    symbol: str
+    quantity: float
+    market_value: float
+    digest: str
+
+
+@dataclass(frozen=True)
 class ReconciliationReport:
     report_version: int
     generated_at: str
     mcp: MCPSourceEvidence | None
     ui: UIObservation | None
+    crypto_observation: CryptoHoldingObservation | None
+    crypto_authenticated: bool
     unexplained_value: float | None
     conflicts: tuple[str, ...]
     blockers: tuple[str, ...]
@@ -142,6 +155,33 @@ def parse_ui_observation(raw: Mapping[str, Any]) -> UIObservation:
                          values["buying_power"], notes, supplied)
 
 
+def parse_crypto_holding_observation(raw: Mapping[str, Any]) -> CryptoHoldingObservation:
+    """Parse a human discovery candidate; this never creates broker truth."""
+    allowed = {"source", "timestamp", "account", "symbol", "quantity", "market_value", "digest"}
+    if set(raw) != allowed:
+        raise ValueError("crypto observation fields are incomplete or unsupported")
+    supplied = str(raw.get("digest", ""))
+    if len(supplied) != 64 or supplied != evidence_digest(raw):
+        raise ValueError("crypto observation digest verification failed")
+    source = str(raw["source"]).strip()
+    if source != "robinhood-ui-agentic":
+        raise ValueError("crypto observation source is invalid")
+    account = str(raw["account"]).strip().replace("*", "").replace("•", "")
+    if account != "1131":
+        raise ValueError("crypto observation account is not Agentic ***1131")
+    observed_at = str(raw["timestamp"])
+    _timestamp(observed_at, "crypto observation")
+    symbol = str(raw["symbol"]).strip().upper()
+    if not re.fullmatch(r"[A-Z0-9][A-Z0-9.-]{0,14}", symbol):
+        raise ValueError("crypto observation symbol is invalid")
+    quantity = _number(raw["quantity"], "crypto observation quantity")
+    market_value = _number(raw["market_value"], "crypto observation market_value")
+    if quantity <= 0 or market_value <= 0:
+        raise ValueError("crypto observation quantity and market value must be positive")
+    return CryptoHoldingObservation(source, observed_at, "1131", symbol, quantity,
+                                    market_value, supplied)
+
+
 def build_mcp_evidence(account: Mapping[str, Any], positions: list[Mapping[str, Any]], *,
                        observed_at: str, identity_verified: bool,
                        expected_last4: str = "1131") -> MCPSourceEvidence:
@@ -188,21 +228,26 @@ def build_mcp_evidence(account: Mapping[str, Any], positions: list[Mapping[str, 
 
 
 def reconcile_evidence(mcp: MCPSourceEvidence | None, ui: UIObservation | None = None, *,
+                       crypto_observation: CryptoHoldingObservation | None = None,
                        now: datetime | None = None, value_tolerance: float = 1.0,
+                       quantity_tolerance: float = 1e-8,
                        max_age_seconds: int = 900,
                        evidence_blockers: tuple[str, ...] = ()) -> ReconciliationReport:
     current = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
     blockers: list[str] = list(evidence_blockers)
     conflicts: list[str] = []
     unexplained = None
+    crypto_authenticated = False
     try:
         value_tolerance = _number(value_tolerance, "value_tolerance")
+        quantity_tolerance = _number(quantity_tolerance, "quantity_tolerance")
         max_age_seconds = int(max_age_seconds)
-        if value_tolerance < 0 or max_age_seconds < 0:
+        if value_tolerance < 0 or quantity_tolerance < 0 or max_age_seconds < 0:
             raise ValueError("evidence tolerances must be non-negative")
     except (TypeError, ValueError) as exc:
         blockers.append(str(exc))
         value_tolerance = 0.0
+        quantity_tolerance = 0.0
         max_age_seconds = 0
     if mcp is None:
         blockers.append("authenticated MCP account or positions evidence unavailable")
@@ -234,6 +279,26 @@ def reconcile_evidence(mcp: MCPSourceEvidence | None, ui: UIObservation | None =
         unexplained = mcp.account.total_value - mcp.account.cash - visible_value
         if abs(unexplained) > value_tolerance:
             blockers.append("unexplained non-cash value exceeds tolerance")
+        if mcp.account.crypto_value > value_tolerance:
+            crypto_rows = [row for row in mcp.positions if row.asset_type == "crypto"]
+            if crypto_observation is None:
+                blockers.append("crypto holding observation is missing")
+            else:
+                try:
+                    observed = _timestamp(crypto_observation.observed_at, "crypto observation")
+                    if abs((current - observed).total_seconds()) > max_age_seconds:
+                        blockers.append("crypto observation is stale")
+                except ValueError as exc:
+                    blockers.append(str(exc))
+                matches = [
+                    row for row in crypto_rows
+                    if row.symbol == crypto_observation.symbol
+                    and abs(row.qty - crypto_observation.quantity) <= quantity_tolerance
+                    and abs(row.market_value - crypto_observation.market_value) <= value_tolerance
+                ]
+                crypto_authenticated = len(matches) == 1
+                if not crypto_authenticated:
+                    blockers.append("crypto observation lacks authenticated position confirmation")
     if ui is not None:
         try:
             observed = _timestamp(ui.observed_at, "manual evidence")
@@ -257,10 +322,13 @@ def reconcile_evidence(mcp: MCPSourceEvidence | None, ui: UIObservation | None =
     else:
         verdict = EvidenceVerdict.RECONCILED
     generated = current.isoformat()
-    core = {"report_version": 1, "generated_at": generated,
+    core = {"report_version": 2, "generated_at": generated,
             "mcp_digest": mcp.digest if mcp else None, "ui_digest": ui.digest if ui else None,
+            "crypto_observation_digest": crypto_observation.digest if crypto_observation else None,
+            "crypto_authenticated": crypto_authenticated,
             "unexplained_value": unexplained, "conflicts": conflicts, "blockers": blockers,
             "verdict": verdict.value, "execution_authority": False,
             "trading_armed": False, "trading_ready": False}
-    return ReconciliationReport(1, generated, mcp, ui, unexplained, tuple(conflicts),
+    return ReconciliationReport(2, generated, mcp, ui, crypto_observation,
+                                crypto_authenticated, unexplained, tuple(conflicts),
                                 tuple(blockers), verdict, evidence_digest(core))
