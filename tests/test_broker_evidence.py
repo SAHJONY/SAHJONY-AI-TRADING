@@ -73,6 +73,31 @@ def test_matching_evidence_may_reconcile():
     assert report.trading_ready is False
 
 
+def test_classified_crypto_without_exact_position_rows_is_blocked():
+    account = {"account_number_last4": "1131", "equity": 25.90, "cash": 19.99,
+               "buying_power": 19.99, "equity_value": 0, "options_value": 0,
+               "crypto_value": 5.91, "total_value": 25.90}
+    evidence = build_mcp_evidence(account, [], observed_at=NOW.isoformat(),
+                                  identity_verified=True)
+    report = reconcile_evidence(evidence, now=NOW)
+    assert report.verdict is EvidenceVerdict.RECONCILIATION_BLOCKED
+    assert "crypto holdings are not fully enumerated" in report.blockers
+    assert report.unexplained_value == pytest.approx(5.91)
+
+
+def test_exact_crypto_position_reconciles_total_value():
+    account = {"account_number_last4": "1131", "equity": 25.90, "cash": 19.99,
+               "buying_power": 19.99, "equity_value": 0, "options_value": 0,
+               "crypto_value": 5.91, "total_value": 25.90}
+    positions = [{"symbol": "BTC", "qty": 0.00005, "market_value": 5.91,
+                  "asset_type": "crypto"}]
+    evidence = build_mcp_evidence(account, positions, observed_at=NOW.isoformat(),
+                                  identity_verified=True)
+    report = reconcile_evidence(evidence, now=NOW)
+    assert report.verdict is EvidenceVerdict.RECONCILED
+    assert report.unexplained_value == pytest.approx(0)
+
+
 def test_manual_digest_and_staleness_fail_closed():
     raw = {"source_id": "robinhood-ui-manual", "observed_at": NOW.isoformat(),
            "equity": 19.99, "cash": 19.99, "buying_power": 19.99,
@@ -152,7 +177,9 @@ def test_cli_collects_only_read_routes_and_never_calls_orders(monkeypatch):
             return 200, {"identity_verified": True, "account_number_last4": "1131"}
         if path == "/account":
             return 200, {"account_number_last4": "1131", "equity": 19.99,
-                         "cash": 19.99, "buying_power": 19.99}
+                         "cash": 19.99, "buying_power": 19.99,
+                         "equity_value": 0, "options_value": 0,
+                         "crypto_value": 0, "total_value": 19.99}
         if path == "/positions":
             return 200, {"positions": []}
         raise AssertionError(path)
@@ -173,7 +200,9 @@ def test_cli_missing_positions_fails_closed(monkeypatch):
     payloads = {
         "/health": (200, {"identity_verified": True, "account_number_last4": "1131"}),
         "/account": (200, {"account_number_last4": "1131", "equity": 19.99,
-                            "cash": 19.99, "buying_power": 19.99}),
+                            "cash": 19.99, "buying_power": 19.99,
+                            "equity_value": 0, "options_value": 0,
+                            "crypto_value": 0, "total_value": 19.99}),
         "/positions": (503, {"error": "unavailable"}),
     }
     monkeypatch.setattr(cli.broker_diagnostics, "_get",
@@ -190,7 +219,9 @@ def test_cli_malformed_positions_payload_fails_closed(monkeypatch):
     payloads = {
         "/health": (200, {"identity_verified": True, "account_number_last4": "1131"}),
         "/account": (200, {"account_number_last4": "1131", "equity": 19.99,
-                            "cash": 19.99, "buying_power": 19.99}),
+                            "cash": 19.99, "buying_power": 19.99,
+                            "equity_value": 0, "options_value": 0,
+                            "crypto_value": 0, "total_value": 19.99}),
         "/positions": (200, {}),
     }
     monkeypatch.setattr(cli.broker_diagnostics, "_get",

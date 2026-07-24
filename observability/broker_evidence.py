@@ -47,6 +47,10 @@ class AccountTotals:
     equity: float
     cash: float
     buying_power: float
+    equity_value: float
+    options_value: float
+    crypto_value: float
+    total_value: float
 
 
 @dataclass(frozen=True)
@@ -54,6 +58,7 @@ class PositionEvidence:
     symbol: str
     qty: float
     market_value: float
+    asset_type: str
 
 
 @dataclass(frozen=True)
@@ -142,8 +147,16 @@ def build_mcp_evidence(account: Mapping[str, Any], positions: list[Mapping[str, 
                        expected_last4: str = "1131") -> MCPSourceEvidence:
     _timestamp(observed_at, "MCP evidence")
     last4 = str(account.get("account_number_last4", ""))[-4:]
-    totals = AccountTotals(*(_number(account.get(name), f"MCP {name}")
-                             for name in ("equity", "cash", "buying_power")))
+    equity = _number(account.get("equity"), "MCP equity")
+    cash = _number(account.get("cash"), "MCP cash")
+    buying_power = _number(account.get("buying_power"), "MCP buying_power")
+    totals = AccountTotals(
+        equity, cash, buying_power,
+        _number(account.get("equity_value", 0), "MCP equity_value"),
+        _number(account.get("options_value", 0), "MCP options_value"),
+        _number(account.get("crypto_value", 0), "MCP crypto_value"),
+        _number(account.get("total_value", equity), "MCP total_value"),
+    )
     rows: list[PositionEvidence] = []
     for raw in positions:
         if not isinstance(raw, Mapping):
@@ -151,8 +164,20 @@ def build_mcp_evidence(account: Mapping[str, Any], positions: list[Mapping[str, 
         symbol = str(raw.get("symbol", "")).strip().upper()
         if not symbol:
             raise ValueError("MCP position symbol is missing")
+        asset_type = str(raw.get("asset_type", "equity")).strip().lower()
+        if asset_type not in {"equity", "option", "crypto"}:
+            raise ValueError("MCP position asset_type is invalid")
         rows.append(PositionEvidence(symbol, _number(raw.get("qty"), "MCP qty"),
-                                     _number(raw.get("market_value"), "MCP market_value")))
+                                     _number(raw.get("market_value"), "MCP market_value"),
+                                     asset_type))
+    if "equity_value" not in account:
+        totals = AccountTotals(
+            totals.equity, totals.cash, totals.buying_power,
+            sum(row.market_value for row in rows if row.asset_type == "equity"),
+            sum(row.market_value for row in rows if row.asset_type == "option"),
+            sum(row.market_value for row in rows if row.asset_type == "crypto"),
+            totals.total_value,
+        )
     base = {"source_id": "robinhood-trading-mcp", "observed_at": observed_at,
             "account_last4": last4, "identity_verified": bool(identity_verified),
             "account": asdict(totals), "positions": [asdict(row) for row in rows]}
@@ -192,8 +217,21 @@ def reconcile_evidence(mcp: MCPSourceEvidence | None, ui: UIObservation | None =
             blockers.append(str(exc))
         if not mcp.identity_verified or mcp.account_last4 != "1131":
             blockers.append("Agentic account identity is not verified")
-        visible_value = sum(row.market_value for row in mcp.positions)
-        unexplained = mcp.account.equity - mcp.account.cash - visible_value
+        visible_by_type = {
+            asset_type: sum(row.market_value for row in mcp.positions
+                            if row.asset_type == asset_type)
+            for asset_type in ("equity", "option", "crypto")
+        }
+        classified = {
+            "equity": mcp.account.equity_value,
+            "option": mcp.account.options_value,
+            "crypto": mcp.account.crypto_value,
+        }
+        for asset_type, broker_value in classified.items():
+            if abs(broker_value - visible_by_type[asset_type]) > value_tolerance:
+                blockers.append(f"{asset_type} holdings are not fully enumerated")
+        visible_value = sum(visible_by_type.values())
+        unexplained = mcp.account.total_value - mcp.account.cash - visible_value
         if abs(unexplained) > value_tolerance:
             blockers.append("unexplained non-cash value exceeds tolerance")
     if ui is not None:

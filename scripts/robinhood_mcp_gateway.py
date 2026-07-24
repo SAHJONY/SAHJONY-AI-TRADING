@@ -48,7 +48,12 @@ Return JSON only, matching this shape:
     "status": "string",
     "cash": 0.0,
     "buying_power": 0.0,
-    "equity": 0.0
+    "equity": 0.0,
+    "equity_value": 0.0,
+    "options_value": 0.0,
+    "crypto_value": 0.0,
+    "total_value": 0.0,
+    "observed_at": "ISO-8601 timestamp"
   }},
   "positions": [
     {{"symbol": "string", "qty": 0.0, "market_value": 0.0,
@@ -58,8 +63,10 @@ Return JSON only, matching this shape:
 }}
 
 For account_snapshot: call get_accounts, select only the account with
-agentic_allowed=true, then call get_portfolio for that exact account. Include
-that account and leave positions/quote empty.
+agentic_allowed=true, then call get_portfolio for that exact account. Preserve
+cash, buying power, total value, and the equity/options/crypto value breakdown.
+Set observed_at to the current UTC time. Include that account and leave
+positions/quote empty.
 For positions: first select the agentic_allowed account with get_accounts, then
 read its nonzero equity and option positions. Never read order history. Include
 normalized positions and the selected account identity; leave quote empty.
@@ -286,6 +293,11 @@ def _validate_upstream_payload(
         "cash": _number(account.get("cash"), "cash"),
         "buying_power": _number(account.get("buying_power"), "buying_power"),
         "equity": _number(account.get("equity"), "equity"),
+        "equity_value": _number(account.get("equity_value"), "equity_value"),
+        "options_value": _number(account.get("options_value"), "options_value"),
+        "crypto_value": _number(account.get("crypto_value"), "crypto_value"),
+        "total_value": _number(account.get("total_value", account.get("equity")), "total_value"),
+        "observed_at": str(account.get("observed_at", "")),
     }
     if operation == "account_snapshot":
         return normalized_account

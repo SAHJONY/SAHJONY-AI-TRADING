@@ -52,6 +52,9 @@ def collect_mcp() -> tuple[Any, list[str]]:
         return None, ["authenticated MCP account or positions evidence unavailable"]
     if not isinstance(health, dict) or not isinstance(account, dict):
         return None, ["authenticated MCP account evidence is invalid"]
+    required_totals = {"equity_value", "options_value", "crypto_value", "total_value"}
+    if not required_totals.issubset(account):
+        return None, ["authenticated MCP asset-class breakdown is unavailable"]
     if not isinstance(positions, dict) or not isinstance(positions.get("positions"), list):
         return None, ["authenticated MCP positions evidence is invalid"]
     verified = bool(isinstance(health, dict) and health.get("identity_verified")
