@@ -371,9 +371,21 @@ function snapshotAgeMs(){
   return t==null?Infinity:Math.max(0,Date.now()-t);
 }
 function snapshotIsFresh(){return snapshotAgeMs()<FRESH_STALE_MS;}
+function runtimeAgeMs(){
+  const t=(typeof RH!=='undefined'&&RH&&RH.updated)?tsMs(RH.updated):null;
+  return t==null?Infinity:Math.max(0,Date.now()-t);
+}
+function runtimeIsFresh(){return !!(RH&&RH.read_only&&RH.agentic&&RH.agentic.identity_verified&&runtimeAgeMs()<10*60*1000);}
+function runtimeAccount(){
+  if(!runtimeIsFresh())return null;
+  return {equity:+RH.total_value||+RH.agentic.equity||0,cash:+RH.cash||+RH.agentic.cash||0,
+    buying_power:+RH.buying_power||+RH.agentic.buying_power||0,
+    deployed:Math.max(0,(+RH.total_value||0)-(+RH.cash||0)),positions:RH.positions||[]};
+}
 function updateFreshness(){
   const stat=document.getElementById('freshStat');if(!stat)return;
-  const t=(typeof DATA!=='undefined'&&DATA&&DATA.ts)?tsMs(DATA.ts):null;
+  const live=runtimeIsFresh();
+  const t=live?tsMs(RH.updated):((typeof DATA!=='undefined'&&DATA&&DATA.ts)?tsMs(DATA.ts):null);
   if(t==null){stat.style.display='none';return;}
   stat.style.display='';
   const age=Date.now()-t,dot=document.getElementById('dFresh'),txt=document.getElementById('freshTxt');
@@ -381,7 +393,7 @@ function updateFreshness(){
   stat.classList.remove('warn','stale');
   if(age>=FRESH_STALE_MS){stat.classList.add('stale');dot.className='dot r';stat.title='STALE — the desk has not updated this snapshot recently. The worker may be stopped.';}
   else if(age>=FRESH_WARN_MS){stat.classList.add('warn');dot.className='dot a';stat.title='Aging — snapshot older than one update cycle.';}
-  else{dot.className='dot g';stat.title='Fresh — snapshot within the normal update cadence.';}
+  else{dot.className='dot g';stat.title=live?'Fresh authenticated Robinhood runtime data.':'Fresh desk snapshot within the normal update cadence.';}
 }
 setInterval(()=>{const el=document.getElementById('clock');if(el)el.textContent=new Date().toISOString().slice(11,19)+" UTC";updateFreshness();},1000);
 
@@ -809,7 +821,7 @@ function heatColor(s){const v=Math.max(-1,Math.min(1,+s||0));const a=(0.16+0.66*
 
 // ── animated KPI count-up (ticks from previous value on each refresh) ──
 const LASTKPI={};
-function fmtVal(type,n){return type==='pct'?pct(n):money(n);}
+function fmtVal(type,n){return type==='pct'?pct(n):type==='text'?'UNAVAILABLE':type==='disabled'?'DISABLED':type==='count'?String(Math.round(n||0)):money(n);}
 function animateCounts(scope){
   scope.querySelectorAll('[data-to]').forEach(el=>{
     const key=el.getAttribute('data-key'),to=+el.getAttribute('data-to'),type=el.getAttribute('data-fmt')||'money';
@@ -872,10 +884,10 @@ function ringGauge(frac,big,label,color){
 function setStatus(){
   const h=(DATA&&DATA.health)||{};
   const md=document.getElementById('mode'); const m=(DATA&&DATA.mode)||'—';
-  const venue=(DATA&&DATA.broker)||h.broker||'';
-  const mLabel = m==='LIVE'?'LIVE':(m==='paper'?'PAPER':(m==='offline-sim'?'SIM':(m==='live-data'?'LIVE DATA':m)));
+  const rt=runtimeIsFresh(),venue=rt?'Robinhood':((DATA&&DATA.broker)||h.broker||'');
+  const mLabel = rt?'LIVE DATA · READ ONLY':(m==='LIVE'?'LIVE':(m==='paper'?'PAPER':(m==='offline-sim'?'SIM':(m==='live-data'?'LIVE DATA':m))));
   md.textContent = venue ? `${venue.toUpperCase()} · ${mLabel}` : mLabel;
-  const c = m==='LIVE'?'var(--down)':(m==='paper'?'var(--up)':(m==='live-data'?'var(--cyan)':'var(--amber)'));
+  const c = rt?'var(--cyan)':(m==='LIVE'?'var(--down)':(m==='paper'?'var(--up)':(m==='live-data'?'var(--cyan)':'var(--amber)')));
   md.style.color=c; md.style.borderColor=c;
   // Honest real-money banner: only when a LIVE venue is deliberately armed.
   const armed=!!h.live_armed;
@@ -899,8 +911,8 @@ function setStatus(){
   const hbn=document.getElementById('haltBanner'); if(hbn)hbn.style.display=halted?'':'none';
   const db=document.getElementById('dBroker'), dm=document.getElementById('dMkt');
   document.getElementById('brokerTxt').textContent =
-    (venue?venue.toUpperCase()+' ':'') + (h.broker_online?'LIVE FEED':'OFFLINE SIM');
-  db.className='dot '+(h.broker_online?'g':'a');
+    (venue?venue.toUpperCase()+' ':'') + (rt?'AUTHENTICATED':(h.broker_online?'LIVE FEED':'OFFLINE SIM'));
+  db.className='dot '+(rt||h.broker_online?'g':'a');
   document.getElementById('mktTxt').textContent = h.market_open?'OPEN':'CLOSED';
   dm.className='dot '+(h.market_open?'g':'r');
   document.getElementById('cycTxt').textContent = (DATA&&DATA.cycle)||'0';
@@ -941,12 +953,17 @@ function render(){
   const _tms=tsMs(DATA.ts), _when=_tms!=null?`${new Date(_tms).toLocaleString()} (${relAge(Date.now()-_tms)})`:'time unknown';
   const _fresh=snapshotIsFresh();
   document.getElementById('foot').textContent =
+    runtimeIsFresh()?`Robinhood Agentic ••••${esc(RH.agentic.account_number_last4)} · authenticated ${relAge(runtimeAgeMs())} · read-only · auto-refresh 30s`:
     `cycle ${DATA.cycle} · ${_when} · ${_fresh&&DESK?'LIVE via Supabase':(_fresh?'current snapshot':'ARCHIVED simulation snapshot')} · auto-refresh 30s`;
   updateFreshness();
   v.innerHTML="";
-  if(!_fresh){
+  if(!_fresh&&!runtimeIsFresh()){
     v.appendChild($(`<div class="cb span12" style="border-color:var(--amber);background:rgba(255,184,77,.08);color:var(--amber)">
       ⚠ <b>ARCHIVED SIMULATION DATA</b> — equities, NAV, P&amp;L, council signals, positions, and activity below are ${esc(relAge(snapshotAgeMs()))} old and are not real-time broker truth. Live crypto/market widgets are labeled separately. Trading authority remains disabled.
+    </div>`));
+  } else if(runtimeIsFresh()&&!_fresh){
+    v.appendChild($(`<div class="cb span12" style="border-color:var(--cyan);background:rgba(42,216,240,.08);color:var(--cyan)">
+      ● <b>AUTHENTICATED ROBINHOOD DATA</b> — account balances and positions below are current read-only broker telemetry. Research analytics remain archived and are labeled separately. Trading authority remains disabled.
     </div>`));
   }
   ({Parquet,Perf,Markets,Macro,News,Council,Book,Brain,"War Room":WarRoom,Operations,Controls,Workforce,Env}[TAB]||Parquet)(v);
@@ -1113,24 +1130,24 @@ function treemap(positions,H=300){
 }
 
 function kpis(){
-  const a=DATA.account||{},p=DATA.pnl||{}; const ret=p.total_return_pct||0;
+  const live=runtimeAccount(),a=live||(DATA.account||{}),p=DATA.pnl||{}; const ret=p.total_return_pct||0;
   const verified=p.broker_verified===true;
   const CY='#2ad8f0',VI='#9b8cff',AM='#ffb000',UP='#34e3a8',DN='#ff5c6c';
   const eqVals=(DATA.equity_curve||[]).map(x=>+x.equity||0);
   // [label, numericValue, fmt, cssClass, accentColor, sparkSVG]
   const tiles=[
-    ['Equity / NAV',a.equity,'money','',CY, miniSpark(eqVals,CY)],
-    ['Total Return',ret,'pct',ret>=0?'up':'down', ret>=0?UP:DN, ''],
+    [live?'Robinhood Account Value':'Equity / NAV',a.equity,'money','',CY, live?'':miniSpark(eqVals,CY)],
+    [live?'Broker Return':'Total Return',live?null:ret,live?'text':'pct',ret>=0?'up':'down', live?AM:(ret>=0?UP:DN), ''],
     ['Cash',a.cash,'money','',VI,''],
     ['Deployed',a.deployed,'money','',AM,''],
-    [verified?'Broker-verified Realized P&L':'Simulated Realized P&L',p.realized,'money',(p.realized||0)>=0?'up':'down',(p.realized||0)>=0?UP:DN,''],
-    ['Premium',p.premium_collected,'money','',AM,''],
+    [live?'Authenticated Positions':'Simulated Realized P&L',live?a.positions.length:p.realized,live?'count':'money','',live?UP:((p.realized||0)>=0?UP:DN),''],
+    [live?'Execution Authority':'Premium',live?null:p.premium_collected,live?'disabled':'money','',AM,''],
   ];
   const g=$(`<div class="kpis"></div>`);
   tiles.forEach(([l,val,fmt,c,accent,spark],i)=>g.appendChild($(
     `<div class="kpi" style="--accent:${accent}">
        <div class="l">${l}</div>
-       <div class="v ${c}" data-key="k${i}" data-to="${Number(val||0)}" data-fmt="${fmt}">${fmtVal(fmt,val||0)}</div>
+       <div class="v ${c}" data-key="k${i}" data-to="${Number(val||0)}" data-fmt="${fmt}">${fmt==='text'?'UNAVAILABLE':fmt==='count'?String(val||0):fmt==='disabled'?'DISABLED':fmtVal(fmt,val||0)}</div>
        ${spark}
      </div>`)));
   animateCounts(g);
@@ -1139,6 +1156,7 @@ function kpis(){
 
 function cbBanner(){
   const cb=(DATA.health&&DATA.health.circuit_breaker)||{};
+  if(runtimeIsFresh()) return `<div class="cb ok">● <b>AUTHENTICATED READ-ONLY BROKER DATA</b> — Agentic ••••${esc(RH.agentic.account_number_last4)} · execution authority disabled · no order routes.</div>`;
   if(DATA.mode!=='LIVE') return `<div class="cb" style="border-color:var(--amber);background:linear-gradient(90deg,rgba(255,176,0,.12),transparent);color:#ffe9b0">⚠ <b>SIMULATION / RESEARCH ACCOUNTING</b> — P&amp;L is not reconciled to Robinhood fills or statements.</div>`;
   if(cb.halted) return `<div class="cb halt">⛔ <b>NEW RISK HALTED</b> — ${esc(cb.reason||'')}</div>`;
   return `<div class="cb ok">● TRADING ACTIVE · day P&L ${pct((cb.day_return||0)*100)} · auto-halt at −${((cb.limit_pct||0)*100).toFixed(0)}%</div>`;
@@ -1148,6 +1166,21 @@ function Parquet(v){
   const root=$(`<div></div>`);
   root.appendChild($(cbBanner()));
   root.appendChild(kpis());
+  if(runtimeIsFresh()){
+    const liveGrid=$(`<div class="grid c12" style="margin-top:12px"></div>`);
+    liveGrid.appendChild(robinhoodPanel());
+    liveGrid.appendChild(panel('Live Data Safety State',
+      `<div class="row"><span class="mut">Source</span><span class="tag on">ROBINHOOD MCP · AUTHENTICATED</span></div>
+       <div class="row"><span class="mut">Account</span><span class="mono">Agentic ••••${esc(RH.agentic.account_number_last4)}</span></div>
+       <div class="row"><span class="mut">Data age</span><span class="mono">${esc(relAge(runtimeAgeMs()))}</span></div>
+       <div class="row"><span class="mut">Execution authority</span><span class="tag off">DISABLED</span></div>
+       <div class="row"><span class="mut">Trading ready</span><span class="tag off">FALSE</span></div>`,
+      'broker truth only', 'span6'));
+    liveGrid.appendChild(panel('Research Archive',
+      `<div class="commentary">Simulation NAV, P&amp;L, council signals, and activity are ${esc(relAge(snapshotAgeMs()))} old and are intentionally excluded from this real-time account view. Use PERF or COUNCIL only as archived research context.</div>`,
+      'not broker truth', 'span6'));
+    root.appendChild(liveGrid); v.appendChild(root); return;
+  }
   const g=$(`<div class="grid c12" style="margin-top:12px"></div>`);
 
   // AI market read (synthesis of council + brain + macro intelligence)
