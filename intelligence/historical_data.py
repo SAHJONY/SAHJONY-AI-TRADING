@@ -107,14 +107,37 @@ class AlpacaHistoricalDataProvider:
                  *, client: Any | None = None, clock: Any | None = None):
         self._api_key = (api_key if api_key is not None else os.getenv("APCA_API_KEY_ID", "")).strip()
         self._secret_key = (secret_key if secret_key is not None else os.getenv("APCA_API_SECRET_KEY", "")).strip()
+        self._auth_mode = os.getenv("ALPACA_MARKET_DATA_AUTH", "trading").strip().lower()
+        self._feed = os.getenv("ALPACA_MARKET_DATA_FEED", "").strip().lower()
         if not self._api_key or not self._secret_key:
             raise HistoricalDataError("Alpaca market-data credentials are missing")
         self._clock = clock or (lambda: datetime.now(UTC))
         if client is None:
             try:
                 from alpaca.data.historical import StockHistoricalDataClient
-                client = StockHistoricalDataClient(self._api_key, self._secret_key)
+                if self._auth_mode == "broker_sandbox":
+                    import requests
+                    response = requests.post(
+                        "https://authx.sandbox.alpaca.markets/v1/oauth2/token",
+                        data={"grant_type": "client_credentials", "client_id": self._api_key,
+                              "client_secret": self._secret_key},
+                        timeout=20,
+                    )
+                    response.raise_for_status()
+                    token = str(response.json().get("access_token", "")).strip()
+                    if not token:
+                        raise HistoricalDataError("Alpaca broker token is missing")
+                    client = StockHistoricalDataClient(
+                        oauth_token=token,
+                        url_override="https://data.sandbox.alpaca.markets",
+                    )
+                elif self._auth_mode == "trading":
+                    client = StockHistoricalDataClient(self._api_key, self._secret_key)
+                else:
+                    raise HistoricalDataError("unsupported Alpaca market-data auth mode")
             except Exception as exc:
+                if isinstance(exc, HistoricalDataError):
+                    raise
                 raise HistoricalDataError("Alpaca market-data client unavailable") from exc
         self._client = client
 
@@ -124,9 +147,19 @@ class AlpacaHistoricalDataProvider:
         try:
             from alpaca.data.requests import StockBarsRequest
             from alpaca.data.timeframe import TimeFrame
-            request = StockBarsRequest(symbol_or_symbols=requested, timeframe=TimeFrame.Day,
-                                       start=now - timedelta(days=max(1, int(lookback_days))),
-                                       end=now)
+            request_args = {
+                "symbol_or_symbols": requested,
+                "timeframe": TimeFrame.Day,
+                "start": now - timedelta(days=max(1, int(lookback_days))),
+                "end": now,
+            }
+            if self._feed:
+                from alpaca.data.enums import DataFeed
+                try:
+                    request_args["feed"] = DataFeed(self._feed)
+                except ValueError as exc:
+                    raise HistoricalDataError("unsupported Alpaca market-data feed") from exc
+            request = StockBarsRequest(**request_args)
             response = self._client.get_stock_bars(request)
             rows: Sequence[Any] = response.data.get(requested, ())
         except Exception as exc:
