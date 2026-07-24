@@ -38,6 +38,9 @@ class FakeBridge:
         if operation == "quote":
             return {"symbol": parameters["symbol"], "price": 321.45,
                     "as_of": "2026-07-15T06:00:00Z", "source": "robinhood-trading-mcp"}
+        if operation == "crypto_capability":
+            return {"supported": False, "reason": "tool_unavailable", "account": account,
+                    "positions": [], "observed_at": datetime.now(timezone.utc).isoformat()}
         raise AssertionError(operation)
 
 
@@ -49,6 +52,38 @@ def test_service_verifies_identity_and_normalizes_contract():
     assert service.positions()["positions"][0]["symbol"] == "VTI"
     assert service.quote("vti")["price"] == 321.45
     assert service.quote("vti")["source"] == "robinhood-trading-mcp"
+    assert service.crypto_capability()["supported"] is False
+
+
+def test_crypto_capability_normalizes_authenticated_rows():
+    payload = {
+        "supported": True, "reason": "available",
+        "account": {"account_number_last4": "1131", "account_type": "Agentic cash",
+                    "status": "active"},
+        "positions": [{"symbol": "btc", "qty": "0.00005", "market_value": "5.91",
+                       "asset_type": "crypto",
+                       "observed_at": "2026-07-23T20:00:00Z"}],
+        "observed_at": "2026-07-23T20:00:00Z",
+    }
+    result = _validate_upstream_payload("crypto_capability", payload, {})
+    assert result["supported"] is True
+    assert result["positions"][0] == {
+        "symbol": "BTC", "qty": 0.00005, "market_value": 5.91,
+        "avg_entry_price": 0.0, "asset_type": "crypto",
+        "observed_at": "2026-07-23T20:00:00Z",
+    }
+
+
+def test_crypto_capability_rejects_invented_unsupported_positions():
+    payload = {
+        "supported": False, "reason": "tool_unavailable",
+        "account": {"account_number_last4": "1131", "account_type": "Agentic cash",
+                    "status": "active"},
+        "positions": [{"symbol": "BTC"}],
+        "observed_at": "2026-07-23T20:00:00Z",
+    }
+    with pytest.raises(GatewayError, match="unsupported crypto capability"):
+        _validate_upstream_payload("crypto_capability", payload, {})
 
 
 def test_identity_mismatch_fails_closed():

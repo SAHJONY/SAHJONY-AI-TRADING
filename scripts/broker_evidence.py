@@ -59,11 +59,24 @@ def collect_mcp() -> tuple[Any, list[str]]:
         return None, ["authenticated MCP asset-class breakdown is unavailable"]
     if not isinstance(positions, dict) or not isinstance(positions.get("positions"), list):
         return None, ["authenticated MCP positions evidence is invalid"]
+    crypto_status, crypto = broker_diagnostics._get(
+        cfg["url"], cfg["token"], "/capabilities/crypto-positions", timeout=120
+    )
+    all_positions = list(positions["positions"])
+    if crypto_status != 200 or not isinstance(crypto, dict):
+        blockers.append("authenticated crypto enumeration capability probe unavailable")
+    elif crypto.get("supported") is True:
+        crypto_rows = crypto.get("positions")
+        if not isinstance(crypto_rows, list):
+            return None, ["authenticated crypto positions evidence is invalid"]
+        all_positions.extend(crypto_rows)
+    else:
+        blockers.append("authenticated crypto enumeration capability unsupported")
     verified = bool(isinstance(health, dict) and health.get("identity_verified")
                     and str(health.get("account_number_last4", ""))[-4:] == cfg["expected_last4"])
     try:
         evidence = build_mcp_evidence(
-            account, positions["positions"],
+            account, all_positions,
             observed_at=datetime.now(timezone.utc).isoformat(), identity_verified=verified,
             expected_last4=cfg["expected_last4"],
         )

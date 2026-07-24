@@ -25,7 +25,7 @@ try:
 except ImportError:  # pragma: no cover
     dotenv_values = None
 
-READ_ONLY_PATHS = ("/health", "/account", "/positions")
+READ_ONLY_PATHS = ("/health", "/account", "/positions", "/capabilities/crypto-positions")
 DEFAULT_SYMBOLS = ("VTI", "QQQ", "NVDA", "MSFT")
 
 
@@ -72,6 +72,7 @@ def collect() -> dict[str, Any]:
         "identity": {"expected_last4": cfg["expected_last4"], "verified": False},
         "account": None,
         "positions": None,
+        "crypto_capability": None,
         "quotes": {},
         "reconciliation": {"status": "unavailable", "blockers": []},
     }
@@ -91,6 +92,10 @@ def collect() -> dict[str, Any]:
     snapshot["account"] = {"http_status": account_status, "data": account}
     positions_status, positions = _get(cfg["url"], cfg["token"], "/positions")
     snapshot["positions"] = {"http_status": positions_status, "data": positions}
+    crypto_status, crypto = _get(
+        cfg["url"], cfg["token"], "/capabilities/crypto-positions", timeout=120
+    )
+    snapshot["crypto_capability"] = {"http_status": crypto_status, "data": crypto}
 
     symbols = [s.strip().upper() for s in cfg["symbols"].split(",") if s.strip()]
     for symbol in symbols:
@@ -106,6 +111,10 @@ def collect() -> dict[str, Any]:
         blockers.append("positions endpoint unavailable")
     elif isinstance(positions, dict) and not positions.get("positions"):
         blockers.append("broker reports no visible positions")
+    if crypto_status != 200:
+        blockers.append("crypto enumeration capability probe unavailable")
+    elif not isinstance(crypto, dict) or crypto.get("supported") is not True:
+        blockers.append("authenticated crypto enumeration capability unsupported")
     failed_quotes = [symbol for symbol, result in snapshot["quotes"].items() if result["http_status"] != 200]
     if failed_quotes:
         blockers.append("quote failures: " + ", ".join(failed_quotes))

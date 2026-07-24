@@ -91,6 +91,27 @@ response in account, positions, or a synthetic quote object. Never expose an
 OAuth token, bearer token, credential, or account information.
 """
 
+_CRYPTO_CAPABILITY_PROMPT = """\
+Use only read tools from the robinhood-trading MCP. Never call review, place,
+cancel, replace, create, update, add, remove, delete, follow, or unfollow tools.
+First call get_accounts and select only the account with agentic_allowed=true
+and account number ending 1131.
+
+Inspect the actually available MCP tools for a read-only crypto holdings or
+crypto positions tool. If none exists, do not infer holdings from portfolio
+totals, history, watchlists, or quotes. Return:
+{"supported":false,"reason":"tool_unavailable","account":{"account_number_last4":"1131",
+"account_type":"Agentic","status":"active"},"positions":[],"observed_at":"ISO-8601 UTC"}
+
+If such a read tool exists, call it using the selected account's documented
+crypto account identifier. Return only nonzero holdings normalized as:
+{"supported":true,"reason":"available","account":{"account_number_last4":"1131",
+"account_type":"Agentic","status":"active"},"positions":[{"symbol":"BTC",
+"qty":0.0,"market_value":0.0,"asset_type":"crypto","observed_at":"ISO-8601 UTC"}],
+"observed_at":"ISO-8601 UTC"}
+Never invent a symbol, quantity, value, timestamp, or account identity.
+"""
+
 
 class GatewayError(RuntimeError):
     """An upstream or validation failure safe to report as a gateway error."""
@@ -113,10 +134,12 @@ class CodexRobinhoodBridge:
         self._lock = threading.Lock()
 
     def call(self, operation: str, **parameters: Any) -> dict[str, Any]:
-        if operation not in {"account_snapshot", "positions", "quote"}:
+        if operation not in {"account_snapshot", "positions", "quote", "crypto_capability"}:
             raise GatewayError("operation is not allowlisted")
         if operation == "quote":
             prompt = _QUOTE_READ_ONLY_PROMPT.format(symbol=str(parameters.get("symbol", "")))
+        elif operation == "crypto_capability":
+            prompt = _CRYPTO_CAPABILITY_PROMPT
         else:
             prompt = _READ_ONLY_PROMPT.format(
                 operation=operation,
@@ -282,6 +305,44 @@ def _validate_upstream_payload(
     if operation == "quote":
         requested = str(parameters.get("symbol", "")).upper()
         return _normalize_equity_quote(payload, requested)
+    if operation == "crypto_capability":
+        account = payload.get("account")
+        positions = payload.get("positions")
+        supported = payload.get("supported")
+        reason = str(payload.get("reason", ""))
+        observed_at = datetime.now(timezone.utc).isoformat()
+        if not isinstance(account, dict) or not isinstance(positions, list):
+            raise GatewayError("crypto capability response is invalid")
+        normalized_account = {
+            "account_number_last4": str(account.get("account_number_last4", ""))[-4:],
+            "account_type": str(account.get("account_type", "")),
+            "status": str(account.get("status", "")),
+        }
+        if supported is False:
+            if reason != "tool_unavailable" or positions:
+                raise GatewayError("unsupported crypto capability response is invalid")
+            return {"supported": False, "reason": reason, "account": normalized_account,
+                    "positions": [], "observed_at": observed_at}
+        if supported is not True or reason != "available":
+            raise GatewayError("crypto capability support status is invalid")
+        rows = []
+        for position in positions:
+            if not isinstance(position, dict):
+                raise GatewayError("invalid crypto position row")
+            symbol = str(position.get("symbol", "")).strip().upper()
+            if not _SYMBOL.fullmatch(symbol):
+                raise GatewayError("invalid crypto position symbol")
+            row_timestamp = str(position.get("observed_at", ""))
+            _timestamp(row_timestamp, "crypto position observed_at")
+            qty = _number(position.get("qty"), "crypto qty")
+            market_value = _number(position.get("market_value"), "crypto market_value")
+            if qty <= 0 or market_value <= 0 or position.get("asset_type") != "crypto":
+                raise GatewayError("invalid crypto position values")
+            rows.append({"symbol": symbol, "qty": qty, "market_value": market_value,
+                         "avg_entry_price": 0.0, "asset_type": "crypto",
+                         "observed_at": row_timestamp})
+        return {"supported": True, "reason": reason, "account": normalized_account,
+                "positions": rows, "observed_at": observed_at}
 
     account = payload.get("account")
     if not isinstance(account, dict):
@@ -369,6 +430,13 @@ class GatewayService:
         self._verify_identity(payload["account"])
         return {"positions": payload["positions"]}
 
+    def crypto_capability(self) -> dict[str, Any]:
+        payload = self._cached(
+            "crypto_capability", lambda: self.bridge.call("crypto_capability"), ttl=300.0
+        )
+        self._verify_identity(payload["account"])
+        return {key: payload[key] for key in ("supported", "reason", "positions", "observed_at")}
+
     def _positions_with_retry(self) -> dict[str, Any]:
         for attempt in range(3):
             try:
@@ -450,6 +518,8 @@ def make_handler(service: GatewayService, token: str) -> type[BaseHTTPRequestHan
                     payload = service.account()
                 elif path == "/positions":
                     payload = service.positions()
+                elif path == "/capabilities/crypto-positions":
+                    payload = service.crypto_capability()
                 elif path.startswith("/quotes/"):
                     payload = service.quote(unquote(path.removeprefix("/quotes/")))
                 else:

@@ -218,13 +218,16 @@ def test_cli_collects_only_read_routes_and_never_calls_orders(monkeypatch):
                          "crypto_value": 0, "total_value": 19.99}
         if path == "/positions":
             return 200, {"positions": []}
+        if path == "/capabilities/crypto-positions":
+            return 200, {"supported": False, "reason": "tool_unavailable", "positions": []}
         raise AssertionError(path)
 
     monkeypatch.setattr(cli.broker_diagnostics, "_get", get)
     evidence, blockers = cli.collect_mcp()
-    assert blockers == []
+    assert blockers == ["authenticated crypto enumeration capability unsupported"]
     assert evidence.identity_verified is True
-    assert calls == [("/health", 90), ("/account", 90), ("/positions", 285)]
+    assert calls == [("/health", 90), ("/account", 90), ("/positions", 285),
+                     ("/capabilities/crypto-positions", 120)]
     assert not any(any(word in path for word in ("order", "preview", "modify", "cancel"))
                    for path, _ in calls)
 
