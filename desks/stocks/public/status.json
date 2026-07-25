@@ -9,8 +9,8 @@
     "return_pct": 0.0,
     "alpha_pct": 0.0
   },
-  "ts": "2026-07-25T09:21:55.828034+00:00",
-  "cycle": 2,
+  "ts": "2026-07-25T10:55:07.133470+00:00",
+  "cycle": 3,
   "account": {
     "equity": 2000.0,
     "equity_start": 2000.0,
@@ -63,7 +63,7 @@
       "auto_update_models": true,
       "models": {
         "brain": "claude-fable-5",
-        "openai": "gpt-4o",
+        "openai": "gpt-5.6-luna",
         "grok": "grok-4.5",
         "gemini": "gemini-3-flash-preview",
         "nvidia": "openai/gpt-oss-120b"
@@ -98,11 +98,11 @@
         "daytrade": 0.867
       },
       "scorecard": {
-        "cycles": 2,
+        "cycles": 3,
         "sharpe": null,
         "sortino": null,
-        "max_drawdown_pct": null,
-        "volatility_pct": null
+        "max_drawdown_pct": 0.0,
+        "volatility_pct": 0.0
       }
     },
     "advisory_board": {
@@ -713,16 +713,16 @@
   ],
   "brain": {
     "enabled": true,
-    "used": true,
+    "used": false,
     "posture": "neutral",
-    "global_risk_multiplier": 0.8,
-    "commentary": "The portfolio leans mildly constructive but exhibits fragility: index longs have modest positive composites but lack alternative confirmation, while single\u2011name flats show negative alpha, high beta and volatility. Aggregate beta is above 1 and volatilities are elevated, especially for NVDA. We stay light and liquid, applying modest conviction tweaks and keeping a cautious exposure level.",
-    "brain_model": "nvidia:openai/gpt-oss-120b",
+    "global_risk_multiplier": 1.0,
+    "commentary": "brain error: HTTPSConnectionPool(host='integrate.api.nvidia.com', port=443): Read timed out. (read timeout=45)",
+    "brain_model": "",
     "counsellors": {
-      "openai": "",
-      "grok": "**Portfolio risk view** (advisory only):\n\nOverall posture is mildly constructive but fragile: index longs (SPY/VTI/QQQ) carry modest positive composites yet zero alt confirmation; single-name flats show clear deterioration. Aggregate beta >1 via QQQ/NVDA, elevated vols (0.20\u20130.37",
-      "gemini": "The portfolio maintains a pro-cyclical posture, heavily reliant on broad-market",
-      "nvidia": "**Risk posture:** The slate is heavily equity\u2011biased (three broad\u2011market ETFs) with a combined beta \u2248\u202f1.15 and average volatility \u2248\u202f0.16. NVDA adds outsized beta (1.83) and vol (0.37), raising tail\u2011risk. Overall exposure is moderate\u2011high; consider a modest tilt toward lower\u2011beta,"
+      "openai": "Overall posture: **moderately constructive but equity-concentrated**. SPY, QQQ, and VTI substantially overlap, creating hidden factor and market-beta concentration; QQQ adds elevated technology/growth sensitivity. With alternatives unavailable, diversification is limited. Flat ca",
+      "grok": "**Risk posture:** Moderately constructive on broad US equities (SPY/VTI lead), but elevated beta/vol in QQQ/NVDA and negative alphas on MSFT/NVDA warrant caution. Portfolio skews long-beta with limited idiosyncratic edge; alt data unavailable adds uncertainty. Overall: balanced b",
+      "gemini": "The portfolio maintains an aggressive posture, heavily reliant on broad-market momentum but vulnerable",
+      "nvidia": ""
     }
   },
   "positions": [
@@ -779,9 +779,35 @@
       "cash": 1916.023057625,
       "realized_pnl": 0.0,
       "premium": 0.0
+    },
+    {
+      "ts": "2026-07-25T10:55:07.057343+00:00",
+      "cycle": 3,
+      "equity": 2000.0,
+      "cash": 1916.023057625,
+      "realized_pnl": 0.0,
+      "premium": 0.0
     }
   ],
   "decisions": [
+    {
+      "ts": "2026-07-25T10:55:06.691023+00:00",
+      "kind": "wheel_wait",
+      "symbol": "VTI",
+      "reason": "no put contract found"
+    },
+    {
+      "ts": "2026-07-25T10:55:06.670968+00:00",
+      "kind": "ladder_update",
+      "symbol": "QQQ",
+      "reason": "px 684.33 peak 684.33 gain +0%"
+    },
+    {
+      "ts": "2026-07-25T10:55:06.669026+00:00",
+      "kind": "wheel_wait",
+      "symbol": "SPY",
+      "reason": "no put contract found"
+    },
     {
       "ts": "2026-07-25T09:21:54.755065+00:00",
       "kind": "wheel_wait",
