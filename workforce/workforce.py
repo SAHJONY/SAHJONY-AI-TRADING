@@ -257,9 +257,27 @@ class Firm:
         if state.get("equity_day") != today:
             state["equity_day"] = today
             state["equity_day_start"] = equity
+            state["realized_day_start"] = float(state.get("realized_pnl", 0.0) or 0.0)
             state["breaker_latched"] = False
         day_start = state.get("equity_day_start") or equity or 1.0
         day_return = (equity / day_start - 1.0) if day_start else 0.0
+
+        # Capital-flow guard. Deposits, withdrawals and sleeve changes move equity
+        # without any trading loss — a $50 sleeve switched to $10 is NOT a -80% day.
+        # If the desk is flat AND has booked no realized P&L today, the move cannot
+        # be a drawdown, so re-anchor the baseline instead of tripping the breaker.
+        # Conservative by construction: it can only un-latch when the desk provably
+        # did not trade that day.
+        realized_today = (float(state.get("realized_pnl", 0.0) or 0.0)
+                          - float(state.get("realized_day_start", 0.0) or 0.0))
+        if (abs(day_return) > 1e-9 and not (state.get("positions") or {})
+                and abs(realized_today) < 1e-9):
+            log.info("circuit breaker baseline re-anchored $%.2f → $%.2f "
+                     "(capital change, no trading activity today)", day_start, equity)
+            state["equity_day_start"] = equity
+            state["realized_day_start"] = float(state.get("realized_pnl", 0.0) or 0.0)
+            state["breaker_latched"] = False
+            day_start, day_return = equity, 0.0
 
         if day_return <= -abs(self.cfg.max_daily_drawdown_pct):
             state["breaker_latched"] = True

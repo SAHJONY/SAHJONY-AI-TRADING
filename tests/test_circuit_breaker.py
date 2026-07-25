@@ -72,10 +72,26 @@ def main() -> int:
     h0 = firm._halt_check(s, 100_000.0)
     _check(not h0["halted"], "breaker not tripped at day open")
     drop = 100_000.0 * (1 - cfg.max_daily_drawdown_pct - 0.01)
+    # A flat desk that lost money has BOOKED that loss — realized P&L moves with it.
+    s["realized_pnl"] = drop - 100_000.0
     h1 = firm._halt_check(s, drop)
     _check(h1["halted"], "breaker trips after daily loss exceeds limit")
     h2 = firm._halt_check(s, 99_999.0)  # equity recovers same day
     _check(h2["halted"], "breaker stays LATCHED for the rest of the day")
+
+    # Capital-flow guard: equity moving while the desk is FLAT and has booked no
+    # realized P&L is a deposit / withdrawal / sleeve change — never a drawdown.
+    firm2 = Firm(cfg, client, db)
+    s2 = default_state()
+    firm2._halt_check(s2, 50.0)                    # day opens on a $50 sleeve
+    h3 = firm2._halt_check(s2, 10.0)               # sleeve switched to $10
+    _check(not h3["halted"], "sleeve/deposit change does NOT trip the breaker")
+    _check(abs(h3["day_return"]) < 1e-9, "baseline re-anchored to the new capital base")
+    _check(h3["day_start"] == 10.0, "day-start now reflects the new base")
+    # …but a genuine loss on top of the new base still trips it
+    s2["realized_pnl"] = -5.0
+    h4 = firm2._halt_check(s2, 5.0)
+    _check(h4["halted"], "real trading loss after re-anchoring still trips the breaker")
 
     db.close()
     print("\nCIRCUIT BREAKER CHECKS PASSED ✓")
