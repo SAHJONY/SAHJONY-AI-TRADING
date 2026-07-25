@@ -79,14 +79,22 @@ class RobinhoodCryptoBroker:
 
     def __init__(self, cfg: Config):
         self.cfg = cfg
-        self.api_key = (os.getenv("ROBINHOOD_API_KEY", "") or "").strip()
+        self.api_key = (os.getenv("ROBINHOOD_API_KEY", "") or "").strip().strip('"\'')
         # Base64-encoded Ed25519 private-key seed (single line — NOT a PEM block).
-        priv_b64 = (os.getenv("ROBINHOOD_PRIVATE_KEY", "") or "").strip()
+        # Normalized to survive common paste accidents: surrounding quotes, internal
+        # whitespace/line breaks, base64url alphabet, and dropped '=' padding.
+        priv_b64 = (os.getenv("ROBINHOOD_PRIVATE_KEY", "") or "").strip().strip('"\'')
+        priv_b64 = "".join(priv_b64.split()).replace("-", "+").replace("_", "/")
+        if len(priv_b64) % 4:
+            priv_b64 += "=" * (4 - len(priv_b64) % 4)
         self._signer = None
         if self.api_key and priv_b64:
             try:
                 import nacl.signing  # lazy: package optional until you go live
                 seed = base64.b64decode(priv_b64)
+                if len(seed) not in (32, 64):
+                    raise ValueError(f"decoded key is {len(seed)} bytes — expected a "
+                                     "32-byte seed (44 base64 chars) or 64-byte signing key")
                 # RH provides a 32-byte seed; some tooling exports the 64-byte
                 # signing key — take the first 32 (the seed) either way.
                 self._signer = nacl.signing.SigningKey(seed[:32])
