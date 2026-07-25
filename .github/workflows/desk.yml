@@ -164,6 +164,26 @@ jobs:
       - name: Run one trading cycle
         run: python main.py --once --force
 
+      # Robinhood crypto desk — DRY-RUN stage: live market data + real account
+      # reads via the official Crypto API, but the broker only LOGS the orders it
+      # would place until the operator deliberately arms BOTH gates
+      # (Variable ROBINHOOD_LIVE=true AND secret LIVE_TRADING_ACK=I_UNDERSTAND_REAL_MONEY).
+      # Isolated under SAHJONY_HOME=desks/robinhood (own state/db/status); runs by
+      # default once Robinhood secrets exist — disable with ROBINHOOD_DESK_ENABLED=false.
+      - name: Run Robinhood crypto desk cycle (DRY-RUN unless armed)
+        if: ${{ vars.ROBINHOOD_DESK_ENABLED != 'false' }}
+        env:
+          SAHJONY_HOME: desks/robinhood
+          BROKER: robinhood_crypto
+          TICKERS: ${{ vars.ROBINHOOD_TICKERS || 'BTC/USD,ETH/USD,SOL/USD,LTC/USD' }}
+          BENCHMARK: BTC/USD
+          PAIRS: BTC/USD:ETH/USD
+          KNOWLEDGE_ROLE: robinhood-crypto
+          COPY_TRADING_ENABLED: 'false'
+          TRADING_CAPITAL: ${{ vars.ROBINHOOD_TRADING_CAPITAL || '100' }}
+          ROBINHOOD_MAX_ORDER_USD: ${{ vars.ROBINHOOD_MAX_ORDER_USD || '10' }}
+        run: python main.py --once --force || true
+
       - name: Preflight (read-only) summary
         if: always()
         run: python main.py --preflight || true
@@ -174,6 +194,7 @@ jobs:
           git config user.email "noreply@anthropic.com"
           git add public/status.json public/copy_signals.json public/knowledge.json 2>/dev/null || true
           git add desks/paper/public/status.json 2>/dev/null || true
+          git add desks/robinhood/public/status.json 2>/dev/null || true
           if ! git diff --cached --quiet; then
             git commit -m "Desk snapshot: cycle ${{ github.run_number }} update"
             for i in 1 2 3 4; do git push && break || sleep $((2**i)); done
