@@ -31,6 +31,14 @@ def main() -> int:
     print(f"  API key present     : {'yes' if rh.api_key else 'NO — set ROBINHOOD_API_KEY'}")
     print(f"  Signer initialized  : {'yes' if rh.online else 'NO — set ROBINHOOD_PRIVATE_KEY (base64 seed)'}")
     print(f"  Armed for real orders: {rh.armed}   (needs LIVE_TRADING_ACK + ROBINHOOD_LIVE=true)")
+    if rh._signer is not None:
+        import base64 as _b64
+        derived_pub = _b64.b64encode(bytes(rh._signer.verify_key)).decode()
+        print(f"  Derived PUBLIC key   : {derived_pub}")
+        print( "    ^ This is computed from your stored PRIVATE key (safe to show).")
+        print( "      It must EXACTLY match the public key registered on the Robinhood")
+        print( "      credential. If it differs, the stored private key is from a")
+        print( "      different keypair (or the public key was pasted as the private).")
     print(f"  Per-order cap        : ${rh.max_order_usd:,.2f}  (ROBINHOOD_MAX_ORDER_USD)")
     if not rh.online:
         print(bar)
