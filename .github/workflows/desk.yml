@@ -161,7 +161,32 @@ jobs:
           COPY_TRADING_ENABLED: 'false'
         run: python main.py --once --force || true
 
+      # Paper STOCK desk — Alpaca paper (zero real money): the owner's equity
+      # universe (SPY/QQQ/VTI/MSFT/NVDA). Robinhood has no official stock API,
+      # so stocks run here; the live Robinhood desk below stays crypto-only.
+      - name: Run paper stock desk cycle (Alpaca paper — stocks)
+        if: ${{ vars.STOCK_DESK_ENABLED != 'false' }}
+        env:
+          SAHJONY_HOME: desks/stocks
+          BROKER: alpaca
+          ALPACA_PAPER: 'true'
+          LIVE_TRADING_ACK: ''
+          ROBINHOOD_LIVE: 'false'
+          TICKERS: ${{ vars.STOCK_TICKERS || 'SPY,QQQ,VTI,MSFT,NVDA' }}
+          BENCHMARK: SPY
+          MARKET_HOURS: us
+          PAIRS: SPY:QQQ
+          PAIRS_ENABLED: 'true'
+          KNOWLEDGE_ROLE: alpaca-paper-stocks
+          TRADING_CAPITAL: ${{ vars.STOCK_TRADING_CAPITAL || '2000' }}
+        run: python main.py --once --force || true
+
       - name: Run one trading cycle
+        env:
+          # Live crypto universe: vars.TICKERS_LIVE overrides; XRP/USD included
+          # per owner directive (Robinhood-supported crypto only).
+          TICKERS: ${{ vars.TICKERS_LIVE || 'BTC/USD,ETH/USD,SOL/USD,LTC/USD,XRP/USD' }}
+          DAY_TRADE_SYMBOLS: ''
         run: python main.py --once --force
 
       # Robinhood crypto desk — DRY-RUN stage: live market data + real account
@@ -197,6 +222,7 @@ jobs:
           git add public/status.json public/copy_signals.json public/knowledge.json 2>/dev/null || true
           git add desks/paper/public/status.json 2>/dev/null || true
           git add desks/robinhood/public/status.json 2>/dev/null || true
+          git add desks/stocks/public/status.json 2>/dev/null || true
           if ! git diff --cached --quiet; then
             git commit -m "Desk snapshot: cycle ${{ github.run_number }} update"
             for i in 1 2 3 4; do git push && break || sleep $((2**i)); done
