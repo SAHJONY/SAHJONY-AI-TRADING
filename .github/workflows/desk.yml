@@ -187,6 +187,11 @@ jobs:
           # per owner directive (Robinhood-supported crypto only).
           TICKERS: ${{ vars.TICKERS_LIVE || 'BTC/USD,ETH/USD,SOL/USD,LTC/USD,XRP/USD' }}
           DAY_TRADE_SYMBOLS: ''
+          # 0 = size and score against the REAL Robinhood balance instead of a
+          # fixed sleeve, so the equity curve and Hermes' scorecard reflect the
+          # actual account (and auto-track deposits). Set LIVE_TRADING_CAPITAL
+          # to a number only to risk less than the full balance.
+          TRADING_CAPITAL: ${{ vars.LIVE_TRADING_CAPITAL || '0' }}
         run: python main.py --once --force
 
       # Robinhood crypto desk — DRY-RUN stage: live market data + real account
