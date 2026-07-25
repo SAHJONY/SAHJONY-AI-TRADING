@@ -9,8 +9,8 @@
     "return_pct": 0.0,
     "alpha_pct": 0.0
   },
-  "ts": "2026-07-25T10:55:07.133470+00:00",
-  "cycle": 3,
+  "ts": "2026-07-25T12:00:44.413525+00:00",
+  "cycle": 4,
   "account": {
     "equity": 2000.0,
     "equity_start": 2000.0,
@@ -98,7 +98,7 @@
         "daytrade": 0.867
       },
       "scorecard": {
-        "cycles": 3,
+        "cycles": 4,
         "sharpe": null,
         "sortino": null,
         "max_drawdown_pct": 0.0,
@@ -719,9 +719,9 @@
     "commentary": "brain error: HTTPSConnectionPool(host='integrate.api.nvidia.com', port=443): Read timed out. (read timeout=45)",
     "brain_model": "",
     "counsellors": {
-      "openai": "Overall posture: **moderately constructive but equity-concentrated**. SPY, QQQ, and VTI substantially overlap, creating hidden factor and market-beta concentration; QQQ adds elevated technology/growth sensitivity. With alternatives unavailable, diversification is limited. Flat ca",
-      "grok": "**Risk posture:** Moderately constructive on broad US equities (SPY/VTI lead), but elevated beta/vol in QQQ/NVDA and negative alphas on MSFT/NVDA warrant caution. Portfolio skews long-beta with limited idiosyncratic edge; alt data unavailable adds uncertainty. Overall: balanced b",
-      "gemini": "The portfolio maintains an aggressive posture, heavily reliant on broad-market momentum but vulnerable",
+      "openai": "**Overall:** Moderately constructive, but risk is concentrated in correlated U.S. equities. SPY, VTI, and QQQ overlap materially; QQQ/NVDA add elevated growth sensitivity. With no alternative tilt, downside diversification is limited. Prefer measured exposure rather than broad co",
+      "grok": "**Portfolio risk view**\n\nOverall posture: Moderately long market beta (SPY/VTI core) with acceptable vol; QQQ adds growth tilt but elevates beta/vol. Single-name flats (MSFT/NVDA) correctly limit idiosyncratic risk amid negative composites/alphas. Net: equity-risk-on but not over",
+      "gemini": "+0.05 (Solid baseline).\n        *   QQQ:",
       "nvidia": ""
     }
   },
@@ -787,9 +787,35 @@
       "cash": 1916.023057625,
       "realized_pnl": 0.0,
       "premium": 0.0
+    },
+    {
+      "ts": "2026-07-25T12:00:44.341779+00:00",
+      "cycle": 4,
+      "equity": 2000.0,
+      "cash": 1916.023057625,
+      "realized_pnl": 0.0,
+      "premium": 0.0
     }
   ],
   "decisions": [
+    {
+      "ts": "2026-07-25T12:00:43.896895+00:00",
+      "kind": "wheel_wait",
+      "symbol": "VTI",
+      "reason": "no put contract found"
+    },
+    {
+      "ts": "2026-07-25T12:00:43.872746+00:00",
+      "kind": "ladder_update",
+      "symbol": "QQQ",
+      "reason": "px 684.33 peak 684.33 gain +0%"
+    },
+    {
+      "ts": "2026-07-25T12:00:43.870084+00:00",
+      "kind": "wheel_wait",
+      "symbol": "SPY",
+      "reason": "no put contract found"
+    },
     {
       "ts": "2026-07-25T10:55:06.691023+00:00",
       "kind": "wheel_wait",
