@@ -81,6 +81,11 @@
     background:linear-gradient(90deg,#fff,#c3d3ee);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
   .brand .sub{font-size:9.5px;color:var(--amber);letter-spacing:2.8px;text-transform:uppercase;font-weight:600;margin-top:1px}
   .spacer{flex:1}
+  .deskSw{display:inline-flex;gap:2px;margin-left:12px;border:1px solid var(--line);border-radius:8px;padding:2px;background:var(--panel2)}
+  .deskSw button{border:0;background:transparent;color:var(--mut);font:600 10.5px var(--mono);letter-spacing:.4px;padding:4px 9px;border-radius:6px;cursor:pointer}
+  .deskSw button.active{background:var(--amber);color:#151004}
+  .liveBadge{margin-left:10px;font:700 10.5px var(--mono);letter-spacing:.6px;color:#ff5c6c;border:1px solid #ff5c6c55;border-radius:8px;padding:4px 9px;animation:livePulse 1.6s ease-in-out infinite}
+  @keyframes livePulse{0%,100%{opacity:1}50%{opacity:.45}}
   .badge{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;
     padding:4px 9px;border-radius:6px;color:var(--cyan);border:1px solid rgba(42,216,240,.35);
     background:rgba(42,216,240,.08);box-shadow:0 0 14px rgba(42,216,240,.12)}
@@ -291,6 +296,10 @@
     <div class="logo">S</div>
     <div><h1 id="firm">SAHJONY CAPITAL</h1><div class="sub">Parquet</div></div>
   </div>
+  <span class="deskSw" id="deskSw" role="tablist" aria-label="Desk switcher">
+    <button data-desk="live" class="active">LIVE · CRYPTO</button><button data-desk="trainer">TRAINER</button><button data-desk="stocks">STOCKS</button>
+  </span>
+  <span class="liveBadge" id="liveBadge" style="display:none">● REAL MONEY</span>
   <span class="spacer"></span>
   <span class="stat"><span class="dot" id="dBroker"></span><span id="brokerTxt">—</span></span>
   <span class="stat"><span class="dot" id="dMkt"></span>MKT <b id="mktTxt">—</b></span>
@@ -388,16 +397,35 @@ async function refreshCreds(){
 // Live data straight from GitHub (raw) so the dashboard is always current and never
 // frozen by Vercel deploy limits; falls back to the co-located snapshot if needed.
 const STATUS_REMOTE='https://raw.githubusercontent.com/SAHJONY/SAHJONY-AI-TRADING/master/public/status.json';
+// The firm is several desks: the LIVE Robinhood crypto desk plus the paper
+// sandboxes (Alpaca crypto trainer, Alpaca stock desk). Each publishes its own
+// status.json; all are readable via GitHub raw, so the switcher needs no deploy.
+const RAW='https://raw.githubusercontent.com/SAHJONY/SAHJONY-AI-TRADING/master/';
+const DESKS={
+  live:   {label:'LIVE · CRYPTO', remote:STATUS_REMOTE, local:'./status.json'},
+  trainer:{label:'TRAINER · PAPER', remote:RAW+'desks/paper/public/status.json', local:null},
+  stocks: {label:'STOCKS · PAPER', remote:RAW+'desks/stocks/public/status.json', local:null},
+};
+let ACTIVE_DESK='live';
 async function load(){
+  const d=DESKS[ACTIVE_DESK]||DESKS.live;
   try{
-    await refreshDesk();
-    if(DESK && DESK.last_status){ DATA=DESK.last_status; }
-    else {
-      try{ const r=await fetch(STATUS_REMOTE+'?_='+Date.now(),{cache:'no-store'}); if(!r.ok)throw 0; DATA=await r.json(); }
-      catch(_){ const r=await fetch('./status.json?_='+Date.now()); DATA=await r.json(); }
+    if(ACTIVE_DESK==='live'){
+      await refreshDesk();
+      if(DESK && DESK.last_status){ DATA=DESK.last_status; }
+      else {
+        try{ const r=await fetch(d.remote+'?_='+Date.now(),{cache:'no-store'}); if(!r.ok)throw 0; DATA=await r.json(); }
+        catch(_){ const r=await fetch(d.local+'?_='+Date.now()); DATA=await r.json(); }
+      }
+    } else {
+      const r=await fetch(d.remote+'?_='+Date.now(),{cache:'no-store'});
+      if(!r.ok)throw new Error(d.label+' snapshot not published yet');
+      DATA=await r.json();
     }
   }catch(e){
-    try{const r=await fetch('./status.json?_='+Date.now());DATA=await r.json();}catch(_){DATA={_error:String(e)};}
+    if(ACTIVE_DESK==='live'){
+      try{const r=await fetch('./status.json?_='+Date.now());DATA=await r.json();}catch(_){DATA={_error:String(e)};}
+    } else { DATA={_error:String(e)}; }
   }
   await fetchRobinhood();                       // live real-money account (read-only)
   buildNav(); render();
@@ -860,6 +888,8 @@ function setStatus(){
   document.getElementById('brokerTxt').textContent = h.broker_online?'LIVE FEED':'OFFLINE SIM';
   db.className='dot '+(h.broker_online?'g':'a');
   document.getElementById('mktTxt').textContent = h.market_open?'OPEN':'CLOSED';
+  const lb=document.getElementById('liveBadge');
+  if(lb) lb.style.display = (String(DATA.mode||'').toUpperCase()==='LIVE' && ACTIVE_DESK==='live') ? '' : 'none';
   dm.className='dot '+(h.market_open?'g':'r');
   document.getElementById('cycTxt').textContent = (DATA&&DATA.cycle)||'0';
   const acc=document.getElementById('account');
@@ -1718,6 +1748,16 @@ function voiceWakeToggle(){VOICE.mode==='wake'?voiceStop():voiceRun('wake');}
 })();
 
 load();
+// Desk switcher: swap the whole dashboard between the firm's desks.
+(function(){
+  const sw=document.getElementById('deskSw'); if(!sw)return;
+  sw.addEventListener('click',(e)=>{
+    const b=e.target.closest('button[data-desk]'); if(!b||b.dataset.desk===ACTIVE_DESK)return;
+    ACTIVE_DESK=b.dataset.desk;
+    sw.querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));
+    DATA={}; render(); load();
+  });
+})();
 setInterval(load,30000);
 if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));}
 </script>
