@@ -9,8 +9,8 @@
     "return_pct": 0.0,
     "alpha_pct": 0.0
   },
-  "ts": "2026-07-25T09:03:27.851380+00:00",
-  "cycle": 1,
+  "ts": "2026-07-25T09:21:55.828034+00:00",
+  "cycle": 2,
   "account": {
     "equity": 2000.0,
     "equity_start": 2000.0,
@@ -98,7 +98,7 @@
         "daytrade": 0.867
       },
       "scorecard": {
-        "cycles": 1,
+        "cycles": 2,
         "sharpe": null,
         "sortino": null,
         "max_drawdown_pct": null,
@@ -715,14 +715,14 @@
     "enabled": true,
     "used": true,
     "posture": "neutral",
-    "global_risk_multiplier": 0.9,
-    "commentary": "The council\u2019s ETF longs (SPY, QQQ, VTI) give a modestly constructive beta (~1.1\u20111.2) and portfolio volatility around 0.18, suggesting a slightly bullish tilt. However, the flat\u2011position singles (MSFT, NVDA) show negative composites, high beta/volatility and are flagged as fragile, so overall exposure should stay moderate.",
+    "global_risk_multiplier": 0.8,
+    "commentary": "The portfolio leans mildly constructive but exhibits fragility: index longs have modest positive composites but lack alternative confirmation, while single\u2011name flats show negative alpha, high beta and volatility. Aggregate beta is above 1 and volatilities are elevated, especially for NVDA. We stay light and liquid, applying modest conviction tweaks and keeping a cautious exposure level.",
     "brain_model": "nvidia:openai/gpt-oss-120b",
     "counsellors": {
       "openai": "",
-      "grok": "**Risk posture:** Moderately constructive beta (~1.1) via ETF longs; QQQ/NVDA elevate vol. Singles flat on weak composites\u2014net cautious equity tilt, monitor drawdowns. Alt data unavailable.\n\n**Adjustments (conviction):**  \nSPY +0.05 | QQQ -0.05 | VTI +0.08 | MSFT -0.10 | NVDA -0.",
-      "gemini": "The portfolio reflects a **cautiously long** posture",
-      "nvidia": "**Risk posture:** The slate is equity\u2011heavy with a modest tech bias. Aggregate beta \u22481.2 and portfolio volatility \u22480.18\u202f\u2013\u202fhigher than a pure market\u2011neutral stance, so market swings will dominate P&L.  \n\n**Conviction tweaks (\u00b10.15):**  \n- **SPY:** +0.05 \u2013 modest lift; signal solid"
+      "grok": "**Portfolio risk view** (advisory only):\n\nOverall posture is mildly constructive but fragile: index longs (SPY/VTI/QQQ) carry modest positive composites yet zero alt confirmation; single-name flats show clear deterioration. Aggregate beta >1 via QQQ/NVDA, elevated vols (0.20\u20130.37",
+      "gemini": "The portfolio maintains a pro-cyclical posture, heavily reliant on broad-market",
+      "nvidia": "**Risk posture:** The slate is heavily equity\u2011biased (three broad\u2011market ETFs) with a combined beta \u2248\u202f1.15 and average volatility \u2248\u202f0.16. NVDA adds outsized beta (1.83) and vol (0.37), raising tail\u2011risk. Overall exposure is moderate\u2011high; consider a modest tilt toward lower\u2011beta,"
     }
   },
   "positions": [
@@ -771,9 +771,35 @@
       "cash": 1916.023057625,
       "realized_pnl": 0.0,
       "premium": 0.0
+    },
+    {
+      "ts": "2026-07-25T09:21:55.618777+00:00",
+      "cycle": 2,
+      "equity": 2000.0,
+      "cash": 1916.023057625,
+      "realized_pnl": 0.0,
+      "premium": 0.0
     }
   ],
   "decisions": [
+    {
+      "ts": "2026-07-25T09:21:54.755065+00:00",
+      "kind": "wheel_wait",
+      "symbol": "VTI",
+      "reason": "no put contract found"
+    },
+    {
+      "ts": "2026-07-25T09:21:54.681716+00:00",
+      "kind": "ladder_update",
+      "symbol": "QQQ",
+      "reason": "px 684.33 peak 684.33 gain +0%"
+    },
+    {
+      "ts": "2026-07-25T09:21:54.679532+00:00",
+      "kind": "wheel_wait",
+      "symbol": "SPY",
+      "reason": "no put contract found"
+    },
     {
       "ts": "2026-07-25T09:03:26.675080+00:00",
       "kind": "wheel_wait",
@@ -901,13 +927,7 @@
       "mandate": "This dashboard"
     }
   ],
-  "executed_this_cycle": [
-    {
-      "symbol": "QQQ",
-      "purpose": "ladder_entry",
-      "reason": "open 0.122715 sh @ 684.33, floor 40%"
-    }
-  ],
+  "executed_this_cycle": [],
   "env_catalog": [
     {
       "name": "ALPACA_API_KEY",
