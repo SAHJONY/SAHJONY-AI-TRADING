@@ -47,9 +47,26 @@ def main() -> int:
         return 1
 
     print("  → GET account (verifies signing on your real account)…")
+    # Identify WHICH Robinhood account this credential is bound to. The last 4 of
+    # the account number should match the account shown in the app (e.g. •1131);
+    # if it doesn't, the keys were created under a different login and the desk
+    # is looking at an empty account.
+    try:
+        raw = rh._request("GET", "/api/v1/crypto/trading/accounts/")
+        num = str(raw.get("account_number", "") or "")
+        print(f"    account_number  : …{num[-4:] if num else '?'}   status={raw.get('status', '?')}")
+        print( "    ^ compare with the account shown in the Robinhood app.")
+    except Exception as exc:
+        print(f"    (could not read account identity: {str(exc)[:90]})")
     acct = rh.get_account()
     ok = acct["buying_power"] > 0 or acct["equity"] > 0 or acct["cash"] >= 0
     print(f"    buying_power=${acct['buying_power']:,.2f}  equity=${acct['equity']:,.2f}")
+    holdings = rh.get_broker_positions()
+    if holdings:
+        for sym, h in holdings.items():
+            print(f"    holding {sym}: {h.get('qty')} (${h.get('market_value', 0):,.2f})")
+    else:
+        print("    holdings: none reported by the API for this account")
     print("  → GET BTC-USD quote…")
     px = rh.get_price("BTC-USD")
     print(f"    BTC-USD mid = ${px:,.2f}")
