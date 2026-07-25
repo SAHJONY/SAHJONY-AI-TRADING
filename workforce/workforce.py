@@ -270,14 +270,20 @@ class Firm:
         # did not trade that day.
         realized_today = (float(state.get("realized_pnl", 0.0) or 0.0)
                           - float(state.get("realized_day_start", 0.0) or 0.0))
-        if (abs(day_return) > 1e-9 and not (state.get("positions") or {})
-                and abs(realized_today) < 1e-9):
-            log.info("circuit breaker baseline re-anchored $%.2f → $%.2f "
-                     "(capital change, no trading activity today)", day_start, equity)
-            state["equity_day_start"] = equity
-            state["realized_day_start"] = float(state.get("realized_pnl", 0.0) or 0.0)
-            state["breaker_latched"] = False
-            day_start, day_return = equity, 0.0
+        no_activity = (not (state.get("positions") or {})) and abs(realized_today) < 1e-9
+        if no_activity:
+            if abs(day_return) > 1e-9:
+                log.info("circuit breaker baseline re-anchored $%.2f → $%.2f "
+                         "(capital change, no trading activity today)", day_start, equity)
+                state["equity_day_start"] = equity
+                state["realized_day_start"] = float(state.get("realized_pnl", 0.0) or 0.0)
+                day_start, day_return = equity, 0.0
+            # A latch with no trade behind it is an artifact of a capital change,
+            # not a loss — clear it. A real loss always leaves positions or
+            # realized P&L, so a genuine halt still survives the whole day.
+            if state.get("breaker_latched"):
+                log.info("circuit breaker un-latched — desk is flat with no realized P&L today")
+                state["breaker_latched"] = False
 
         if day_return <= -abs(self.cfg.max_daily_drawdown_pct):
             state["breaker_latched"] = True

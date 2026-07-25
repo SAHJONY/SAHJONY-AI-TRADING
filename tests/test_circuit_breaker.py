@@ -93,6 +93,15 @@ def main() -> int:
     h4 = firm2._halt_check(s2, 5.0)
     _check(h4["halted"], "real trading loss after re-anchoring still trips the breaker")
 
+    # A latch left over from a capital-base artifact must not freeze the desk:
+    # flat + no realized P&L today means nothing was ever lost.
+    firm3 = Firm(cfg, client, db)
+    s3 = default_state()
+    firm3._halt_check(s3, 50.0)
+    s3["breaker_latched"] = True                 # stale latch from a prior mis-read
+    h5 = firm3._halt_check(s3, 50.0)
+    _check(not h5["halted"], "stale latch clears when the desk never traded")
+
     db.close()
     print("\nCIRCUIT BREAKER CHECKS PASSED ✓")
     return 0
