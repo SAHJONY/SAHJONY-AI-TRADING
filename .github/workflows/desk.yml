@@ -170,8 +170,10 @@ jobs:
       # (Variable ROBINHOOD_LIVE=true AND secret LIVE_TRADING_ACK=I_UNDERSTAND_REAL_MONEY).
       # Isolated under SAHJONY_HOME=desks/robinhood (own state/db/status); runs by
       # default once Robinhood secrets exist — disable with ROBINHOOD_DESK_ENABLED=false.
+      # Skipped when the MAIN desk already runs on robinhood_crypto (vars.BROKER),
+      # so one account can never be traded by two desks at once.
       - name: Run Robinhood crypto desk cycle (DRY-RUN unless armed)
-        if: ${{ vars.ROBINHOOD_DESK_ENABLED != 'false' }}
+        if: ${{ vars.ROBINHOOD_DESK_ENABLED != 'false' && vars.BROKER != 'robinhood_crypto' }}
         env:
           SAHJONY_HOME: desks/robinhood
           BROKER: robinhood_crypto
