@@ -434,6 +434,22 @@ class Firm:
             equity = acct["equity"]
         if state.get("equity_start") is None:
             state["equity_start"] = equity
+        # Capital-flow guard on the RETURN baseline (same principle as the daily
+        # breaker): deposits, withdrawals and sleeve changes move equity without
+        # any trading. If the desk is FLAT and has booked no realized P&L, a moved
+        # equity cannot be performance — re-anchor, or the dashboard reports a
+        # capital change as profit (a $10 → $50 sleeve read as "+400% return").
+        try:
+            flat = not (state.get("positions") or {})
+            no_pnl = (abs(float(state.get("realized_pnl", 0.0) or 0.0)) < 1e-9
+                      and abs(float(state.get("premium_collected", 0.0) or 0.0)) < 1e-9)
+            base = float(state.get("equity_start") or 0.0)
+            if flat and no_pnl and base > 0 and abs(equity - base) > 1e-9:
+                log.info("return baseline re-anchored $%.2f → $%.2f (capital change, "
+                         "no trading activity)", base, equity)
+                state["equity_start"] = equity
+        except Exception:
+            pass
         state["equity_last"] = equity
 
         # Broker reconciliation FIRST: never plan a cycle against a stale view of
