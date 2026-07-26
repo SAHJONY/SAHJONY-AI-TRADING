@@ -9,8 +9,8 @@
     "return_pct": 0.0,
     "alpha_pct": 0.0
   },
-  "ts": "2026-07-26T11:48:45.951810+00:00",
-  "cycle": 28,
+  "ts": "2026-07-26T13:04:32.960114+00:00",
+  "cycle": 29,
   "account": {
     "equity": 2000.0,
     "equity_start": 2000.0,
@@ -48,7 +48,7 @@
     "cadence": {
       "degraded": false,
       "reason": "",
-      "gap_min": 65.7,
+      "gap_min": 74.6,
       "expected_min": 15,
       "tolerance_min": 90.0
     },
@@ -109,7 +109,7 @@
         "daytrade": 0.867
       },
       "scorecard": {
-        "cycles": 28,
+        "cycles": 29,
         "sharpe": null,
         "sortino": null,
         "max_drawdown_pct": 0.0,
@@ -724,16 +724,16 @@
   ],
   "brain": {
     "enabled": true,
-    "used": true,
+    "used": false,
     "posture": "neutral",
-    "global_risk_multiplier": 0.82,
-    "commentary": "The portfolio leans moderate\u2011beta with three correlated US equity ETFs (SPY, QQQ, VTI) providing the core exposure. Convictions are modest and composites low, while QQQ and NVDA introduce elevated beta and volatility. Signals for MSFT, NVDA (and to a lesser extent QQQ) appear fragile due to negative alpha, flat direction, and high vol. Given the concentration and tail\u2011risk concerns, we stay neutral on overall stance and apply a modest risk multiplier. Adjustments are small, nudging the anchor SPY and diversified VTI slightly higher, while pulling back on the more volatile and fragile names.",
-    "brain_model": "nvidia:openai/gpt-oss-120b",
+    "global_risk_multiplier": 1.0,
+    "commentary": "brain error: HTTPSConnectionPool(host='integrate.api.nvidia.com', port=443): Read timed out. (read timeout=45)",
+    "brain_model": "",
     "counsellors": {
-      "openai": "**Overall posture:** Moderately constructive but concentrated in correlated U.S. equities; SPY/VTI overlap is substantial, while QQQ adds meaningful growth and beta exposure. No alternative diversifiers are available. Given modest composites and limited conviction, avoid aggressi",
-      "grok": "**Risk posture:** Moderate equity beta tilt via index longs; idiosyncratic tech flat. Aggregate vol contained but QQQ/NVDA elevate tail risk. No alt hedges. Advise caution on crowding.\n\n**Adjustments (conviction delta):**\n- SPY: +0.05 (stable beta, clean signal)\n- QQQ: -0.05 (ele",
-      "gemini": "The portfolio reflects a pro-cyclical stance via broad indices, but signals a",
-      "nvidia": "**Risk posture:** The core is three broad\u2011market ETFs (SPY, QQQ, VTI) \u2013 a moderate\u2011beta, moderate\u2011volatility base. However, QQQ\u2019s beta (1.42) and NVDA\u2019s beta (1.83) push overall market\u2011risk upward, while the flat\u2011position stocks add volatility without offsetting beta. The mix lea"
+      "openai": "**Overall:** Moderately constructive but concentrated in overlapping U.S. large-cap exposure; SPY/VTI/QQQ collectively amplify equity beta, while QQQ and NVDA add meaningful volatility. No alternative diversification is available. Maintain disciplined sizing and avoid treating \u201cl",
+      "grok": "**Portfolio risk view (advisory only)**\n\nOverall posture: Moderately constructive but defensive. Long bias concentrated in low-vol broad beta (SPY/VTI); QQQ adds growth tilt with elevated beta/vol. Single-name flats (MSFT/NVDA) correctly limit idiosyncratic risk amid negative com",
+      "gemini": "The current posture is **cautiously beta-heavy**, leaning on broad indices",
+      "nvidia": ""
     }
   },
   "positions": [
@@ -1198,9 +1198,74 @@
       "cash": 621.4227979899999,
       "realized_pnl": 0.0,
       "premium": 0.0
+    },
+    {
+      "ts": "2026-07-26T13:04:32.711505+00:00",
+      "cycle": 29,
+      "equity": 2000.0,
+      "cash": 621.4227979899999,
+      "realized_pnl": 0.0,
+      "premium": 0.0
     }
   ],
   "decisions": [
+    {
+      "ts": "2026-07-26T13:04:32.032056+00:00",
+      "kind": "risk_block",
+      "symbol": "DLHC",
+      "purpose": "copy_buy",
+      "reason": "would breach total-deployed cap $1,400 (room $21)"
+    },
+    {
+      "ts": "2026-07-26T13:04:32.031986+00:00",
+      "kind": "risk_block",
+      "symbol": "VMI",
+      "purpose": "copy_buy",
+      "reason": "would breach total-deployed cap $1,400 (room $21)"
+    },
+    {
+      "ts": "2026-07-26T13:04:32.031919+00:00",
+      "kind": "risk_block",
+      "symbol": "FSBC",
+      "purpose": "copy_buy",
+      "reason": "would breach total-deployed cap $1,400 (room $21)"
+    },
+    {
+      "ts": "2026-07-26T13:04:31.795303+00:00",
+      "kind": "copy_hold",
+      "symbol": "DLHC",
+      "reason": "+0.0% vs basis, peak $2.15"
+    },
+    {
+      "ts": "2026-07-26T13:04:31.795300+00:00",
+      "kind": "copy_hold",
+      "symbol": "VMI",
+      "reason": "+0.0% vs basis, peak $218.36"
+    },
+    {
+      "ts": "2026-07-26T13:04:31.795280+00:00",
+      "kind": "copy_hold",
+      "symbol": "FSBC",
+      "reason": "+0.0% vs basis, peak $46.73"
+    },
+    {
+      "ts": "2026-07-26T13:04:31.475086+00:00",
+      "kind": "wheel_wait",
+      "symbol": "VTI",
+      "reason": "no put contract found"
+    },
+    {
+      "ts": "2026-07-26T13:04:31.412038+00:00",
+      "kind": "ladder_update",
+      "symbol": "QQQ",
+      "reason": "px 684.33 peak 684.33 gain +0%"
+    },
+    {
+      "ts": "2026-07-26T13:04:31.314457+00:00",
+      "kind": "wheel_wait",
+      "symbol": "SPY",
+      "reason": "no put contract found"
+    },
     {
       "ts": "2026-07-26T11:48:45.637829+00:00",
       "kind": "risk_block",
@@ -1296,60 +1361,6 @@
     },
     {
       "ts": "2026-07-26T10:42:53.792855+00:00",
-      "kind": "wheel_wait",
-      "symbol": "VTI",
-      "reason": "no put contract found"
-    },
-    {
-      "ts": "2026-07-26T10:42:53.722329+00:00",
-      "kind": "ladder_update",
-      "symbol": "QQQ",
-      "reason": "px 684.33 peak 684.33 gain +0%"
-    },
-    {
-      "ts": "2026-07-26T10:42:53.720283+00:00",
-      "kind": "wheel_wait",
-      "symbol": "SPY",
-      "reason": "no put contract found"
-    },
-    {
-      "ts": "2026-07-26T08:58:30.300290+00:00",
-      "kind": "halt_block",
-      "symbol": "DLHC",
-      "purpose": "copy_buy"
-    },
-    {
-      "ts": "2026-07-26T08:58:30.300178+00:00",
-      "kind": "halt_block",
-      "symbol": "VMI",
-      "purpose": "copy_buy"
-    },
-    {
-      "ts": "2026-07-26T08:58:30.300113+00:00",
-      "kind": "halt_block",
-      "symbol": "FSBC",
-      "purpose": "copy_buy"
-    },
-    {
-      "ts": "2026-07-26T08:58:30.037903+00:00",
-      "kind": "copy_hold",
-      "symbol": "DLHC",
-      "reason": "+0.0% vs basis, peak $2.15"
-    },
-    {
-      "ts": "2026-07-26T08:58:30.037898+00:00",
-      "kind": "copy_hold",
-      "symbol": "VMI",
-      "reason": "+0.0% vs basis, peak $218.36"
-    },
-    {
-      "ts": "2026-07-26T08:58:30.037876+00:00",
-      "kind": "copy_hold",
-      "symbol": "FSBC",
-      "reason": "+0.0% vs basis, peak $46.73"
-    },
-    {
-      "ts": "2026-07-26T08:58:29.761013+00:00",
       "kind": "wheel_wait",
       "symbol": "VTI",
       "reason": "no put contract found"
