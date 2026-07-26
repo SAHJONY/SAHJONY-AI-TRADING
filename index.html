@@ -304,7 +304,7 @@
   <span class="stat"><span class="dot" id="dBroker"></span><span id="brokerTxt">—</span></span>
   <span class="stat"><span class="dot" id="dMkt"></span>MKT <b id="mktTxt">—</b></span>
   <span class="stat">CYC <b id="cycTxt">—</b></span>
-  <span class="stat"><span class="dot" id="dStream"></span>STREAM</span>
+  <span class="stat"><span class="dot" id="dStream"></span><span id="streamTxt">STREAM</span></span>
   <span class="stat mono" id="clock">--:--:-- UTC</span>
   <span class="stat mono" id="freshStat" title="Data freshness — time since the desk last updated this snapshot" style="display:none"><span class="dot" id="dFresh"></span><span id="freshTxt">—</span></span>
   <span class="badge" id="viewerBadge" style="display:none" title="Shareable read-only view — no changes can be made from here">◇ VIEW ONLY</span>
@@ -532,15 +532,57 @@ async function fetchSymbolNews(sym){    // per-ticker headlines (Finnhub key, el
 
 // ── realtime streaming over WebSocket ───────────────────────────────────────
 const BINANCE_SYMS=['btc','eth','sol','bnb','xrp','ada','doge','avax','link','dot','ltc','trx'];
-function setStreamDot(){const d=document.getElementById('dStream'); if(d)d.className='dot '+(STREAM.connected?'live':'');}
+function setStreamDot(){
+  const d=document.getElementById('dStream'); if(d)d.className='dot '+(STREAM.connected?'live':'');
+  // Say what is actually streaming and how fresh it is — a green dot alone can
+  // stay lit while ticks have silently stopped arriving.
+  const el=document.getElementById('streamTxt'); if(!el)return;
+  const ts=Object.values(STREAM.live).map(v=>v.t||0);
+  const n=ts.length, age=n?Math.round((Date.now()-Math.max(...ts))/1000):null;
+  el.textContent = !STREAM.connected ? 'STREAM' :
+    (n? `STREAM ${n}·${age<=2?'now':age+'s'}` : 'STREAM …');
+  el.title = n? `${n} symbol(s) streaming · last tick ${age}s ago · positions marked to market live`
+              : 'connecting to live price feeds';
+}
 function cryptoRows(){
   if((MARKETS.list||[]).length) return MARKETS.list.map(m=>({sym:(m.symbol||'').toUpperCase(),price:m.current_price,pct:m.price_change_percentage_24h}));
   return Object.entries(STREAM.live).filter(([k,v])=>v.pct!=null).map(([k,v])=>({sym:k,price:v.price,pct:v.pct}));
 }
+// Realtime mark-to-market. Ticks used to feed only the Markets tab, so the
+// owner's positions, P&L and equity stayed frozen on the 15-minute snapshot
+// while live prices were already streaming. Overlay every tick on the snapshot
+// so the book moves continuously; load() re-baselines from the desk each cycle.
+function liveTick(sym){
+  const s=String(sym||'').toUpperCase();
+  const base=s.replace('/USD','').replace('-USD','').replace('USDT','').replace('/USDT','');
+  return STREAM.live[base]||STREAM.live[s]||null;
+}
+function applyLivePrices(){
+  const ps=DATA.positions||[]; let touched=0, signed=0;
+  ps.forEach(p=>{
+    const sh=+p.shares||0, t=liveTick(p.symbol);
+    if(t&&t.price>0&&sh){
+      p.price=t.price; p.market_value=sh*t.price;
+      p.unrealized=(t.price-(+p.cost_basis||0))*sh; p._liveTs=t.t; touched++;
+    }
+    signed+=(+p.market_value||0);
+  });
+  if(touched&&DATA.account){
+    DATA.account.deployed=signed;
+    DATA.account.equity=(+DATA.account.cash||0)+signed;
+  }
+  // council table prices track the same ticks
+  (DATA.council||[]).forEach(c=>{const t=liveTick(c.symbol); if(t&&t.price>0)c.price=t.price;});
+  return touched;
+}
 let _tick=null;
 function scheduleTick(){ if(_tick)return; _tick=setTimeout(()=>{ _tick=null;
   (MARKETS.list||[]).forEach(m=>{const l=STREAM.live[(m.symbol||'').toUpperCase()]; if(l){m.current_price=l.price; if(l.pct!=null)m.price_change_percentage_24h=l.pct;}});
-  buildTape(); if(TAB==='Markets')render(); }, 900); }
+  const touched=applyLivePrices();
+  buildTape(); setStreamDot();
+  // Re-render any tab whose numbers just moved (not just Markets).
+  if(TAB==='Markets'||(touched&&['Overview','Positions','Council','Risk'].includes(TAB))) render();
+}, 900); }
 function connectCrypto(){
   if(!('WebSocket' in window)) return;
   try{
@@ -557,7 +599,14 @@ function connectCrypto(){
 function connectStocks(){
   if(!FINNHUB||!('WebSocket' in window)) return;
   const syms=((DATA&&DATA.council)||[]).map(c=>c.symbol).filter(s=>!String(s).includes('/'));
-  if(!syms.length) return;
+  // Streams start before the first snapshot lands, so an empty council used to
+  // abort permanently — no stock stream for the whole session. Retry instead.
+  if(!syms.length){ clearTimeout(STREAM.stockRetry);
+    STREAM.stockRetry=setTimeout(connectStocks,5000); return; }
+  const key=syms.slice().sort().join(',');
+  if(STREAM.stockSyms===key && STREAM.stockWS && STREAM.stockWS.readyState<=1) return;
+  STREAM.stockSyms=key;
+  try{ if(STREAM.stockWS) STREAM.stockWS.close(); }catch(e){}
   try{
     const ws=new WebSocket('wss://ws.finnhub.io?token='+encodeURIComponent(FINNHUB)); STREAM.stockWS=ws;
     ws.onopen=()=>{syms.forEach(s=>ws.send(JSON.stringify({type:'subscribe',symbol:s})));STREAM.connected=true;setStreamDot();};
