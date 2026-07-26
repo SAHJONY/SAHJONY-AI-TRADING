@@ -9,13 +9,13 @@
     "return_pct": 0.0,
     "alpha_pct": 0.0
   },
-  "ts": "2026-07-26T01:29:11.512967+00:00",
-  "cycle": 20,
+  "ts": "2026-07-26T01:45:09.271243+00:00",
+  "cycle": 22,
   "account": {
     "equity": 2000.0,
     "equity_start": 2000.0,
-    "cash": 1562.37,
-    "deployed": 437.63
+    "cash": 855.07,
+    "deployed": 1144.93
   },
   "pnl": {
     "realized": 0.0,
@@ -102,7 +102,7 @@
         "daytrade": 0.867
       },
       "scorecard": {
-        "cycles": 20,
+        "cycles": 22,
         "sharpe": null,
         "sortino": null,
         "max_drawdown_pct": 0.0,
@@ -719,14 +719,14 @@
     "enabled": true,
     "used": true,
     "posture": "neutral",
-    "global_risk_multiplier": 0.85,
-    "commentary": "The portfolio is broadly equity\u2011biased with modest constructive tilt. Core ETFs (SPY, VTI) provide a stable anchor, but the growth\u2011heavy QQQ and NVDA add significant beta and volatility. MSFT and NVDA signals are fragile (flat verdicts, negative composites, high vol/negative alpha). Maintain modest sizing and enforce correlation limits.",
+    "global_risk_multiplier": 0.9,
+    "commentary": "The book remains moderately constructive but fragile. Core equity exposure (SPY, VTI) is solid, yet the concentration in U.S. beta assets and the presence of high\u2011beta, high\u2011volatility names (QQQ, NVDA, MSFT) limit diversification and increase sensitivity to market swings. Signals for QQQ, MSFT and NVDA are flagged as fragile due to elevated beta, volatility and negative alpha. Adjustments are modest to preserve capital while keeping a modest long bias.",
     "brain_model": "nvidia:openai/gpt-oss-120b",
     "counsellors": {
-      "openai": "Overall posture is cautiously constructive but equity-beta heavy: SPY, QQQ, and VTI materially overlap, while QQQ/NVDA add growth and volatility concentration. Convictions are modest, so avoid treating the ETF consensus as a strong risk-on signal. No alternative diversification i",
-      "grok": "**Risk posture:** Moderately constructive broad-equity tilt (SPY/VTI). Elevated beta/vol in QQQ/NVDA plus deeply negative MSFT alpha create asymmetric downside; absent alt data raises model risk. Net: balanced but fragile to growth/vol shocks.\n\n**Conviction adjustments:**  \nSPY +",
+      "openai": "Overall posture: **moderately constructive but concentrated**. SPY, VTI, and QQQ overlap substantially, leaving meaningful U.S. equity and growth-beta exposure; QQQ and NVDA add higher volatility. With alternatives unavailable, diversification is limited. Signals are not especial",
+      "grok": "**Risk posture:** Moderately constructive but fragile. Long bias concentrated in beta-1 broad beta (SPY/VTI); QQQ adds unwanted high-beta drag. Single-name flats correctly limit idiosyncratic vol, yet negative alphas and missing alt data weaken edge. Overall book is index-heavy, ",
       "gemini": "",
-      "nvidia": "**Risk posture:** The slate is heavily equity\u2011biased (beta\u202f\u2248\u202f1.2 overall) with modest diversification beyond the three broad ETFs. Volatility is driven by QQQ (20\u202f%) and NVDA (37\u202f%). The mix leans toward growth, so a market pull\u2011back would hit the portfolio harder than a balanced"
+      "nvidia": "**Risk posture:** The slate is equity\u2011heavy, with three broad\u2011market ETFs (SPY, QQQ, VTI) and two high\u2011beta tech names. Portfolio beta \u22481.2 and aggregate volatility \u22480.18, so market swings will be felt strongly. The flat\u2011position tech stocks carry the most fragility\u2014both show neg"
     }
   },
   "positions": [
@@ -744,30 +744,30 @@
       "symbol": "FSBC",
       "strategy": "copy",
       "state": "long",
-      "shares": 5.0,
+      "shares": 15.0,
       "cost_basis": 46.73,
       "price": 46.73,
-      "market_value": 233.65,
+      "market_value": 700.95,
       "unrealized": 0.0
     },
     {
       "symbol": "VMI",
       "strategy": "copy",
       "state": "long",
-      "shares": 0.274776,
+      "shares": 0.8243280000000001,
       "cost_basis": 218.36,
       "price": 218.36,
-      "market_value": 60.0,
+      "market_value": 180.0,
       "unrealized": 0.0
     },
     {
       "symbol": "DLHC",
       "strategy": "copy",
       "state": "long",
-      "shares": 27.842227,
+      "shares": 83.526681,
       "cost_basis": 2.15,
       "price": 2.15,
-      "market_value": 60.0,
+      "market_value": 180.0,
       "unrealized": 0.0
     }
   ],
@@ -779,6 +779,108 @@
     "committed": 0.0
   },
   "recent_trades": [
+    {
+      "id": 10,
+      "ts": "2026-07-26T01:45:07.481541+00:00",
+      "cycle": 22,
+      "symbol": "DLHC",
+      "strategy": "copy",
+      "kind": "equity",
+      "side": "buy",
+      "qty": 27.842227,
+      "price": 2.155,
+      "premium": 0.0,
+      "notional": 59.999999185,
+      "purpose": "copy_buy",
+      "reason": "mirror SEC Form 4: Mink Brook Asset Management LLC buy 27.842227 @ 2.15",
+      "mode": "paper",
+      "simulated": 0
+    },
+    {
+      "id": 9,
+      "ts": "2026-07-26T01:45:07.322229+00:00",
+      "cycle": 22,
+      "symbol": "VMI",
+      "strategy": "copy",
+      "kind": "equity",
+      "side": "buy",
+      "qty": 0.274776,
+      "price": 218.36,
+      "premium": 0.0,
+      "notional": 60.00008736000001,
+      "purpose": "copy_buy",
+      "reason": "mirror SEC Form 4: Schwietz John L buy 0.274776 @ 218.36",
+      "mode": "paper",
+      "simulated": 0
+    },
+    {
+      "id": 8,
+      "ts": "2026-07-26T01:45:07.176580+00:00",
+      "cycle": 22,
+      "symbol": "FSBC",
+      "strategy": "copy",
+      "kind": "equity",
+      "side": "buy",
+      "qty": 5.0,
+      "price": 46.730000000000004,
+      "premium": 0.0,
+      "notional": 233.65000000000003,
+      "purpose": "copy_buy",
+      "reason": "mirror SEC Form 4: Allbaugh Larry Eugene buy 5.0 @ 46.73",
+      "mode": "paper",
+      "simulated": 0
+    },
+    {
+      "id": 7,
+      "ts": "2026-07-26T01:40:02.577199+00:00",
+      "cycle": 21,
+      "symbol": "DLHC",
+      "strategy": "copy",
+      "kind": "equity",
+      "side": "buy",
+      "qty": 27.842227,
+      "price": 2.155,
+      "premium": 0.0,
+      "notional": 59.999999185,
+      "purpose": "copy_buy",
+      "reason": "mirror SEC Form 4: Mink Brook Asset Management LLC buy 27.842227 @ 2.15",
+      "mode": "paper",
+      "simulated": 0
+    },
+    {
+      "id": 6,
+      "ts": "2026-07-26T01:40:02.487989+00:00",
+      "cycle": 21,
+      "symbol": "VMI",
+      "strategy": "copy",
+      "kind": "equity",
+      "side": "buy",
+      "qty": 0.274776,
+      "price": 218.36,
+      "premium": 0.0,
+      "notional": 60.00008736000001,
+      "purpose": "copy_buy",
+      "reason": "mirror SEC Form 4: Schwietz John L buy 0.274776 @ 218.36",
+      "mode": "paper",
+      "simulated": 0
+    },
+    {
+      "id": 5,
+      "ts": "2026-07-26T01:40:02.401989+00:00",
+      "cycle": 21,
+      "symbol": "FSBC",
+      "strategy": "copy",
+      "kind": "equity",
+      "side": "buy",
+      "qty": 5.0,
+      "price": 46.730000000000004,
+      "premium": 0.0,
+      "notional": 233.65000000000003,
+      "purpose": "copy_buy",
+      "reason": "mirror SEC Form 4: Allbaugh Larry Eugene buy 5.0 @ 46.73",
+      "mode": "paper",
+      "simulated": 0
+    },
     {
       "id": 4,
       "ts": "2026-07-26T01:29:10.009996+00:00",
@@ -1008,9 +1110,133 @@
       "cash": 1562.3729710799998,
       "realized_pnl": 0.0,
       "premium": 0.0
+    },
+    {
+      "ts": "2026-07-26T01:40:03.249398+00:00",
+      "cycle": 21,
+      "equity": 2000.0,
+      "cash": 1208.722884535,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-26T01:45:08.609576+00:00",
+      "cycle": 22,
+      "equity": 2000.0,
+      "cash": 855.07279799,
+      "realized_pnl": 0.0,
+      "premium": 0.0
     }
   ],
   "decisions": [
+    {
+      "ts": "2026-07-26T01:45:07.482193+00:00",
+      "kind": "copy_buy",
+      "symbol": "DLHC",
+      "reason": "mirror SEC Form 4: Mink Brook Asset Management LLC buy 27.842227 @ 2.15"
+    },
+    {
+      "ts": "2026-07-26T01:45:07.322886+00:00",
+      "kind": "copy_buy",
+      "symbol": "VMI",
+      "reason": "mirror SEC Form 4: Schwietz John L buy 0.274776 @ 218.36"
+    },
+    {
+      "ts": "2026-07-26T01:45:07.177283+00:00",
+      "kind": "copy_buy",
+      "symbol": "FSBC",
+      "reason": "mirror SEC Form 4: Allbaugh Larry Eugene buy 5.0 @ 46.73"
+    },
+    {
+      "ts": "2026-07-26T01:45:06.758323+00:00",
+      "kind": "copy_hold",
+      "symbol": "DLHC",
+      "reason": "+0.0% vs basis, peak $2.15"
+    },
+    {
+      "ts": "2026-07-26T01:45:06.758319+00:00",
+      "kind": "copy_hold",
+      "symbol": "VMI",
+      "reason": "+0.0% vs basis, peak $218.36"
+    },
+    {
+      "ts": "2026-07-26T01:45:06.758301+00:00",
+      "kind": "copy_hold",
+      "symbol": "FSBC",
+      "reason": "+0.0% vs basis, peak $46.73"
+    },
+    {
+      "ts": "2026-07-26T01:45:06.405191+00:00",
+      "kind": "wheel_wait",
+      "symbol": "VTI",
+      "reason": "no put contract found"
+    },
+    {
+      "ts": "2026-07-26T01:45:06.335086+00:00",
+      "kind": "ladder_update",
+      "symbol": "QQQ",
+      "reason": "px 684.33 peak 684.33 gain +0%"
+    },
+    {
+      "ts": "2026-07-26T01:45:06.332787+00:00",
+      "kind": "wheel_wait",
+      "symbol": "SPY",
+      "reason": "no put contract found"
+    },
+    {
+      "ts": "2026-07-26T01:40:02.577838+00:00",
+      "kind": "copy_buy",
+      "symbol": "DLHC",
+      "reason": "mirror SEC Form 4: Mink Brook Asset Management LLC buy 27.842227 @ 2.15"
+    },
+    {
+      "ts": "2026-07-26T01:40:02.488643+00:00",
+      "kind": "copy_buy",
+      "symbol": "VMI",
+      "reason": "mirror SEC Form 4: Schwietz John L buy 0.274776 @ 218.36"
+    },
+    {
+      "ts": "2026-07-26T01:40:02.402770+00:00",
+      "kind": "copy_buy",
+      "symbol": "FSBC",
+      "reason": "mirror SEC Form 4: Allbaugh Larry Eugene buy 5.0 @ 46.73"
+    },
+    {
+      "ts": "2026-07-26T01:40:02.047723+00:00",
+      "kind": "copy_hold",
+      "symbol": "DLHC",
+      "reason": "+0.0% vs basis, peak $2.15"
+    },
+    {
+      "ts": "2026-07-26T01:40:02.047718+00:00",
+      "kind": "copy_hold",
+      "symbol": "VMI",
+      "reason": "+0.0% vs basis, peak $218.36"
+    },
+    {
+      "ts": "2026-07-26T01:40:02.047699+00:00",
+      "kind": "copy_hold",
+      "symbol": "FSBC",
+      "reason": "+0.0% vs basis, peak $46.73"
+    },
+    {
+      "ts": "2026-07-26T01:40:01.860427+00:00",
+      "kind": "wheel_wait",
+      "symbol": "VTI",
+      "reason": "no put contract found"
+    },
+    {
+      "ts": "2026-07-26T01:40:01.815697+00:00",
+      "kind": "ladder_update",
+      "symbol": "QQQ",
+      "reason": "px 684.33 peak 684.33 gain +0%"
+    },
+    {
+      "ts": "2026-07-26T01:40:01.813923+00:00",
+      "kind": "wheel_wait",
+      "symbol": "SPY",
+      "reason": "no put contract found"
+    },
     {
       "ts": "2026-07-26T01:29:10.010807+00:00",
       "kind": "copy_buy",
@@ -1049,114 +1275,6 @@
     },
     {
       "ts": "2026-07-26T00:15:16.545166+00:00",
-      "kind": "wheel_wait",
-      "symbol": "VTI",
-      "reason": "no put contract found"
-    },
-    {
-      "ts": "2026-07-26T00:15:16.533647+00:00",
-      "kind": "ladder_update",
-      "symbol": "QQQ",
-      "reason": "px 684.33 peak 684.33 gain +0%"
-    },
-    {
-      "ts": "2026-07-26T00:15:16.525171+00:00",
-      "kind": "wheel_wait",
-      "symbol": "SPY",
-      "reason": "no put contract found"
-    },
-    {
-      "ts": "2026-07-25T23:10:37.457617+00:00",
-      "kind": "wheel_wait",
-      "symbol": "VTI",
-      "reason": "no put contract found"
-    },
-    {
-      "ts": "2026-07-25T23:10:37.388478+00:00",
-      "kind": "ladder_update",
-      "symbol": "QQQ",
-      "reason": "px 684.33 peak 684.33 gain +0%"
-    },
-    {
-      "ts": "2026-07-25T23:10:37.386551+00:00",
-      "kind": "wheel_wait",
-      "symbol": "SPY",
-      "reason": "no put contract found"
-    },
-    {
-      "ts": "2026-07-25T22:54:38.519693+00:00",
-      "kind": "wheel_wait",
-      "symbol": "VTI",
-      "reason": "no put contract found"
-    },
-    {
-      "ts": "2026-07-25T22:54:38.447411+00:00",
-      "kind": "ladder_update",
-      "symbol": "QQQ",
-      "reason": "px 684.33 peak 684.33 gain +0%"
-    },
-    {
-      "ts": "2026-07-25T22:54:38.445299+00:00",
-      "kind": "wheel_wait",
-      "symbol": "SPY",
-      "reason": "no put contract found"
-    },
-    {
-      "ts": "2026-07-25T22:46:23.291653+00:00",
-      "kind": "wheel_wait",
-      "symbol": "VTI",
-      "reason": "no put contract found"
-    },
-    {
-      "ts": "2026-07-25T22:46:23.281893+00:00",
-      "kind": "ladder_update",
-      "symbol": "QQQ",
-      "reason": "px 684.33 peak 684.33 gain +0%"
-    },
-    {
-      "ts": "2026-07-25T22:46:23.279694+00:00",
-      "kind": "wheel_wait",
-      "symbol": "SPY",
-      "reason": "no put contract found"
-    },
-    {
-      "ts": "2026-07-25T22:12:31.067691+00:00",
-      "kind": "wheel_wait",
-      "symbol": "VTI",
-      "reason": "no put contract found"
-    },
-    {
-      "ts": "2026-07-25T22:12:31.058358+00:00",
-      "kind": "ladder_update",
-      "symbol": "QQQ",
-      "reason": "px 684.33 peak 684.33 gain +0%"
-    },
-    {
-      "ts": "2026-07-25T22:12:31.056216+00:00",
-      "kind": "wheel_wait",
-      "symbol": "SPY",
-      "reason": "no put contract found"
-    },
-    {
-      "ts": "2026-07-25T22:07:35.957907+00:00",
-      "kind": "wheel_wait",
-      "symbol": "VTI",
-      "reason": "no put contract found"
-    },
-    {
-      "ts": "2026-07-25T22:07:35.884753+00:00",
-      "kind": "ladder_update",
-      "symbol": "QQQ",
-      "reason": "px 684.33 peak 684.33 gain +0%"
-    },
-    {
-      "ts": "2026-07-25T22:07:35.882492+00:00",
-      "kind": "wheel_wait",
-      "symbol": "SPY",
-      "reason": "no put contract found"
-    },
-    {
-      "ts": "2026-07-25T21:55:44.200814+00:00",
       "kind": "wheel_wait",
       "symbol": "VTI",
       "reason": "no put contract found"
