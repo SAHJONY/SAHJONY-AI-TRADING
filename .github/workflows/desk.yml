@@ -26,7 +26,7 @@ permissions:
 jobs:
   run:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 70
     env:
       # ── Broker selection ──────────────────────────────────────────────────────
       # Default 'alpaca' (paper) keeps the desk 100% paper. Set repo Variable
@@ -181,8 +181,15 @@ jobs:
           TRADING_CAPITAL: ${{ vars.STOCK_TRADING_CAPITAL == '' && '2000' || vars.STOCK_TRADING_CAPITAL }}
         run: python main.py --once --force || true
 
-      - name: Run one trading cycle
+      # The scheduler THROTTLES how often it STARTS a job (observed: ~hourly for a
+      # */15 cron, with multi-hour skips) but one job may run for hours. So drive
+      # the live desk from INSIDE a single job: a cycle every CYCLE_MINUTES across
+      # DESK_LOOP_MINUTES, publishing each snapshot as it goes. That restores true
+      # 15-minute risk checks — stops, floors and the breaker re-evaluate on
+      # schedule — with no paid infrastructure. Manual dispatch runs one pass.
+      - name: Run live desk cycles (loops through the scheduled window)
         env:
+          LOOP_MINUTES: ${{ github.event_name == 'schedule' && (vars.DESK_LOOP_MINUTES == '' && '55' || vars.DESK_LOOP_MINUTES) || '0' }}
           # Live crypto universe: vars.TICKERS_LIVE overrides; XRP/USD included
           # per owner directive (Robinhood-supported crypto only).
           TICKERS: ${{ vars.TICKERS_LIVE || 'BTC/USD,ETH/USD,SOL/USD,LTC/USD,XRP/USD' }}
@@ -192,7 +199,29 @@ jobs:
           # account and follow deposits automatically). Set Variable
           # LIVE_TRADING_CAPITAL to a number to risk only part of the balance.
           TRADING_CAPITAL: ${{ vars.LIVE_TRADING_CAPITAL == '' && '0' || vars.LIVE_TRADING_CAPITAL }}
-        run: python main.py --once --force
+        run: |
+          set +e
+          git config user.name  "sahjony-desk[bot]"
+          git config user.email "noreply@anthropic.com"
+          END=$(( SECONDS + 60 * ${LOOP_MINUTES:-0} ))
+          GAP=$(( 60 * ${CYCLE_MINUTES:-15} ))
+          n=0
+          while : ; do
+            n=$(( n + 1 ))
+            echo "── live cycle $n (window ${LOOP_MINUTES:-0} min, gap ${GAP}s) ──"
+            python main.py --once --force
+            # Publish each cycle immediately so the dashboard and its freshness
+            # indicator track the DESK, not the scheduler.
+            git add public/status.json public/knowledge.json 2>/dev/null
+            if ! git diff --cached --quiet; then
+              git commit -q -m "Desk snapshot: live cycle ${{ github.run_number }}.$n"
+              git pull --rebase -q origin master || git rebase --abort
+              git push -q origin HEAD:master || echo "push deferred to the final commit step"
+            fi
+            [ $SECONDS -ge $END ] && break
+            [ $(( END - SECONDS )) -lt $GAP ] && break
+            sleep $GAP
+          done
 
       # Robinhood crypto desk — DRY-RUN stage: live market data + real account
       # reads via the official Crypto API, but the broker only LOGS the orders it
