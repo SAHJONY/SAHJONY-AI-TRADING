@@ -539,10 +539,12 @@ function setStreamDot(){
   const el=document.getElementById('streamTxt'); if(!el)return;
   const ts=Object.values(STREAM.live).map(v=>v.t||0);
   const n=ts.length, age=n?Math.round((Date.now()-Math.max(...ts))/1000):null;
+  const srcName=(STREAM.src||'').toUpperCase();
   el.textContent = !STREAM.connected ? 'STREAM' :
-    (n? `STREAM ${n}·${age<=2?'now':age+'s'}` : 'STREAM …');
-  el.title = n? `${n} symbol(s) streaming · last tick ${age}s ago · positions marked to market live`
-              : 'connecting to live price feeds';
+    (n? `${srcName||'STREAM'} ${n}·${age<=2?'now':age+'s'}` : (srcName? srcName+' …' : 'STREAM …'));
+  el.title = n? `${n} symbol(s) live from ${srcName||'feed'} · last tick ${age}s ago · `
+               +`positions marked to market in realtime`
+              : 'connecting to live price feeds (Binance → Coinbase fallback)';
 }
 function cryptoRows(){
   if((MARKETS.list||[]).length) return MARKETS.list.map(m=>({sym:(m.symbol||'').toUpperCase(),price:m.current_price,pct:m.price_change_percentage_24h}));
@@ -583,19 +585,73 @@ function scheduleTick(){ if(_tick)return; _tick=setTimeout(()=>{ _tick=null;
   // Re-render any tab whose numbers just moved (not just Markets).
   if(TAB==='Markets'||(touched&&['Overview','Positions','Council','Risk'].includes(TAB))) render();
 }, 900); }
+// Crypto ticks: Binance first, Coinbase as the fallback. Binance's global feed
+// is unreachable from US networks, where this desk actually runs — without a
+// fallback the socket silently never delivers and every "live" number on the
+// page is really the 15-minute snapshot. Whichever source answers first wins,
+// and a watchdog fails over if ticks stop arriving.
+function cryptoUniverse(){
+  const fromDesk=((DATA&&DATA.council)||[]).map(c=>String(c.symbol||'').toUpperCase())
+    .filter(s=>s.includes('/')||s.includes('-')).map(s=>s.replace('/USD','').replace('-USD',''));
+  const base=fromDesk.length?fromDesk:BINANCE_SYMS.map(s=>s.toUpperCase());
+  return [...new Set(base)];
+}
+function noteTick(base, price, pct){
+  if(!base||!(price>0))return;
+  STREAM.live[base]={price:+price, pct:(pct==null?undefined:+pct), t:Date.now()};
+  STREAM.lastTick=Date.now(); scheduleTick();
+}
 function connectCrypto(){
   if(!('WebSocket' in window)) return;
   try{
     const ws=new WebSocket('wss://stream.binance.com:9443/stream?streams='+BINANCE_SYMS.map(s=>s+'usdt@ticker').join('/'));
-    STREAM.cryptoWS=ws;
+    STREAM.cryptoWS=ws; STREAM.src='binance';
+    // If Binance is geo-blocked the socket may "open" yet never deliver: give it
+    // a short grace period, then fail over rather than sitting silently dead.
+    clearTimeout(STREAM.probe);
+    STREAM.probe=setTimeout(()=>{ if(!STREAM.lastTick) connectCoinbase(); }, 6000);
     ws.onopen=()=>{STREAM.connected=true;STREAM.tries=0;setStreamDot();};
     ws.onmessage=(ev)=>{try{const m=JSON.parse(ev.data);const d=m.data||m;if(!d||!d.s)return;
-      STREAM.live[d.s.replace('USDT','')]={price:+d.c,pct:+d.P,t:Date.now()};scheduleTick();}catch(e){}};
+      noteTick(d.s.replace('USDT',''), +d.c, +d.P);}catch(e){}};
     ws.onclose=()=>{STREAM.connected=!!(STREAM.stockWS&&STREAM.stockWS.readyState===1);setStreamDot();
+      if(!STREAM.lastTick){ connectCoinbase(); return; }      // never worked → switch source
       STREAM.tries++;setTimeout(connectCrypto,Math.min(30000,1000*Math.pow(2,STREAM.tries)));};
+    ws.onerror=()=>{try{ws.close();}catch(e){}};
+  }catch(e){ connectCoinbase(); }
+}
+function connectCoinbase(){
+  if(!('WebSocket' in window)) return;
+  if(STREAM.cbWS && STREAM.cbWS.readyState<=1) return;        // already connecting/open
+  try{ if(STREAM.cryptoWS) STREAM.cryptoWS.close(); }catch(e){}
+  const products=cryptoUniverse().map(b=>b+'-USD');
+  try{
+    const ws=new WebSocket('wss://ws-feed.exchange.coinbase.com');
+    STREAM.cbWS=ws; STREAM.src='coinbase';
+    ws.onopen=()=>{ STREAM.connected=true; STREAM.tries=0; setStreamDot();
+      ws.send(JSON.stringify({type:'subscribe', product_ids:products, channels:['ticker']})); };
+    ws.onmessage=(ev)=>{try{const m=JSON.parse(ev.data);
+      if(m.type!=='ticker'||!m.product_id)return;
+      const base=String(m.product_id).replace('-USD','');
+      const px=+m.price, open=+m.open_24h;
+      noteTick(base, px, (open>0? (px/open-1)*100 : null));
+    }catch(e){}};
+    ws.onclose=()=>{STREAM.connected=!!(STREAM.stockWS&&STREAM.stockWS.readyState===1);setStreamDot();
+      STREAM.tries++;setTimeout(connectCoinbase,Math.min(30000,1000*Math.pow(2,STREAM.tries)));};
     ws.onerror=()=>{try{ws.close();}catch(e){}};
   }catch(e){}
 }
+// Staleness watchdog: a socket can stay "open" while the feed dies. If no tick
+// has landed in 90s, tear down and reconnect (alternating source).
+setInterval(()=>{
+  if(!STREAM.started) return;
+  const age=STREAM.lastTick? Date.now()-STREAM.lastTick : null;
+  if(age!=null && age>90000){
+    STREAM.lastTick=0;
+    try{ if(STREAM.cbWS) STREAM.cbWS.close(); }catch(e){}
+    try{ if(STREAM.cryptoWS) STREAM.cryptoWS.close(); }catch(e){}
+    (STREAM.src==='coinbase'? connectCrypto : connectCoinbase)();
+  }
+}, 30000);
 function connectStocks(){
   if(!FINNHUB||!('WebSocket' in window)) return;
   const syms=((DATA&&DATA.council)||[]).map(c=>c.symbol).filter(s=>!String(s).includes('/'));
