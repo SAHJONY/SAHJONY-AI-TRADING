@@ -139,6 +139,30 @@ def _capital_block(db, equity: float, equity_start: float) -> Dict[str, Any]:
     }
 
 
+def _evaluation_block() -> Dict[str, Any]:
+    """The 90-day out-of-sample window (public/evaluation.json), with days elapsed.
+
+    Surfaced on every snapshot so progress toward the decision date is visible and
+    the protocol cannot quietly drift: the window is what makes the final number
+    mean anything.
+    """
+    try:
+        with open(os.path.join(_ROOT, "public", "evaluation.json"), "r", encoding="utf-8") as fh:
+            m = json.load(fh)
+        start = datetime.fromisoformat(m["started_at"])
+        end = datetime.fromisoformat(m["ends_at"])
+        now = datetime.now(timezone.utc)
+        total = max(1, (end - start).days)
+        elapsed = max(0, (now - start).days)
+        return {"active": now < end, "day": min(elapsed, total), "days": total,
+                "started_at": m["started_at"], "ends_at": m["ends_at"],
+                "pct": round(100.0 * min(elapsed, total) / total, 1),
+                "criteria": m.get("success_criteria", {}),
+                "frozen_at_commit": m.get("frozen_at_commit", "")[:7]}
+    except Exception:
+        return {}
+
+
 def _hermes_block(firm, db, cycle_result: Dict[str, Any]) -> Dict[str, Any]:
     """Hermes guardian status: goal, this cycle's data quality + calibration, and the
     honest Sharpe/Sortino scorecard off the equity curve. Secret-free, fault-isolated."""
@@ -251,6 +275,7 @@ def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[st
             "vol_targeting": {"target_annual": getattr(cfg, "vol_target_annual", 0.0),
                               "scale": cycle_result.get("vol_scale", 1.0)},
             "cadence": cycle_result.get("cadence") or {},
+            "evaluation": _evaluation_block(),
             "circuit_breaker": cycle_result.get("halt", {"halted": False, "reason": ""}),
             "ai_brain": firm.brain.status,
             "alt_data": getattr(firm, "alt", None).status if getattr(firm, "alt", None) else {"enabled": False},
