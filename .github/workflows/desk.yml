@@ -86,8 +86,8 @@ jobs:
       XAI_MODEL: ${{ vars.XAI_MODEL || 'grok-4' }}
       GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-2.5-pro' }}
       TRADING_HALT: ${{ vars.TRADING_HALT || 'false' }}
-      VOL_TARGET_ANNUAL: ${{ vars.VOL_TARGET_ANNUAL || '0.20' }}
-      TRADING_CAPITAL: ${{ vars.TRADING_CAPITAL || '0' }}
+      VOL_TARGET_ANNUAL: ${{ vars.VOL_TARGET_ANNUAL == '' && '0.20' || vars.VOL_TARGET_ANNUAL }}
+      TRADING_CAPITAL: ${{ vars.TRADING_CAPITAL == '' && '0' || vars.TRADING_CAPITAL }}
       FOREX_PAIRS: ${{ vars.FOREX_PAIRS || 'EUR/USD,GBP/USD,USD/JPY,AUD/USD' }}
       DAY_TRADE_SYMBOLS: ${{ vars.DAY_TRADE_SYMBOLS || '' }}
       DAY_TRADE_TARGET_PCT: ${{ vars.DAY_TRADE_TARGET_PCT || '0.015' }}
@@ -151,7 +151,7 @@ jobs:
           LIVE_TRADING_ACK: ''
           ROBINHOOD_LIVE: 'false'
           TICKERS: ${{ vars.PAPER_TICKERS || vars.TICKERS || 'BTC/USD,ETH/USD,SOL/USD,LTC/USD' }}
-          TRADING_CAPITAL: ${{ vars.PAPER_TRADING_CAPITAL || '2000' }}
+          TRADING_CAPITAL: ${{ vars.PAPER_TRADING_CAPITAL == '' && '2000' || vars.PAPER_TRADING_CAPITAL }}
           MIN_COUNCIL_CONVICTION: ${{ vars.PAPER_MIN_CONVICTION || '0.40' }}
           KNOWLEDGE_ROLE: alpaca-paper-trainer
           # Alpaca crypto uses the slash form (BTC/USD); BTC-USD 400s there.
@@ -178,7 +178,7 @@ jobs:
           PAIRS: SPY:QQQ
           PAIRS_ENABLED: 'true'
           KNOWLEDGE_ROLE: alpaca-paper-stocks
-          TRADING_CAPITAL: ${{ vars.STOCK_TRADING_CAPITAL || '2000' }}
+          TRADING_CAPITAL: ${{ vars.STOCK_TRADING_CAPITAL == '' && '2000' || vars.STOCK_TRADING_CAPITAL }}
         run: python main.py --once --force || true
 
       - name: Run one trading cycle
@@ -191,7 +191,7 @@ jobs:
           # Hermes' scorecard all measure against $10 — matching the funded
           # balance today, and capping risk at $10 even if the account grows.
           # (0 would instead track the full broker balance automatically.)
-          TRADING_CAPITAL: ${{ vars.LIVE_TRADING_CAPITAL || '10' }}
+          TRADING_CAPITAL: ${{ vars.LIVE_TRADING_CAPITAL == '' && '10' || vars.LIVE_TRADING_CAPITAL }}
         run: python main.py --once --force
 
       # Robinhood crypto desk — DRY-RUN stage: live market data + real account
@@ -212,7 +212,7 @@ jobs:
           PAIRS: BTC/USD:ETH/USD
           KNOWLEDGE_ROLE: robinhood-crypto
           COPY_TRADING_ENABLED: 'false'
-          TRADING_CAPITAL: ${{ vars.ROBINHOOD_TRADING_CAPITAL || '100' }}
+          TRADING_CAPITAL: ${{ vars.ROBINHOOD_TRADING_CAPITAL == '' && '100' || vars.ROBINHOOD_TRADING_CAPITAL }}
           ROBINHOOD_MAX_ORDER_USD: ${{ vars.ROBINHOOD_MAX_ORDER_USD || '10' }}
         run: python main.py --once --force || true
 
