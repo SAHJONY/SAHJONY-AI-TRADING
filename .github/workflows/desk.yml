@@ -200,6 +200,36 @@ jobs:
       # (Variable ROBINHOOD_LIVE=true AND secret LIVE_TRADING_ACK=I_UNDERSTAND_REAL_MONEY).
       # Isolated under SAHJONY_HOME=desks/robinhood (own state/db/status); runs by
       # default once Robinhood secrets exist — disable with ROBINHOOD_DESK_ENABLED=false.
+      # ── Alpaca LIVE stock desk (REAL MONEY) ──────────────────────────────────
+      # Deliberately isolated from every paper desk and triple-gated: it runs only
+      # when Variable ALPACA_LIVE_ENABLED=true AND separate LIVE keys exist AND the
+      # LIVE_TRADING_ACK secret is set. It uses ALPACA_LIVE_* secrets — never the
+      # paper keys — so a live flag can never be paired with a paper credential
+      # (or vice versa) by accident.
+      #
+      # Day trading is FORCED OFF here: US pattern-day-trader rules restrict
+      # accounts under $25k to 3 day trades per 5 business days, and a violation
+      # freezes the account. The swing desks (ladder/wheel) are unaffected.
+      - name: Run Alpaca LIVE stock desk cycle (REAL MONEY — gated)
+        if: ${{ vars.ALPACA_LIVE_ENABLED == 'true' }}
+        env:
+          SAHJONY_HOME: desks/alpaca-live
+          BROKER: alpaca
+          ALPACA_PAPER: 'false'
+          ALPACA_API_KEY: ${{ secrets.ALPACA_LIVE_API_KEY }}
+          ALPACA_SECRET_KEY: ${{ secrets.ALPACA_LIVE_SECRET_KEY }}
+          ROBINHOOD_LIVE: 'false'
+          TICKERS: ${{ vars.ALPACA_LIVE_TICKERS || 'SPY,QQQ,VTI,MSFT,NVDA' }}
+          BENCHMARK: SPY
+          MARKET_HOURS: us
+          KNOWLEDGE_ROLE: alpaca-live-stocks
+          DAY_TRADING_ENABLED: 'false'
+          COPY_TRADING_ENABLED: 'false'
+          PAIRS_ENABLED: 'false'
+          CREDIT_SPREADS_ENABLED: 'false'
+          TRADING_CAPITAL: ${{ vars.ALPACA_LIVE_CAPITAL == '' && '0' || vars.ALPACA_LIVE_CAPITAL }}
+        run: python main.py --once --force || true
+
       # Skipped when the MAIN desk already runs on robinhood_crypto (vars.BROKER),
       # so one account can never be traded by two desks at once.
       - name: Run Robinhood crypto desk cycle (DRY-RUN unless armed)
@@ -228,6 +258,7 @@ jobs:
           git add desks/paper/public/status.json 2>/dev/null || true
           git add desks/robinhood/public/status.json 2>/dev/null || true
           git add desks/stocks/public/status.json 2>/dev/null || true
+          git add desks/alpaca-live/public/status.json 2>/dev/null || true
           if ! git diff --cached --quiet; then
             git commit -m "Desk snapshot: cycle ${{ github.run_number }} update"
             for i in 1 2 3 4; do git push && break || sleep $((2**i)); done
