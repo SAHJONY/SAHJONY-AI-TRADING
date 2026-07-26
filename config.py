@@ -134,6 +134,11 @@ class Config:
     copy_trading_source_url: str = ""
     copy_trading_api_key: str = ""
     copy_trading_max_symbols: int = 10
+    # Protective exits for mirrored positions — enforced even when the signal
+    # feed is empty or unreachable (0 disables the hard stop).
+    copy_stop_pct: float = 0.15
+    copy_trail_trigger_pct: float = 0.15
+    copy_trail_pct: float = 0.08
 
     # pairs / statistical arbitrage (market-neutral desk)
     pairs_enabled: bool = True
@@ -251,6 +256,9 @@ def load_config() -> Config:
         copy_trading_source_url=(os.getenv("COPY_TRADING_SOURCE_URL", "") or "").strip(),
         copy_trading_api_key=os.getenv("COPY_TRADING_API_KEY", "").strip(),
         copy_trading_max_symbols=max(1, _i("COPY_TRADING_MAX_SYMBOLS", 10)),
+        copy_stop_pct=_clamp(_f("COPY_STOP_PCT", 0.15), 0.0, 0.50),
+        copy_trail_trigger_pct=_clamp(_f("COPY_TRAIL_TRIGGER_PCT", 0.15), 0.02, 1.0),
+        copy_trail_pct=_clamp(_f("COPY_TRAIL_PCT", 0.08), 0.01, 0.50),
         pairs_enabled=_b("PAIRS_ENABLED", True),
         pairs=_list("PAIRS", "SPY:QQQ,GLD:SLV"),
         pairs_entry_z=_clamp(_f("PAIRS_ENTRY_Z", 2.0), 1.0, 5.0),

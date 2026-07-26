@@ -454,6 +454,19 @@ class Firm:
         # 6b) Copy-trading desk — mirror external disclosure feed (risk-gated)
         if trade and self.cfg.copy_trading_enabled:
             try:
+                # Protective exits run FIRST and unconditionally: the feed can go
+                # empty or 404, but held positions must still be risk-managed.
+                m_intents = self.copy.manage(state, self.client.get_price)
+                if m_intents:
+                    done, deployed = self.execution.execute(
+                        m_intents, state, cycle, equity, deployed,
+                        max(self.cfg.min_council_conviction, 0.6), allow_new_risk)
+                    executed += done
+                    if done:
+                        log.info("COPY desk protective exit: %d order(s)", len(done))
+            except Exception as exc:
+                log.error("copy-trading risk management failed: %s", exc)
+            try:
                 signals = self.copy.fetch_signals()
                 if signals:
                     c_intents = self.copy.decide(signals, state, equity, self.client.get_price)
