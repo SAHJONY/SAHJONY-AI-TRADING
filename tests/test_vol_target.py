@@ -61,6 +61,24 @@ def main() -> int:
            "garbage data degrades to neutral, never crashes")
 
     os.environ.pop("VOL_TARGET_ANNUAL", None)
+
+    # ── venue minimum notional (small-account viability) ──
+    os.environ["MIN_ORDER_NOTIONAL_USD"] = "1.0"
+    os.environ["MAX_ALLOCATION_PCT"] = "0.12"
+    from config import load_config as _lc
+    from risk.risk_engine import RiskEngine as _RE
+    rr = _RE(_lc())
+    b = rr.position_budget(10.0, 0.75, 1.0)          # would be $0.90 raw
+    _check(b >= 1.0, f"sub-minimum budget raised to the venue minimum (got ${b:.2f})")
+    _check(b <= 10.0 * 0.12 + 1e-9, "raised budget still inside the per-position cap")
+    _check(rr.position_budget(10.0, 0.0, 1.0) == 0.0, "zero conviction still means no order")
+    tiny = rr.position_budget(2.0, 0.75, 1.0)        # cap $0.24 < $1 minimum
+    _check(tiny == 0.0, "stands down when the minimum exceeds the per-position cap")
+    big = rr.position_budget(100_000.0, 0.60, 0.80)
+    _check(abs(big - 100_000.0 * 0.12 * 0.60 * 0.80) < 1e-6,
+           "large accounts are unaffected by the minimum")
+    os.environ.pop("MIN_ORDER_NOTIONAL_USD", None); os.environ.pop("MAX_ALLOCATION_PCT", None)
+
     print("\nVOL TARGETING CHECKS PASSED ✓")
     return 0
 

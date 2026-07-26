@@ -94,6 +94,10 @@ class Config:
     max_daily_drawdown_pct: float = 0.06
     # Kill switch: hard-stop all new risk regardless of P&L (env or a HALT file).
     trading_halt: bool = False
+    # Smallest notional a venue will accept (Robinhood/Alpaca ≈ $1). Sub-minimum
+    # budgets are rounded up to this when it still fits the per-position cap,
+    # otherwise the desk stands down instead of sending a doomed order.
+    min_order_notional: float = 1.0
     # Volatility targeting: when realized portfolio vol (annualized, from the
     # equity curve) exceeds this, new-position budgets scale down proportionally
     # (never below ×0.5, never above ×1.0 — it de-risks, never levers up).
@@ -236,6 +240,7 @@ def load_config() -> Config:
         min_council_conviction=_clamp(_f("MIN_COUNCIL_CONVICTION", 0.55), HARD_MIN_CONVICTION, 1.0),
         max_daily_drawdown_pct=_clamp(_f("MAX_DAILY_DRAWDOWN_PCT", 0.06), 0.01, HARD_MAX_DAILY_DRAWDOWN_PCT),
         trading_halt=_b("TRADING_HALT", False),
+        min_order_notional=max(0.0, _f("MIN_ORDER_NOTIONAL_USD", 1.0)),
         vol_target_annual=_clamp(_f("VOL_TARGET_ANNUAL", 0.20), 0.0, 2.0),
         trading_capital=max(0.0, _f("TRADING_CAPITAL", 0.0)),
         allow_fractional=_b("ALLOW_FRACTIONAL", True),

@@ -27,9 +27,29 @@ class RiskEngine:
         self.cfg = cfg
 
     def position_budget(self, equity: float, conviction: float, risk_mult: float) -> float:
-        """Notional a single new position may use, scaled by conviction × risk."""
+        """Notional a single new position may use, scaled by conviction × risk.
+
+        Venue minimums matter for small accounts: on a $10 sleeve even a maximum
+        -conviction signal sizes ~$0.75, below the $1 minimum every venue enforces,
+        so *every* order would be rejected and the desk could never trade. A
+        sub-minimum budget is therefore rounded UP to the venue minimum — but only
+        when that still fits inside the per-position cap. If it doesn't, return 0
+        rather than sending an order that is guaranteed to bounce.
+        """
         cap = equity * self.cfg.max_allocation_pct
-        return max(0.0, cap * max(0.0, min(1.0, conviction)) * max(0.0, min(1.0, risk_mult)))
+        budget = max(0.0, cap * max(0.0, min(1.0, conviction)) * max(0.0, min(1.0, risk_mult)))
+        floor = max(0.0, float(getattr(self.cfg, "min_order_notional", 0.0) or 0.0))
+        if floor > 0 and 0.0 < budget < floor:
+            if floor <= cap:
+                log.info("budget $%.2f below the $%.2f venue minimum — sizing at the "
+                         "minimum (still inside the %.0f%% per-position cap)",
+                         budget, floor, self.cfg.max_allocation_pct * 100)
+                return floor
+            log.info("budget $%.2f below the $%.2f venue minimum and the minimum "
+                     "exceeds the per-position cap $%.2f — standing down",
+                     budget, floor, cap)
+            return 0.0
+        return budget
 
     def approve(self, equity: float, deployed_value: float, intended_notional: float,
                 conviction: float, symbol: str) -> RiskDecision:
