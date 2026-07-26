@@ -9,8 +9,8 @@
     "return_pct": 0.0,
     "alpha_pct": -1438.338
   },
-  "ts": "2026-07-26T21:55:23.940259+00:00",
-  "cycle": 37,
+  "ts": "2026-07-26T22:53:21.191801+00:00",
+  "cycle": 38,
   "account": {
     "equity": -26766.75,
     "equity_start": 2000.0,
@@ -48,7 +48,7 @@
     "cadence": {
       "degraded": false,
       "reason": "",
-      "gap_min": 64.8,
+      "gap_min": 59.0,
       "expected_min": 15,
       "tolerance_min": 90.0
     },
@@ -68,9 +68,9 @@
       "frozen_at_commit": "8a82b4c"
     },
     "circuit_breaker": {
-      "halted": false,
-      "reason": "",
-      "day_return": 0.0,
+      "halted": true,
+      "reason": "daily circuit breaker \u2014 down -1438.3% (limit 10%)",
+      "day_return": -14.3834,
       "day_start": 2000.0,
       "limit_pct": 0.1
     },
@@ -739,16 +739,16 @@
   ],
   "brain": {
     "enabled": true,
-    "used": false,
-    "posture": "neutral",
-    "global_risk_multiplier": 1.0,
-    "commentary": "brain error: HTTPSConnectionPool(host='integrate.api.nvidia.com', port=443): Read timed out. (read timeout=45)",
-    "brain_model": "",
+    "used": true,
+    "posture": "risk_on",
+    "global_risk_multiplier": 0.82,
+    "commentary": "The council leans modestly constructive but the portfolio is heavily weighted to market beta (SPY, VTI) with an additional high\u2011beta growth tilt via QQQ. Overlap among the three ETFs reduces true diversification. Single\u2011stock legs (MSFT, NVDA) show negative composites, negative alphas and elevated volatility, making their signals fragile. Accordingly we keep a constructive stance overall while tempering exposure to the more fragile bets.",
+    "brain_model": "nvidia:openai/gpt-oss-120b",
     "counsellors": {
-      "openai": "Overall posture is **moderately constructive but equity-concentrated**: SPY/VTI overlap substantially, while QQQ adds high-beta growth exposure. Portfolio sensitivity is elevated through QQQ (\u03b2 1.42) and NVDA (\u03b2 1.83, 36.8% volatility). Diversification is limited; alternative dat",
-      "grok": "**Risk posture:** Moderately constructive but equity-beta heavy. Broad longs (SPY/VTI/QQQ) dominate; QQQ+NVDA betas/vols elevate drawdown risk. No alt hedges. Single-stock flats show weak/negative composites.\n\n**Adjustments (conviction delta):**  \n- SPY: +0.05  \n- QQQ: -0.05  \n- ",
-      "gemini": "",
-      "nvidia": ""
+      "openai": "Overall posture is **moderately constructive but equity-beta heavy**: SPY, QQQ, and VTI materially overlap, while QQQ adds elevated technology/growth sensitivity (\u03b2 1.415). Diversification is therefore weaker than the ticker count suggests. Maintain disciplined sizing and avoid t",
+      "grok": "**Risk posture:** Equity-beta heavy (SPY/VTI core, QQQ tilt). Moderate aggregate conviction; cushioned by MSFT/NVDA flats. Vol/beta elevated in tech; alts unavailable \u2192 unhedged factor risk. Net constructive but fragile to growth drawdowns.\n\n**Adjustments (conviction):**\n- SPY: +",
+      "gemini": "The portfolio reflects a cautious pivot toward broad-market stability (V",
+      "nvidia": "**Risk posture:** The slate is a high\u2011beta, equity\u2011heavy core (SPY/QQQ/VTI) with modest tilt toward tech. Portfolio volatility sits near 13\u201120\u202f% and beta \u22481.2, so market\u2011wide moves will dominate. The two single\u2011stock bets add concentration risk and amplify draw\u2011down potential.\n\n*"
     }
   },
   "positions": [
@@ -1047,9 +1047,29 @@
       "cash": -63845.38561992356,
       "realized_pnl": 0.0,
       "premium": 0.0
+    },
+    {
+      "ts": "2026-07-26T22:53:19.441582+00:00",
+      "cycle": 38,
+      "equity": -26766.754789938554,
+      "cash": -63845.38561992356,
+      "realized_pnl": 0.0,
+      "premium": 0.0
     }
   ],
   "decisions": [
+    {
+      "ts": "2026-07-26T22:53:16.679332+00:00",
+      "kind": "wheel_wait",
+      "symbol": "VTI",
+      "reason": "no put contract found"
+    },
+    {
+      "ts": "2026-07-26T22:53:16.589403+00:00",
+      "kind": "ladder_update",
+      "symbol": "SPY",
+      "reason": "px 738.63 peak 738.63 gain +0%"
+    },
     {
       "ts": "2026-07-26T21:55:23.269376+00:00",
       "kind": "risk_block",
@@ -1197,19 +1217,6 @@
       "kind": "ladder_update",
       "symbol": "QQQ",
       "reason": "px 684.33 peak 684.33 gain +0%"
-    },
-    {
-      "ts": "2026-07-26T19:52:40.210159+00:00",
-      "kind": "wheel_wait",
-      "symbol": "SPY",
-      "reason": "no put contract found"
-    },
-    {
-      "ts": "2026-07-26T18:43:35.984486+00:00",
-      "kind": "risk_block",
-      "symbol": "DLHC",
-      "purpose": "copy_buy",
-      "reason": "would breach total-deployed cap $1,400 (room $21)"
     }
   ],
   "agents_roster": [
