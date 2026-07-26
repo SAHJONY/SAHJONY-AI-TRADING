@@ -85,6 +85,7 @@
   .deskSw button{border:0;background:transparent;color:var(--mut);font:600 10.5px var(--mono);letter-spacing:.4px;padding:4px 9px;border-radius:6px;cursor:pointer}
   .deskSw button.active{background:var(--amber);color:#151004}
   .liveBadge{margin-left:10px;font:700 10.5px var(--mono);letter-spacing:.6px;color:#ff5c6c;border:1px solid #ff5c6c55;border-radius:8px;padding:4px 9px;animation:livePulse 1.6s ease-in-out infinite}
+  .evalBadge{margin-left:8px;font:600 10.5px var(--mono);letter-spacing:.4px;color:var(--amber);border:1px solid #ffb00055;border-radius:8px;padding:4px 9px}
   @keyframes livePulse{0%,100%{opacity:1}50%{opacity:.45}}
   .badge{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;
     padding:4px 9px;border-radius:6px;color:var(--cyan);border:1px solid rgba(42,216,240,.35);
@@ -300,6 +301,7 @@
     <button data-desk="live" class="active">LIVE · CRYPTO</button><button data-desk="trainer">TRAINER</button><button data-desk="stocks">STOCKS</button>
   </span>
   <span class="liveBadge" id="liveBadge" style="display:none">● REAL MONEY</span>
+  <span class="evalBadge" id="evalBadge" style="display:none" title="90-day out-of-sample evaluation window"></span>
   <span class="spacer"></span>
   <span class="stat"><span class="dot" id="dBroker"></span><span id="brokerTxt">—</span></span>
   <span class="stat"><span class="dot" id="dMkt"></span>MKT <b id="mktTxt">—</b></span>
@@ -993,6 +995,17 @@ function setStatus(){
   document.getElementById('brokerTxt').textContent = h.broker_online?'LIVE FEED':'OFFLINE SIM';
   db.className='dot '+(h.broker_online?'g':'a');
   document.getElementById('mktTxt').textContent = h.market_open?'OPEN':'CLOSED';
+  // 90-day evaluation countdown — the window is what makes the final number mean
+  // something, so keep it in sight rather than buried in a file.
+  const eb=document.getElementById('evalBadge');
+  const ev=(DATA.health||{}).evaluation||{};
+  if(eb){
+    if(ev.days){ eb.style.display=''; eb.textContent=`EVAL ${ev.day}/${ev.days}`;
+      eb.title=`Out-of-sample window ${ev.pct}% elapsed · frozen at ${ev.frozen_at_commit}`
+        +`\nDecision date: ${String(ev.ends_at||'').slice(0,10)}`
+        +(ev.active?'':' · WINDOW CLOSED — time to judge the result'); }
+    else eb.style.display='none';
+  }
   const lb=document.getElementById('liveBadge');
   if(lb) lb.style.display = (String(DATA.mode||'').toUpperCase()==='LIVE' && ACTIVE_DESK==='live') ? '' : 'none';
   dm.className='dot '+(h.market_open?'g':'r');
