@@ -7,28 +7,28 @@
     "start_price": 738.63,
     "last_price": 738.63,
     "return_pct": 0.0,
-    "alpha_pct": 0.0
+    "alpha_pct": -1438.338
   },
-  "ts": "2026-07-26T20:50:42.361024+00:00",
-  "cycle": 36,
+  "ts": "2026-07-26T21:55:23.940259+00:00",
+  "cycle": 37,
   "account": {
-    "equity": 2000.0,
+    "equity": -26766.75,
     "equity_start": 2000.0,
-    "cash": 621.42,
-    "deployed": 1378.58
+    "cash": -63845.39,
+    "deployed": 37078.63
   },
   "pnl": {
     "realized": 0.0,
     "premium_collected": 0.0,
-    "total_return_pct": 0.0
+    "total_return_pct": -1438.338
   },
   "capital": {
     "deposits": 0.0,
     "withdrawals": 0.0,
     "net_capital": 0.0,
     "flows": 0,
-    "trading_pnl": 0.0,
-    "trading_return_pct": 0.0
+    "trading_pnl": -28766.75,
+    "trading_return_pct": -1438.338
   },
   "capital_flows": [],
   "health": {
@@ -48,9 +48,24 @@
     "cadence": {
       "degraded": false,
       "reason": "",
-      "gap_min": 56.6,
+      "gap_min": 64.8,
       "expected_min": 15,
       "tolerance_min": 90.0
+    },
+    "evaluation": {
+      "active": true,
+      "day": 0,
+      "days": 90,
+      "started_at": "2026-07-26T21:38:16.798191+00:00",
+      "ends_at": "2026-10-24T21:38:16.798191+00:00",
+      "pct": 0.0,
+      "criteria": {
+        "primary": "net-of-fees return beats buy-and-hold BTC over the window",
+        "risk": "max drawdown stays inside 15%",
+        "quality": "positive Sharpe on the equity curve",
+        "minimum_sample": "at least 30 closed trades, else the result is not significant"
+      },
+      "frozen_at_commit": "8a82b4c"
     },
     "circuit_breaker": {
       "halted": false,
@@ -109,11 +124,11 @@
         "daytrade": 0.867
       },
       "scorecard": {
-        "cycles": 36,
+        "cycles": 0,
         "sharpe": null,
         "sortino": null,
-        "max_drawdown_pct": 0.0,
-        "volatility_pct": 0.0
+        "max_drawdown_pct": null,
+        "volatility_pct": null
       }
     },
     "advisory_board": {
@@ -730,52 +745,102 @@
     "commentary": "brain error: HTTPSConnectionPool(host='integrate.api.nvidia.com', port=443): Read timed out. (read timeout=45)",
     "brain_model": "",
     "counsellors": {
-      "openai": "Overall posture: mildly constructive but concentrated in U.S. equities, with substantial overlap among SPY, VTI, and QQQ. Aggregate sensitivity is elevated through QQQ\u2019s 1.42 beta and NVDA\u2019s 1.83 beta; diversification is limited, and alternatives are unavailable. The modest convi",
-      "grok": "**Portfolio risk posture:** Moderately constructive on broad equities (SPY/VTI lead), but cautious\u2014QQQ adds beta/vol drag; single-name tech is weak/negative composite with elevated vol. Net: equity beta tilt without strong alpha; watch drawdown in high-vol names.\n\n**Conviction ad",
-      "gemini": "The portfolio maintains a **moderate-aggressive risk posture**, heavily reliant on broad",
+      "openai": "Overall posture is **moderately constructive but equity-concentrated**: SPY/VTI overlap substantially, while QQQ adds high-beta growth exposure. Portfolio sensitivity is elevated through QQQ (\u03b2 1.42) and NVDA (\u03b2 1.83, 36.8% volatility). Diversification is limited; alternative dat",
+      "grok": "**Risk posture:** Moderately constructive but equity-beta heavy. Broad longs (SPY/VTI/QQQ) dominate; QQQ+NVDA betas/vols elevate drawdown risk. No alt hedges. Single-stock flats show weak/negative composites.\n\n**Adjustments (conviction delta):**  \n- SPY: +0.05  \n- QQQ: -0.05  \n- ",
+      "gemini": "",
       "nvidia": ""
     }
   },
   "positions": [
     {
-      "symbol": "QQQ",
+      "symbol": "AMPY",
       "strategy": "ladder",
       "state": "long",
-      "shares": 0.122715,
-      "cost_basis": 684.33,
-      "price": 684.33,
-      "market_value": 83.98,
-      "unrealized": 0.0
+      "shares": 12104.0,
+      "cost_basis": 4.08,
+      "price": 1.73,
+      "market_value": 20879.4,
+      "unrealized": -28454.06
     },
     {
-      "symbol": "FSBC",
-      "strategy": "copy",
+      "symbol": "BTCUSD",
+      "strategy": "ladder",
       "state": "long",
-      "shares": 20.0,
-      "cost_basis": 46.73,
-      "price": 46.73,
-      "market_value": 934.6,
-      "unrealized": 0.0
+      "shares": 0.00018354,
+      "cost_basis": 65034.7,
+      "price": 0.0,
+      "market_value": 0.0,
+      "unrealized": -11.94
     },
     {
-      "symbol": "VMI",
-      "strategy": "copy",
+      "symbol": "COIN",
+      "strategy": "ladder",
       "state": "long",
-      "shares": 0.8243280000000001,
-      "cost_basis": 218.36,
-      "price": 218.36,
-      "market_value": 180.0,
-      "unrealized": 0.0
+      "shares": 0.390493,
+      "cost_basis": 159.07,
+      "price": 74.81,
+      "market_value": 29.21,
+      "unrealized": -32.91
     },
     {
-      "symbol": "DLHC",
-      "strategy": "copy",
+      "symbol": "DIA",
+      "strategy": "ladder",
       "state": "long",
-      "shares": 83.526681,
-      "cost_basis": 2.15,
-      "price": 2.15,
-      "market_value": 180.0,
-      "unrealized": 0.0
+      "shares": -9.935112,
+      "cost_basis": 516.18,
+      "price": 518.74,
+      "market_value": -5153.74,
+      "unrealized": -25.43
+    },
+    {
+      "symbol": "EDRY",
+      "strategy": "ladder",
+      "state": "long",
+      "shares": 492.0,
+      "cost_basis": 24.57,
+      "price": 24.41,
+      "market_value": 12007.26,
+      "unrealized": -79.5
+    },
+    {
+      "symbol": "ETHUSD",
+      "strategy": "ladder",
+      "state": "long",
+      "shares": 0.007455315,
+      "cost_basis": 1857.2,
+      "price": 0.0,
+      "market_value": 0.0,
+      "unrealized": -13.85
+    },
+    {
+      "symbol": "GOOGL",
+      "strategy": "ladder",
+      "state": "long",
+      "shares": 6.0,
+      "cost_basis": 350.09,
+      "price": 321.7,
+      "market_value": 1930.2,
+      "unrealized": -170.32
+    },
+    {
+      "symbol": "SOLUSD",
+      "strategy": "ladder",
+      "state": "long",
+      "shares": 0.16653063,
+      "cost_basis": 74.54,
+      "price": 0.0,
+      "market_value": 0.0,
+      "unrealized": -12.41
+    },
+    {
+      "symbol": "SPY",
+      "strategy": "ladder",
+      "state": "long",
+      "shares": 10.0,
+      "cost_basis": 735.26,
+      "price": 738.63,
+      "market_value": 7386.3,
+      "unrealized": 33.66
     }
   ],
   "crm": {
@@ -976,295 +1041,55 @@
   ],
   "equity_curve": [
     {
-      "ts": "2026-07-25T09:03:27.439939+00:00",
-      "cycle": 1,
-      "equity": 2000.0,
-      "cash": 1916.023057625,
-      "realized_pnl": 0.0,
-      "premium": 0.0
-    },
-    {
-      "ts": "2026-07-25T09:21:55.618777+00:00",
-      "cycle": 2,
-      "equity": 2000.0,
-      "cash": 1916.023057625,
-      "realized_pnl": 0.0,
-      "premium": 0.0
-    },
-    {
-      "ts": "2026-07-25T10:55:07.057343+00:00",
-      "cycle": 3,
-      "equity": 2000.0,
-      "cash": 1916.023057625,
-      "realized_pnl": 0.0,
-      "premium": 0.0
-    },
-    {
-      "ts": "2026-07-25T12:00:44.341779+00:00",
-      "cycle": 4,
-      "equity": 2000.0,
-      "cash": 1916.023057625,
-      "realized_pnl": 0.0,
-      "premium": 0.0
-    },
-    {
-      "ts": "2026-07-25T13:15:23.916970+00:00",
-      "cycle": 5,
-      "equity": 2000.0,
-      "cash": 1916.023057625,
-      "realized_pnl": 0.0,
-      "premium": 0.0
-    },
-    {
-      "ts": "2026-07-25T14:43:37.241939+00:00",
-      "cycle": 6,
-      "equity": 2000.0,
-      "cash": 1916.023057625,
-      "realized_pnl": 0.0,
-      "premium": 0.0
-    },
-    {
-      "ts": "2026-07-25T15:49:40.865854+00:00",
-      "cycle": 7,
-      "equity": 2000.0,
-      "cash": 1916.023057625,
-      "realized_pnl": 0.0,
-      "premium": 0.0
-    },
-    {
-      "ts": "2026-07-25T16:47:54.565175+00:00",
-      "cycle": 8,
-      "equity": 2000.0,
-      "cash": 1916.023057625,
-      "realized_pnl": 0.0,
-      "premium": 0.0
-    },
-    {
-      "ts": "2026-07-25T17:53:23.841600+00:00",
-      "cycle": 9,
-      "equity": 2000.0,
-      "cash": 1916.023057625,
-      "realized_pnl": 0.0,
-      "premium": 0.0
-    },
-    {
-      "ts": "2026-07-25T18:57:58.586170+00:00",
-      "cycle": 10,
-      "equity": 2000.0,
-      "cash": 1916.023057625,
-      "realized_pnl": 0.0,
-      "premium": 0.0
-    },
-    {
-      "ts": "2026-07-25T20:10:32.649039+00:00",
-      "cycle": 11,
-      "equity": 2000.0,
-      "cash": 1916.023057625,
-      "realized_pnl": 0.0,
-      "premium": 0.0
-    },
-    {
-      "ts": "2026-07-25T21:11:24.981965+00:00",
-      "cycle": 12,
-      "equity": 2000.0,
-      "cash": 1916.023057625,
-      "realized_pnl": 0.0,
-      "premium": 0.0
-    },
-    {
-      "ts": "2026-07-25T21:55:44.815592+00:00",
-      "cycle": 13,
-      "equity": 2000.0,
-      "cash": 1916.023057625,
-      "realized_pnl": 0.0,
-      "premium": 0.0
-    },
-    {
-      "ts": "2026-07-25T22:07:36.794845+00:00",
-      "cycle": 14,
-      "equity": 2000.0,
-      "cash": 1916.023057625,
-      "realized_pnl": 0.0,
-      "premium": 0.0
-    },
-    {
-      "ts": "2026-07-25T22:12:31.338646+00:00",
-      "cycle": 15,
-      "equity": 2000.0,
-      "cash": 1916.023057625,
-      "realized_pnl": 0.0,
-      "premium": 0.0
-    },
-    {
-      "ts": "2026-07-25T22:46:23.552911+00:00",
-      "cycle": 16,
-      "equity": 2000.0,
-      "cash": 1916.023057625,
-      "realized_pnl": 0.0,
-      "premium": 0.0
-    },
-    {
-      "ts": "2026-07-25T22:54:39.318262+00:00",
-      "cycle": 17,
-      "equity": 2000.0,
-      "cash": 1916.023057625,
-      "realized_pnl": 0.0,
-      "premium": 0.0
-    },
-    {
-      "ts": "2026-07-25T23:10:38.231981+00:00",
-      "cycle": 18,
-      "equity": 2000.0,
-      "cash": 1916.023057625,
-      "realized_pnl": 0.0,
-      "premium": 0.0
-    },
-    {
-      "ts": "2026-07-26T00:15:16.761287+00:00",
-      "cycle": 19,
-      "equity": 2000.0,
-      "cash": 1916.023057625,
-      "realized_pnl": 0.0,
-      "premium": 0.0
-    },
-    {
-      "ts": "2026-07-26T01:29:10.961187+00:00",
-      "cycle": 20,
-      "equity": 2000.0,
-      "cash": 1562.3729710799998,
-      "realized_pnl": 0.0,
-      "premium": 0.0
-    },
-    {
-      "ts": "2026-07-26T01:40:03.249398+00:00",
-      "cycle": 21,
-      "equity": 2000.0,
-      "cash": 1208.722884535,
-      "realized_pnl": 0.0,
-      "premium": 0.0
-    },
-    {
-      "ts": "2026-07-26T01:45:08.609576+00:00",
-      "cycle": 22,
-      "equity": 2000.0,
-      "cash": 855.07279799,
-      "realized_pnl": 0.0,
-      "premium": 0.0
-    },
-    {
-      "ts": "2026-07-26T01:51:34.445172+00:00",
-      "cycle": 23,
-      "equity": 2000.0,
-      "cash": 621.4227979899999,
-      "realized_pnl": 0.0,
-      "premium": 0.0
-    },
-    {
-      "ts": "2026-07-26T03:54:56.871982+00:00",
-      "cycle": 24,
-      "equity": 2000.0,
-      "cash": 621.4227979899999,
-      "realized_pnl": 0.0,
-      "premium": 0.0
-    },
-    {
-      "ts": "2026-07-26T06:30:18.738476+00:00",
-      "cycle": 25,
-      "equity": 2000.0,
-      "cash": 621.4227979899999,
-      "realized_pnl": 0.0,
-      "premium": 0.0
-    },
-    {
-      "ts": "2026-07-26T08:58:31.404184+00:00",
-      "cycle": 26,
-      "equity": 2000.0,
-      "cash": 621.4227979899999,
-      "realized_pnl": 0.0,
-      "premium": 0.0
-    },
-    {
-      "ts": "2026-07-26T10:42:55.372786+00:00",
-      "cycle": 27,
-      "equity": 2000.0,
-      "cash": 621.4227979899999,
-      "realized_pnl": 0.0,
-      "premium": 0.0
-    },
-    {
-      "ts": "2026-07-26T11:48:45.852655+00:00",
-      "cycle": 28,
-      "equity": 2000.0,
-      "cash": 621.4227979899999,
-      "realized_pnl": 0.0,
-      "premium": 0.0
-    },
-    {
-      "ts": "2026-07-26T13:04:32.711505+00:00",
-      "cycle": 29,
-      "equity": 2000.0,
-      "cash": 621.4227979899999,
-      "realized_pnl": 0.0,
-      "premium": 0.0
-    },
-    {
-      "ts": "2026-07-26T14:42:45.344239+00:00",
-      "cycle": 30,
-      "equity": 2000.0,
-      "cash": 621.4227979899999,
-      "realized_pnl": 0.0,
-      "premium": 0.0
-    },
-    {
-      "ts": "2026-07-26T15:47:52.765961+00:00",
-      "cycle": 31,
-      "equity": 2000.0,
-      "cash": 621.4227979899999,
-      "realized_pnl": 0.0,
-      "premium": 0.0
-    },
-    {
-      "ts": "2026-07-26T16:40:00.523611+00:00",
-      "cycle": 32,
-      "equity": 2000.0,
-      "cash": 621.4227979899999,
-      "realized_pnl": 0.0,
-      "premium": 0.0
-    },
-    {
-      "ts": "2026-07-26T17:42:48.267676+00:00",
-      "cycle": 33,
-      "equity": 2000.0,
-      "cash": 621.4227979899999,
-      "realized_pnl": 0.0,
-      "premium": 0.0
-    },
-    {
-      "ts": "2026-07-26T18:43:36.330936+00:00",
-      "cycle": 34,
-      "equity": 2000.0,
-      "cash": 621.4227979899999,
-      "realized_pnl": 0.0,
-      "premium": 0.0
-    },
-    {
-      "ts": "2026-07-26T19:52:41.835853+00:00",
-      "cycle": 35,
-      "equity": 2000.0,
-      "cash": 621.4227979899999,
-      "realized_pnl": 0.0,
-      "premium": 0.0
-    },
-    {
-      "ts": "2026-07-26T20:50:42.281768+00:00",
-      "cycle": 36,
-      "equity": 2000.0,
-      "cash": 621.4227979899999,
+      "ts": "2026-07-26T21:55:23.730915+00:00",
+      "cycle": 37,
+      "equity": -26766.754789938554,
+      "cash": -63845.38561992356,
       "realized_pnl": 0.0,
       "premium": 0.0
     }
   ],
   "decisions": [
+    {
+      "ts": "2026-07-26T21:55:23.269376+00:00",
+      "kind": "risk_block",
+      "symbol": "DLHC",
+      "purpose": "copy_buy",
+      "reason": "would breach total-deployed cap $1,400 (room $0)"
+    },
+    {
+      "ts": "2026-07-26T21:55:23.269260+00:00",
+      "kind": "risk_block",
+      "symbol": "VMI",
+      "purpose": "copy_buy",
+      "reason": "would breach total-deployed cap $1,400 (room $0)"
+    },
+    {
+      "ts": "2026-07-26T21:55:23.269126+00:00",
+      "kind": "risk_block",
+      "symbol": "FSBC",
+      "purpose": "copy_buy",
+      "reason": "would breach total-deployed cap $1,400 (room $0)"
+    },
+    {
+      "ts": "2026-07-26T21:55:23.103899+00:00",
+      "kind": "wheel_wait",
+      "symbol": "VTI",
+      "reason": "no put contract found"
+    },
+    {
+      "ts": "2026-07-26T21:55:22.813684+00:00",
+      "kind": "risk_block",
+      "symbol": "QQQ",
+      "purpose": "ladder_entry",
+      "reason": "conviction 47% < floor 52%"
+    },
+    {
+      "ts": "2026-07-26T21:55:22.811846+00:00",
+      "kind": "ladder_update",
+      "symbol": "SPY",
+      "reason": "px 738.63 peak 738.63 gain +0%"
+    },
     {
       "ts": "2026-07-26T20:50:42.009783+00:00",
       "kind": "risk_block",
@@ -1385,44 +1210,6 @@
       "symbol": "DLHC",
       "purpose": "copy_buy",
       "reason": "would breach total-deployed cap $1,400 (room $21)"
-    },
-    {
-      "ts": "2026-07-26T18:43:35.984428+00:00",
-      "kind": "risk_block",
-      "symbol": "VMI",
-      "purpose": "copy_buy",
-      "reason": "would breach total-deployed cap $1,400 (room $21)"
-    },
-    {
-      "ts": "2026-07-26T18:43:35.984342+00:00",
-      "kind": "risk_block",
-      "symbol": "FSBC",
-      "purpose": "copy_buy",
-      "reason": "would breach total-deployed cap $1,400 (room $21)"
-    },
-    {
-      "ts": "2026-07-26T18:43:35.795253+00:00",
-      "kind": "copy_hold",
-      "symbol": "DLHC",
-      "reason": "+0.0% vs basis, peak $2.15"
-    },
-    {
-      "ts": "2026-07-26T18:43:35.795250+00:00",
-      "kind": "copy_hold",
-      "symbol": "VMI",
-      "reason": "+0.0% vs basis, peak $218.36"
-    },
-    {
-      "ts": "2026-07-26T18:43:35.795235+00:00",
-      "kind": "copy_hold",
-      "symbol": "FSBC",
-      "reason": "+0.0% vs basis, peak $46.73"
-    },
-    {
-      "ts": "2026-07-26T18:43:35.688277+00:00",
-      "kind": "wheel_wait",
-      "symbol": "VTI",
-      "reason": "no put contract found"
     }
   ],
   "agents_roster": [
