@@ -32,7 +32,7 @@ from intelligence.ai_brain import AIBrain, BrainVerdict
 from intelligence.alt_data import AltData
 from intelligence.hermes import Hermes, HermesReport
 from risk.risk_engine import RiskEngine
-from strategies.base import OrderIntent
+from strategies.base import OrderIntent, fee_cost
 from strategies.copy_trading import CopyTrader
 from strategies.credit_spreads import CreditSpreads
 from strategies.day_trading import DayTrading
@@ -151,6 +151,17 @@ class ExecutionTrader:
                 if res.get("status") not in ("filled", "submitted"):
                     log.warning("order not filled %s: %s", intent.symbol, res)
                     continue
+                # Transaction costs: charge the estimated round trip when a position
+                # is CLOSED, so realized P&L — and therefore the equity curve and
+                # Hermes' scorecard — are NET of spread rather than gross.
+                if intent.realized_delta:
+                    gross = float(intent.realized_delta)
+                    cost = fee_cost(intent.symbol, abs(float(intent.qty or 0) * float(price or 0)),
+                                    self.cfg)
+                    if cost > 0:
+                        intent.realized_delta = gross - cost
+                        log.info("%s %s realized $%.4f gross → $%.4f net (est. cost $%.4f)",
+                                 intent.symbol, intent.purpose, gross, intent.realized_delta, cost)
                 self._apply(intent, state)
                 # Consume deployed budget for: equity buys, risk-gated equity shorts,
                 # and cash-secured puts (sell_to_open carries collateral in

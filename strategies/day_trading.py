@@ -22,7 +22,7 @@ from typing import Dict, List, Optional
 from config import Config
 from intelligence import engines
 from intelligence.agents import MarketSnapshot
-from strategies.base import OrderIntent, size_qty
+from strategies.base import OrderIntent, fee_cost, size_qty
 
 
 class DayTrading:
@@ -57,6 +57,14 @@ class DayTrading:
 
     def _enter(self, symbol, snap, budget, today) -> List[OrderIntent]:
         sig, strength, info = self._signal(snap)
+        # Fee gate: a profit target that cannot clear the round-trip spread is a
+        # guaranteed loser however good the signal is. Require the target to beat
+        # the estimated cost by 1.5x before risking anything.
+        fee_pct = (fee_cost(symbol, 1.0, self.cfg) if self.cfg else 0.0)
+        if fee_pct > 0 and self.cfg.day_trade_target_pct < fee_pct * 1.5:
+            return [OrderIntent(symbol, "daytrade", "state", "daytrade_fee_block",
+                                reason=(f"target {self.cfg.day_trade_target_pct:.2%} below the "
+                                        f"{fee_pct:.2%} round-trip cost — no edge after fees"))]
         if sig != "long" or strength < self.cfg.day_trade_min_signal or budget <= 0:
             return []
         price = snap.price

@@ -79,6 +79,19 @@ def main() -> int:
            "large accounts are unaffected by the minimum")
     os.environ.pop("MIN_ORDER_NOTIONAL_USD", None); os.environ.pop("MAX_ALLOCATION_PCT", None)
 
+    # ── transaction costs (fee-aware scorecard) ──
+    os.environ["FEE_BPS_CRYPTO"] = "60"; os.environ["FEE_BPS_EQUITY"] = "4"
+    from config import load_config as _lc2
+    from strategies.base import fee_cost as _fc
+    c = _lc2()
+    _check(abs(_fc("BTC/USD", 100.0, c) - 0.60) < 1e-9, "crypto round trip = 60bps of notional")
+    _check(abs(_fc("SPY", 100.0, c) - 0.04) < 1e-9, "equity round trip = 4bps of notional")
+    _check(_fc("BTC/USD", 0.0, c) == 0.0 and _fc("BTC/USD", None, c) == 0.0,
+           "no notional / bad input → no cost, never crashes")
+    # a $2 crypto round trip costs more than a 1% move on a $2 position earns
+    _check(_fc("BTC/USD", 2.0, c) > 0, "small orders are not cost-free")
+    os.environ.pop("FEE_BPS_CRYPTO", None); os.environ.pop("FEE_BPS_EQUITY", None)
+
     print("\nVOL TARGETING CHECKS PASSED ✓")
     return 0
 
