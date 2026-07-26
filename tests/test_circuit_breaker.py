@@ -102,6 +102,39 @@ def main() -> int:
     h5 = firm3._halt_check(s3, 50.0)
     _check(not h5["halted"], "stale latch clears when the desk never traded")
 
+    # ── broker reconciliation: the broker is the truth about what we own ──
+    firm4 = Firm(cfg, client, db)
+    client.get_broker_positions = lambda: {"BTC-USD": {"qty": 0.0005, "avg_price": 64000.0,
+                                                       "market_value": 32.0}}
+    s4 = {"positions": {}}
+    r = firm4._reconcile_broker(s4)
+    _check(len(r["adopted"]) == 1 and "BTC" in r["adopted"][0].upper(),
+           f"untracked broker holding is ADOPTED, not ignored (got {r['adopted']})")
+    adopted = s4["positions"][r["adopted"][0]]
+    _check(adopted["strategy"] == "ladder" and adopted["hard_floor"] > 0,
+           "adopted position immediately gets stop/floor protection")
+    _check(adopted["cost_basis"] == 64000.0, "adopted basis comes from the broker, not a guess")
+    r2 = firm4._reconcile_broker(s4)
+    _check(not r2["adopted"] and not r2["dropped"], "reconciliation is idempotent")
+
+    client.get_broker_positions = lambda: {}
+    s5 = {"positions": {"ETH/USD": {"strategy": "ladder", "shares": 1.0, "cost_basis": 1800.0}}}
+    _check(firm4._reconcile_broker(s5)["dropped"] == ["ETH/USD"] and not s5["positions"],
+           "ghost position the broker does not hold is dropped")
+
+    s6 = {"positions": {"AAPL": {"strategy": "wheel", "stage": "csp", "shares": 0,
+                                 "contract": "AAPL240119P00150000"}}}
+    _check(not firm4._reconcile_broker(s6)["dropped"] and "AAPL" in s6["positions"],
+           "option/wheel legs are never mistaken for ghosts")
+
+    def _boom():
+        raise RuntimeError("broker api down")
+    client.get_broker_positions = _boom
+    s7 = {"positions": {"BTC/USD": {"strategy": "ladder", "shares": 1.0, "cost_basis": 100.0}}}
+    rr = firm4._reconcile_broker(s7)
+    _check(rr["ok"] is False and "BTC/USD" in s7["positions"],
+           "a broker failure never mutates state")
+
     db.close()
     print("\nCIRCUIT BREAKER CHECKS PASSED ✓")
     return 0

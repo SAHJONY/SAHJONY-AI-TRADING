@@ -312,6 +312,76 @@ class Firm:
         return {"halted": halted, "reason": reason, "day_return": round(day_return, 4),
                 "day_start": round(day_start, 2), "limit_pct": self.cfg.max_daily_drawdown_pct}
 
+    def _reconcile_broker(self, state: Dict[str, Any]) -> Dict[str, Any]:
+        """Make the broker the source of truth for WHAT WE OWN.
+
+        The desk's positions live in state.json, which is runtime-only (gitignored,
+        cached by the runner). If that state is ever lost — killed job, evicted
+        cache, fresh machine — the desk would believe it is flat while the broker
+        still holds the asset: it would re-buy (double exposure) and never manage
+        or exit the orphan, since no strategy tracks it.
+
+        So every cycle we compare the two:
+          • broker holds something state doesn't know → ADOPT it under the ladder
+            desk so stops and floors start protecting it immediately (basis from
+            the broker when available, else the live price — conservative: it
+            protects from here on rather than inventing a P&L history),
+          • state holds something the broker doesn't → drop the ghost so it can't
+            block new entries or emit sells for shares that do not exist.
+        Fault-isolated: any broker hiccup leaves state untouched.
+        """
+        out = {"adopted": [], "dropped": [], "ok": True}
+        try:
+            broker = self.client.get_broker_positions() or {}
+        except Exception as exc:
+            log.warning("broker reconciliation skipped: %s", exc)
+            out["ok"] = False
+            return out
+        if not isinstance(broker, dict):
+            out["ok"] = False
+            return out
+        positions = state.setdefault("positions", {})
+
+        def _norm(sym: str) -> str:
+            return str(sym or "").upper().replace("-", "/").replace("/USD", "")
+
+        held = {_norm(k): (k, v) for k, v in broker.items()
+                if abs(float((v or {}).get("qty", 0) or 0)) > 0}
+        known = {_norm(k) for k, v in positions.items()
+                 if abs(float((v or {}).get("shares", 0) or 0)) > 0}
+
+        for base, (raw_sym, info) in held.items():
+            if base in known:
+                continue
+            qty = float(info.get("qty", 0) or 0)
+            basis = float(info.get("avg_price", 0) or 0)
+            if basis <= 0:
+                try:
+                    basis = float(self.client.get_price(raw_sym) or 0.0)
+                except Exception:
+                    basis = 0.0
+            if basis <= 0:
+                continue                      # no defensible basis → leave it alone
+            sym = next((s for s in self.cfg.tickers if _norm(s) == base), raw_sym)
+            positions[sym] = {"strategy": "ladder", "shares": qty, "cost_basis": basis,
+                              "entry_price": basis, "peak": basis, "adopted": True,
+                              "hard_floor": basis * (1 - self.cfg.ladder_catastrophic_pct
+                                                     if self.cfg.ladder_enable_averaging
+                                                     else 1 - self.cfg.ladder_hard_floor_pct)}
+            out["adopted"].append(sym)
+            log.warning("ADOPTED untracked broker position %s: %s @ %.6f — now under "
+                        "ladder risk management", sym, qty, basis)
+
+        for sym in [s for s in list(positions) if _norm(s) not in held
+                    and abs(float((positions[s] or {}).get("shares", 0) or 0)) > 0]:
+            # options/spreads are not equity holdings — never treat them as ghosts
+            if (positions[sym] or {}).get("stage") or (positions[sym] or {}).get("contract"):
+                continue
+            out["dropped"].append(sym)
+            log.warning("DROPPED ghost position %s — the broker reports no such holding", sym)
+            positions.pop(sym, None)
+        return out
+
     def _cadence_check(self, state: Dict[str, Any]) -> Dict[str, Any]:
         """Measure the real gap between cycles and flag a degraded schedule.
 
@@ -365,6 +435,10 @@ class Firm:
         if state.get("equity_start") is None:
             state["equity_start"] = equity
         state["equity_last"] = equity
+
+        # Broker reconciliation FIRST: never plan a cycle against a stale view of
+        # what we own (see _reconcile_broker for why state alone is not enough).
+        recon = self._reconcile_broker(state)
 
         # Circuit breaker / kill switch — suspends NEW risk this cycle if tripped.
         halt = self._halt_check(state, equity)
@@ -600,4 +674,4 @@ class Firm:
                 "research": research, "brain": brain, "executed": executed,
                 "deployed": self._position_value(state), "halt": halt,
                 "hermes": hermes, "board": board, "vol_scale": round(vol_scale, 3),
-                "cadence": cadence}
+                "cadence": cadence, "reconciliation": recon}
