@@ -187,11 +187,11 @@ jobs:
           # per owner directive (Robinhood-supported crypto only).
           TICKERS: ${{ vars.TICKERS_LIVE || 'BTC/USD,ETH/USD,SOL/USD,LTC/USD,XRP/USD' }}
           DAY_TRADE_SYMBOLS: ''
-          # Owner directive: a fixed $10 sleeve. Sizing, the equity curve and
-          # Hermes' scorecard all measure against $10 — matching the funded
-          # balance today, and capping risk at $10 even if the account grows.
-          # (0 would instead track the full broker balance automatically.)
-          TRADING_CAPITAL: ${{ vars.LIVE_TRADING_CAPITAL == '' && '10' || vars.LIVE_TRADING_CAPITAL }}
+          # Owner directive: 0 = size against the FULL live Robinhood balance
+          # (equity curve, sizing and Hermes' scorecard all track the real
+          # account and follow deposits automatically). Set Variable
+          # LIVE_TRADING_CAPITAL to a number to risk only part of the balance.
+          TRADING_CAPITAL: ${{ vars.LIVE_TRADING_CAPITAL == '' && '0' || vars.LIVE_TRADING_CAPITAL }}
         run: python main.py --once --force
 
       # Robinhood crypto desk — DRY-RUN stage: live market data + real account
