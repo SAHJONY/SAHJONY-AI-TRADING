@@ -37,8 +37,16 @@ _DEFAULT_TTL_HOURS = 24.0
 #    Our counsellors speak only chat/completions and want a model that actually
 #    answers, so we steer to the standard/flash tier (plenty for a <120-word view).
 _EXCLUDE = ("embed", "whisper", "tts", "audio", "realtime", "moderation",
-            "dall-e", "image", "vision-only", "search", "transcribe", "instruct",
-            "-pro")
+            "dall-e", "image", "vision-only", "search", "transcribe", "instruct")
+# Provider-specific exclusions. A blanket "-pro" ban was too broad: it also threw
+# away Gemini's stable *-pro tier (the configured default and the stronger model),
+# leaving only flash. Ban precisely what actually fails:
+#   • OpenAI  gpt-*-pro  → Responses-API only, 404 on v1/chat/completions
+#   • Gemini  *-pro-preview → tiny free quota, 429s in practice (stable -pro is fine)
+_EXCLUDE_BY_PROVIDER = {
+    "openai": ("-pro",),
+    "gemini": ("-pro-preview",),
+}
 
 
 def _refresh_hours() -> float:
@@ -48,16 +56,19 @@ def _refresh_hours() -> float:
         return _DEFAULT_TTL_HOURS
 
 
-def _ok_id(model_id: str) -> bool:
+def _ok_id(model_id: str, provider: Optional[str] = None) -> bool:
     mid = model_id.lower()
-    return not any(x in mid for x in _EXCLUDE)
+    if any(x in mid for x in _EXCLUDE):
+        return False
+    return not any(x in mid for x in _EXCLUDE_BY_PROVIDER.get(provider or "", ()))
 
 
-def _pick_latest(models: List[Dict], prefer: Tuple[str, ...]) -> Optional[str]:
+def _pick_latest(models: List[Dict], prefer: Tuple[str, ...],
+                 provider: Optional[str] = None) -> Optional[str]:
     """models: [{'id','created'}] with created as a sortable number (epoch).
     Prefer the newest id whose name contains any 'prefer' keyword; if none match,
     the newest acceptable chat id overall."""
-    usable = [m for m in models if m.get("id") and _ok_id(m["id"])]
+    usable = [m for m in models if m.get("id") and _ok_id(m["id"], provider)]
     if not usable:
         return None
     usable.sort(key=lambda m: m.get("created", 0), reverse=True)
@@ -143,7 +154,7 @@ def resolve(provider: str, key: str, default: str, *, force: bool = False) -> st
     # A cached pick that a newer exclusion rule now rejects (e.g. a "-pro" model
     # that 404s/429s on the chat endpoint) must NOT be served just because it's
     # fresh — re-query so the fix takes effect without waiting out the 24h TTL.
-    cached_ok = entry.get("model") and _ok_id(entry["model"])
+    cached_ok = entry.get("model") and _ok_id(entry["model"], provider)
     fresh = (not force and cached_ok
              and (time.time() - entry.get("ts", 0)) < _refresh_hours() * 3600)
     if fresh:
@@ -151,7 +162,7 @@ def resolve(provider: str, key: str, default: str, *, force: bool = False) -> st
 
     lister, prefer = _PROVIDERS[provider]
     try:
-        latest = _pick_latest(lister(key), prefer)
+        latest = _pick_latest(lister(key), prefer, provider)
     except Exception as exc:  # network/API/parse — never break the brain
         log.warning("%s model lookup failed (%s) → using %s", provider, exc, default)
         return (entry["model"] if cached_ok else "") or default
