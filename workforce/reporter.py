@@ -250,6 +250,7 @@ def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[st
                           "daily_drawdown_pct": cfg.max_daily_drawdown_pct},
             "vol_targeting": {"target_annual": getattr(cfg, "vol_target_annual", 0.0),
                               "scale": cycle_result.get("vol_scale", 1.0)},
+            "cadence": cycle_result.get("cadence") or {},
             "circuit_breaker": cycle_result.get("halt", {"halted": False, "reason": ""}),
             "ai_brain": firm.brain.status,
             "alt_data": getattr(firm, "alt", None).status if getattr(firm, "alt", None) else {"enabled": False},

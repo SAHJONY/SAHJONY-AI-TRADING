@@ -312,6 +312,34 @@ class Firm:
         return {"halted": halted, "reason": reason, "day_return": round(day_return, 4),
                 "day_start": round(day_start, 2), "limit_pct": self.cfg.max_daily_drawdown_pct}
 
+    def _cadence_check(self, state: Dict[str, Any]) -> Dict[str, Any]:
+        """Measure the real gap between cycles and flag a degraded schedule.
+
+        The configured CYCLE_MINUTES is an intention, not a guarantee: shared
+        schedulers throttle high-frequency crons, so the observed cadence is what
+        actually bounds our risk management. Tolerate 3x the configured interval
+        (or 90 minutes, whichever is larger) before declaring the schedule
+        unreliable for opening new positions.
+        """
+        now = datetime.now(timezone.utc)
+        expected = max(1, int(getattr(self.cfg, "cycle_minutes", 15)))
+        prev = state.get("last_cycle_ts")
+        gap = None
+        if prev:
+            try:
+                gap = (now - datetime.fromisoformat(str(prev))).total_seconds() / 60.0
+            except Exception:
+                gap = None
+        state["last_cycle_ts"] = now.isoformat()
+        tolerance = max(expected * 3.0, 90.0)
+        degraded = gap is not None and gap > tolerance
+        reason = ("" if not degraded else
+                  f"execution cadence degraded: {gap:.0f} min since the last cycle "
+                  f"(expected ~{expected} min) — a new position could not be managed")
+        return {"degraded": bool(degraded), "reason": reason,
+                "gap_min": (round(gap, 1) if gap is not None else None),
+                "expected_min": expected, "tolerance_min": round(tolerance, 1)}
+
     def run_cycle(self, state: Dict[str, Any], trade: bool = True) -> Dict[str, Any]:
         state["cycle"] = state.get("cycle", 0) + 1
         cycle = state["cycle"]
@@ -341,6 +369,17 @@ class Firm:
         # Circuit breaker / kill switch — suspends NEW risk this cycle if tripped.
         halt = self._halt_check(state, equity)
         allow_new_risk = trade and not halt["halted"]
+
+        # Execution-cadence guard. Every protective rail (trailing stops, hard
+        # floors, the daily breaker) only evaluates WHEN A CYCLE RUNS. Scheduled
+        # runners throttle and skip, so cycles can be hours apart — and a position
+        # opened into a multi-hour blind spot cannot be managed. When the gap runs
+        # far beyond the configured cadence we keep EXITS flowing but refuse to
+        # open NEW risk: better to miss a trade than to hold what we cannot watch.
+        cadence = self._cadence_check(state)
+        if cadence["degraded"] and allow_new_risk:
+            log.warning("NEW RISK PAUSED — %s", cadence["reason"])
+            allow_new_risk = False
 
         # Volatility targeting — realized portfolio vol above target scales every
         # new-position budget down ([0.5, 1.0]); fault-isolated, neutral on failure.
@@ -560,4 +599,5 @@ class Firm:
         return {"cycle": cycle, "equity": eq_now, "cash": cash_now,
                 "research": research, "brain": brain, "executed": executed,
                 "deployed": self._position_value(state), "halt": halt,
-                "hermes": hermes, "board": board, "vol_scale": round(vol_scale, 3)}
+                "hermes": hermes, "board": board, "vol_scale": round(vol_scale, 3),
+                "cadence": cadence}
