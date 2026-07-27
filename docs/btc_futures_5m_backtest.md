@@ -149,6 +149,31 @@ time. Requiring both is probably a mistake — pick one.
 **These two were not retuned.** Loosening entry filters against synthetic data
 would be fitting to noise. They are flagged for the real-data run.
 
+### 5. Two spec rules were stated in the playbook but missing from the code
+
+Both are now implemented, and both cost signals:
+
+- **S1 — "≥ 24 bars since the VWAP re-anchor."** Added after finding 2. S1 still
+  produces **zero** trades: the six-way conjunction leaves ~10 candidate bars per
+  51k, the limit order misses most of them, and the §0 edge gate rejects the rest.
+  **As specified, S1 is not tradeable.** It needs to be re-specified, not tuned.
+- **S9 — "the range must be ≥ 20 bars old."** Enforcing it cut S9 from 48 trades
+  to **12** on the same sample, so S9's sample size is now marginal too.
+
+The first formulation of the range-age test compared the Donchian channel to
+itself 20 bars earlier. That is wrong: those two windows are disjoint, so for a
+random walk they differ by roughly the range itself — it passed 0.5% of break
+events and took S9 to zero trades. The correct test asks whether the **preceding**
+20 bars also sat inside the channel (a range that has contained price for 40 bars,
+not 20), which passes ~20% of breaks:
+
+```
+tolerance   disjoint-Donchian (wrong)   prior-20-inside-channel (used)
+0.00 ATR              0 / 11,976                1,878 / 11,976
+0.25 ATR             62                         2,342
+0.50 ATR            238                         2,854
+```
+
 ---
 
 ## Harness validation run (synthetic — NOT a result)
@@ -164,11 +189,18 @@ s2       37     0.7027   0.7237       26.78    9.74       -1.42      2.488
 s3       4      0.0      -1.5849      -6.34    -2.20      -2.20      0.0
 s5       12     0.5833   0.1404       1.68     0.57       -1.29      1.239
 s6       3      0.3333   -0.0907      -0.27    -0.10      -0.54      0.9
-s9       48     0.2708   -0.7383      -35.44   -11.72     -11.72     0.283
+s9       12     0.3333   -0.4243      -5.09    -1.79      -2.25      0.543
 ```
 
 Do not read across this table. Every strategy is below the 300-trade minimum the
 playbook sets, on data with no microstructure in it.
+
+The column that *is* informative is `trades`. Only S2 generates a workable sample
+once every stated rule is enforced; S1 generates none at all, and S3, S5, S6 and
+S9 are in single or low double digits over six months. Signal frequency is a
+property of the specification, not of the price series, so expect the same shape
+on real data: **most of this book is too selective to be measurable**, let alone
+profitable, and the specs need widening before the numbers mean anything.
 
 ```bash
 python -m tests.test_backtest     # 14 mechanical checks, all passing

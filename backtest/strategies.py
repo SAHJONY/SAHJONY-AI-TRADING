@@ -36,7 +36,15 @@ class S1_VWAPBandFade(Strategy):
         vwap, sig = ta.anchored_vwap(b.high, b.low, b.close, b.volume, b.day_id)
         a = ta.atr(b.high, b.low, b.close, 14)
         adx, _, _ = ta.adx(b.high, b.low, b.close, 14)
-        return {"atr": a, "vwap": vwap, "sigma": sig, "adx": adx,
+        # bars elapsed since the 00:00 UTC re-anchor — σ is meaningless right
+        # after it, which is what put the stop inside the fee in validation
+        d = b.day_id
+        age = np.zeros(len(b), dtype=float)
+        k = 0
+        for i in range(len(b)):
+            k = 0 if (i and d[i] != d[i - 1]) else k + 1
+            age[i] = k
+        return {"atr": a, "vwap": vwap, "sigma": sig, "adx": adx, "anchor_age": age,
                 "rsi2": ta.rsi(b.close, 2), "vsma": ta.sma(b.volume, 20),
                 "atr_pct": a / b.close}
 
@@ -47,6 +55,8 @@ class S1_VWAPBandFade(Strategy):
         if adx >= 20 or adx > ind["adx"][t - 3]:            # trend suppressor
             return None
         if ap >= 0.0030:                                     # LOW/NORMAL only
+            return None
+        if ind["anchor_age"][t] < 24:                        # ≥2h since re-anchor
             return None
         if b.volume[t] < 1.5 * ind["vsma"][t]:
             return None
@@ -455,9 +465,25 @@ class S9_FailedBreakFade(Strategy):
         c, w = b.close[t], self.WINDOW
         r2, vs = ind["rsi2"], ind["vsma"]
 
+        def intact(i0: int) -> bool:
+            """Spec: the range must have been holding for >= 20 bars before the
+            break. The Donchian at i0 already covers the 20 bars before it, so
+            the test is whether the *preceding* 20 bars also sat inside the same
+            channel — a range that has contained price for 40 bars, not 20.
+
+            (Comparing the channel to itself 20 bars earlier does not work: those
+            windows are disjoint, so for a random walk they differ by roughly the
+            range itself — that version passed 0.5% of breaks and took no trades.)
+            """
+            if i0 - 40 < 0:
+                return False
+            tol = 0.25 * a
+            return (b.high[i0 - 40:i0 - 20].max() <= ind["dc_hi"][i0] + tol
+                    and b.low[i0 - 40:i0 - 20].min() >= ind["dc_lo"][i0] - tol)
+
         # failed downside break -> fade long
         brk = [i for i in range(t - w + 1, t + 1) if b.low[i] < lo]
-        if brk and c > lo:
+        if brk and c > lo and intact(brk[0]):
             i0 = brk[0]
             if b.volume[i0] < 1.2 * vs[i0] and min(r2[i] for i in brk) < 10:
                 ext = float(min(b.low[i] for i in brk))
@@ -470,7 +496,7 @@ class S9_FailedBreakFade(Strategy):
 
         # failed upside break -> fade short
         brk = [i for i in range(t - w + 1, t + 1) if b.high[i] > hi]
-        if brk and c < hi:
+        if brk and c < hi and intact(brk[0]):
             i0 = brk[0]
             if b.volume[i0] < 1.2 * vs[i0] and max(r2[i] for i in brk) > 90:
                 ext = float(max(b.high[i] for i in brk))
