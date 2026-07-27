@@ -9,8 +9,8 @@
     "return_pct": -0.162,
     "alpha_pct": -1578.821
   },
-  "ts": "2026-07-27T21:32:37.304680+00:00",
-  "cycle": 48,
+  "ts": "2026-07-27T22:35:50.348885+00:00",
+  "cycle": 49,
   "account": {
     "equity": -29579.65,
     "equity_start": 2000.0,
@@ -48,17 +48,17 @@
     "cadence": {
       "degraded": false,
       "reason": "",
-      "gap_min": 75.2,
+      "gap_min": 63.9,
       "expected_min": 15,
       "tolerance_min": 90.0
     },
     "evaluation": {
       "active": true,
-      "day": 0,
+      "day": 1,
       "days": 90,
       "started_at": "2026-07-26T21:38:16.798191+00:00",
       "ends_at": "2026-10-24T21:38:16.798191+00:00",
-      "pct": 0.0,
+      "pct": 1.1,
       "criteria": {
         "primary": "net-of-fees return beats buy-and-hold BTC over the window",
         "risk": "max drawdown stays inside 15%",
@@ -112,9 +112,9 @@
         ]
       },
       "hit_rates": {
-        "SPY": 0.071,
-        "QQQ": 0.149,
-        "VTI": 0.072
+        "SPY": 0.068,
+        "QQQ": 0.143,
+        "VTI": 0.069
       },
       "strategy_weights": {
         "daytrade": 0.867
@@ -737,14 +737,14 @@
     "enabled": true,
     "used": true,
     "posture": "neutral",
-    "global_risk_multiplier": 0.85,
-    "commentary": "The portfolio is heavily weighted to U.S. equity ETFs with overlapping exposure (SPY, VTI) and a high\u2011beta tech tilt (QQQ, NVDA). Volatility is modest for the ETFs (13\u201114%) but spikes above 30% for the two stocks, and both MSFT and NVDA exhibit negative alpha and fragile signals. Given the concentration risk and tail\u2011risk from the high\u2011beta, high\u2011vol stocks, we adopt a neutral stance with a modest risk\u2011off scaling factor. Conviction adjustments reflect confidence in the broad\u2011market longs while pulling back on the more fragile, volatile positions.",
+    "global_risk_multiplier": 0.9,
+    "commentary": "Overall stance is moderately bullish but heavily weighted to market beta. Broad ETFs (SPY, VTI) provide core exposure, while QQQ adds growth tilt. MSFT and NVDA signals are fragile (negative alpha, high volatility/beta) so we keep adjustments modest and maintain a slight risk buffer.",
     "brain_model": "nvidia:openai/gpt-oss-120b",
     "counsellors": {
-      "openai": "**Risk posture:** Moderately aggressive, with substantial overlapping U.S. equity exposure. SPY/VTI are highly correlated, while QQQ adds meaningful tech/growth beta; portfolio sensitivity rises in a broad equity drawdown. Volatility and downside risk are highest in NVDA and MSFT",
-      "grok": "**Risk posture:** Moderately constructive but equity-heavy. Broad-market longs (SPY/VTI) show positive composites and contained vol; QQQ adds beta/vol drag. MSFT/NVDA flats correctly sidestep negative alpha and elevated vol\u2014overall risk balanced, not aggressive.\n\n**Adjustments (c",
+      "openai": "**Risk posture: moderately bullish but equity-beta heavy.** SPY/VTI overlap substantially, while QQQ adds meaningful growth concentration (beta 1.415). With alternatives unavailable, diversification is limited; portfolio drawdown risk remains correlated. Convictions are not stron",
+      "grok": "**Risk posture:** Moderately constructive but equity-beta heavy. Broad indices (SPY/VTI) show positive composites and contained vol; QQQ adds growth tilt with higher beta. MSFT/NVDA correctly flat\u2014negative alpha, elevated vol. Overall risk is market-directional; limited idiosyncr",
       "gemini": "",
-      "nvidia": "**Risk posture:** The slate is heavily equity\u2011biased (three broad\u2011market ETFs) with modest beta overall (\u22481.1) but pockets of high\u2011beta exposure (QQQ\u202f\u03b2\u202f1.42, NVDA\u202f\u03b2\u202f1.83). Volatility clusters around 13\u201120\u202f% for the ETFs and spikes above 30\u202f% for the two stocks, raising tail\u2011risk "
+      "nvidia": "**Risk posture:** The slate is a pure\u2011equity, market\u2011beta tilt (average \u03b2\u22481.2) with modest diversification beyond the three broad ETFs. Volatility sits 10\u201115\u202f% above the S&P\u202f500 benchmark, and two names (MSFT, NVDA) show negative alpha and flat\u2011direction signals, raising downside"
     }
   },
   "positions": [
@@ -1161,9 +1161,35 @@
       "cash": -65665.38323641755,
       "realized_pnl": 0.0,
       "premium": 0.0
+    },
+    {
+      "ts": "2026-07-27T22:35:48.547086+00:00",
+      "cycle": 49,
+      "equity": -29579.65345187254,
+      "cash": -65665.38323641755,
+      "realized_pnl": 0.0,
+      "premium": 0.0
     }
   ],
   "decisions": [
+    {
+      "ts": "2026-07-27T22:35:45.663128+00:00",
+      "kind": "wheel_wait",
+      "symbol": "VTI",
+      "reason": "no put contract found"
+    },
+    {
+      "ts": "2026-07-27T22:35:45.594451+00:00",
+      "kind": "ladder_update",
+      "symbol": "QQQ",
+      "reason": "px 682.21 peak 682.21 gain -1%"
+    },
+    {
+      "ts": "2026-07-27T22:35:45.592261+00:00",
+      "kind": "ladder_update",
+      "symbol": "SPY",
+      "reason": "px 737.43 peak 745.16 gain +0%"
+    },
     {
       "ts": "2026-07-27T21:32:36.287704+00:00",
       "kind": "wheel_wait",
@@ -1295,24 +1321,6 @@
       "kind": "wheel_wait",
       "symbol": "VTI",
       "reason": "no put contract found"
-    },
-    {
-      "ts": "2026-07-27T02:04:13.533138+00:00",
-      "kind": "ladder_update",
-      "symbol": "SPY",
-      "reason": "px 738.63 peak 738.63 gain +0%"
-    },
-    {
-      "ts": "2026-07-26T23:54:33.602095+00:00",
-      "kind": "wheel_wait",
-      "symbol": "VTI",
-      "reason": "no put contract found"
-    },
-    {
-      "ts": "2026-07-26T23:54:33.567507+00:00",
-      "kind": "ladder_update",
-      "symbol": "SPY",
-      "reason": "px 738.63 peak 738.63 gain +0%"
     }
   ],
   "agents_roster": [
