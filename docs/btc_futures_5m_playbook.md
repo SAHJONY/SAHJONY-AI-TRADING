@@ -28,6 +28,14 @@ Everything below assumes these constants. Strategy-level R:R numbers are stated
 | CME session gaps | Fri 22:00 UTC → Sun 23:00 UTC close; gap-fill logic in S10 |
 | Minimum edge filter | **Never take a setup whose target is < 3× round-trip cost** |
 
+⚠️ **That last row is the binding constraint, not a footnote.** At 4.5 bps taker
+and ~0.15% ATR, a round trip costs ≈ 12 bps, so TP1 must be ≥ **~36 bps** away.
+When the gate was implemented and run, it rejected the majority of signals from
+every fade/pullback strategy here (S5 64 of 76, S6 44 of 47, S9 83 of 131, S1 both
+candidates). The implication is structural: **at taker fees these 5m setups mostly
+do not clear costs.** They need maker entries, a fee-tier/rebate venue, or wider
+targets — see `docs/btc_futures_5m_backtest.md`.
+
 **Position sizing (identical across all strategies):**
 
 ```
@@ -91,6 +99,11 @@ oscillates around AVWAP and σ-band excursions are inventory imbalances that dec
 **5. Risk protocol**
 - Stop: beyond the **±2.5σ** band, or `1.2 × ATR(14)` from entry — whichever is
   **wider** (survives the second flush) — capped at 0.55% of price.
+- **Floor the stop, and don't trade near the anchor.** σ is ~0 for the first hour
+  after the 00:00 UTC re-anchor, which put the σ-band stop **8 bps** from entry in
+  validation — inside the 9 bps round-trip fee, making the trade unwinnable before
+  it started. Require ≥ 24 bars since the anchor, and let the §0 edge gate (below)
+  reject anything left.
 - TP1: **AVWAP itself** — scale 60% off.
 - TP2: opposite **1.0σ** band — remaining 40%.
 - Move stop to breakeven when TP1 fills.
@@ -452,7 +465,12 @@ become the fuel for a move to the opposite side of the range.
 
 **2. Indicators & parameters**
 - Donchian channel (20) to define the range; range must be ≥ **20 bars old**.
-- Range width filter: `0.5 × ATR ≤ width ≤ 3 × ATR`.
+- Range width filter: **`3 × ATR(14) ≤ width ≤ 8 × ATR(14)`**.
+  *(Corrected after implementation. The original `0.5–3 × ATR` was arithmetically
+  impossible for a 20-bar range: for a random walk the expected n-bar range is
+  ≈ `1.6 σ √n` while `ATR(14) ≈ 1.13 σ`, putting a 20-bar Donchian near **6.4 ×
+  ATR** by construction. Measured median was 6.09 × ATR and the old window matched
+  0.8% of bars.)*
 - Volume 20-SMA; RSI(2).
 - Bollinger Bandwidth percentile (to confirm the market is *in* a range, i.e. NOT
   in the bottom-20% squeeze that S3 trades — a squeeze break is usually real).
