@@ -9,8 +9,8 @@
     "return_pct": 0.0,
     "alpha_pct": -1438.338
   },
-  "ts": "2026-07-27T06:03:14.083684+00:00",
-  "cycle": 41,
+  "ts": "2026-07-27T09:59:03.930843+00:00",
+  "cycle": 42,
   "account": {
     "equity": -26766.75,
     "equity_start": 2000.0,
@@ -47,8 +47,8 @@
     },
     "cadence": {
       "degraded": true,
-      "reason": "execution cadence degraded: 238 min since the last cycle (expected ~15 min) \u2014 a new position could not be managed",
-      "gap_min": 237.7,
+      "reason": "execution cadence degraded: 236 min since the last cycle (expected ~15 min) \u2014 a new position could not be managed",
+      "gap_min": 235.7,
       "expected_min": 15,
       "tolerance_min": 90.0
     },
@@ -745,9 +745,9 @@
     "commentary": "brain error: HTTPSConnectionPool(host='integrate.api.nvidia.com', port=443): Read timed out. (read timeout=45)",
     "brain_model": "",
     "counsellors": {
-      "openai": "**Overall posture:** Moderately aggressive and highly equity-concentrated. SPY/VTI overlap is substantial, while QQQ and NVDA add pronounced technology, duration, and high-beta exposure. Diversification is therefore less than the symbol count suggests. \u201cAlt\u201d inputs are unavailabl",
-      "grok": "**Risk posture:** Mildly constructive but uneven. Broad-market longs (SPY/VTI) dominate with modest composites and contained vol; QQQ adds beta/vol drag. Single-name flats (MSFT/NVDA) correctly sidestep weak alpha\u2014net book is market-like, not overextended, yet tech residual risk ",
-      "gemini": "The portfolio maintains a pro-cyclical bias with high beta sensitivity. VTI",
+      "openai": "Overall posture is **moderately constructive but equity-beta heavy**, with substantial overlap among SPY, VTI, and QQQ. QQQ/NVDA add high-growth and volatility concentration; unavailable alternative data reduces confidence. Consider sizing discipline and avoiding inadvertent dupl",
+      "grok": "**Risk posture:** Moderate equity beta via broad longs (SPY/VTI core; QQQ adds growth tilt). Flat single-names limit idiosyncratic blow-ups, but elevated vol/beta in QQQ/NVDA and negative alphas warrant caution\u2014no leverage implied, yet tech concentration is the main risk.\n\n**Adju",
+      "gemini": "The portfolio maintains an aggressive beta posture, heavily reliant on broad-market momentum",
       "nvidia": ""
     }
   },
@@ -1079,9 +1079,29 @@
       "cash": -63845.38561992356,
       "realized_pnl": 0.0,
       "premium": 0.0
+    },
+    {
+      "ts": "2026-07-27T09:59:03.420084+00:00",
+      "cycle": 42,
+      "equity": -26766.754789938554,
+      "cash": -63845.38561992356,
+      "realized_pnl": 0.0,
+      "premium": 0.0
     }
   ],
   "decisions": [
+    {
+      "ts": "2026-07-27T09:59:02.397451+00:00",
+      "kind": "wheel_wait",
+      "symbol": "VTI",
+      "reason": "no put contract found"
+    },
+    {
+      "ts": "2026-07-27T09:59:02.308708+00:00",
+      "kind": "ladder_update",
+      "symbol": "SPY",
+      "reason": "px 738.63 peak 738.63 gain +0%"
+    },
     {
       "ts": "2026-07-27T06:03:13.410082+00:00",
       "kind": "wheel_wait",
@@ -1226,20 +1246,6 @@
       "kind": "wheel_wait",
       "symbol": "SPY",
       "reason": "no put contract found"
-    },
-    {
-      "ts": "2026-07-26T19:52:40.820352+00:00",
-      "kind": "risk_block",
-      "symbol": "DLHC",
-      "purpose": "copy_buy",
-      "reason": "would breach total-deployed cap $1,400 (room $21)"
-    },
-    {
-      "ts": "2026-07-26T19:52:40.820308+00:00",
-      "kind": "risk_block",
-      "symbol": "VMI",
-      "purpose": "copy_buy",
-      "reason": "would breach total-deployed cap $1,400 (room $21)"
     }
   ],
   "agents_roster": [
