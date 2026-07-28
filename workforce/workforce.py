@@ -41,6 +41,7 @@ from strategies.trailing_ladder import TrailingLadder
 from strategies.wheel_strategy import WheelStrategy
 from utils.logger import get_logger
 from utils.notify import Notifier
+from utils.quote_cache import CachedBroker
 from utils.state_store import record_event
 
 log = get_logger("workforce")
@@ -192,7 +193,10 @@ class ExecutionTrader:
 class Firm:
     def __init__(self, cfg: Config, client, db: Database):
         self.cfg = cfg
-        self.client = client
+        # One price per symbol per cycle. Wrapped here rather than in
+        # utils.broker.get_broker() so the factory keeps returning the bare
+        # adapter its contract promises; every role below shares this instance.
+        self.client = client = CachedBroker(client)
         self.db = db
         self.council = Council()
         self.brain = AIBrain(cfg)
@@ -413,6 +417,7 @@ class Firm:
     def run_cycle(self, state: Dict[str, Any], trade: bool = True) -> Dict[str, Any]:
         state["cycle"] = state.get("cycle", 0) + 1
         cycle = state["cycle"]
+        self.client.begin_cycle()      # fresh quotes; pinned for this cycle
         mode = getattr(self.client, "mode", self.cfg.mode)   # broker-accurate
         state["mode"] = mode
         acct = self.client.get_account()

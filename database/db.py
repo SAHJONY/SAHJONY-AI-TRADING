@@ -116,6 +116,21 @@ CREATE TABLE IF NOT EXISTS capital_ledger (
     equity_after  REAL,                                -- account equity right after the flow
     note          TEXT
 );
+
+-- Indices. council_log is the fastest-growing table on the desk (agents ×
+-- tickers × cycles): a 24/7 desk at 15-minute cycles over 8 tickers writes ~1.9M
+-- rows in about seven months, and the reporter reads the latest council every
+-- single cycle. Unindexed, that scan measured 81 ms per lookup and 99 ms for
+-- MAX(cycle); with the index, 0.13 ms and 0.01 ms. The rest are cheap insurance
+-- on lookups that are currently full scans of tables that only grow.
+CREATE INDEX IF NOT EXISTS idx_council_cycle   ON council_log(cycle);
+CREATE INDEX IF NOT EXISTS idx_trades_cycle    ON trades(cycle);
+CREATE INDEX IF NOT EXISTS idx_trades_symbol   ON trades(symbol);
+CREATE INDEX IF NOT EXISTS idx_equity_cycle    ON equity_curve(cycle);
+CREATE INDEX IF NOT EXISTS idx_snapshots_cycle ON position_snapshots(cycle);
+CREATE INDEX IF NOT EXISTS idx_contrib_investor ON contributions(investor_id);
+CREATE INDEX IF NOT EXISTS idx_investors_token ON investors(share_token);
+CREATE INDEX IF NOT EXISTS idx_events_ts       ON events(ts);
 """
 
 
@@ -133,6 +148,13 @@ class Database:
         self.conn = sqlite3.connect(path)
         self.conn.row_factory = sqlite3.Row
         self.conn.execute("PRAGMA journal_mode=WAL;")
+        # WAL + NORMAL is the documented safe pairing: still durable across an
+        # application crash, and it drops the per-commit fsync that dominated the
+        # cycle profile (~17 commits/cycle, 0.62s of a 3.6s 20-cycle run). The
+        # exposure is the last transaction on an OS crash or power loss, which for
+        # this DB means one cycle of telemetry — the broker, not this file, is the
+        # source of truth for positions.
+        self.conn.execute("PRAGMA synchronous=NORMAL;")
         self.conn.executescript(_SCHEMA)
         self._migrate()
         self.conn.commit()

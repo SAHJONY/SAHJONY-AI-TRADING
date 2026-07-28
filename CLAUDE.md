@@ -33,6 +33,8 @@ native SQLite CRM/database and a static owner dashboard deployed on Vercel.
 ## Verify like this
 - `python -m py_compile $(git ls-files '*.py')` — syntax gate.
 - `python -m tests.test_dry_run` — 8 offline cycles; asserts state/DB/status update.
+- `python -m tests.test_optimizations` — locks in the hot-path work (expanding-vol
+  equivalence, per-cycle quote cache, DB indices). See `docs/system_review.md`.
 - `python main.py --cycles 8` — regenerates `public/status.json` for the dashboard.
 - The dashboard is browser-rendered; `status.json` is the contract between the
   Python engine and `public/index.html` — keep the schema in `reporter.py` in sync.

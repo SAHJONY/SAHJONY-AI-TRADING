@@ -184,8 +184,8 @@ class DEShawOptions(Agent):
 
     def evaluate(self, s):
         vol = s.vol or 0.25
-        vols_hist = np.array([engines.annualized_vol(s.closes[:i]) for i in range(20, len(s.closes))]) \
-            if len(s.closes) > 25 else np.array([vol])
+        vols_hist = (engines.expanding_vol(s.closes, 20) if len(s.closes) > 25
+                     else np.array([vol]))
         rank = engines.iv_rank(vol, vols_hist)
         # high IV rank => premium-selling (wheel) favorable; mild bullish bias
         favorability = rank
