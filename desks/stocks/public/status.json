@@ -5,30 +5,30 @@
   "benchmark": {
     "symbol": "SPY",
     "start_price": 738.63,
-    "last_price": 739.27,
-    "return_pct": 0.087,
-    "alpha_pct": -387.033
+    "last_price": 741.04,
+    "return_pct": 0.326,
+    "alpha_pct": -386.484
   },
-  "ts": "2026-07-28T20:15:01.671105+00:00",
-  "cycle": 60,
+  "ts": "2026-07-28T21:25:28.122763+00:00",
+  "cycle": 61,
   "account": {
-    "equity": -5738.93,
+    "equity": -5723.15,
     "equity_start": 2000.0,
-    "cash": -65623.96,
-    "deployed": 59885.03
+    "cash": -65708.81,
+    "deployed": 59985.65
   },
   "pnl": {
     "realized": -43.42,
     "premium_collected": 0.0,
-    "total_return_pct": -386.946
+    "total_return_pct": -386.158
   },
   "capital": {
     "deposits": 0.0,
     "withdrawals": 0.0,
     "net_capital": 0.0,
     "flows": 0,
-    "trading_pnl": -7738.93,
-    "trading_return_pct": -386.946
+    "trading_pnl": -7723.15,
+    "trading_return_pct": -386.158
   },
   "capital_flows": [],
   "health": {
@@ -48,7 +48,7 @@
     "cadence": {
       "degraded": false,
       "reason": "",
-      "gap_min": 79.8,
+      "gap_min": 70.3,
       "expected_min": 15,
       "tolerance_min": 90.0
     },
@@ -69,8 +69,8 @@
     },
     "circuit_breaker": {
       "halted": true,
-      "reason": "daily circuit breaker \u2014 down -80.6% (limit 10%)",
-      "day_return": -0.806,
+      "reason": "daily circuit breaker \u2014 down -80.7% (limit 10%)",
+      "day_return": -0.8066,
       "day_start": -29579.65,
       "limit_pct": 0.1
     },
@@ -102,19 +102,13 @@
       "agent": "hermes",
       "goal": "Beat buy-and-hold (positive alpha vs BTC) while keeping max drawdown under 15% and never risking the mandate on a single trade \u2014 capital preservation first. Near-term: prove a sustained, fee-aware, positive out-of-sample edge on the paper trainer over ~90 days before scaling any live capital; grow the live account only on demonstrated alpha.",
       "used": true,
-      "data_ok_pct": 0.8,
-      "quarantined": [
-        "QQQ"
-      ],
-      "issues": {
-        "QQQ": [
-          "extreme jump vs last close"
-        ]
-      },
+      "data_ok_pct": 1.0,
+      "quarantined": [],
+      "issues": {},
       "hit_rates": {
-        "SPY": 0.078,
-        "QQQ": 0.127,
-        "VTI": 0.11
+        "SPY": 0.111,
+        "QQQ": 0.158,
+        "VTI": 0.106
       },
       "strategy_weights": {
         "daytrade": 0.867
@@ -158,43 +152,43 @@
     {
       "symbol": "SPY",
       "scores": {
-        "buffett": 0.256,
+        "buffett": 0.25,
         "munger": 0.3,
         "macro": 0.0,
-        "growth": 0.424,
-        "quant": 0.324
+        "growth": 0.428,
+        "quant": 0.265
       },
       "gate": 1.0,
-      "composite": 0.276,
-      "tilt": 0.0276,
+      "composite": 0.261,
+      "tilt": 0.0261,
       "rationale": {
-        "buffett": "+0.2% vs 200d mean, vol 13%",
-        "munger": "-0.8% vs 50d trend, 5d move -1.0%",
+        "buffett": "-0.0% vs 200d mean, vol 13%",
+        "munger": "-0.5% vs 50d trend, 5d move -1.0%",
         "macro": "insufficient benchmark history",
-        "growth": "6m +6.9%, -2.7% off the high",
-        "quant": "z -1.48, 20/50 trend +0.2%",
-        "risk_gate": "drawdown -2.7%, vol 13% \u2192 gate 1.00"
+        "growth": "6m +6.9%, -2.4% off the high",
+        "quant": "z -1.13, 20/50 trend +0.2%",
+        "risk_gate": "drawdown -2.4%, vol 13% \u2192 gate 1.00"
       }
     },
     {
       "symbol": "QQQ",
       "scores": {
-        "buffett": 0.674,
+        "buffett": 0.143,
         "munger": 0.3,
         "macro": 0.0,
-        "growth": -0.222,
-        "quant": 0.452
+        "growth": 0.346,
+        "quant": 0.337
       },
-      "gate": 0.0,
-      "composite": 0.271,
-      "tilt": 0.0,
+      "gate": 1.0,
+      "composite": 0.239,
+      "tilt": 0.0239,
       "rationale": {
-        "buffett": "+50.0% vs 200d mean, vol 20%",
-        "munger": "-52.9% vs 50d trend, 5d move -4.7%",
+        "buffett": "-0.0% vs 200d mean, vol 20%",
+        "munger": "-5.7% vs 50d trend, 5d move -4.7%",
         "macro": "insufficient benchmark history",
-        "growth": "6m +8.0%, -54.7% off the high",
-        "quant": "z -23.41, 20/50 trend -1.2%",
-        "risk_gate": "drawdown -54.7%, vol 20% \u2192 gate 0.00"
+        "growth": "6m +8.0%, -9.4% off the high",
+        "quant": "z -2.04, 20/50 trend -1.2%",
+        "risk_gate": "drawdown -9.4%, vol 20% \u2192 gate 1.00"
       }
     },
     {
@@ -264,10 +258,10 @@
   "council": [
     {
       "symbol": "SPY",
-      "price": 739.27,
-      "conviction": 0.551,
+      "price": 741.04,
+      "conviction": 0.543,
       "direction": "long",
-      "composite": 0.102,
+      "composite": 0.087,
       "risk_multiplier": 0.917,
       "agents": [
         {
@@ -294,9 +288,9 @@
         {
           "name": "Renaissance Patterns",
           "persona": "Mean-reversion",
-          "score": 0.711,
-          "confidence": 0.596,
-          "rationale": "z(20)=-1.48 (mean-revert), autocorr=-0.01"
+          "score": 0.589,
+          "confidence": 0.525,
+          "rationale": "z(20)=-1.13 (mean-revert), autocorr=-0.01"
         },
         {
           "name": "Goldman Technical",
@@ -308,9 +302,9 @@
         {
           "name": "JPMorgan Fundamental",
           "persona": "Valuation proxy",
-          "score": 0.009,
+          "score": 0.013,
           "confidence": 0.45,
-          "rationale": "px/200d=1.00, drawdown-from-1y-high=-3% (proxy)"
+          "rationale": "px/200d=1.00, drawdown-from-1y-high=-2% (proxy)"
         },
         {
           "name": "D.E. Shaw Options",
@@ -330,7 +324,7 @@
           "name": "Citadel Securities MM",
           "persona": "Order-flow microstructure",
           "score": 0.129,
-          "confidence": 0.533,
+          "confidence": 0.534,
           "rationale": "VPIN order-flow toxicity=0.17 (1=max adverse selection)"
         },
         {
@@ -350,26 +344,26 @@
         {
           "name": "Sovereign Wealth",
           "persona": "Secular macro / SAA",
-          "score": 0.031,
+          "score": 0.029,
           "confidence": 0.4,
-          "rationale": "secular trend=-0%, structural drawdown=-3% (accumulate dips)"
+          "rationale": "secular trend=+0%, structural drawdown=-2% (accumulate dips)"
         }
       ]
     },
     {
       "symbol": "QQQ",
-      "price": 337.71,
-      "conviction": 0.518,
+      "price": 675.75,
+      "conviction": 0.516,
       "direction": "long",
-      "composite": 0.036,
+      "composite": 0.033,
       "risk_multiplier": 0.676,
       "agents": [
         {
           "name": "Citadel Systematic",
           "persona": "Trend/Systematic",
-          "score": -0.911,
+          "score": -0.712,
           "confidence": 1.0,
-          "rationale": "MACD=-4.07, 20-50 slope=-0.026, Q-mom=+1.7%"
+          "rationale": "MACD=-4.07, 20-50 slope=-0.013, Q-mom=+1.7%"
         },
         {
           "name": "Two Sigma Backtest",
@@ -388,9 +382,9 @@
         {
           "name": "Renaissance Patterns",
           "persona": "Mean-reversion",
-          "score": 1.0,
-          "confidence": 1.0,
-          "rationale": "z(20)=-23.41 (mean-revert), autocorr=-0.02"
+          "score": 0.841,
+          "confidence": 0.709,
+          "rationale": "z(20)=-2.04 (mean-revert), autocorr=-0.02"
         },
         {
           "name": "Goldman Technical",
@@ -402,9 +396,9 @@
         {
           "name": "JPMorgan Fundamental",
           "persona": "Valuation proxy",
-          "score": -0.621,
+          "score": 0.048,
           "confidence": 0.45,
-          "rationale": "px/200d=0.50, drawdown-from-1y-high=-55% (proxy)"
+          "rationale": "px/200d=1.00, drawdown-from-1y-high=-9% (proxy)"
         },
         {
           "name": "D.E. Shaw Options",
@@ -444,9 +438,9 @@
         {
           "name": "Sovereign Wealth",
           "persona": "Secular macro / SAA",
-          "score": 0.386,
+          "score": 0.113,
           "confidence": 0.4,
-          "rationale": "secular trend=-50%, structural drawdown=-55% (accumulate dips)"
+          "rationale": "secular trend=+0%, structural drawdown=-9% (accumulate dips)"
         }
       ]
     },
@@ -741,8 +735,8 @@
     "commentary": "brain error: HTTPSConnectionPool(host='integrate.api.nvidia.com', port=443): Read timed out. (read timeout=45)",
     "brain_model": "",
     "counsellors": {
-      "openai": "Overall posture is **moderately constructive but equity-beta heavy**: SPY/VTI overlap materially, while QQQ adds concentrated growth exposure (\u03b2 1.41). NVDA is especially volatile (37.1%, \u03b2 1.84). With alternative data unavailable and weak/negative alpha for QQQ, MSFT, and NVDA, ",
-      "grok": "**Risk posture:** Mildly constructive beta tilt via SPY/VTI/QQQ longs; overall moderate conviction, equity-heavy, with elevated vol drag from QQQ/NVDA. No alt hedges. Net: balanced but fragile to growth/vol shocks.\n\n**Adjustments (advise only):**\n- SPY: +0.05  \n- QQQ: -0.05  \n- V",
+      "openai": "Overall posture: **cautiously constructive but risk-sensitive**. Long exposure is concentrated in highly correlated U.S. equities, with QQQ and NVDA adding meaningful growth/beta and volatility; SPY/VTI overlap is substantial. Convictions are modest, so avoid treating these as st",
+      "grok": "**Portfolio risk view**\n\nOverall posture: moderately constructive but uneven. Broad-market longs (SPY/VTI) show positive composites and contained vol; QQQ adds beta/vol drag. Single-name flats (MSFT/NVDA) carry negative alpha, weak composites and elevated vol\u2014net risk is equity-b",
       "gemini": "",
       "nvidia": ""
     }
@@ -824,9 +818,9 @@
       "state": "long",
       "shares": 10.0,
       "cost_basis": 735.26,
-      "price": 739.27,
-      "market_value": 7392.7,
-      "unrealized": 40.06
+      "price": 741.04,
+      "market_value": 7410.4,
+      "unrealized": 57.76
     },
     {
       "symbol": "DLHC",
@@ -857,6 +851,16 @@
       "price": 483.29,
       "market_value": 398.39,
       "unrealized": -7.23
+    },
+    {
+      "symbol": "QQQ",
+      "strategy": "ladder",
+      "state": "long",
+      "shares": 0.122715,
+      "cost_basis": 691.43,
+      "price": 675.75,
+      "market_value": 82.92,
+      "unrealized": -1.92
     }
   ],
   "crm": {
@@ -1264,9 +1268,35 @@
       "cash": -65623.95773060061,
       "realized_pnl": -43.42332663306,
       "premium": 0.0
+    },
+    {
+      "ts": "2026-07-28T21:25:26.760641+00:00",
+      "cycle": 61,
+      "equity": -5723.152860395608,
+      "cash": -65708.8065630506,
+      "realized_pnl": -43.42332663306,
+      "premium": 0.0
     }
   ],
   "decisions": [
+    {
+      "ts": "2026-07-28T21:25:24.266932+00:00",
+      "kind": "wheel_wait",
+      "symbol": "VTI",
+      "reason": "no put contract found"
+    },
+    {
+      "ts": "2026-07-28T21:25:24.100045+00:00",
+      "kind": "ladder_update",
+      "symbol": "QQQ",
+      "reason": "px 675.75 peak 675.75 gain -2%"
+    },
+    {
+      "ts": "2026-07-28T21:25:24.093994+00:00",
+      "kind": "ladder_update",
+      "symbol": "SPY",
+      "reason": "px 741.04 peak 745.16 gain +1%"
+    },
     {
       "ts": "2026-07-28T20:15:00.507812+00:00",
       "kind": "wheel_wait",
@@ -1398,24 +1428,6 @@
       "kind": "ladder_update",
       "symbol": "SPY",
       "reason": "px 737.43 peak 745.16 gain +0%"
-    },
-    {
-      "ts": "2026-07-28T09:47:24.875548+00:00",
-      "kind": "wheel_wait",
-      "symbol": "VTI",
-      "reason": "no put contract found"
-    },
-    {
-      "ts": "2026-07-28T09:47:24.815648+00:00",
-      "kind": "ladder_update",
-      "symbol": "QQQ",
-      "reason": "px 682.21 peak 682.21 gain -1%"
-    },
-    {
-      "ts": "2026-07-28T09:47:24.813885+00:00",
-      "kind": "ladder_update",
-      "symbol": "SPY",
-      "reason": "px 737.43 peak 745.16 gain +0%"
     }
   ],
   "agents_roster": [
@@ -1526,13 +1538,7 @@
       "mandate": "This dashboard"
     }
   ],
-  "executed_this_cycle": [
-    {
-      "symbol": "QQQ",
-      "purpose": "catastrophic_floor",
-      "reason": "catastrophic_floor 414.86 hit, realize $-43"
-    }
-  ],
+  "executed_this_cycle": [],
   "env_catalog": [
     {
       "name": "ALPACA_API_KEY",
