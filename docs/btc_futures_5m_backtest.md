@@ -52,8 +52,10 @@ python -m backtest.run --csv bars.csv --portfolio --funnel
 | `backtest/run.py` | CLI with walk-forward split, cost overrides, sensitivity flags, `--funnel` |
 | `backtest/funnel.py` | Signal-funnel recorder — per-gate pass rates (see below) |
 | `backtest/portfolio.py` | Regime-routing table, shared-equity portfolio mode, attribution |
+| `backtest/optimize.py` | Walk-forward search, PBO/CSCV, deflated Sharpe, stability, promotion gate |
+| `backtest/improve.py` | CLI for the self-improvement loop; emits a reviewable JSON proposal |
 | `backtest/synth.py` | Synthetic bar generator — **harness self-test only** |
-| `tests/test_backtest.py` | 38 mechanical assertions (all passing) |
+| `tests/test_backtest.py` | 53 mechanical assertions (all passing) |
 
 ### Assumptions that bias results *against* the strategies
 
@@ -208,7 +210,7 @@ on real data: **most of this book is too selective to be measurable**, let alone
 profitable, and the specs need widening before the numbers mean anything.
 
 ```bash
-python -m tests.test_backtest     # 38 mechanical checks, all passing
+python -m tests.test_backtest     # 53 mechanical checks, all passing
 python -m backtest.run --synth 180
 ```
 
@@ -306,19 +308,86 @@ the right denominator for "how selective is this condition".
 `tests/test_backtest.py` asserts the instrumentation is observation-only: every
 strategy produces byte-identical trades with and without `--funnel`.
 
+## The self-improvement layer
+
+Automated parameter search is easy to write and almost always produces a
+beautiful, worthless equity curve. Everything expensive in `backtest/optimize.py`
+exists to make the search **refuse** results, not to find them.
+
+```bash
+python -m backtest.improve --csv bars.csv --strategy s6 --folds 4 --out proposals/
+```
+
+| Control | What it answers | Gate |
+|---|---|---|
+| Walk-forward | Do parameters chosen on one window survive the next? | in-sample is never reported |
+| **PBO** (CSCV) | If I pick the in-sample winner, how often is it below median out-of-sample? | ≤ 0.35 |
+| **Deflated Sharpe** | Is this Sharpe better than the best of N lucky trials? | ≥ 0.95 |
+| **Parameter stability** | Is the optimum a plateau or a spike in a noise surface? | neighbours ≥ 60% of winner |
+| **Parameter drift** | Do the chosen values move every fold? | cross-fold CV ≤ 0.50 |
+| Trade floor | Is there enough evidence to say anything? | ≥ 300 OOS trades |
+
+**The gate defaults to REJECT and requires every check to pass.** It emits a JSON
+proposal; it never writes to a live configuration. A system that silently
+re-tunes itself in production is not self-improving, it is unsupervised — and
+under this repo's safety directives that is a decision for a human, not a loop.
+
+### Validating the guards in both directions
+
+A gate that always rejects is as useless as one that always promotes, so both
+behaviours are tested:
+
+```
+PBO ~0.0    when one parameter set genuinely dominates every block
+PBO ~0.26   on pure noise — the search learned nothing
+DSR 0.9914 -> 0.9791  same Sharpe, 1 trial vs 5,000 trials
+stability >= 0.9 on a plateau, <= 0.2 on a spike
+```
+
+Run end-to-end on synthetic (edge-free by construction) data, the loop **rejects
+S6 on all seven checks**, with PBO = 0.63. That is the correct answer on a random
+process, and it is the strongest evidence available here that the machinery
+works.
+
+### Strategy upgrades this enabled
+
+All six strategies are now parameterised — every tunable number lives in
+`PARAMS`, read through `self.p`. **Constructing a strategy with no arguments
+reproduces the playbook exactly**, verified trade-by-trade across 18 runs, so
+parameterisation added search surface without changing a single documented rule.
+
+Two structural upgrades came from the funnel findings rather than from any P&L:
+
+- **S1 — confluence score.** Six hard-ANDed conditions produced 4 setups in 51k
+  bars. The band pierce stays mandatory (it defines the entry price); the five
+  context conditions are scored, with `min_score` setting how many must agree.
+  `min_score=1.0` is the original spec; relaxing it restored frequency
+  (0 → 45 → 287 trades at 1.0 / 0.8 / 0.6).
+- **S6 — `zone_mode`.** The Fib window and the EMA21–55 zone are two definitions
+  of the same thing. `both` is the spec; `fib` and `ema` pick one (3 → 9 / 7
+  trades).
+
+Those trade counts are mechanism demonstrations on synthetic data. **Which
+threshold is correct is exactly what the promotion gate exists to decide, on real
+data.** Defaults remain the specification precisely so that no unvalidated value
+becomes the new normal by accident.
+
 ## What to do when real data is available
 
 1. Run `--funnel` **first**, before looking at any P&L. It tells you which gates
    to widen; fixing frequency is a precondition for the statistics meaning
    anything.
-2. Run with `--split 0.6` and report in-sample and out-of-sample separately.
-3. Check trade counts first. Anything under ~300 out-of-sample trades is not
+2. Then `python -m backtest.improve --strategy sN` per strategy, and believe the
+   promotion gate rather than the equity curve. Expect most strategies to be
+   rejected on the trade floor before any other check even applies.
+3. Run with `--split 0.6` and report in-sample and out-of-sample separately.
+4. Check trade counts first. Anything under ~300 out-of-sample trades is not
    evidence; S1 and S6 will likely need their conjunctions loosened before they
    generate a sample at all — do that on in-sample data only.
-4. Run `--entry next_open` as a friction check. A strategy whose edge disappears
+5. Run `--entry next_open` as a friction check. A strategy whose edge disappears
    when market entries move from the signal close to the next open is measuring
    its own fill assumption, not an edge.
-5. Sweep `--taker` across the fee tiers actually available to the desk. Given
+6. Sweep `--taker` across the fee tiers actually available to the desk. Given
    finding 3, this matters more than any indicator parameter.
-6. Only then look at expectancy, and only regime-conditionally — the `by_regime`
+7. Only then look at expectancy, and only regime-conditionally — the `by_regime`
    block in the JSON output exists for this.

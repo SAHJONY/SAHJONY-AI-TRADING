@@ -7,6 +7,7 @@ P&L number is not evidence of anything.
 """
 from __future__ import annotations
 
+import json
 import sys
 
 import numpy as np
@@ -182,6 +183,59 @@ def main() -> int:
         _check(bool(fires_in & armed_in),
                f"{sid}: routed to a regime it actually signals in "
                f"(fires {sorted(fires_in)}, armed {sorted(armed_in)})")
+
+    print("\n── self-improvement: parameterisation ──")
+    from backtest import optimize as opt
+    for sid, cls in REGISTRY.items():
+        base = Backtester(b2).run(cls())
+        same = Backtester(b2).run(cls(**{}))
+        _check(len(base["trades"]) == len(same["trades"]),
+               f"{sid}: constructing with no overrides reproduces the spec")
+    try:
+        REGISTRY["s6"](not_a_real_param=1)
+        _check(False, "unknown parameters are rejected")
+    except ValueError:
+        _check(True, "unknown parameters are rejected")
+
+    print("\n── self-improvement: the guards discriminate ──")
+    rng = np.random.default_rng(0)
+    # (a) one parameter set genuinely best in every block -> PBO must be ~0
+    good = np.tile(np.linspace(0.1, 1.0, 10)[:, None], (1, 8)) + rng.normal(0, .01, (10, 8))
+    p_good = opt.pbo(good, seed=1)["pbo"]
+    _check(p_good is not None and p_good <= 0.1,
+           f"PBO ~0 when one parameter set really is best (got {p_good})")
+    # (b) pure noise -> PBO must land near 0.5, i.e. the search learned nothing
+    noise = rng.normal(0, 1, (30, 8))
+    p_noise = opt.pbo(noise, seed=1)["pbo"]
+    _check(p_noise is not None and 0.25 <= p_noise <= 0.75,
+           f"PBO ~0.5 on pure noise (got {p_noise})")
+    _check(p_noise > p_good, "PBO separates a real winner from a lucky one")
+
+    # deflated Sharpe must charge for the number of trials
+    rets = rng.normal(0.12, 1.0, 500)
+    d1 = opt.deflated_sharpe(rets, n_trials=1)["dsr"]
+    d500 = opt.deflated_sharpe(rets, n_trials=5000)["dsr"]
+    _check(d1 is not None and d500 is not None and d1 > d500,
+           f"the same Sharpe is worth less after more trials ({d1} -> {d500})")
+    _check(opt.deflated_sharpe(rng.normal(0, 1, 10), n_trials=1)["dsr"] is None,
+           "deflated Sharpe refuses to opine on a tiny sample")
+
+    # stability: a plateau scores high, a spike scores low
+    space = {"x": [1, 2, 3]}
+    plateau = {json.dumps({"x": v}, sort_keys=True): 1.0 for v in (1, 2, 3)}
+    spike = {json.dumps({"x": 1}, sort_keys=True): 0.05,
+             json.dumps({"x": 2}, sort_keys=True): 1.0,
+             json.dumps({"x": 3}, sort_keys=True): 0.05}
+    _check(opt.stability(space, plateau, {"x": 2})["stability"] >= 0.9,
+           "a plateau optimum is reported stable")
+    _check(opt.stability(space, spike, {"x": 2})["stability"] <= 0.2,
+           "a spike optimum is reported unstable")
+
+    # the gate defaults to refusing
+    empty = {"strategy": "sX", "oos_trades": [], "folds": [], "param_drift": {}}
+    dec = opt.promote(empty, {"pbo": None}, {"dsr": None}, {"stability": None})
+    _check(not dec["promoted"] and len(dec["failed_checks"]) >= 5,
+           "promotion gate refuses by default and says why")
 
     print("\n── data round-trip ──")
     import tempfile, os

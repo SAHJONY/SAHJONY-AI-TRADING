@@ -84,6 +84,13 @@ oscillates around AVWAP and σ-band excursions are inventory imbalances that dec
 - ATR(14) — stop sizing.
 - Volume: 20-bar SMA of volume.
 
+**Upgrade — confluence score instead of a hard AND.** Implementation showed these
+six conditions co-occur ~4 times in 51k bars, so the strategy never trades. The
+band pierce is structural (it sets the entry price) and stays mandatory; the five
+context conditions are now **scored**, and `min_score` sets how many must agree.
+`min_score = 1.0` is the specification below, exactly. The right threshold is a
+real-data question — see `docs/btc_futures_5m_backtest.md`.
+
 **3. Long entry (all must hold on close of bar *t*)**
 1. `ADX(14) < 20` and ADX not rising for 3 bars (no trend regime).
 2. Regime = LOW or NORMAL (`ATRpct < 0.30%`).
@@ -318,6 +325,9 @@ retracement rather than the breakout dramatically improves R:R and cuts slippage
 - EMA(200) on 5m for the higher-order bias.
 - ADX(14) — **trend confirmer** (opposite polarity to S1's use).
 - Fibonacci retracement of the last impulse leg (38.2% / 50% / 61.8%).
+  *(The Fib window and the EMA21–55 zone below are two definitions of the same
+  "pullback area" and agree only 43% of the time; requiring both costs ~93% of
+  surviving setups. `zone_mode` selects `both` (as specified), `fib`, or `ema`.)*
 - ATR(14); volume 20-SMA.
 
 **3. Long entry**

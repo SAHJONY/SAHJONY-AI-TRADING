@@ -20,6 +20,15 @@ from backtest.data import Bars
 from backtest.engine import Position, Setup, Strategy
 
 
+def _zone_ok(mode: str, fib_ok: bool, ema_ok: bool) -> bool:
+    """Which definition of "the pullback area" has to agree — see S6.PARAMS."""
+    if mode == "fib":
+        return fib_ok
+    if mode == "ema":
+        return ema_ok
+    return fib_ok and ema_ok
+
+
 def _upper_frac(o, h, l, c) -> float:
     """Where the close sits inside the bar's range, 0 (low) .. 1 (high)."""
     rng = h - l
@@ -31,6 +40,17 @@ class S1_VWAPBandFade(Strategy):
     id = "s1"
     name = "AVWAP σ-Band Fade"
     warmup = 300
+    # The funnel showed six hard-AND conditions leaving 4 setups in 51k bars —
+    # the conjunction, not any one gate, was the problem. The context conditions
+    # are now scored instead of ANDed; `min_score` = 1.0 requires all of them and
+    # reproduces the specification exactly. Lowering it trades selectivity for
+    # frequency, and the right value must be found on real data, not chosen here.
+    PARAMS = {
+        "band_sigma": 2.0, "stop_sigma": 2.5, "stop_atr_mult": 1.2,
+        "stop_cap_pct": 0.0055, "adx_max": 20.0, "atr_pct_max": 0.0030,
+        "anchor_min_bars": 24.0, "vol_mult": 1.5, "rsi_lo": 5.0, "rsi_hi": 95.0,
+        "min_score": 1.0, "time_stop": 12.0, "adx_exit": 25.0, "tp1_frac": 0.6,
+    }
 
     def prepare(self, b: Bars) -> Dict[str, np.ndarray]:
         vwap, sig = ta.anchored_vwap(b.high, b.low, b.close, b.volume, b.day_id)
@@ -49,49 +69,56 @@ class S1_VWAPBandFade(Strategy):
                 "atr_pct": a / b.close}
 
     def signal(self, t, b, ind) -> Optional[Setup]:
+        p = self.p
         adx, ap = ind["adx"][t], ind["atr_pct"][t]
         if not self._g("indicators_ready", np.isfinite(adx) and np.isfinite(ap)):
-            return None
-        if not self._g("adx<20_and_flat", adx < 20 and adx <= ind["adx"][t - 3]):
-            return None
-        if not self._g("atr%<0.30", ap < 0.0030):             # LOW/NORMAL only
-            return None
-        if not self._g("anchor_age>=24", ind["anchor_age"][t] >= 24):
-            return None
-        if not self._g("vol>=1.5x", b.volume[t] >= 1.5 * ind["vsma"][t]):
             return None
         vw, sg, a = ind["vwap"][t], ind["sigma"][t], ind["atr"][t]
         if not self._g("sigma>0", np.isfinite(sg) and sg > 0):
             return None
-        lo2, hi2 = vw - 2.0 * sg, vw + 2.0 * sg
-        r2 = ind["rsi2"]
+        band = p["band_sigma"]
+        lo2, hi2 = vw - band * sg, vw + band * sg
         pierce_lo = b.low[t] <= lo2 < b.close[t]
         pierce_hi = b.high[t] >= hi2 > b.close[t]
-        if not self._g("2sigma_pierce_reject", pierce_lo or pierce_hi):
+        # the pierce is structural — it defines the entry price, so it is never
+        # scored away; everything else is context and is scored
+        if not self._g("sigma_band_pierce_reject", pierce_lo or pierce_hi):
             return None
-        long_ok = pierce_lo and min(r2[t], r2[t - 1]) < 5
-        short_ok = pierce_hi and max(r2[t], r2[t - 1]) > 95
-        if not self._g("rsi2_extreme", long_ok or short_ok):
+        side = 1 if pierce_lo else -1
+        r2 = ind["rsi2"]
+        conds = {
+            "adx<max_and_flat": bool(adx < p["adx_max"] and adx <= ind["adx"][t - 3]),
+            "atr%<max": bool(ap < p["atr_pct_max"]),
+            "anchor_age_ok": bool(ind["anchor_age"][t] >= p["anchor_min_bars"]),
+            "vol>=mult": bool(b.volume[t] >= p["vol_mult"] * ind["vsma"][t]),
+            "rsi2_extreme": bool(min(r2[t], r2[t - 1]) < p["rsi_lo"] if side > 0
+                                 else max(r2[t], r2[t - 1]) > p["rsi_hi"]),
+        }
+        for k, v in conds.items():
+            self._g(k, v)
+        score = sum(conds.values()) / len(conds)
+        if not self._g("confluence_score>=min", score >= p["min_score"] - 1e-9):
             return None
 
-        if long_ok:
+        f1 = p["tp1_frac"]
+        if side > 0:
             entry = lo2
-            stop = min(vw - 2.5 * sg, entry - 1.2 * a)
-            stop = max(stop, entry * (1 - 0.0055))           # cap the stop at 55 bps
+            stop = min(vw - p["stop_sigma"] * sg, entry - p["stop_atr_mult"] * a)
+            stop = max(stop, entry * (1 - p["stop_cap_pct"]))
             return self._emit(Setup(
                 side=1, entry_kind="limit", entry_price=entry, valid_bars=2,
-                stop=stop, targets=[(vw, 0.6), (vw + sg, 0.4)],
-                time_stop_bars=12, tag="long"))
+                stop=stop, targets=[(vw, f1), (vw + sg, 1 - f1)],
+                time_stop_bars=int(p["time_stop"]), tag="long"))
         entry = hi2
-        stop = max(vw + 2.5 * sg, entry + 1.2 * a)
-        stop = min(stop, entry * (1 + 0.0055))
+        stop = max(vw + p["stop_sigma"] * sg, entry + p["stop_atr_mult"] * a)
+        stop = min(stop, entry * (1 + p["stop_cap_pct"]))
         return self._emit(Setup(
             side=-1, entry_kind="limit", entry_price=entry, valid_bars=2,
-            stop=stop, targets=[(vw, 0.6), (vw - sg, 0.4)],
-            time_stop_bars=12, tag="short"))
+            stop=stop, targets=[(vw, f1), (vw - sg, 1 - f1)],
+            time_stop_bars=int(p["time_stop"]), tag="short"))
 
     def manage(self, t, b, ind, pos: Position) -> Optional[str]:
-        return "adx_trend" if ind["adx"][t] > 25 else None
+        return "adx_trend" if ind["adx"][t] > self.p["adx_exit"] else None
 
 
 # ── S2 · Session opening-range expansion ──────────────────────────────────────
@@ -102,6 +129,11 @@ class S2_OpeningRange(Strategy):
     SESSIONS = (420, 810, 1380)      # 07:00 London, 13:30 CME/US, 23:00 CME reopen
     OR_BARS = 3
     MAX_BARS = 48                    # 4h session window
+    PARAMS = {
+        "min_session_atr_pct": 0.0015, "width_min_atr": 0.4, "width_max_atr": 2.5,
+        "vol_mult": 1.3, "close_frac": 0.6, "buf_atr": 0.05, "stop_atr": 1.0,
+        "narrow_mult": 1.2, "tp1_mult": 1.0, "tp2_mult": 2.0, "trail_atr": 3.0,
+    }
 
     def prepare(self, b: Bars) -> Dict[str, np.ndarray]:
         n = len(b)
@@ -137,47 +169,54 @@ class S2_OpeningRange(Strategy):
         if not self._g("in_session_window", t - s <= self.MAX_BARS
                        and s not in self._traded):
             return None
-        if not self._g("session_atr%>=0.15", a_pre / b.close[s] >= 0.0015):
+        p = self.p
+        if not self._g("session_atr%>=min", a_pre / b.close[s] >= p["min_session_atr_pct"]):
             return None
         width = hi - lo
-        if not self._g("OR_width_0.4-2.5ATR", 0.4 * a_pre <= width <= 2.5 * a_pre):
+        if not self._g("OR_width_in_band",
+                       p["width_min_atr"] * a_pre <= width <= p["width_max_atr"] * a_pre):
             return None
-        if not self._g("vol>=1.3x", b.volume[t] >= 1.3 * ind["vsma"][t]):
+        if not self._g("vol>=mult", b.volume[t] >= p["vol_mult"] * ind["vsma"][t]):
             return None
         a, e50 = ind["atr"][t], ind["ema50"][t]
-        buf = 0.05 * a
+        buf = p["buf_atr"] * a
         f = _upper_frac(b.open[t], b.high[t], b.low[t], b.close[t])
         up, dn = b.close[t] > hi, b.close[t] < lo
         if not self._g("close_beyond_OR", up or dn):
             return None
-        if not self._g("close_in_outer_40%", (up and f >= 0.6) or (dn and f <= 0.4)):
+        cf = p["close_frac"]
+        if not self._g("close_in_outer_band", (up and f >= cf) or (dn and f <= 1 - cf)):
             return None
         if not self._g("ema50_agrees",
-                       (up and f >= 0.6 and b.close[t] > e50)
-                       or (dn and f <= 0.4 and b.close[t] < e50)):
+                       (up and f >= cf and b.close[t] > e50)
+                       or (dn and f <= 1 - cf and b.close[t] < e50)):
             return None
 
-        if b.close[t] > hi and f >= 0.6 and b.close[t] > e50:
+        if b.close[t] > hi and f >= cf and b.close[t] > e50:
             self._traded.add(s)
             entry = hi + buf
-            stop = (lo + hi) / 2 if width < 1.2 * a else entry - 1.0 * a
+            stop = ((lo + hi) / 2 if width < p["narrow_mult"] * a
+                    else entry - p["stop_atr"] * a)
             return self._emit(Setup(
                 side=1, entry_kind="stop", entry_price=entry, valid_bars=2,
                 stop=stop,
-                targets=[(entry + width, 0.5), (entry + 2 * width, 0.3),
+                targets=[(entry + p["tp1_mult"] * width, 0.5),
+                         (entry + p["tp2_mult"] * width, 0.3),
                          (entry + 6 * width, 0.2)],
-                trail_atr_mult=3.0, trail_after_leg=2,
+                trail_atr_mult=p["trail_atr"], trail_after_leg=2,
                 time_stop_bars=self.MAX_BARS, tag="long"))
-        if b.close[t] < lo and f <= 0.4 and b.close[t] < e50:
+        if b.close[t] < lo and f <= 1 - cf and b.close[t] < e50:
             self._traded.add(s)
             entry = lo - buf
-            stop = (lo + hi) / 2 if width < 1.2 * a else entry + 1.0 * a
+            stop = ((lo + hi) / 2 if width < p["narrow_mult"] * a
+                    else entry + p["stop_atr"] * a)
             return self._emit(Setup(
                 side=-1, entry_kind="stop", entry_price=entry, valid_bars=2,
                 stop=stop,
-                targets=[(entry - width, 0.5), (entry - 2 * width, 0.3),
+                targets=[(entry - p["tp1_mult"] * width, 0.5),
+                         (entry - p["tp2_mult"] * width, 0.3),
                          (entry - 6 * width, 0.2)],
-                trail_atr_mult=3.0, trail_after_leg=2,
+                trail_atr_mult=p["trail_atr"], trail_after_leg=2,
                 time_stop_bars=self.MAX_BARS, tag="short"))
         return None
 
@@ -187,6 +226,10 @@ class S3_SqueezeBreakout(Strategy):
     id = "s3"
     name = "Squeeze Compression Breakout"
     warmup = 400
+    PARAMS = {
+        "min_run": 6.0, "bw_pct_max": 0.20, "vol_mult": 1.4, "atr_pct_max": 0.0060,
+        "stop_atr": 1.5, "tp1_mult": 1.5, "tp2_mult": 3.0,
+    }
 
     def prepare(self, b: Bars) -> Dict[str, np.ndarray]:
         a = ta.atr(b.high, b.low, b.close, 14)
@@ -203,20 +246,22 @@ class S3_SqueezeBreakout(Strategy):
                 "vsma": ta.sma(b.volume, 20), "atr_pct": a / b.close}
 
     def signal(self, t, b, ind) -> Optional[Setup]:
+        p = self.p
         sq, ap = ind["sq"], ind["atr_pct"][t]
-        if not self._g("not_extreme_vol", np.isfinite(ap) and ap < 0.0060):
+        if not self._g("not_extreme_vol", np.isfinite(ap) and ap < p["atr_pct_max"]):
             return None
         if not self._g("squeeze_fires", (not sq[t]) and sq[t - 1]):
             return None
         run = 0
         while run < 60 and sq[t - 1 - run]:
             run += 1
-        if not self._g("squeeze_run>=6", run >= 6):
+        if not self._g("squeeze_run>=min", run >= p["min_run"]):
             return None
         bwp = ind["bw_pct"][t - 1]
-        if not self._g("bandwidth_bottom20%", np.isfinite(bwp) and bwp <= 0.20):
+        if not self._g("bandwidth_bottom_pct",
+                       np.isfinite(bwp) and bwp <= p["bw_pct_max"]):
             return None
-        if not self._g("vol>=1.4x", b.volume[t] >= 1.4 * ind["vsma"][t]):
+        if not self._g("vol>=mult", b.volume[t] >= p["vol_mult"] * ind["vsma"][t]):
             return None
         i0 = t - run
         sq_hi, sq_lo = b.high[i0:t].max(), b.low[i0:t].min()
@@ -230,16 +275,16 @@ class S3_SqueezeBreakout(Strategy):
             return None
 
         if up:
-            stop = max(sq_lo, c - 1.5 * a)
+            stop = max(sq_lo, c - p["stop_atr"] * a)
             return self._emit(Setup(
                 side=1, entry_kind="close", stop=stop,
-                targets=[(c + 1.5 * rng, 0.5), (c + 3.0 * rng, 0.3),
+                targets=[(c + p["tp1_mult"] * rng, 0.5), (c + p["tp2_mult"] * rng, 0.3),
                          (c + 12.0 * rng, 0.2)],
                 tag="long", meta={"sq_hi": sq_hi, "sq_lo": sq_lo}))
-        stop = min(sq_hi, c + 1.5 * a)
+        stop = min(sq_hi, c + p["stop_atr"] * a)
         return self._emit(Setup(
             side=-1, entry_kind="close", stop=stop,
-            targets=[(c - 1.5 * rng, 0.5), (c - 3.0 * rng, 0.3),
+            targets=[(c - p["tp1_mult"] * rng, 0.5), (c - p["tp2_mult"] * rng, 0.3),
                      (c - 12.0 * rng, 0.2)],
             tag="short", meta={"sq_hi": sq_hi, "sq_lo": sq_lo}))
 
@@ -263,6 +308,11 @@ class S5_SweepReclaim(Strategy):
     warmup = 300
     SWEEP_WINDOW = 3
     MIN_LEVEL_AGE = 12
+    PARAMS = {
+        "sweep_atr": 0.15, "min_level_age": 12.0, "reclaim_range_atr": 0.8,
+        "close_third": 0.667, "stop_buf_atr": 0.25, "stop_max_atr": 1.5,
+        "trail_atr": 2.0, "no_progress_bars": 10.0,
+    }
 
     def prepare(self, b: Bars) -> Dict[str, np.ndarray]:
         a = ta.atr(b.high, b.low, b.close, 14)
@@ -275,22 +325,23 @@ class S5_SweepReclaim(Strategy):
         a = ind["atr"][t]
         if not self._g("atr_ready", np.isfinite(a) and a > 0):
             return None
+        p = self.p
         w = self.SWEEP_WINDOW
         rng_frac = (b.high[t] - b.low[t]) / a
-        if not self._g("reclaim_bar>=0.8ATR", rng_frac >= 0.8):
+        if not self._g("reclaim_bar>=min_atr", rng_frac >= p["reclaim_range_atr"]):
             return None
         f = _upper_frac(b.open[t], b.high[t], b.low[t], b.close[t])
         c = b.close[t]
 
         lvl_lo, i_lo = ind["fl"][t], int(ind["fl_idx"][t])
-        if self._g("level_age>=12", np.isfinite(lvl_lo) and i_lo >= 0
-                   and t - i_lo >= self.MIN_LEVEL_AGE):
+        if self._g("level_age>=min", np.isfinite(lvl_lo) and i_lo >= 0
+                   and t - i_lo >= p["min_level_age"]):
             sweep_lo = b.low[t - w + 1:t + 1].min()
-            if (self._g("swept_by>=0.15ATR", sweep_lo <= lvl_lo - 0.15 * a)
+            if (self._g("swept_by>=min_atr", sweep_lo <= lvl_lo - p["sweep_atr"] * a)
                     and self._g("closed_back_inside", c > lvl_lo)
-                    and self._g("close_in_outer_third", f >= 0.667)):
-                stop = sweep_lo - 0.25 * a
-                if self._g("stop<=1.5ATR", c - stop <= 1.5 * a):
+                    and self._g("close_in_outer_third", f >= p["close_third"])):
+                stop = sweep_lo - p["stop_buf_atr"] * a
+                if self._g("stop<=max_atr", c - stop <= p["stop_max_atr"] * a):
                     tgt_hi = ind["fh"][t]
                     if not np.isfinite(tgt_hi) or tgt_hi <= c:
                         tgt_hi = c + 3.0 * (c - stop)
@@ -298,18 +349,18 @@ class S5_SweepReclaim(Strategy):
                         side=1, entry_kind="close", stop=stop,
                         targets=[((c + tgt_hi) / 2, 0.4), (tgt_hi, 0.4),
                                  (c + 6 * (c - stop), 0.2)],
-                        trail_atr_mult=2.0, trail_after_leg=2,
+                        trail_atr_mult=p["trail_atr"], trail_after_leg=2,
                         tag="long", meta={"sweep": sweep_lo}))
 
         lvl_hi, i_hi = ind["fh"][t], int(ind["fh_idx"][t])
-        if self._g("level_age>=12", np.isfinite(lvl_hi) and i_hi >= 0
-                   and t - i_hi >= self.MIN_LEVEL_AGE):
+        if self._g("level_age>=min", np.isfinite(lvl_hi) and i_hi >= 0
+                   and t - i_hi >= p["min_level_age"]):
             sweep_hi = b.high[t - w + 1:t + 1].max()
-            if (self._g("swept_by>=0.15ATR", sweep_hi >= lvl_hi + 0.15 * a)
+            if (self._g("swept_by>=min_atr", sweep_hi >= lvl_hi + p["sweep_atr"] * a)
                     and self._g("closed_back_inside", c < lvl_hi)
-                    and self._g("close_in_outer_third", f <= 0.333)):
-                stop = sweep_hi + 0.25 * a
-                if self._g("stop<=1.5ATR", stop - c <= 1.5 * a):
+                    and self._g("close_in_outer_third", f <= 1 - p["close_third"])):
+                stop = sweep_hi + p["stop_buf_atr"] * a
+                if self._g("stop<=max_atr", stop - c <= p["stop_max_atr"] * a):
                     tgt_lo = ind["fl"][t]
                     if not np.isfinite(tgt_lo) or tgt_lo >= c:
                         tgt_lo = c - 3.0 * (stop - c)
@@ -317,7 +368,7 @@ class S5_SweepReclaim(Strategy):
                         side=-1, entry_kind="close", stop=stop,
                         targets=[((c + tgt_lo) / 2, 0.4), (tgt_lo, 0.4),
                                  (c - 6 * (stop - c), 0.2)],
-                        trail_atr_mult=2.0, trail_after_leg=2,
+                        trail_atr_mult=p["trail_atr"], trail_after_leg=2,
                         tag="short", meta={"sweep": sweep_hi}))
         return None
 
@@ -328,7 +379,7 @@ class S5_SweepReclaim(Strategy):
                 return "reclaim_failed"
             if pos.side < 0 and b.close[t] > sw:
                 return "reclaim_failed"
-        if pos.legs_done == 0 and t - pos.entry_bar >= 10:
+        if pos.legs_done == 0 and t - pos.entry_bar >= self.p["no_progress_bars"]:
             return "no_progress"
         return None
 
@@ -339,6 +390,16 @@ class S6_RibbonPullback(Strategy):
     name = "EMA Ribbon Pullback"
     warmup = 400
     MAX_PER_LEG = 2
+    # `zone_mode` exists because the funnel showed the Fib 38-62% window and the
+    # EMA21-55 zone are two definitions of the same "pullback area" that agree
+    # only 43% of the time; requiring both costs ~93% of surviving setups.
+    # "both" is the specification; "fib" / "ema" pick one. Which (if either) is
+    # better is a real-data question.
+    PARAMS = {
+        "adx_min": 22.0, "retr_lo": 0.382, "retr_hi": 0.618, "max_pull_bars": 8.0,
+        "vol_ratio": 0.8, "stop_atr": 1.5, "trail_atr": 2.5, "zone_tol_atr": 0.3,
+        "atr_pct_max": 0.0060, "zone_mode": "both",
+    }
 
     def prepare(self, b: Bars) -> Dict[str, np.ndarray]:
         a = ta.atr(b.high, b.low, b.close, 14)
@@ -360,10 +421,11 @@ class S6_RibbonPullback(Strategy):
         a, adx, ap = ind["atr"][t], ind["adx"][t], ind["atr_pct"][t]
         if not self._g("emas_ready", all(np.isfinite(x[t]) for x in (e8, e21, e55, e200))):
             return None
-        if not self._g("adx>22_rising", np.isfinite(adx) and adx > 22
+        p = self.p
+        if not self._g("adx>min_rising", np.isfinite(adx) and adx > p["adx_min"]
                        and adx > ind["adx"][t - 3]):
             return None
-        if not self._g("not_extreme_vol", np.isfinite(ap) and ap < 0.0060):
+        if not self._g("not_extreme_vol", np.isfinite(ap) and ap < p["atr_pct_max"]):
             return None
         c = b.close[t]
         f = _upper_frac(b.open[t], b.high[t], b.low[t], b.close[t])
@@ -385,17 +447,18 @@ class S6_RibbonPullback(Strategy):
             leg_lo = float(b.low[max(0, imp_i - 30):imp_i + 1].min())
             leg = imp_hi - leg_lo
             pull_bars = t - imp_i
-            if not self._g("pullback<=8bars", leg > 0 and 1 <= pull_bars <= 8):
+            if not self._g("pullback<=max_bars",
+                           leg > 0 and 1 <= pull_bars <= p["max_pull_bars"]):
                 return None
             pull_lo = float(b.low[imp_i:t + 1].min())
             retr = (imp_hi - pull_lo) / leg
-            if not self._g("fib_38-62%", 0.382 <= retr <= 0.618):
-                return None
-            if not self._g("in_ema21-55_zone", e55[t] - 0.3 * a <= pull_lo <= e21[t]):
+            fib_ok = p["retr_lo"] <= retr <= p["retr_hi"]
+            ema_ok = e55[t] - p["zone_tol_atr"] * a <= pull_lo <= e21[t]
+            if not self._g("pullback_zone", _zone_ok(p["zone_mode"], fib_ok, ema_ok)):
                 return None
             v_imp = b.volume[max(0, imp_i - 5):imp_i + 1].mean()
             if not self._g("low_volume_pullback",
-                           b.volume[imp_i:t + 1].mean() < 0.8 * v_imp):
+                           b.volume[imp_i:t + 1].mean() < p["vol_ratio"] * v_imp):
                 return None
             # spec trigger: a close back above EMA8 after price pulled into the
             # ribbon. Requiring the cross on this exact bar was over-strict —
@@ -405,7 +468,7 @@ class S6_RibbonPullback(Strategy):
                 return None
             if not self._g("leg_budget<=2", self._leg_ok(imp_hi)):
                 return None
-            stop = max(min(e55[t] - 0.5 * a, pull_lo), c - 1.5 * a)
+            stop = max(min(e55[t] - 0.5 * a, pull_lo), c - p["stop_atr"] * a)
             if not self._g("stop_valid", c - stop > 0):
                 return None
             self._leg_count += 1
@@ -413,7 +476,7 @@ class S6_RibbonPullback(Strategy):
                 side=1, entry_kind="close", stop=stop,
                 targets=[(imp_hi, 0.4), (pull_lo + 1.618 * leg, 0.3),
                          (c + 10 * (c - stop), 0.3)],
-                trail_atr_mult=2.5, trail_after_leg=2, tag="long"))
+                trail_atr_mult=p["trail_atr"], trail_after_leg=2, tag="long"))
 
         if dn:
             w = b.low[t - 10:t + 1]
@@ -425,24 +488,25 @@ class S6_RibbonPullback(Strategy):
             leg_hi = float(b.high[max(0, imp_i - 30):imp_i + 1].max())
             leg = leg_hi - imp_lo
             pull_bars = t - imp_i
-            if not self._g("pullback<=8bars", leg > 0 and 1 <= pull_bars <= 8):
+            if not self._g("pullback<=max_bars",
+                           leg > 0 and 1 <= pull_bars <= p["max_pull_bars"]):
                 return None
             pull_hi = float(b.high[imp_i:t + 1].max())
             retr = (pull_hi - imp_lo) / leg
-            if not self._g("fib_38-62%", 0.382 <= retr <= 0.618):
-                return None
-            if not self._g("in_ema21-55_zone", e21[t] <= pull_hi <= e55[t] + 0.3 * a):
+            fib_ok = p["retr_lo"] <= retr <= p["retr_hi"]
+            ema_ok = e21[t] <= pull_hi <= e55[t] + p["zone_tol_atr"] * a
+            if not self._g("pullback_zone", _zone_ok(p["zone_mode"], fib_ok, ema_ok)):
                 return None
             v_imp = b.volume[max(0, imp_i - 5):imp_i + 1].mean()
             if not self._g("low_volume_pullback",
-                           b.volume[imp_i:t + 1].mean() < 0.8 * v_imp):
+                           b.volume[imp_i:t + 1].mean() < p["vol_ratio"] * v_imp):
                 return None
             if not self._g("close_back_above_ema8",
                            c < e8[t] and pull_hi >= e8[t] and f <= 0.5):
                 return None
             if not self._g("leg_budget<=2", self._leg_ok(imp_lo)):
                 return None
-            stop = min(max(e55[t] + 0.5 * a, pull_hi), c + 1.5 * a)
+            stop = min(max(e55[t] + 0.5 * a, pull_hi), c + p["stop_atr"] * a)
             if not self._g("stop_valid", stop - c > 0):
                 return None
             self._leg_count += 1
@@ -450,7 +514,7 @@ class S6_RibbonPullback(Strategy):
                 side=-1, entry_kind="close", stop=stop,
                 targets=[(imp_lo, 0.4), (pull_hi - 1.618 * leg, 0.3),
                          (c - 10 * (stop - c), 0.3)],
-                trail_atr_mult=2.5, trail_after_leg=2, tag="short"))
+                trail_atr_mult=p["trail_atr"], trail_after_leg=2, tag="short"))
         return None
 
     def manage(self, t, b, ind, pos: Position) -> Optional[str]:
@@ -467,6 +531,12 @@ class S9_FailedBreakFade(Strategy):
     name = "Failed Breakout Fade"
     warmup = 400
     WINDOW = 3
+    PARAMS = {
+        "atr_pct_max": 0.0030, "bw_pct_min": 0.30, "width_min_atr": 3.0,
+        "width_max_atr": 8.0, "vol_mult": 1.2, "rsi_lo": 10.0, "rsi_hi": 90.0,
+        "stop_range_frac": 0.35, "stop_max_atr": 1.2, "time_stop": 15.0,
+        "intact_tol_atr": 0.25, "max_fades": 2.0,
+    }
 
     def prepare(self, b: Bars) -> Dict[str, np.ndarray]:
         a = ta.atr(b.high, b.low, b.close, 14)
@@ -482,7 +552,7 @@ class S9_FailedBreakFade(Strategy):
     def _budget(self, key, side) -> bool:
         k = (round(key, 1), side)
         used = self._faded.get(k, 0)
-        if used >= 2:
+        if used >= self.p["max_fades"]:
             return False
         self._faded[k] = used + 1
         return True
@@ -494,9 +564,10 @@ class S9_FailedBreakFade(Strategy):
         if not self._g("indicators_ready",
                        all(np.isfinite(x) for x in (a, ap, hi, lo, bwp)) and a > 0):
             return None
-        if not self._g("atr%<0.30", ap < 0.0030):        # ranging tape only
+        p = self.p
+        if not self._g("atr%<max", ap < p["atr_pct_max"]):     # ranging tape only
             return None
-        if not self._g("bandwidth>30%", bwp > 0.30):     # and not a squeeze (S3's job)
+        if not self._g("bandwidth>min", bwp > p["bw_pct_min"]):  # not a squeeze (S3's)
             return None
         width = hi - lo
         # NB: the playbook's original "0.5-3.0 x ATR" window is arithmetically
@@ -505,7 +576,8 @@ class S9_FailedBreakFade(Strategy):
         # 6.4x ATR by construction — the old window matched 0.8% of bars. This
         # band keeps the intent (a normal-width range: not a squeeze, not an
         # already-expanded move) at the right scale.
-        if not self._g("range_width_3-8ATR", 3.0 * a <= width <= 8.0 * a):
+        if not self._g("range_width_in_band",
+                       p["width_min_atr"] * a <= width <= p["width_max_atr"] * a):
             return None
         c, w = b.close[t], self.WINDOW
         r2, vs = ind["rsi2"], ind["vsma"]
@@ -522,7 +594,7 @@ class S9_FailedBreakFade(Strategy):
             """
             if i0 - 40 < 0:
                 return False
-            tol = 0.25 * a
+            tol = p["intact_tol_atr"] * a
             return (b.high[i0 - 40:i0 - 20].max() <= ind["dc_hi"][i0] + tol
                     and b.low[i0 - 40:i0 - 20].min() >= ind["dc_lo"][i0] - tol)
 
@@ -532,16 +604,16 @@ class S9_FailedBreakFade(Strategy):
                 and self._g("closed_back_inside", c > lo)
                 and self._g("range_intact_20bars", intact(brk[0]))):
             i0 = brk[0]
-            if (self._g("break_vol<1.2x", b.volume[i0] < 1.2 * vs[i0])
-                    and self._g("rsi2_extreme", min(r2[i] for i in brk) < 10)):
+            if (self._g("break_vol<mult", b.volume[i0] < p["vol_mult"] * vs[i0])
+                    and self._g("rsi2_extreme", min(r2[i] for i in brk) < p["rsi_lo"])):
                 ext = float(min(b.low[i] for i in brk))
-                stop = max(ext - 0.35 * width, c - 1.2 * a)
+                stop = max(ext - p["stop_range_frac"] * width, c - p["stop_max_atr"] * a)
                 if self._g("stop_valid", c - stop > 0) and self._g(
                         "fade_budget<=2", self._budget(lo, 1)):
                     return self._emit(Setup(
                         side=1, entry_kind="close", stop=stop,
                         targets=[((hi + lo) / 2, 0.5), (hi, 0.5)],
-                        time_stop_bars=15, tag="long",
+                        time_stop_bars=int(p["time_stop"]), tag="long",
                         meta={"lo": lo, "hi": hi, "side_lvl": lo}))
 
         # failed upside break -> fade short
@@ -550,16 +622,16 @@ class S9_FailedBreakFade(Strategy):
                 and self._g("closed_back_inside", c < hi)
                 and self._g("range_intact_20bars", intact(brk[0]))):
             i0 = brk[0]
-            if (self._g("break_vol<1.2x", b.volume[i0] < 1.2 * vs[i0])
-                    and self._g("rsi2_extreme", max(r2[i] for i in brk) > 90)):
+            if (self._g("break_vol<mult", b.volume[i0] < p["vol_mult"] * vs[i0])
+                    and self._g("rsi2_extreme", max(r2[i] for i in brk) > p["rsi_hi"])):
                 ext = float(max(b.high[i] for i in brk))
-                stop = min(ext + 0.35 * width, c + 1.2 * a)
+                stop = min(ext + p["stop_range_frac"] * width, c + p["stop_max_atr"] * a)
                 if self._g("stop_valid", stop - c > 0) and self._g(
                         "fade_budget<=2", self._budget(hi, -1)):
                     return self._emit(Setup(
                         side=-1, entry_kind="close", stop=stop,
                         targets=[((hi + lo) / 2, 0.5), (lo, 0.5)],
-                        time_stop_bars=15, tag="short",
+                        time_stop_bars=int(p["time_stop"]), tag="short",
                         meta={"lo": lo, "hi": hi, "side_lvl": hi}))
         return None
 

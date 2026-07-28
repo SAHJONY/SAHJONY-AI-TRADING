@@ -113,11 +113,32 @@ class Trade:
 
 
 class Strategy:
-    """Interface implemented in strategies.py."""
+    """Interface implemented in strategies.py.
+
+    Every tunable number lives in `PARAMS` and is read through `self.p`, so the
+    optimizer can search a strategy without editing it. Defaults are the values
+    written in the playbook — constructing a strategy with no arguments always
+    reproduces the specification exactly.
+    """
     id = "base"
     name = "base"
     warmup = 300
     funnel = None            # set by Backtester(..., funnel=True)
+    PARAMS: Dict[str, float] = {}
+
+    def __init__(self, **overrides):
+        unknown = set(overrides) - set(self.PARAMS)
+        if unknown:
+            raise ValueError(f"{self.id}: unknown parameter(s) {sorted(unknown)}")
+        self.p = dict(self.PARAMS)
+        self.p.update(overrides)
+        self.overrides = dict(overrides)
+
+    def describe_params(self) -> str:
+        if not self.overrides:
+            return f"{self.id}(spec defaults)"
+        return f"{self.id}(" + ", ".join(f"{k}={v}" for k, v in
+                                         sorted(self.overrides.items())) + ")"
 
     def _g(self, name: str, cond) -> bool:
         """Route a signal condition through the funnel recorder when attached."""
