@@ -98,6 +98,7 @@ class Config:
     # budgets are rounded up to this when it still fits the per-position cap,
     # otherwise the desk stands down instead of sending a doomed order.
     min_order_notional: float = 1.0
+    quote_guard_enabled: bool = False
     quote_max_jump_pct: float = 0.10
     quote_stale_after_s: float = 300.0
     quote_max_venue_age_s: float = 60.0
@@ -249,7 +250,13 @@ def load_config() -> Config:
         max_daily_drawdown_pct=_clamp(_f("MAX_DAILY_DRAWDOWN_PCT", 0.06), 0.01, HARD_MAX_DAILY_DRAWDOWN_PCT),
         trading_halt=_b("TRADING_HALT", False),
         min_order_notional=max(0.0, _f("MIN_ORDER_NOTIONAL_USD", 1.0)),
-        # Real-time quote guard: reject a single print that jumps more than this
+        # Real-time quote guard. DEFAULT OFF: it changes when the desk trades
+        # (rejected ticks, feed-based quarantine), and public/evaluation.json
+        # freezes desk behaviour for the 90-day out-of-sample window ending
+        # 2026-10-24. Set QUOTE_GUARD=true to enable — after the window, or on a
+        # desk that is not under evaluation.
+        quote_guard_enabled=_b("QUOTE_GUARD", False),
+        # Reject a single print that jumps more than this
         # against the last good price (a second confirming print is accepted), and
         # flag a feed whose price has not moved for this long as possibly frozen.
         quote_max_jump_pct=_clamp(_f("QUOTE_MAX_JUMP_PCT", 0.10), 0.0, 1.0),

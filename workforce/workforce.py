@@ -194,16 +194,30 @@ class ExecutionTrader:
 class Firm:
     def __init__(self, cfg: Config, client, db: Database):
         self.cfg = cfg
-        # One price per symbol per cycle. Wrapped here rather than in
-        # utils.broker.get_broker() so the factory keeps returning the bare
-        # adapter its contract promises; every role below shares this instance.
-        # Order matters: validate the fresh read, then cache the validated value.
-        # RealtimeGuard rejects bad ticks and flags frozen feeds; CachedBroker
-        # pins one price per symbol per cycle.
-        self.feed = RealtimeGuard(client, max_jump_pct=cfg.quote_max_jump_pct,
-                                  stale_after_s=cfg.quote_stale_after_s,
-                                  max_venue_age_s=cfg.quote_max_venue_age_s)
-        self.client = client = CachedBroker(self.feed)
+        # Real-time quote guard + per-cycle price cache.
+        #
+        # OFF BY DEFAULT, deliberately. Both change desk behaviour — the guard
+        # can reject a tick (so the desk stands down where it previously traded)
+        # and the cache pins one price per symbol per cycle — and
+        # public/evaluation.json freezes behaviour for the 90-day out-of-sample
+        # window ending 2026-10-24. Merging this must not silently invalidate
+        # that measurement, so the code ships wired but dormant: flip QUOTE_GUARD
+        # to true once the window closes and no code change or merge is needed.
+        #
+        # Wrapped here rather than in utils.broker.get_broker() so the factory
+        # keeps returning the bare adapter its contract promises; every role
+        # below shares this instance. Order matters: validate the fresh read,
+        # then cache the validated value.
+        self.feed = None
+        if getattr(cfg, "quote_guard_enabled", False):
+            self.feed = RealtimeGuard(client, max_jump_pct=cfg.quote_max_jump_pct,
+                                      stale_after_s=cfg.quote_stale_after_s,
+                                      max_venue_age_s=cfg.quote_max_venue_age_s)
+            client = CachedBroker(self.feed)
+            log.info("real-time quote guard ENABLED (jump>%.0f%% rejected, "
+                     "venue prints >%.0fs flagged)",
+                     cfg.quote_max_jump_pct * 100, cfg.quote_max_venue_age_s)
+        self.client = client
         self.db = db
         self.council = Council()
         self.brain = AIBrain(cfg)
@@ -424,7 +438,8 @@ class Firm:
     def run_cycle(self, state: Dict[str, Any], trade: bool = True) -> Dict[str, Any]:
         state["cycle"] = state.get("cycle", 0) + 1
         cycle = state["cycle"]
-        self.client.begin_cycle()      # fresh quotes; pinned for this cycle
+        if hasattr(self.client, "begin_cycle"):
+            self.client.begin_cycle()  # fresh quotes; pinned for this cycle
         mode = getattr(self.client, "mode", self.cfg.mode)   # broker-accurate
         state["mode"] = mode
         acct = self.client.get_account()

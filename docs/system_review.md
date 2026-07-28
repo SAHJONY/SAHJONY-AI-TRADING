@@ -222,6 +222,37 @@ Both paths are fault-isolated and tested for it — a guard that raises cannot t
 down the review that exists to catch problems, and a failing feed cannot break
 the report.
 
+## Shipped dormant: the 90-day evaluation window
+
+`public/evaluation.json` froze desk behaviour on 2026-07-26 for a 90-day
+out-of-sample window ending **2026-10-24**, and explicitly disallows parameter
+tuning, new strategies, fee-model changes and conviction-gate changes during it.
+
+The quote guard and per-cycle cache **change desk behaviour** — the guard can
+reject a tick, so the desk stands down where it previously traded. Merging them
+live would have quietly invalidated a measurement two days into its window.
+
+So they ship **wired but dormant**, behind `QUOTE_GUARD` (default `false`):
+
+```bash
+QUOTE_GUARD=true        # enable after 2026-10-24, or on a desk not under evaluation
+```
+
+With it off, `Firm` holds the bare broker adapter exactly as before, `Hermes`
+receives `feed=None` and adds no issues, and the dashboard panel is skipped —
+verified, not assumed. Re-enabling after the window needs **no code change and no
+second merge**, which is the point of a flag rather than a deferred branch.
+
+Everything else in this work is protocol-safe by construction:
+
+| Change | Why it is allowed during the window |
+|---|---|
+| `backtest/` (14 strategies, optimizer, portfolio, funnel) | Research only — nothing in the live loop imports it, verified by grep |
+| `expanding_vol` | Output identical to 1e-16; infrastructure, not behaviour |
+| DB indices, `synchronous=NORMAL` | Storage-layer infrastructure |
+| Dashboard feed panel, docs | Explicitly listed under `allowed_during_window` |
+| `get_price_with_ts`, `utils/realtime.py`, `utils/quote_cache.py` | Inert modules — nothing calls them while the flag is off |
+
 ## Verify
 
 ```bash
