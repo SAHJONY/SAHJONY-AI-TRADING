@@ -171,6 +171,41 @@ def main() -> int:
     _check(not agreed2, "cross-source disagreement is reported, not silently averaged")
     _check(consensus_price([])[0] == 0.0, "no usable sources returns 0 and not-agreed")
 
+    # venue timestamps: the failure fetch-time cannot see
+    class _TsFeed:
+        mode = "test"
+        def __init__(self, age_s): self.age = age_s
+        def get_price(self, symbol): return 100.0
+        def get_price_with_ts(self, symbol):
+            import time as _t
+            return 100.0, _t.time() - self.age
+
+    g6 = RealtimeGuard(_TsFeed(600.0), max_venue_age_s=60.0)
+    _check(g6.venue_timestamps, "an adapter reporting venue time is detected")
+    g6.get_price("V")
+    q6 = g6.last_quote("V")
+    _check(q6.venue_age_s is not None and q6.venue_age_s > 500,
+           "staleness is measured from the exchange print, not our fetch")
+    _check(q6.age_s < 5 and q6.suspect and not q6.trustworthy,
+           "a fresh fetch of a stale print is caught (age_s alone would miss it)")
+
+    g7 = RealtimeGuard(_TsFeed(1.0), max_venue_age_s=60.0)
+    g7.get_price("V")
+    _check(g7.last_quote("V").trustworthy, "a fresh venue print is trusted")
+
+    # adapters without the optional extension must be unaffected
+    g8 = RealtimeGuard(_Feed([100.0]), max_venue_age_s=60.0)
+    _check(not g8.venue_timestamps and g8.get_price("N") == 100.0,
+           "an adapter lacking the extension still prices normally")
+    _check(g8.last_quote("N").venue_age_s is None,
+           "…and honestly reports that it has no venue timestamp")
+
+    class _BadTs(_Feed):
+        def get_price_with_ts(self, symbol): raise RuntimeError("venue api down")
+    g9 = RealtimeGuard(_BadTs([100.0]), max_venue_age_s=60.0)
+    _check(g9.get_price("B") == 100.0,
+           "a failing optional extension falls back instead of breaking pricing")
+
     print("\n── extra strategies (S11-S18) ──")
     from backtest import synth as _syn
     from backtest.strategies import REGISTRY as _REG

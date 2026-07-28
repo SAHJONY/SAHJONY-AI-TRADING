@@ -19,11 +19,12 @@ This wraps any adapter satisfying the `utils/broker.py` contract and adds:
   • **Health telemetry** — per-symbol counters the reporter and Hermes can read,
     so a degrading feed is visible before it costs money.
 
-Honest limitation: these adapters do not expose the venue's own quote timestamp,
-so "age" here is measured from *our* fetch, not from the exchange print. That
-detects a frozen or failing feed; it cannot detect a venue publishing stale data
-with a fresh timestamp. Fixing that needs the exchange timestamp plumbed through
-the adapter contract.
+Venue timestamps: an adapter may implement the optional
+`get_price_with_ts(symbol) -> (price, venue_ts)` extension (see utils/broker.py).
+When it does, `Quote.venue_age_s` measures staleness from the *exchange print*
+rather than from our fetch, and `max_venue_age_s` flags a fresh HTTP response
+carrying a minutes-old price — the exact failure fetch-time cannot see. Adapters
+without it keep working unchanged and fall back to fetch-time only.
 
 Safety posture: this can only ever make the desk trade *less* on bad data. A
 rejected quote falls back to the last good price (flagged stale) and never to
@@ -49,10 +50,21 @@ class Quote:
     source: str = "broker"
     stale: bool = False             # served from cache after a rejection/failure
     suspect: bool = False           # accepted, but the feed looks unhealthy
+    venue_ts: Optional[float] = None  # the exchange's own print time, when known
 
     @property
     def age_s(self) -> float:
+        """Seconds since WE fetched it."""
         return max(0.0, time.time() - self.ts)
+
+    @property
+    def venue_age_s(self) -> Optional[float]:
+        """Seconds since the VENUE printed it, or None if it does not say.
+
+        This is the number that matters: a fresh fetch of an old print is
+        exactly the failure `age_s` cannot see.
+        """
+        return None if self.venue_ts is None else max(0.0, time.time() - self.venue_ts)
 
     @property
     def trustworthy(self) -> bool:
@@ -68,6 +80,7 @@ class _SymbolState:
     accepted: int = 0
     rejected: int = 0
     frozen_flags: int = 0
+    venue_stale_flags: int = 0
 
 
 @dataclass
@@ -86,7 +99,8 @@ class RealtimeGuard:
     """Broker wrapper that validates every quote before it reaches the desk."""
 
     def __init__(self, broker: Any, max_jump_pct: float = 0.10,
-                 stale_after_s: float = 300.0, source: str = ""):
+                 stale_after_s: float = 300.0, source: str = "",
+                 max_venue_age_s: float = 0.0):
         object.__setattr__(self, "_broker", broker)
         object.__setattr__(self, "_state", {})
         object.__setattr__(self, "_max_jump", max(0.0, float(max_jump_pct)))
@@ -94,6 +108,10 @@ class RealtimeGuard:
         object.__setattr__(self, "_source",
                            source or getattr(broker, "mode", "broker"))
         object.__setattr__(self, "_quotes", {})
+        object.__setattr__(self, "_max_venue_age", max(0.0, float(max_venue_age_s)))
+        # Optional broker-contract extension: the venue's own print timestamp.
+        object.__setattr__(self, "_ts_capable",
+                           callable(getattr(broker, "get_price_with_ts", None)))
 
     # -- transparent delegation ----------------------------------------------
     def __getattr__(self, name: str):
@@ -101,13 +119,19 @@ class RealtimeGuard:
 
     def __setattr__(self, name: str, value) -> None:
         if name in ("_broker", "_state", "_max_jump", "_stale_after", "_source",
-                    "_quotes"):
+                    "_quotes", "_max_venue_age", "_ts_capable"):
             object.__setattr__(self, name, value)
         else:
             setattr(self._broker, name, value)
 
     # -- validation ----------------------------------------------------------
-    def _validate(self, symbol: str, raw: float) -> Quote:
+    @property
+    def venue_timestamps(self) -> bool:
+        """Whether the wrapped adapter reports the exchange's own print time."""
+        return bool(self._ts_capable)
+
+    def _validate(self, symbol: str, raw: float,
+                  venue_ts: Optional[float] = None) -> Quote:
         st = self._state.setdefault(symbol, _SymbolState())
         now = time.time()
 
@@ -117,7 +141,8 @@ class RealtimeGuard:
             if st.last_price > 0:
                 log.warning("%s: bad quote (%r) — serving last good %.6f (age %.0fs)",
                             symbol, raw, st.last_price, now - st.last_ts)
-                return Quote(symbol, st.last_price, st.last_ts, self._source, stale=True)
+                return Quote(symbol, st.last_price, st.last_ts, self._source,
+                             stale=True)
             return Quote(symbol, 0.0, now, self._source, stale=True)
 
         # 2) outlier gate — one wild print is quarantined, two in a row is a move
@@ -132,7 +157,7 @@ class RealtimeGuard:
                     log.warning("%s: %.1f%% jump to %.6f rejected pending confirmation "
                                 "(last good %.6f)", symbol, jump * 100, raw, st.last_price)
                     return Quote(symbol, st.last_price, st.last_ts, self._source,
-                                 stale=True)
+                                 stale=True, venue_ts=venue_ts)
                 log.info("%s: %.1f%% move to %.6f confirmed by a second print",
                          symbol, jump * 100, raw)
         st.pending = None
@@ -147,15 +172,36 @@ class RealtimeGuard:
             log.warning("%s: price unchanged at %.6f for %.0fs — feed may be frozen",
                         symbol, raw, now - st.last_change_ts)
 
+        # 4) venue staleness — the check fetch-time cannot make. A fresh HTTP
+        # response carrying a minutes-old print is a venue problem, and without
+        # the exchange timestamp it is invisible.
+        if venue_ts is not None and self._max_venue_age > 0:
+            v_age = now - venue_ts
+            if v_age > self._max_venue_age:
+                suspect = True
+                st.venue_stale_flags += 1
+                log.warning("%s: venue print is %.1fs old (limit %.0fs) — quote "
+                            "marked suspect", symbol, v_age, self._max_venue_age)
+
         st.last_price, st.last_ts = raw, now
         if not st.last_change_ts:
             st.last_change_ts = now
         st.accepted += 1
-        return Quote(symbol, raw, now, self._source, stale=False, suspect=suspect)
+        return Quote(symbol, raw, now, self._source, stale=False, suspect=suspect,
+                     venue_ts=venue_ts)
 
     # -- broker surface ------------------------------------------------------
     def get_price(self, symbol: str) -> float:
-        q = self._validate(symbol, self._broker.get_price(symbol))
+        venue_ts = None
+        if self._ts_capable:
+            try:
+                raw, venue_ts = self._broker.get_price_with_ts(symbol)
+            except Exception as exc:   # an optional extension must never break pricing
+                log.warning("%s: get_price_with_ts failed (%s) — falling back", symbol, exc)
+                raw, venue_ts = self._broker.get_price(symbol), None
+        else:
+            raw = self._broker.get_price(symbol)
+        q = self._validate(symbol, raw, venue_ts)
         self._quotes[symbol] = q
         return q.price
 
@@ -179,6 +225,7 @@ class RealtimeGuard:
                                    if st.last_change_ts else None),
                 "accepted": st.accepted, "rejected": st.rejected,
                 "frozen_flags": st.frozen_flags,
+                "venue_stale_flags": st.venue_stale_flags,
             }
         return h
 

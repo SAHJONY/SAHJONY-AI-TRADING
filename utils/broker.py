@@ -28,6 +28,17 @@ REQUIRED = (
     "submit_option_order", "advance_sim",
 )
 
+# Optional extensions. An adapter that implements one gets extra protection; one
+# that does not still satisfies the contract and degrades to the documented
+# fallback, so these can never break an existing venue.
+#
+#   get_price_with_ts(symbol) -> (price, venue_ts_epoch_seconds | None)
+#       The venue's OWN timestamp for the quote, not our fetch time. Without it
+#       utils/realtime.py can only measure how long since *we* asked, which
+#       detects a dead socket but not a venue publishing stale data with a fresh
+#       response. With it, genuinely old prints are caught before they are traded.
+OPTIONAL = ("get_price_with_ts",)
+
 
 @runtime_checkable
 class BrokerAdapter(Protocol):
@@ -46,6 +57,9 @@ class BrokerAdapter(Protocol):
     def submit_equity_order(self, symbol: str, qty: float, side: str) -> Dict: ...
     def submit_option_order(self, contract: str, qty: int, side: str, premium: float = 0.0) -> Dict: ...
     def advance_sim(self, steps: int = 1) -> None: ...
+
+    # -- optional (see OPTIONAL above) --------------------------------------
+    # def get_price_with_ts(self, symbol: str) -> Tuple[float, Optional[float]]: ...
 
 
 def _verify(adapter) -> object:

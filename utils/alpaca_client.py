@@ -134,6 +134,36 @@ class AlpacaClient:
             hist = self.get_history(symbol, 5)
             return float(hist["closes"][-1]) if hist["closes"].size else 0.0
 
+    def get_price_with_ts(self, symbol: str):
+        """(price, venue_timestamp_epoch_s) — the exchange's own print time.
+
+        Optional broker-contract extension (see utils/broker.py). Lets
+        utils/realtime.py distinguish "our fetch is old" from "the venue is
+        publishing an old print", which fetch-time alone cannot do. Returns a
+        None timestamp whenever the venue does not supply one, and never raises:
+        a missing timestamp must degrade to the fetch-time behaviour, not break
+        pricing.
+        """
+        if not self.online:
+            return self._sim.get_price(symbol), None
+        try:
+            if _is_crypto(symbol):
+                from alpaca.data.requests import CryptoLatestQuoteRequest
+                q = self._crypto.get_crypto_latest_quote(
+                    CryptoLatestQuoteRequest(symbol_or_symbols=symbol))
+            else:
+                from alpaca.data.requests import StockLatestQuoteRequest
+                q = self._data.get_stock_latest_quote(
+                    StockLatestQuoteRequest(symbol_or_symbols=symbol))
+            quote = q[symbol]
+            mid = (float(quote.ask_price) + float(quote.bid_price)) / 2.0
+            px = mid if mid > 0 else float(quote.ask_price or quote.bid_price)
+            ts = getattr(quote, "timestamp", None)
+            return px, (ts.timestamp() if hasattr(ts, "timestamp") else None)
+        except Exception as exc:
+            log.error("get_price_with_ts(%s) failed: %s", symbol, exc)
+            return self.get_price(symbol), None
+
     def is_market_open(self) -> bool:
         if self.cfg.always_on:   # 24/7 desk (crypto) — never closed
             return True

@@ -201,7 +201,8 @@ class Firm:
         # RealtimeGuard rejects bad ticks and flags frozen feeds; CachedBroker
         # pins one price per symbol per cycle.
         self.feed = RealtimeGuard(client, max_jump_pct=cfg.quote_max_jump_pct,
-                                  stale_after_s=cfg.quote_stale_after_s)
+                                  stale_after_s=cfg.quote_stale_after_s,
+                                  max_venue_age_s=cfg.quote_max_venue_age_s)
         self.client = client = CachedBroker(self.feed)
         self.db = db
         self.council = Council()

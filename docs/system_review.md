@@ -179,17 +179,34 @@ rejected quote falls back to the last good price flagged `stale`, never to `0.0`
 history at all, a bad read stays `0.0` rather than fabricating a price. Both are
 tested.
 
-**Honest limitation:** the adapters do not expose the venue's own quote
-timestamp, so "age" is measured from *our* fetch. That catches a frozen or
-failing feed; it cannot catch a venue publishing stale data with a fresh
-timestamp. Fixing that needs the exchange timestamp plumbed through the adapter
-contract.
+### Venue timestamps — closing the stale-print hole
+
+Measuring age from *our* fetch catches a dead socket but not a venue returning a
+fresh HTTP response carrying a minutes-old print. That is now closed by an
+**optional** broker-contract extension:
+
+```python
+get_price_with_ts(symbol) -> (price, venue_ts_epoch_seconds | None)
+```
+
+`utils/broker.py` declares it in a new `OPTIONAL` tuple rather than `REQUIRED`,
+so **no existing venue breaks**: an adapter that implements it gains the extra
+protection, one that does not keeps working and falls back to fetch-time only.
+`AlpacaClient` implements it from the quote's own `timestamp`; IBKR, CCXT,
+Robinhood and the simulator are untouched and degrade honestly (`venue_age_s`
+reports `None` rather than pretending).
+
+With it, `Quote.venue_age_s` measures staleness from the exchange print and
+`QUOTE_MAX_VENUE_AGE_S` (default 60s) flags anything older. Tested end to end: a
+600-second-old print behind a fresh fetch is caught and marked untrustworthy
+while `age_s` reads under a second — the exact case fetch-time alone misses. A
+failing extension falls back rather than breaking pricing, which is also tested.
 
 ## Verify
 
 ```bash
 python -m py_compile $(git ls-files '*.py')   # syntax gate
-python -m tests.test_optimizations            # 64 equivalence/invariant checks
+python -m tests.test_optimizations            # 71 equivalence/invariant checks
 python -m tests.test_dry_run                  # 8 offline cycles
 python main.py --cycles 8                     # regenerates public/status.json
 ```
