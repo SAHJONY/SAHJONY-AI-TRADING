@@ -17,7 +17,16 @@ import sys
 
 os.environ.setdefault("LOG_LEVEL", "ERROR")
 
-import nacl.signing
+try:
+    import nacl.signing
+except ImportError:                                   # pragma: no cover
+    # pynacl is only needed for the Robinhood venue's Ed25519 signing. Without it
+    # these checks cannot run — but exiting 1 makes a fresh checkout report a
+    # SAFETY TEST FAILURE, which reads as a risk regression rather than a missing
+    # optional dependency. Skip loudly and cleanly instead.
+    print("SKIPPED: pynacl is not installed — Robinhood signing checks cannot run.")
+    print("         Install it to exercise them:  pip install pynacl")
+    raise SystemExit(0)
 
 # Deterministic test keypair — set BEFORE constructing the broker so it picks
 # these up. This is a throwaway key generated from a fixed seed; not a secret.

@@ -3,7 +3,7 @@
 Review of the live desk (~12.9k lines across `workforce/`, `strategies/`, `risk/`,
 `intelligence/`, `utils/`, `database/`), not just the `backtest/` research package.
 
-**Baseline:** all 20 test suites green (once `pynacl` is installed — see below).
+**Baseline:** 20 test suites green (21st blocked by a missing optional dep — fixed below).
 **After:** 21 suites green, cycle time down 3.4×, no behaviour change.
 
 ---
@@ -117,13 +117,43 @@ Not everything needed changing, and it is worth recording what held up:
   with orphan adoption under ladder risk management and ghost removal — the right
   default for a system whose state file is runtime-only.
 
-## One environment note
+## Correctness pass over the decision logic
 
-`tests/test_robinhood_safety.py` fails on a fresh checkout with
-`ModuleNotFoundError: nacl`. It is not a code defect — `pynacl` is declared in
-`requirements.txt` but is an optional extra for the Robinhood venue. Installing
-it makes the suite 21/21. Worth knowing before anyone reads that failure as a
-safety regression.
+The performance work above only touched the hot path, so a separate read of
+`strategies/` and `intelligence/` (~2.6k lines) went looking for the kind of bug
+that produces *wrong trades* rather than slow ones. **No new defects were
+found.** What was checked, and why each is clean:
+
+- **Unguarded division** — every candidate site is guarded. `size_qty` returns
+  early on `price <= 0`; `AltData._ratio` returns 0 on an empty total; the HMM
+  E-step floors both `denom` and `nk` at `1e-12`; `CopyTrader` skips a position
+  whose basis is non-positive. `Hermes.review` divides by `len(research)` but
+  early-returns on an empty list *and* is wrapped by the caller.
+- **Trailing ladder** — exits correctly realize against `cost_basis` while the
+  rungs and ratchet measure from `entry_price`, which is the intended asymmetry.
+  Share/basis/rung updates ride on the risk-checked buy rather than the
+  unconditional state intent, so a blocked add cannot record phantom shares.
+- **Wheel** — assignment sets `cost_basis` to the strike and explicitly does
+  *not* re-add the premium, which was already banked at CSP open; double-counting
+  it would inflate the sleeve twice.
+- **Pairs** — closes a surviving leg immediately rather than ever running
+  unhedged.
+- **Zero-quote handling** — a `0.0` tick cannot drive an exit anywhere: the
+  ladder holds rather than reading it as -100% and firing the catastrophic floor.
+
+The recurring pattern is that these files carry comments naming bugs that were
+already found and fixed. This is a codebase that has been through review before,
+and the honest result of another pass is a short list of confirmations rather
+than a list of finds.
+
+## Fixed: a missing optional dependency looked like a safety failure
+
+`tests/test_robinhood_safety.py` aborted on a fresh checkout with
+`ModuleNotFoundError: nacl`, printing a *safety test failure* — which reads as a
+risk regression when it is really an absent optional extra (`pynacl` is only
+needed for the Robinhood venue's Ed25519 signing). It now skips cleanly with an
+explanatory message and exit 0, and still runs in full when the package is
+present. Both paths are verified.
 
 ## Verify
 
