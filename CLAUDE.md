@@ -36,6 +36,12 @@ native SQLite CRM/database and a static owner dashboard deployed on Vercel.
 - `python -m tests.test_optimizations` — locks in the hot-path work (expanding-vol
   equivalence, per-cycle quote cache, DB indices). See `docs/system_review.md`.
 - `python main.py --cycles 8` — regenerates `public/status.json` for the dashboard.
+  **Do not commit what this writes from a feature branch.** It also rewrites
+  `public/knowledge.json`, and both files are owned by the *running* desk on
+  `master`. Committing offline-sim output overwrites real accumulated state (the
+  per-pair hit rates the desk weights itself with) and turns every later merge
+  into a conflict whose "ours" side is simulated noise. After verifying, restore
+  them: `git checkout -- public/status.json public/knowledge.json`.
 - The dashboard is browser-rendered; `status.json` is the contract between the
   Python engine and `public/index.html` — keep the schema in `reporter.py` in sync.
 
