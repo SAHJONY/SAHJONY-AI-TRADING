@@ -47,10 +47,15 @@ from backtest.engine import Strategy
 # S4/S7/S8/S10 need data this harness does not have, so EXTREME routes to
 # nothing and the desk stands down, exactly as §0 intends.
 ROUTING: List = [
-    (0.0000, 0.0012, ["s3", "s9", "s1", "s5"]),                # LOW
-    (0.0012, 0.0030, ["s3", "s2", "s6", "s5", "s1", "s9"]),    # NORMAL
-    (0.0030, 0.0060, ["s2", "s6", "s5"]),                      # HIGH
-    (0.0060, 9.9999, []),                                      # EXTREME — stand down
+    # LOW — compression and mean reversion
+    (0.0000, 0.0012, ["s3", "s14", "s9", "s1", "s5", "s12", "s13", "s16"]),
+    # NORMAL — everything has a claim here
+    (0.0012, 0.0030, ["s3", "s14", "s2", "s11", "s18", "s6", "s17", "s5",
+                      "s12", "s13", "s16", "s15", "s1", "s9"]),
+    # HIGH — trend, breakout and continuation only
+    (0.0030, 0.0060, ["s2", "s11", "s15", "s18", "s6", "s17", "s5"]),
+    # EXTREME — s7/s8 territory, which this harness cannot trade: stand down
+    (0.0060, 9.9999, []),
 ]
 
 REGIME_NAMES = ["LOW", "NORMAL", "HIGH", "EXTREME"]

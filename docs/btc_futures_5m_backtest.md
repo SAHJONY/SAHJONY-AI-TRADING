@@ -1,7 +1,7 @@
 # BTC 5m Backtest — harness, findings, and the data blocker
 
-Companion to `docs/btc_futures_5m_playbook.md`. Covers the six **OHLCV-only**
-strategies: S1, S2, S3, S5, S6, S9.
+Companion to `docs/btc_futures_5m_playbook.md`. Covers the **14 OHLCV-only**
+strategies: the playbook's S1, S2, S3, S5, S6, S9 plus candidates S11–S18.
 
 ---
 
@@ -48,6 +48,7 @@ python -m backtest.run --csv bars.csv --portfolio --funnel
 | `backtest/data.py` | `Bars` container, CSV load/save, venue fetchers (binance-vision / binance / bybit) with caching |
 | `backtest/engine.py` | Bar-by-bar engine: pending orders, scaled exits, trails, time stops, fees, slippage, sizing, leverage cap, circuit breakers |
 | `backtest/strategies.py` | S1, S2, S3, S5, S6, S9 as pure decision engines |
+| `backtest/strategies_extra.py` | S11–S18 candidate strategies (see roster below) |
 | `backtest/metrics.py` | Expectancy in R, hit rate, profit factor, Sharpe/Sortino, max DD, MAE, exit-reason and regime breakdowns |
 | `backtest/run.py` | CLI with walk-forward split, cost overrides, sensitivity flags, `--funnel` |
 | `backtest/funnel.py` | Signal-funnel recorder — per-gate pass rates (see below) |
@@ -263,6 +264,43 @@ spends effort on allocation logic: at current selectivity the correlation proble
 §0 worries about does not bind, and the regime table is the only part of the
 portfolio layer doing real work. If the specs are widened (findings 3–5), expect
 this to invert.
+
+## The candidate roster (S11–S18)
+
+Eight additional strategies were added as **candidates**, bringing the
+implementable book to 14. None is claimed to win: the promotion gate decides
+that on out-of-sample evidence, and nothing here has seen real BTC data.
+
+| # | Strategy | Class | Why it earns a slot |
+|---|---|---|---|
+| S11 | Donchian Turtle Breakout | Trend | The oldest systematic trend rule; the honest baseline every fancier trend strategy should beat |
+| S12 | Connors RSI(2) Pullback | Mean reversion + trend filter | Published and widely replicated — a near-null model for "does reversion work here at all" |
+| S13 | Bollinger %B Reversion | Mean reversion | Same family as S1 but trend-filtered, so it never fades a trend day |
+| S14 | NR7 Range Expansion | Volatility expansion | S3's premise measured on one bar instead of a band relationship, so it fires far more often |
+| S15 | Volume-Spike Continuation | Momentum | Trades participation rather than fading it; risk defined by the signal bar |
+| S16 | Engulfing at Extreme | Price action | No indicators — a one-bar shift in control at a channel extreme |
+| S17 | Session-Window Momentum | Seasonality | Makes the "crypto has sessions" claim testable, with the window as a searchable parameter rather than folklore |
+| S18 | Dual-Timeframe Pullback | Trend + timing | 30m trend from aggregated 5m bars, causal by construction |
+
+**These are deliberately cheaper in conditions than S1–S9.** The funnel work
+showed the original book's problem was not weak signals but conjunctions so deep
+nothing fired. Each of these uses 3–5 conditions, and it shows in the sample
+sizes — 198 to 674 trades over 180 days where S1 produced zero:
+
+```
+s11 626   s12 379   s13 333   s14 390
+s15 198   s16 443   s17 464   s18 674
+```
+
+**Every one loses money on synthetic data, and that is the correct result.** The
+generator is a random process; after real fees, any strategy must have negative
+expectancy on it. A candidate that "won" here would indicate a bug in the cost
+model, not an edge. This is the sanity check the roster exists to pass before it
+ever sees real bars.
+
+All eight are registered, routed by regime, and have search spaces in
+`backtest/improve.py`, so `python -m backtest.improve --strategy s11` runs the
+full walk-forward + PBO + deflated-Sharpe + promotion gate against them.
 
 ## The funnel diagnostic
 

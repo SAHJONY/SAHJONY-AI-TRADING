@@ -650,4 +650,11 @@ class S9_FailedBreakFade(Strategy):
 
 ALL = [S1_VWAPBandFade, S2_OpeningRange, S3_SqueezeBreakout,
        S5_SweepReclaim, S6_RibbonPullback, S9_FailedBreakFade]
+
+# S11-S18 are additional candidates (backtest/strategies_extra.py). Imported at
+# the bottom to keep this module's own definitions readable; the registry is the
+# single place the CLI, portfolio router and optimizer look for a strategy.
+from backtest.strategies_extra import ALL_EXTRA          # noqa: E402
+
+ALL = ALL + ALL_EXTRA
 REGISTRY = {c.id: c for c in ALL}

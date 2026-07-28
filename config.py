@@ -98,6 +98,8 @@ class Config:
     # budgets are rounded up to this when it still fits the per-position cap,
     # otherwise the desk stands down instead of sending a doomed order.
     min_order_notional: float = 1.0
+    quote_max_jump_pct: float = 0.10
+    quote_stale_after_s: float = 300.0
     # Estimated ROUND-TRIP transaction cost in basis points. Commission-free
     # venues still charge the spread; realized P&L is booked net of this so the
     # scorecard measures a fee-aware edge (the desk's stated mandate).
@@ -246,6 +248,11 @@ def load_config() -> Config:
         max_daily_drawdown_pct=_clamp(_f("MAX_DAILY_DRAWDOWN_PCT", 0.06), 0.01, HARD_MAX_DAILY_DRAWDOWN_PCT),
         trading_halt=_b("TRADING_HALT", False),
         min_order_notional=max(0.0, _f("MIN_ORDER_NOTIONAL_USD", 1.0)),
+        # Real-time quote guard: reject a single print that jumps more than this
+        # against the last good price (a second confirming print is accepted), and
+        # flag a feed whose price has not moved for this long as possibly frozen.
+        quote_max_jump_pct=_clamp(_f("QUOTE_MAX_JUMP_PCT", 0.10), 0.0, 1.0),
+        quote_stale_after_s=max(0.0, _f("QUOTE_STALE_AFTER_S", 300.0)),
         fee_bps_crypto=_clamp(_f("FEE_BPS_CRYPTO", 60.0), 0.0, 500.0),
         fee_bps_equity=_clamp(_f("FEE_BPS_EQUITY", 4.0), 0.0, 500.0),
         vol_target_annual=_clamp(_f("VOL_TARGET_ANNUAL", 0.20), 0.0, 2.0),

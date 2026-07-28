@@ -42,6 +42,7 @@ from strategies.wheel_strategy import WheelStrategy
 from utils.logger import get_logger
 from utils.notify import Notifier
 from utils.quote_cache import CachedBroker
+from utils.realtime import RealtimeGuard
 from utils.state_store import record_event
 
 log = get_logger("workforce")
@@ -196,7 +197,12 @@ class Firm:
         # One price per symbol per cycle. Wrapped here rather than in
         # utils.broker.get_broker() so the factory keeps returning the bare
         # adapter its contract promises; every role below shares this instance.
-        self.client = client = CachedBroker(client)
+        # Order matters: validate the fresh read, then cache the validated value.
+        # RealtimeGuard rejects bad ticks and flags frozen feeds; CachedBroker
+        # pins one price per symbol per cycle.
+        self.feed = RealtimeGuard(client, max_jump_pct=cfg.quote_max_jump_pct,
+                                  stale_after_s=cfg.quote_stale_after_s)
+        self.client = client = CachedBroker(self.feed)
         self.db = db
         self.council = Council()
         self.brain = AIBrain(cfg)

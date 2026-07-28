@@ -14,6 +14,7 @@ import numpy as np
 from config import load_config
 from database import Database
 from intelligence import engines
+from backtest.engine import Backtester
 from utils.quote_cache import CachedBroker
 
 FAILURES = []
@@ -120,6 +121,71 @@ def main() -> int:
     stats = c.cache_stats()
     _check(stats["price_hits"] >= 1 and stats["price_calls"] > stats["price_hits"],
            "cache reports hit statistics")
+
+    print("\n── real-time quote guard ──")
+    from utils.realtime import RealtimeGuard, consensus_price, Quote
+
+    class _Feed:
+        mode = "test"
+        def __init__(self, seq): self.seq, self.i = seq, 0
+        def get_price(self, symbol):
+            v = self.seq[min(self.i, len(self.seq) - 1)]; self.i += 1; return v
+        @property
+        def online(self): return False
+
+    # a single wild print is quarantined; the last good price is served instead
+    g = RealtimeGuard(_Feed([100.0, 500.0, 101.0]), max_jump_pct=0.10)
+    _check(g.get_price("X") == 100.0, "first quote is accepted")
+    _check(g.get_price("X") == 100.0, "a 5x outlier print is rejected, last good served")
+    _check(g.get_price("X") == 101.0, "the feed recovers to a sane price")
+    _check(g.health().total_rejected == 1, "the rejection is counted in health")
+
+    # two consecutive prints in the new region ARE a real move, not an outlier
+    g2 = RealtimeGuard(_Feed([100.0, 130.0, 131.0]), max_jump_pct=0.10)
+    g2.get_price("Y"); g2.get_price("Y")
+    _check(g2.get_price("Y") == 131.0, "a confirmed gap is accepted on the second print")
+
+    # a failed (0.0) read must never become a traded price
+    g3 = RealtimeGuard(_Feed([100.0, 0.0]), max_jump_pct=0.10)
+    g3.get_price("Z")
+    _check(g3.get_price("Z") == 100.0, "a 0.0 read never replaces a good price")
+    q = g3.last_quote("Z")
+    _check(q is not None and q.stale and not q.trustworthy,
+           "the served fallback is flagged stale and untrustworthy")
+
+    # with no history at all a bad read stays 0.0 rather than inventing a price
+    g4 = RealtimeGuard(_Feed([0.0]), max_jump_pct=0.10)
+    _check(g4.get_price("W") == 0.0, "with no history, a bad read is not fabricated")
+
+    # frozen-feed detection
+    g5 = RealtimeGuard(_Feed([50.0, 50.0]), max_jump_pct=0.10, stale_after_s=0.0)
+    g5.get_price("F"); g5.get_price("F")
+    _check(g5.last_quote("F").suspect, "an unchanging price is flagged as possibly frozen")
+
+    _check(g.mode == "test" and g.online is False, "guard delegates transparently")
+
+    px, agreed = consensus_price([Quote("A", 100.0, 0), Quote("A", 100.5, 0),
+                                  Quote("A", 100.2, 0)])
+    _check(agreed and 100.0 <= px <= 100.5, "agreeing sources produce a median price")
+    px2, agreed2 = consensus_price([Quote("A", 100.0, 0), Quote("A", 140.0, 0)])
+    _check(not agreed2, "cross-source disagreement is reported, not silently averaged")
+    _check(consensus_price([])[0] == 0.0, "no usable sources returns 0 and not-agreed")
+
+    print("\n── extra strategies (S11-S18) ──")
+    from backtest import synth as _syn
+    from backtest.strategies import REGISTRY as _REG
+    b4 = _syn.make(days=90, seed=5)
+    for sid in ("s11", "s12", "s13", "s14", "s15", "s16", "s17", "s18"):
+        _check(sid in _REG, f"{sid} is registered")
+    for sid in ("s11", "s12", "s14", "s16", "s18"):
+        r = Backtester(b4).run(_REG[sid]())
+        ok = all(np.isfinite(t.pnl) and np.isfinite(t.r) for t in r["trades"])
+        _check(ok and len(r["trades"]) > 0,
+               f"{sid}: produces a measurable sample ({len(r['trades'])} trades)")
+    for sid, cls in _REG.items():
+        base = len(Backtester(b4).run(cls())["trades"])
+        same = len(Backtester(b4).run(cls(**{}))["trades"])
+        _check(base == same, f"{sid}: no-arg construction is the documented spec")
 
     print("\n── database indices exist ──")
     import tempfile, os

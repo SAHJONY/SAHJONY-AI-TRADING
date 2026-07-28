@@ -155,11 +155,41 @@ needed for the Robinhood venue's Ed25519 signing). It now skips cleanly with an
 explanatory message and exit 0, and still runs in full when the package is
 present. Both paths are verified.
 
+## Real-time quote intelligence
+
+The brokers return a bare float. A float cannot say *when* it was true, whether
+the feed has frozen, or whether it is a corrupt print — so the desk would size a
+position against a stale or fat-fingered tick and never know. `utils/realtime.py`
+adds that context, wrapping any adapter satisfying the broker contract.
+
+| Guard | Behaviour |
+|---|---|
+| **Provenance** | Every accepted price becomes a `Quote` with fetch timestamp, source, and `stale` / `suspect` flags |
+| **Outlier rejection** | A print jumping more than `QUOTE_MAX_JUMP_PCT` (default 10%) against the last good price is quarantined; a **second** confirming print accepts it, so real gaps pass and single bad ticks do not |
+| **Freeze detection** | An unchanging price for longer than `QUOTE_STALE_AFTER_S` (default 300s) is flagged — on a 24/7 market that is more often a dead socket than a quiet tape |
+| **Consensus** | `consensus_price()` takes the median across independent feeds and *reports* disagreement rather than silently averaging it |
+| **Telemetry** | Per-symbol accepted/rejected/frozen counters for the reporter and Hermes |
+
+Layering is `CachedBroker(RealtimeGuard(broker))` — validate the fresh read, then
+pin the validated value for the cycle.
+
+**Safety posture:** this can only ever make the desk trade *less* on bad data. A
+rejected quote falls back to the last good price flagged `stale`, never to `0.0`
+— a zero would read as a −100% move and fire every catastrophic floor. With no
+history at all, a bad read stays `0.0` rather than fabricating a price. Both are
+tested.
+
+**Honest limitation:** the adapters do not expose the venue's own quote
+timestamp, so "age" is measured from *our* fetch. That catches a frozen or
+failing feed; it cannot catch a venue publishing stale data with a fresh
+timestamp. Fixing that needs the exchange timestamp plumbed through the adapter
+contract.
+
 ## Verify
 
 ```bash
 python -m py_compile $(git ls-files '*.py')   # syntax gate
-python -m tests.test_optimizations            # 25 equivalence/invariant checks
+python -m tests.test_optimizations            # 64 equivalence/invariant checks
 python -m tests.test_dry_run                  # 8 offline cycles
 python main.py --cycles 8                     # regenerates public/status.json
 ```
