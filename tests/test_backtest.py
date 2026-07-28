@@ -143,6 +143,46 @@ def main() -> int:
                for i in range(len(rows) - 1) if rows[i + 1]["reached"] <= rows[i]["passed"]),
            "gate ordering is monotone where the funnel is sequential")
 
+    print("\n── portfolio mode ──")
+    from backtest import portfolio as pf
+    strats = [cls() for cls in REGISTRY.values()]
+    bt = Backtester(b2)
+    port = bt.run_many(strats, arm=pf.router(strats))
+    solo = {sid: Backtester(b2).run(cls()) for sid, cls in REGISTRY.items()}
+    solo_n = sum(len(r["trades"]) for r in solo.values())
+    _check(len(port["trades"]) <= solo_n,
+           "one position at a time cannot produce more trades than running solo")
+    _check(np.isfinite(port["equity_final"]) and port["strategy"] == "portfolio",
+           "portfolio run returns a single shared equity curve")
+    seen = {t.strategy for t in port["trades"]}
+    _check(seen.issubset(set(REGISTRY)), "every portfolio trade is attributed to a strategy")
+
+    one = Backtester(b2).run_many([REGISTRY["s9"]()])
+    ref = Backtester(b2).run(REGISTRY["s9"]())
+    _check(len(one["trades"]) == len(ref["trades"])
+           and abs(one["equity_final"] - ref["equity_final"]) < 1e-9,
+           "run() is exactly the N=1 case of run_many()")
+
+    # The bug this catches: §0 originally routed S3 to HIGH only, but every S3
+    # signal fires in LOW/NORMAL — ATR(14) is a trailing classifier and a squeeze
+    # breaks out while the average still reflects the compressed bars. A strategy
+    # routed only to regimes it never signals in is dead code.
+    b3 = synth.make(days=180, seed=7)
+    ts_at = {int(t): i for i, t in enumerate(b3.ts)}
+    for sid, cls in REGISTRY.items():
+        st = cls()
+        r = Backtester(b3).run(st)
+        if not r["trades"]:
+            continue
+        ind = st.prepare(b3)
+        ap = ind["atr"] / b3.close
+        fires_in = {pf.regime_of(float(ap[ts_at[t.entry_ts]])) for t in r["trades"]}
+        armed_in = {pf.REGIME_NAMES[i] for i, (_, _, ids) in enumerate(pf.ROUTING)
+                    if sid in ids}
+        _check(bool(fires_in & armed_in),
+               f"{sid}: routed to a regime it actually signals in "
+               f"(fires {sorted(fires_in)}, armed {sorted(armed_in)})")
+
     print("\n── data round-trip ──")
     import tempfile, os
     with tempfile.TemporaryDirectory() as d:

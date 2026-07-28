@@ -33,6 +33,9 @@ python -m backtest.run --source binance-vision --months 2026-01:2026-06 \
 
 # or from a CSV you already have (ts/open/high/low/close/volume, any timestamp format)
 python -m backtest.run --csv path/to/BTCUSDT-5m.csv --split 0.6 --out report.md
+
+# the book as §0 specifies it: shared equity, one position at a time, regime routing
+python -m backtest.run --csv bars.csv --portfolio --funnel
 ```
 
 ---
@@ -48,8 +51,9 @@ python -m backtest.run --csv path/to/BTCUSDT-5m.csv --split 0.6 --out report.md
 | `backtest/metrics.py` | Expectancy in R, hit rate, profit factor, Sharpe/Sortino, max DD, MAE, exit-reason and regime breakdowns |
 | `backtest/run.py` | CLI with walk-forward split, cost overrides, sensitivity flags, `--funnel` |
 | `backtest/funnel.py` | Signal-funnel recorder — per-gate pass rates (see below) |
+| `backtest/portfolio.py` | Regime-routing table, shared-equity portfolio mode, attribution |
 | `backtest/synth.py` | Synthetic bar generator — **harness self-test only** |
-| `tests/test_backtest.py` | 29 mechanical assertions (all passing) |
+| `tests/test_backtest.py` | 38 mechanical assertions (all passing) |
 
 ### Assumptions that bias results *against* the strategies
 
@@ -204,11 +208,59 @@ on real data: **most of this book is too selective to be measurable**, let alone
 profitable, and the specs need widening before the numbers mean anything.
 
 ```bash
-python -m tests.test_backtest     # 29 mechanical checks, all passing
+python -m tests.test_backtest     # 38 mechanical checks, all passing
 python -m backtest.run --synth 180
 ```
 
 ---
+
+### 6. §0's routing table made S3 unreachable — corrected
+
+Running the six strategies as six independent backtests is not what the playbook
+describes: §0 specifies one shared equity, one position at a time, and one
+portfolio-level circuit breaker. Portfolio mode (`--portfolio`) implements that,
+and running it surfaced a third arithmetic-class defect.
+
+The original routing table armed **S3 only in the HIGH bucket**. Measured, every
+S3 signal fires in LOW or NORMAL:
+
+```
+strategy   regime at entry (standalone)          armed by original §0 table
+s3         LOW 2, NORMAL 2                       HIGH          -> 0 trades, dead code
+s5         NORMAL 5, HIGH 4, EXTREME 3           NORMAL        -> 5 of 12 survive
+s2         HIGH 20, NORMAL 12, EXTREME 4, LOW 1  HIGH          -> 25 of 37 survive
+```
+
+The cause is definitional rather than statistical: **ATR(14) is a trailing
+classifier**, and a squeeze breakout fires while the average still reflects the
+compressed bars it is escaping. A strategy that trades a *transition* can never
+be armed by a gate that measures the regime it is transitioning into. The table
+also contradicted the strategies' own "optimal regime" lines — S3's section says
+"transition from LOW to HIGH".
+
+Corrected in both the playbook and `backtest/portfolio.py`, with each bucket now
+following the strategies' own regime sections and intra-bucket priority set by
+scarcity and time-criticality, never by observed P&L. `tests/test_backtest.py`
+now asserts that every strategy is armed in at least one regime it actually
+signals in — the regression that catches this whole class of bug.
+
+### 7. "One position at a time" costs almost nothing — routing is what binds
+
+Decomposing the two portfolio constraints on the same sample:
+
+```
+                                        trades
+six independent runs (own equity each)     68
+portfolio, contention only (--no-routing)  68     <- one-at-a-time costs 0
+portfolio, with regime routing             63     <- routing costs 5
+```
+
+Contention is free because signal frequency is so low that these strategies
+almost never want the book at the same time. That is worth knowing before anyone
+spends effort on allocation logic: at current selectivity the correlation problem
+§0 worries about does not bind, and the regime table is the only part of the
+portfolio layer doing real work. If the specs are widened (findings 3–5), expect
+this to invert.
 
 ## The funnel diagnostic
 

@@ -22,6 +22,7 @@ from typing import Dict, List
 from backtest import metrics
 from backtest.data import Bars, DataUnavailable, fetch, load_csv
 from backtest.engine import Backtester, CostModel, RiskConfig
+from backtest import portfolio as pf
 from backtest.strategies import REGISTRY
 
 
@@ -68,6 +69,19 @@ def run_all(bars: Bars, ids: List[str], costs: CostModel, risk: RiskConfig,
             funnels.append(res["funnel"])
         rows.append(row)
     return rows, funnels
+
+
+def run_portfolio(bars: Bars, ids: List[str], costs: CostModel, risk: RiskConfig,
+                  args):
+    """Run the selected strategies as a single book on one equity curve."""
+    strats = [REGISTRY[s]() for s in ids if s in REGISTRY]
+    bt = Backtester(bars, costs, risk, entry_mode=args.entry, funnel=args.funnel)
+    res = bt.run_many(strats, arm=pf.router(strats, enabled=not args.no_routing))
+    row = metrics.summarize(res, bars, risk.equity0)
+    attr = pf.attribution(res["trades"])
+    row["attribution"] = attr
+    row["routing"] = "off" if args.no_routing else "§0 regime table"
+    return [row], res.get("funnels", []), attr
 
 
 def _report(bars: Bars, rows: List[Dict], bh: Dict, args, label: str,
@@ -126,6 +140,12 @@ def main(argv=None) -> int:
                         "multiple. Lower it only to measure sensitivity.")
     p.add_argument("--funding-bps", type=float, default=0.0,
                    help="perp funding per 8h, charged pro-rata on hold time")
+    p.add_argument("--portfolio", action="store_true",
+                   help="run the selected strategies as one book: shared equity, "
+                        "one position at a time, portfolio-level circuit breakers")
+    p.add_argument("--no-routing", action="store_true",
+                   help="portfolio mode without the §0 regime-routing table "
+                        "(all strategies armed in every regime)")
     p.add_argument("--funnel", action="store_true",
                    help="report, per strategy, how many evaluations each entry "
                         "condition passed — shows which gate kills the signals")
@@ -160,13 +180,20 @@ def main(argv=None) -> int:
 
     all_rows, chunks = {}, []
     for label, seg in segments:
-        rows, funnels = run_all(seg, ids, costs, risk, args.entry, args.funnel)
+        if args.portfolio:
+            rows, funnels, attr = run_portfolio(seg, ids, costs, risk, args)
+        else:
+            rows, funnels = run_all(seg, ids, costs, risk, args.entry, args.funnel)
+            attr = None
         bh = metrics.buy_hold(seg)
         all_rows[label] = rows
         print(f"\n=== {label} — {seg.describe()}")
         print(metrics.format_table(rows))
         print(f"buy&hold: {bh['return_pct']}% ret, {bh['max_dd_pct']}% DD, "
               f"Sharpe {bh['sharpe']}")
+        if attr:
+            print("\n-- attribution (shared equity, one position at a time) --")
+            print(pf.format_attribution(attr))
         if funnels:
             print("\n-- signal funnels --")
             for f in funnels:

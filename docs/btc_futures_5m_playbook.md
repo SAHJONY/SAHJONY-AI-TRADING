@@ -583,13 +583,29 @@ Requires L2 book data and low-latency execution; on a retail REST connection wit
 **Regime routing** — at most one directional strategy live at a time:
 
 ```
-ATRpct < 0.12%              → S10, S9, S1        (fade / scalp)
-0.12% ≤ ATRpct < 0.30%      → S1, S5, S6, S9     (mixed)
-0.30% ≤ ATRpct < 0.60%      → S2, S3, S6, S4     (trend / breakout)
-ATRpct ≥ 0.60%              → S7, S8 only        (cascade / RV), size ×0.5
+ATRpct < 0.12%              → S3, S10, S9, S1, S5     (fade / compression)
+0.12% ≤ ATRpct < 0.30%      → S3, S2, S6, S5, S1, S9  (mixed)
+0.30% ≤ ATRpct < 0.60%      → S2, S6, S5, S4          (trend / breakout)
+ATRpct ≥ 0.60%              → S7, S8 only             (cascade / RV), size ×0.5
 Squeeze ON + bandwidth pct < 20  → S3 has priority, S9 disabled
 ADX < 20 → S1/S9 armed, S6 disabled ; ADX > 22 rising → S6 armed, S1 disabled
 ```
+
+*(Corrected after implementation. The original table routed **S3 to HIGH only**,
+which made it unreachable: every S3 signal fires in LOW/NORMAL, because ATR(14)
+is a **trailing** classifier and a squeeze breaks out while the average still
+reflects the compressed bars it is escaping. That also contradicted S3's own
+"optimal regime — transition from LOW to HIGH". Each row now follows the
+strategies' own regime sections. Priority inside a bucket is by scarcity and
+time-criticality — a rare setup that must be taken on its signal bar outranks a
+frequent one — never by observed P&L.)*
+
+**Lagging-classifier caveat, generally.** Any regime gate built on a trailing
+average reads the regime the market is *leaving*, not the one it is entering.
+That is harmless for the fade strategies, which want the regime to persist, and
+actively wrong for the expansion strategies (S2, S3), which are defined by a
+regime change. Where a strategy trades a transition, gate it on the compression
+it is leaving, not the expansion it is entering.
 
 ## Validation requirements before any of these leave paper
 
