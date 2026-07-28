@@ -9,8 +9,8 @@
     "return_pct": -0.162,
     "alpha_pct": -1578.821
   },
-  "ts": "2026-07-27T23:47:08.403802+00:00",
-  "cycle": 50,
+  "ts": "2026-07-28T01:04:45.321532+00:00",
+  "cycle": 51,
   "account": {
     "equity": -29579.65,
     "equity_start": 2000.0,
@@ -48,7 +48,7 @@
     "cadence": {
       "degraded": false,
       "reason": "",
-      "gap_min": 69.9,
+      "gap_min": 78.9,
       "expected_min": 15,
       "tolerance_min": 90.0
     },
@@ -68,10 +68,10 @@
       "frozen_at_commit": "8a82b4c"
     },
     "circuit_breaker": {
-      "halted": true,
-      "reason": "daily circuit breaker \u2014 down 10.5% (limit 10%)",
-      "day_return": 0.1051,
-      "day_start": -26766.75,
+      "halted": false,
+      "reason": "",
+      "day_return": 0.0,
+      "day_start": -29579.65,
       "limit_pct": 0.1
     },
     "ai_brain": {
@@ -112,9 +112,9 @@
         ]
       },
       "hit_rates": {
-        "SPY": 0.066,
-        "QQQ": 0.137,
-        "VTI": 0.066
+        "SPY": 0.063,
+        "QQQ": 0.132,
+        "VTI": 0.064
       },
       "strategy_weights": {
         "daytrade": 0.867
@@ -735,16 +735,16 @@
   ],
   "brain": {
     "enabled": true,
-    "used": false,
+    "used": true,
     "posture": "neutral",
-    "global_risk_multiplier": 1.0,
-    "commentary": "brain error: HTTPSConnectionPool(host='integrate.api.nvidia.com', port=443): Read timed out. (read timeout=45)",
-    "brain_model": "",
+    "global_risk_multiplier": 0.9,
+    "commentary": "The signal set is modestly constructive but heavily weighted to correlated US large\u2011cap equities. SPY, QQQ and VTI together drive beta above 1.2 and the flat tech names add tail risk. Composite scores are low to modest and alpha is weak or negative for the tech names, making those signals fragile. We keep a neutral stance, slightly below full risk exposure, and apply modest conviction tweaks to reinforce the broad market long bias while pulling back on the more fragile positions.",
+    "brain_model": "nvidia:openai/gpt-oss-120b",
     "counsellors": {
-      "openai": "**Risk posture:** Moderately aggressive, equity-long and highly overlapping: SPY/VTI duplicate broad-market exposure, while QQQ adds growth concentration. QQQ and especially NVDA carry elevated beta/volatility. With alt data unavailable, conviction should be discounted.\n\n**Sugges",
-      "grok": "**Risk posture:** Equity-beta heavy (SPY/VTI core, QQQ overlay). Moderate aggregate conviction; singles (MSFT/NVDA) show negative composites, elevated vol, and weak alpha\u2014net defensive tilt already in place via flats. Liquidity strong; factor concentration (tech/growth) and beta>",
-      "gemini": "The portfolio maintains a **cautiously constructive** posture on broad",
-      "nvidia": ""
+      "openai": "**Overall:** Moderately constructive, but risk is concentrated in correlated U.S. equities\u2014especially large-cap growth. SPY/VTI overlap materially, while QQQ and NVDA add elevated beta and volatility. With no position weights or downside controls provided, avoid interpreting mode",
+      "grok": "**Risk posture:** Mildly constructive but beta-heavy. Broad longs (SPY/VTI/QQQ) dominate; single-name flats limit idiosyncratic risk. Elevated QQQ/NVDA betas and MSFT/NVDA vols warrant caution\u2014portfolio leans market-directional with thin alpha.\n\n**Adjustments:**\n- SPY: +0.05\n- QQ",
+      "gemini": "The portfolio exhibits a defensive pivot, favoring broad market beta (VTI/SP",
+      "nvidia": "**Risk posture:** The portfolio leans heavily into high\u2011beta U.S. equity (SPY, QQQ, VTI) with modest diversification. Overall volatility (\u22480.16\u202f\u2013\u202f0.20) is modest, but the beta\u2011weighted exposure (\u22481.2) and the flat\u2011position tech names add tail\u2011risk, especially if market momentum s"
     }
   },
   "positions": [
@@ -1177,9 +1177,35 @@
       "cash": -65665.38323641755,
       "realized_pnl": 0.0,
       "premium": 0.0
+    },
+    {
+      "ts": "2026-07-28T01:04:43.141883+00:00",
+      "cycle": 51,
+      "equity": -29579.65345187254,
+      "cash": -65665.38323641755,
+      "realized_pnl": 0.0,
+      "premium": 0.0
     }
   ],
   "decisions": [
+    {
+      "ts": "2026-07-28T01:04:40.150756+00:00",
+      "kind": "wheel_wait",
+      "symbol": "VTI",
+      "reason": "no put contract found"
+    },
+    {
+      "ts": "2026-07-28T01:04:40.081371+00:00",
+      "kind": "ladder_update",
+      "symbol": "QQQ",
+      "reason": "px 682.21 peak 682.21 gain -1%"
+    },
+    {
+      "ts": "2026-07-28T01:04:40.076945+00:00",
+      "kind": "ladder_update",
+      "symbol": "SPY",
+      "reason": "px 737.43 peak 745.16 gain +0%"
+    },
     {
       "ts": "2026-07-27T23:47:07.664234+00:00",
       "kind": "wheel_wait",
@@ -1311,24 +1337,6 @@
       "kind": "wheel_wait",
       "symbol": "VTI",
       "reason": "no put contract found"
-    },
-    {
-      "ts": "2026-07-27T12:56:07.973173+00:00",
-      "kind": "ladder_update",
-      "symbol": "SPY",
-      "reason": "px 745.16 peak 745.16 gain +1%"
-    },
-    {
-      "ts": "2026-07-27T09:59:02.397451+00:00",
-      "kind": "wheel_wait",
-      "symbol": "VTI",
-      "reason": "no put contract found"
-    },
-    {
-      "ts": "2026-07-27T09:59:02.308708+00:00",
-      "kind": "ladder_update",
-      "symbol": "SPY",
-      "reason": "px 738.63 peak 738.63 gain +0%"
     }
   ],
   "agents_roster": [
