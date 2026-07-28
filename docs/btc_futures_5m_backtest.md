@@ -46,9 +46,10 @@ python -m backtest.run --csv path/to/BTCUSDT-5m.csv --split 0.6 --out report.md
 | `backtest/engine.py` | Bar-by-bar engine: pending orders, scaled exits, trails, time stops, fees, slippage, sizing, leverage cap, circuit breakers |
 | `backtest/strategies.py` | S1, S2, S3, S5, S6, S9 as pure decision engines |
 | `backtest/metrics.py` | Expectancy in R, hit rate, profit factor, Sharpe/Sortino, max DD, MAE, exit-reason and regime breakdowns |
-| `backtest/run.py` | CLI with walk-forward split, cost overrides, sensitivity flags |
+| `backtest/run.py` | CLI with walk-forward split, cost overrides, sensitivity flags, `--funnel` |
+| `backtest/funnel.py` | Signal-funnel recorder — per-gate pass rates (see below) |
 | `backtest/synth.py` | Synthetic bar generator — **harness self-test only** |
-| `tests/test_backtest.py` | 14 mechanical assertions (all passing) |
+| `tests/test_backtest.py` | 29 mechanical assertions (all passing) |
 
 ### Assumptions that bias results *against* the strategies
 
@@ -203,22 +204,69 @@ on real data: **most of this book is too selective to be measurable**, let alone
 profitable, and the specs need widening before the numbers mean anything.
 
 ```bash
-python -m tests.test_backtest     # 14 mechanical checks, all passing
+python -m tests.test_backtest     # 29 mechanical checks, all passing
 python -m backtest.run --synth 180
 ```
 
 ---
 
+## The funnel diagnostic
+
+Since trade count is the problem, the harness reports **where the signals die**:
+
+```bash
+python -m backtest.run --csv bars.csv --funnel
+```
+
+Every entry condition is a named gate. Each row counts evaluations that reached
+that gate *and* passed it, so the drop to the next row is exactly what the gate
+costs. This is the tool for deciding what to widen — it replaces guessing.
+
+```
+s1 funnel  (4 setups emitted)
+  gate                  reached    passed     pass%    killed
+  adx<20_and_flat       51,531     9,306     18.06%   42,225   <-- biggest drop
+  atr%<0.30              9,306     8,280     88.97%    1,026
+  anchor_age>=24         8,280     7,345     88.71%      935
+  vol>=1.5x              7,345       949     12.92%    6,396
+  2sigma_pierce_reject     949        40      4.21%      909
+  rsi2_extreme              40         4     10.00%       36
+```
+
+S1's problem is now precisely located: the killer is not any single gate but the
+product of three independent ones — `volume ≥ 1.5×` (12.9%), `2σ pierce` (4.2%)
+and `RSI(2) extreme` (10%). Four setups survive 51,531 bars, and the edge gate
+takes all four. Any fix has to relax that product, not the ADX filter that
+*looks* like the biggest drop.
+
+S6 is the same story in a different place: `Fib 38–62%` passes 16.4% and
+`EMA21–55 zone` a further 44.8%. As noted in finding 4 these are two definitions
+of the same thing, and requiring both costs ~93% of surviving setups.
+
+S6 emits 47 setups and trades 3; S9 emits 24 and trades 12. The gap in both cases
+is the §0 edge gate, which confirms finding 3 from the other direction.
+
+Notes on reading it: counts are per *evaluation*, not per bar — strategies that
+test a long branch and then a short branch increment shared gate names twice (this
+is why S9's `broke_out` row shows more `reached` than the row above it). That is
+the right denominator for "how selective is this condition".
+
+`tests/test_backtest.py` asserts the instrumentation is observation-only: every
+strategy produces byte-identical trades with and without `--funnel`.
+
 ## What to do when real data is available
 
-1. Run with `--split 0.6` and report in-sample and out-of-sample separately.
-2. Check trade counts first. Anything under ~300 out-of-sample trades is not
+1. Run `--funnel` **first**, before looking at any P&L. It tells you which gates
+   to widen; fixing frequency is a precondition for the statistics meaning
+   anything.
+2. Run with `--split 0.6` and report in-sample and out-of-sample separately.
+3. Check trade counts first. Anything under ~300 out-of-sample trades is not
    evidence; S1 and S6 will likely need their conjunctions loosened before they
    generate a sample at all — do that on in-sample data only.
-3. Run `--entry next_open` as a friction check. A strategy whose edge disappears
+4. Run `--entry next_open` as a friction check. A strategy whose edge disappears
    when market entries move from the signal close to the next open is measuring
    its own fill assumption, not an edge.
-4. Sweep `--taker` across the fee tiers actually available to the desk. Given
+5. Sweep `--taker` across the fee tiers actually available to the desk. Given
    finding 3, this matters more than any indicator parameter.
-5. Only then look at expectancy, and only regime-conditionally — the `by_regime`
+6. Only then look at expectancy, and only regime-conditionally — the `by_regime`
    block in the JSON output exists for this.

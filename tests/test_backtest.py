@@ -127,6 +127,22 @@ def main() -> int:
         _check(ok and np.isfinite(r["equity_final"]),
                f"{sid}: {len(r['trades'])} trades, finite equity")
 
+    print("\n── funnel instrumentation is observation-only ──")
+    for sid, cls in REGISTRY.items():
+        plain = Backtester(b2).run(cls())
+        instr = Backtester(b2, funnel=True).run(cls())
+        same = (len(plain["trades"]) == len(instr["trades"])
+                and all(abs(x.pnl - y.pnl) < 1e-9 and x.entry_ts == y.entry_ts
+                        for x, y in zip(plain["trades"], instr["trades"])))
+        _check(same, f"{sid}: --funnel does not change any trade")
+    f = Backtester(b2, funnel=True).run(REGISTRY["s9"]())["funnel"]
+    rows = f.rows()
+    _check(bool(rows) and all(r["reached"] >= r["passed"] for r in rows),
+           "funnel rows are internally consistent (passed <= reached)")
+    _check(all(rows[i]["reached"] >= rows[i + 1]["reached"]
+               for i in range(len(rows) - 1) if rows[i + 1]["reached"] <= rows[i]["passed"]),
+           "gate ordering is monotone where the funnel is sequential")
+
     print("\n── data round-trip ──")
     import tempfile, os
     with tempfile.TemporaryDirectory() as d:

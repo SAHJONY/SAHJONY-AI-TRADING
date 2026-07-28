@@ -117,6 +117,18 @@ class Strategy:
     id = "base"
     name = "base"
     warmup = 300
+    funnel = None            # set by Backtester(..., funnel=True)
+
+    def _g(self, name: str, cond) -> bool:
+        """Route a signal condition through the funnel recorder when attached."""
+        if self.funnel is None:
+            return bool(cond)
+        return self.funnel.gate(name, cond)
+
+    def _emit(self, setup):
+        if self.funnel is not None and setup is not None:
+            self.funnel.emitted()
+        return setup
 
     def prepare(self, bars: Bars) -> Dict[str, np.ndarray]:
         return {}
@@ -133,10 +145,12 @@ class Strategy:
 # ── engine ────────────────────────────────────────────────────────────────────
 class Backtester:
     def __init__(self, bars: Bars, costs: Optional[CostModel] = None,
-                 risk: Optional[RiskConfig] = None, entry_mode: str = "spec"):
+                 risk: Optional[RiskConfig] = None, entry_mode: str = "spec",
+                 funnel: bool = False):
         self.bars = bars
         self.costs = costs or CostModel()
         self.risk = risk or RiskConfig()
+        self.funnel = funnel
         # "spec" honours each strategy's stated entry; "next_open" forces every
         # market entry to the next bar's open (a friction-sensitivity run).
         self.entry_mode = entry_mode
@@ -159,6 +173,9 @@ class Backtester:
         b = self.bars
         n = len(b)
         ind = strat.prepare(b)
+        if self.funnel:
+            from backtest.funnel import Funnel
+            strat.funnel = Funnel(strat.id)
         atr = ind.get("atr")
         if atr is None:
             raise ValueError(f"{strat.id}: prepare() must expose 'atr'")
@@ -369,6 +386,7 @@ class Backtester:
             eq_curve[n - 1] = equity
 
         return {"strategy": strat.id, "name": strat.name, "trades": trades,
+                "funnel": strat.funnel,
                 "equity": eq_curve, "equity_final": equity,
                 "skipped_leverage": skipped_leverage, "skipped_halt": skipped_halt,
                 "skipped_edge": skipped_edge}

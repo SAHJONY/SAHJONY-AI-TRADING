@@ -53,20 +53,25 @@ def _load(args) -> Bars:
 
 
 def run_all(bars: Bars, ids: List[str], costs: CostModel, risk: RiskConfig,
-            entry_mode: str) -> List[Dict]:
-    bt = Backtester(bars, costs, risk, entry_mode=entry_mode)
-    rows = []
+            entry_mode: str, funnel: bool = False):
+    bt = Backtester(bars, costs, risk, entry_mode=entry_mode, funnel=funnel)
+    rows, funnels = [], []
     for sid in ids:
         cls = REGISTRY.get(sid)
         if cls is None:
             print(f"  ! unknown strategy '{sid}' (have: {', '.join(REGISTRY)})")
             continue
         res = bt.run(cls())
-        rows.append(metrics.summarize(res, bars, risk.equity0))
-    return rows
+        row = metrics.summarize(res, bars, risk.equity0)
+        if res.get("funnel") is not None:
+            row["funnel"] = res["funnel"].rows()
+            funnels.append(res["funnel"])
+        rows.append(row)
+    return rows, funnels
 
 
-def _report(bars: Bars, rows: List[Dict], bh: Dict, args, label: str) -> str:
+def _report(bars: Bars, rows: List[Dict], bh: Dict, args, label: str,
+            funnels=()) -> str:
     lines = [f"# Backtest — {label}", "",
              f"- **Data:** {bars.describe()}",
              f"- **Entry mode:** {args.entry}",
@@ -81,6 +86,13 @@ def _report(bars: Bars, rows: List[Dict], bh: Dict, args, label: str) -> str:
     for r in rows:
         lines += [f"### {r['strategy'].upper()} — {r['name']}", "", "```json",
                   json.dumps(r, indent=2), "```", ""]
+    if funnels:
+        lines += ["## Signal funnels", "",
+                  "Each row is evaluations that reached that gate *and* passed it; "
+                  "the drop to the next row is what the gate costs.", "", "```"]
+        for f in funnels:
+            lines += [f.report(), ""]
+        lines += ["```", ""]
     return "\n".join(lines)
 
 
@@ -114,6 +126,9 @@ def main(argv=None) -> int:
                         "multiple. Lower it only to measure sensitivity.")
     p.add_argument("--funding-bps", type=float, default=0.0,
                    help="perp funding per 8h, charged pro-rata on hold time")
+    p.add_argument("--funnel", action="store_true",
+                   help="report, per strategy, how many evaluations each entry "
+                        "condition passed — shows which gate kills the signals")
     p.add_argument("--out", help="write a markdown report here")
     p.add_argument("--json", dest="json_out", help="write raw stats JSON here")
     args = p.parse_args(argv)
@@ -145,14 +160,19 @@ def main(argv=None) -> int:
 
     all_rows, chunks = {}, []
     for label, seg in segments:
-        rows = run_all(seg, ids, costs, risk, args.entry)
+        rows, funnels = run_all(seg, ids, costs, risk, args.entry, args.funnel)
         bh = metrics.buy_hold(seg)
         all_rows[label] = rows
         print(f"\n=== {label} — {seg.describe()}")
         print(metrics.format_table(rows))
         print(f"buy&hold: {bh['return_pct']}% ret, {bh['max_dd_pct']}% DD, "
               f"Sharpe {bh['sharpe']}")
-        chunks.append(_report(seg, rows, bh, args, label))
+        if funnels:
+            print("\n-- signal funnels --")
+            for f in funnels:
+                print(f.report())
+                print()
+        chunks.append(_report(seg, rows, bh, args, label, funnels))
 
     if args.out:
         os.makedirs(os.path.dirname(args.out) or ".", exist_ok=True)

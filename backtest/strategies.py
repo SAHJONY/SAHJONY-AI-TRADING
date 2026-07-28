@@ -50,37 +50,45 @@ class S1_VWAPBandFade(Strategy):
 
     def signal(self, t, b, ind) -> Optional[Setup]:
         adx, ap = ind["adx"][t], ind["atr_pct"][t]
-        if not np.isfinite(adx) or not np.isfinite(ap):
+        if not self._g("indicators_ready", np.isfinite(adx) and np.isfinite(ap)):
             return None
-        if adx >= 20 or adx > ind["adx"][t - 3]:            # trend suppressor
+        if not self._g("adx<20_and_flat", adx < 20 and adx <= ind["adx"][t - 3]):
             return None
-        if ap >= 0.0030:                                     # LOW/NORMAL only
+        if not self._g("atr%<0.30", ap < 0.0030):             # LOW/NORMAL only
             return None
-        if ind["anchor_age"][t] < 24:                        # ≥2h since re-anchor
+        if not self._g("anchor_age>=24", ind["anchor_age"][t] >= 24):
             return None
-        if b.volume[t] < 1.5 * ind["vsma"][t]:
+        if not self._g("vol>=1.5x", b.volume[t] >= 1.5 * ind["vsma"][t]):
             return None
         vw, sg, a = ind["vwap"][t], ind["sigma"][t], ind["atr"][t]
-        if not np.isfinite(sg) or sg <= 0:
+        if not self._g("sigma>0", np.isfinite(sg) and sg > 0):
             return None
         lo2, hi2 = vw - 2.0 * sg, vw + 2.0 * sg
         r2 = ind["rsi2"]
+        pierce_lo = b.low[t] <= lo2 < b.close[t]
+        pierce_hi = b.high[t] >= hi2 > b.close[t]
+        if not self._g("2sigma_pierce_reject", pierce_lo or pierce_hi):
+            return None
+        long_ok = pierce_lo and min(r2[t], r2[t - 1]) < 5
+        short_ok = pierce_hi and max(r2[t], r2[t - 1]) > 95
+        if not self._g("rsi2_extreme", long_ok or short_ok):
+            return None
 
-        if b.low[t] <= lo2 < b.close[t] and min(r2[t], r2[t - 1]) < 5:
+        if long_ok:
             entry = lo2
             stop = min(vw - 2.5 * sg, entry - 1.2 * a)
             stop = max(stop, entry * (1 - 0.0055))           # cap the stop at 55 bps
-            return Setup(side=1, entry_kind="limit", entry_price=entry, valid_bars=2,
-                         stop=stop, targets=[(vw, 0.6), (vw + sg, 0.4)],
-                         time_stop_bars=12, tag="long")
-        if b.high[t] >= hi2 > b.close[t] and max(r2[t], r2[t - 1]) > 95:
-            entry = hi2
-            stop = max(vw + 2.5 * sg, entry + 1.2 * a)
-            stop = min(stop, entry * (1 + 0.0055))
-            return Setup(side=-1, entry_kind="limit", entry_price=entry, valid_bars=2,
-                         stop=stop, targets=[(vw, 0.6), (vw - sg, 0.4)],
-                         time_stop_bars=12, tag="short")
-        return None
+            return self._emit(Setup(
+                side=1, entry_kind="limit", entry_price=entry, valid_bars=2,
+                stop=stop, targets=[(vw, 0.6), (vw + sg, 0.4)],
+                time_stop_bars=12, tag="long"))
+        entry = hi2
+        stop = max(vw + 2.5 * sg, entry + 1.2 * a)
+        stop = min(stop, entry * (1 + 0.0055))
+        return self._emit(Setup(
+            side=-1, entry_kind="limit", entry_price=entry, valid_bars=2,
+            stop=stop, targets=[(vw, 0.6), (vw - sg, 0.4)],
+            time_stop_bars=12, tag="short"))
 
     def manage(self, t, b, ind, pos: Position) -> Optional[str]:
         return "adx_trend" if ind["adx"][t] > 25 else None
@@ -123,41 +131,54 @@ class S2_OpeningRange(Strategy):
     def signal(self, t, b, ind) -> Optional[Setup]:
         s = int(ind["start"][t])
         hi, lo, a_pre = ind["or_hi"][t], ind["or_lo"][t], ind["atr_pre"][t]
-        if s < 0 or not np.isfinite(hi) or not np.isfinite(a_pre) or a_pre <= 0:
+        if not self._g("OR_complete", s >= 0 and np.isfinite(hi)
+                       and np.isfinite(a_pre) and a_pre > 0):
             return None
-        if t - s > self.MAX_BARS or s in self._traded:
+        if not self._g("in_session_window", t - s <= self.MAX_BARS
+                       and s not in self._traded):
             return None
-        if a_pre / b.close[s] < 0.0015:              # dead-tape sessions are skipped
+        if not self._g("session_atr%>=0.15", a_pre / b.close[s] >= 0.0015):
             return None
         width = hi - lo
-        if not (0.4 * a_pre <= width <= 2.5 * a_pre):
+        if not self._g("OR_width_0.4-2.5ATR", 0.4 * a_pre <= width <= 2.5 * a_pre):
             return None
-        if b.volume[t] < 1.3 * ind["vsma"][t]:
+        if not self._g("vol>=1.3x", b.volume[t] >= 1.3 * ind["vsma"][t]):
             return None
         a, e50 = ind["atr"][t], ind["ema50"][t]
         buf = 0.05 * a
         f = _upper_frac(b.open[t], b.high[t], b.low[t], b.close[t])
+        up, dn = b.close[t] > hi, b.close[t] < lo
+        if not self._g("close_beyond_OR", up or dn):
+            return None
+        if not self._g("close_in_outer_40%", (up and f >= 0.6) or (dn and f <= 0.4)):
+            return None
+        if not self._g("ema50_agrees",
+                       (up and f >= 0.6 and b.close[t] > e50)
+                       or (dn and f <= 0.4 and b.close[t] < e50)):
+            return None
 
         if b.close[t] > hi and f >= 0.6 and b.close[t] > e50:
             self._traded.add(s)
             entry = hi + buf
             stop = (lo + hi) / 2 if width < 1.2 * a else entry - 1.0 * a
-            return Setup(side=1, entry_kind="stop", entry_price=entry, valid_bars=2,
-                         stop=stop,
-                         targets=[(entry + width, 0.5), (entry + 2 * width, 0.3),
-                                  (entry + 6 * width, 0.2)],
-                         trail_atr_mult=3.0, trail_after_leg=2,
-                         time_stop_bars=self.MAX_BARS, tag="long")
+            return self._emit(Setup(
+                side=1, entry_kind="stop", entry_price=entry, valid_bars=2,
+                stop=stop,
+                targets=[(entry + width, 0.5), (entry + 2 * width, 0.3),
+                         (entry + 6 * width, 0.2)],
+                trail_atr_mult=3.0, trail_after_leg=2,
+                time_stop_bars=self.MAX_BARS, tag="long"))
         if b.close[t] < lo and f <= 0.4 and b.close[t] < e50:
             self._traded.add(s)
             entry = lo - buf
             stop = (lo + hi) / 2 if width < 1.2 * a else entry + 1.0 * a
-            return Setup(side=-1, entry_kind="stop", entry_price=entry, valid_bars=2,
-                         stop=stop,
-                         targets=[(entry - width, 0.5), (entry - 2 * width, 0.3),
-                                  (entry - 6 * width, 0.2)],
-                         trail_atr_mult=3.0, trail_after_leg=2,
-                         time_stop_bars=self.MAX_BARS, tag="short")
+            return self._emit(Setup(
+                side=-1, entry_kind="stop", entry_price=entry, valid_bars=2,
+                stop=stop,
+                targets=[(entry - width, 0.5), (entry - 2 * width, 0.3),
+                         (entry - 6 * width, 0.2)],
+                trail_atr_mult=3.0, trail_after_leg=2,
+                time_stop_bars=self.MAX_BARS, tag="short"))
         return None
 
 
@@ -183,40 +204,44 @@ class S3_SqueezeBreakout(Strategy):
 
     def signal(self, t, b, ind) -> Optional[Setup]:
         sq, ap = ind["sq"], ind["atr_pct"][t]
-        if not np.isfinite(ap) or ap >= 0.0060:      # no compression to trade in EXTREME
+        if not self._g("not_extreme_vol", np.isfinite(ap) and ap < 0.0060):
             return None
-        if sq[t] or not sq[t - 1]:                   # must fire on this bar
+        if not self._g("squeeze_fires", (not sq[t]) and sq[t - 1]):
             return None
         run = 0
         while run < 60 and sq[t - 1 - run]:
             run += 1
-        if run < 6:
+        if not self._g("squeeze_run>=6", run >= 6):
             return None
         bwp = ind["bw_pct"][t - 1]
-        if not np.isfinite(bwp) or bwp > 0.20:
+        if not self._g("bandwidth_bottom20%", np.isfinite(bwp) and bwp <= 0.20):
             return None
-        if b.volume[t] < 1.4 * ind["vsma"][t]:
+        if not self._g("vol>=1.4x", b.volume[t] >= 1.4 * ind["vsma"][t]):
             return None
         i0 = t - run
         sq_hi, sq_lo = b.high[i0:t].max(), b.low[i0:t].min()
         rng = sq_hi - sq_lo
-        if rng <= 0:
+        if not self._g("range>0", rng > 0):
             return None
         mom, a, c = ind["mom"], ind["atr"][t], b.close[t]
+        up = mom[t] > 0 and mom[t] > mom[t - 1] and c > ind["kcu"][t] and c > sq_hi
+        dn = mom[t] < 0 and mom[t] < mom[t - 1] and c < ind["kcl"][t] and c < sq_lo
+        if not self._g("momentum+KC+range_break", up or dn):
+            return None
 
-        if mom[t] > 0 and mom[t] > mom[t - 1] and c > ind["kcu"][t] and c > sq_hi:
+        if up:
             stop = max(sq_lo, c - 1.5 * a)
-            return Setup(side=1, entry_kind="close", stop=stop,
-                         targets=[(c + 1.5 * rng, 0.5), (c + 3.0 * rng, 0.3),
-                                  (c + 12.0 * rng, 0.2)],
-                         tag="long", meta={"sq_hi": sq_hi, "sq_lo": sq_lo})
-        if mom[t] < 0 and mom[t] < mom[t - 1] and c < ind["kcl"][t] and c < sq_lo:
-            stop = min(sq_hi, c + 1.5 * a)
-            return Setup(side=-1, entry_kind="close", stop=stop,
-                         targets=[(c - 1.5 * rng, 0.5), (c - 3.0 * rng, 0.3),
-                                  (c - 12.0 * rng, 0.2)],
-                         tag="short", meta={"sq_hi": sq_hi, "sq_lo": sq_lo})
-        return None
+            return self._emit(Setup(
+                side=1, entry_kind="close", stop=stop,
+                targets=[(c + 1.5 * rng, 0.5), (c + 3.0 * rng, 0.3),
+                         (c + 12.0 * rng, 0.2)],
+                tag="long", meta={"sq_hi": sq_hi, "sq_lo": sq_lo}))
+        stop = min(sq_hi, c + 1.5 * a)
+        return self._emit(Setup(
+            side=-1, entry_kind="close", stop=stop,
+            targets=[(c - 1.5 * rng, 0.5), (c - 3.0 * rng, 0.3),
+                     (c - 12.0 * rng, 0.2)],
+            tag="short", meta={"sq_hi": sq_hi, "sq_lo": sq_lo}))
 
     def manage(self, t, b, ind, pos: Position) -> Optional[str]:
         m = pos.setup.meta
@@ -248,44 +273,52 @@ class S5_SweepReclaim(Strategy):
 
     def signal(self, t, b, ind) -> Optional[Setup]:
         a = ind["atr"][t]
-        if not np.isfinite(a) or a <= 0:
+        if not self._g("atr_ready", np.isfinite(a) and a > 0):
             return None
         w = self.SWEEP_WINDOW
         rng_frac = (b.high[t] - b.low[t]) / a
-        if rng_frac < 0.8:                       # reclaim bar must have conviction
+        if not self._g("reclaim_bar>=0.8ATR", rng_frac >= 0.8):
             return None
         f = _upper_frac(b.open[t], b.high[t], b.low[t], b.close[t])
         c = b.close[t]
 
         lvl_lo, i_lo = ind["fl"][t], int(ind["fl_idx"][t])
-        if np.isfinite(lvl_lo) and i_lo >= 0 and t - i_lo >= self.MIN_LEVEL_AGE:
+        if self._g("level_age>=12", np.isfinite(lvl_lo) and i_lo >= 0
+                   and t - i_lo >= self.MIN_LEVEL_AGE):
             sweep_lo = b.low[t - w + 1:t + 1].min()
-            if sweep_lo <= lvl_lo - 0.15 * a and c > lvl_lo and f >= 0.667:
+            if (self._g("swept_by>=0.15ATR", sweep_lo <= lvl_lo - 0.15 * a)
+                    and self._g("closed_back_inside", c > lvl_lo)
+                    and self._g("close_in_outer_third", f >= 0.667)):
                 stop = sweep_lo - 0.25 * a
-                if c - stop <= 1.5 * a:          # else the wick is too big to size
+                if self._g("stop<=1.5ATR", c - stop <= 1.5 * a):
                     tgt_hi = ind["fh"][t]
                     if not np.isfinite(tgt_hi) or tgt_hi <= c:
                         tgt_hi = c + 3.0 * (c - stop)
-                    return Setup(side=1, entry_kind="close", stop=stop,
-                                 targets=[((c + tgt_hi) / 2, 0.4), (tgt_hi, 0.4),
-                                          (c + 6 * (c - stop), 0.2)],
-                                 trail_atr_mult=2.0, trail_after_leg=2,
-                                 tag="long", meta={"sweep": sweep_lo})
+                    return self._emit(Setup(
+                        side=1, entry_kind="close", stop=stop,
+                        targets=[((c + tgt_hi) / 2, 0.4), (tgt_hi, 0.4),
+                                 (c + 6 * (c - stop), 0.2)],
+                        trail_atr_mult=2.0, trail_after_leg=2,
+                        tag="long", meta={"sweep": sweep_lo}))
 
         lvl_hi, i_hi = ind["fh"][t], int(ind["fh_idx"][t])
-        if np.isfinite(lvl_hi) and i_hi >= 0 and t - i_hi >= self.MIN_LEVEL_AGE:
+        if self._g("level_age>=12", np.isfinite(lvl_hi) and i_hi >= 0
+                   and t - i_hi >= self.MIN_LEVEL_AGE):
             sweep_hi = b.high[t - w + 1:t + 1].max()
-            if sweep_hi >= lvl_hi + 0.15 * a and c < lvl_hi and f <= 0.333:
+            if (self._g("swept_by>=0.15ATR", sweep_hi >= lvl_hi + 0.15 * a)
+                    and self._g("closed_back_inside", c < lvl_hi)
+                    and self._g("close_in_outer_third", f <= 0.333)):
                 stop = sweep_hi + 0.25 * a
-                if stop - c <= 1.5 * a:
+                if self._g("stop<=1.5ATR", stop - c <= 1.5 * a):
                     tgt_lo = ind["fl"][t]
                     if not np.isfinite(tgt_lo) or tgt_lo >= c:
                         tgt_lo = c - 3.0 * (stop - c)
-                    return Setup(side=-1, entry_kind="close", stop=stop,
-                                 targets=[((c + tgt_lo) / 2, 0.4), (tgt_lo, 0.4),
-                                          (c - 6 * (stop - c), 0.2)],
-                                 trail_atr_mult=2.0, trail_after_leg=2,
-                                 tag="short", meta={"sweep": sweep_hi})
+                    return self._emit(Setup(
+                        side=-1, entry_kind="close", stop=stop,
+                        targets=[((c + tgt_lo) / 2, 0.4), (tgt_lo, 0.4),
+                                 (c - 6 * (stop - c), 0.2)],
+                        trail_atr_mult=2.0, trail_after_leg=2,
+                        tag="short", meta={"sweep": sweep_hi}))
         return None
 
     def manage(self, t, b, ind, pos: Position) -> Optional[str]:
@@ -325,11 +358,12 @@ class S6_RibbonPullback(Strategy):
     def signal(self, t, b, ind) -> Optional[Setup]:
         e8, e21, e55, e200 = (ind["ema8"], ind["ema21"], ind["ema55"], ind["ema200"])
         a, adx, ap = ind["atr"][t], ind["adx"][t], ind["atr_pct"][t]
-        if not all(np.isfinite(x[t]) for x in (e8, e21, e55, e200)):
+        if not self._g("emas_ready", all(np.isfinite(x[t]) for x in (e8, e21, e55, e200))):
             return None
-        if not np.isfinite(adx) or adx <= 22 or adx <= ind["adx"][t - 3]:
+        if not self._g("adx>22_rising", np.isfinite(adx) and adx > 22
+                       and adx > ind["adx"][t - 3]):
             return None
-        if not np.isfinite(ap) or ap >= 0.0060:
+        if not self._g("not_extreme_vol", np.isfinite(ap) and ap < 0.0060):
             return None
         c = b.close[t]
         f = _upper_frac(b.open[t], b.high[t], b.low[t], b.close[t])
@@ -338,77 +372,85 @@ class S6_RibbonPullback(Strategy):
               and e55[t] > e55[t - 5] and c > e200[t])
         dn = (e8[t] < e21[t] < e55[t] and e8[t] < e8[t - 5] and e21[t] < e21[t - 5]
               and e55[t] < e55[t - 5] and c < e200[t])
+        if not self._g("ribbon_stacked+ema200", up or dn):
+            return None
 
         if up:
             w = b.high[t - 10:t + 1]
             k = int(w.argmax())
             imp_hi = float(w[k])
             imp_i = t - 10 + k
-            if imp_hi < b.high[t - 30:t - 10].max():        # must be a fresh leg
+            if not self._g("fresh_20bar_extreme", imp_hi >= b.high[t - 30:t - 10].max()):
                 return None
             leg_lo = float(b.low[max(0, imp_i - 30):imp_i + 1].min())
             leg = imp_hi - leg_lo
             pull_bars = t - imp_i
-            if leg <= 0 or not (1 <= pull_bars <= 8):
+            if not self._g("pullback<=8bars", leg > 0 and 1 <= pull_bars <= 8):
                 return None
             pull_lo = float(b.low[imp_i:t + 1].min())
             retr = (imp_hi - pull_lo) / leg
-            if not (0.382 <= retr <= 0.618):
+            if not self._g("fib_38-62%", 0.382 <= retr <= 0.618):
                 return None
-            if not (e55[t] - 0.3 * a <= pull_lo <= e21[t]):
+            if not self._g("in_ema21-55_zone", e55[t] - 0.3 * a <= pull_lo <= e21[t]):
                 return None
             v_imp = b.volume[max(0, imp_i - 5):imp_i + 1].mean()
-            if b.volume[imp_i:t + 1].mean() >= 0.8 * v_imp:
+            if not self._g("low_volume_pullback",
+                           b.volume[imp_i:t + 1].mean() < 0.8 * v_imp):
                 return None
             # spec trigger: a close back above EMA8 after price pulled into the
             # ribbon. Requiring the cross on this exact bar was over-strict —
             # it cut 60 valid setups to 3 in validation.
-            if not (c > e8[t] and pull_lo <= e8[t] and f >= 0.5):
+            if not self._g("close_back_above_ema8",
+                           c > e8[t] and pull_lo <= e8[t] and f >= 0.5):
                 return None
-            if not self._leg_ok(imp_hi):
+            if not self._g("leg_budget<=2", self._leg_ok(imp_hi)):
                 return None
             stop = max(min(e55[t] - 0.5 * a, pull_lo), c - 1.5 * a)
-            if c - stop <= 0:
+            if not self._g("stop_valid", c - stop > 0):
                 return None
             self._leg_count += 1
-            return Setup(side=1, entry_kind="close", stop=stop,
-                         targets=[(imp_hi, 0.4), (pull_lo + 1.618 * leg, 0.3),
-                                  (c + 10 * (c - stop), 0.3)],
-                         trail_atr_mult=2.5, trail_after_leg=2, tag="long")
+            return self._emit(Setup(
+                side=1, entry_kind="close", stop=stop,
+                targets=[(imp_hi, 0.4), (pull_lo + 1.618 * leg, 0.3),
+                         (c + 10 * (c - stop), 0.3)],
+                trail_atr_mult=2.5, trail_after_leg=2, tag="long"))
 
         if dn:
             w = b.low[t - 10:t + 1]
             k = int(w.argmin())
             imp_lo = float(w[k])
             imp_i = t - 10 + k
-            if imp_lo > b.low[t - 30:t - 10].min():
+            if not self._g("fresh_20bar_extreme", imp_lo <= b.low[t - 30:t - 10].min()):
                 return None
             leg_hi = float(b.high[max(0, imp_i - 30):imp_i + 1].max())
             leg = leg_hi - imp_lo
             pull_bars = t - imp_i
-            if leg <= 0 or not (1 <= pull_bars <= 8):
+            if not self._g("pullback<=8bars", leg > 0 and 1 <= pull_bars <= 8):
                 return None
             pull_hi = float(b.high[imp_i:t + 1].max())
             retr = (pull_hi - imp_lo) / leg
-            if not (0.382 <= retr <= 0.618):
+            if not self._g("fib_38-62%", 0.382 <= retr <= 0.618):
                 return None
-            if not (e21[t] <= pull_hi <= e55[t] + 0.3 * a):
+            if not self._g("in_ema21-55_zone", e21[t] <= pull_hi <= e55[t] + 0.3 * a):
                 return None
             v_imp = b.volume[max(0, imp_i - 5):imp_i + 1].mean()
-            if b.volume[imp_i:t + 1].mean() >= 0.8 * v_imp:
+            if not self._g("low_volume_pullback",
+                           b.volume[imp_i:t + 1].mean() < 0.8 * v_imp):
                 return None
-            if not (c < e8[t] and pull_hi >= e8[t] and f <= 0.5):
+            if not self._g("close_back_above_ema8",
+                           c < e8[t] and pull_hi >= e8[t] and f <= 0.5):
                 return None
-            if not self._leg_ok(imp_lo):
+            if not self._g("leg_budget<=2", self._leg_ok(imp_lo)):
                 return None
             stop = min(max(e55[t] + 0.5 * a, pull_hi), c + 1.5 * a)
-            if stop - c <= 0:
+            if not self._g("stop_valid", stop - c > 0):
                 return None
             self._leg_count += 1
-            return Setup(side=-1, entry_kind="close", stop=stop,
-                         targets=[(imp_lo, 0.4), (pull_hi - 1.618 * leg, 0.3),
-                                  (c - 10 * (stop - c), 0.3)],
-                         trail_atr_mult=2.5, trail_after_leg=2, tag="short")
+            return self._emit(Setup(
+                side=-1, entry_kind="close", stop=stop,
+                targets=[(imp_lo, 0.4), (pull_hi - 1.618 * leg, 0.3),
+                         (c - 10 * (stop - c), 0.3)],
+                trail_atr_mult=2.5, trail_after_leg=2, tag="short"))
         return None
 
     def manage(self, t, b, ind, pos: Position) -> Optional[str]:
@@ -449,9 +491,12 @@ class S9_FailedBreakFade(Strategy):
         a, ap = ind["atr"][t], ind["atr_pct"][t]
         hi, lo = ind["dc_hi"][t], ind["dc_lo"][t]
         bwp = ind["bw_pct"][t]
-        if not all(np.isfinite(x) for x in (a, ap, hi, lo, bwp)) or a <= 0:
+        if not self._g("indicators_ready",
+                       all(np.isfinite(x) for x in (a, ap, hi, lo, bwp)) and a > 0):
             return None
-        if ap >= 0.0030 or bwp <= 0.30:      # ranging tape only, and not a squeeze
+        if not self._g("atr%<0.30", ap < 0.0030):        # ranging tape only
+            return None
+        if not self._g("bandwidth>30%", bwp > 0.30):     # and not a squeeze (S3's job)
             return None
         width = hi - lo
         # NB: the playbook's original "0.5-3.0 x ATR" window is arithmetically
@@ -460,7 +505,7 @@ class S9_FailedBreakFade(Strategy):
         # 6.4x ATR by construction — the old window matched 0.8% of bars. This
         # band keeps the intent (a normal-width range: not a squeeze, not an
         # already-expanded move) at the right scale.
-        if not (3.0 * a <= width <= 8.0 * a):
+        if not self._g("range_width_3-8ATR", 3.0 * a <= width <= 8.0 * a):
             return None
         c, w = b.close[t], self.WINDOW
         r2, vs = ind["rsi2"], ind["vsma"]
@@ -483,29 +528,39 @@ class S9_FailedBreakFade(Strategy):
 
         # failed downside break -> fade long
         brk = [i for i in range(t - w + 1, t + 1) if b.low[i] < lo]
-        if brk and c > lo and intact(brk[0]):
+        if (self._g("broke_out", bool(brk))
+                and self._g("closed_back_inside", c > lo)
+                and self._g("range_intact_20bars", intact(brk[0]))):
             i0 = brk[0]
-            if b.volume[i0] < 1.2 * vs[i0] and min(r2[i] for i in brk) < 10:
+            if (self._g("break_vol<1.2x", b.volume[i0] < 1.2 * vs[i0])
+                    and self._g("rsi2_extreme", min(r2[i] for i in brk) < 10)):
                 ext = float(min(b.low[i] for i in brk))
                 stop = max(ext - 0.35 * width, c - 1.2 * a)
-                if c - stop > 0 and self._budget(lo, 1):
-                    return Setup(side=1, entry_kind="close", stop=stop,
-                                 targets=[((hi + lo) / 2, 0.5), (hi, 0.5)],
-                                 time_stop_bars=15, tag="long",
-                                 meta={"lo": lo, "hi": hi, "side_lvl": lo})
+                if self._g("stop_valid", c - stop > 0) and self._g(
+                        "fade_budget<=2", self._budget(lo, 1)):
+                    return self._emit(Setup(
+                        side=1, entry_kind="close", stop=stop,
+                        targets=[((hi + lo) / 2, 0.5), (hi, 0.5)],
+                        time_stop_bars=15, tag="long",
+                        meta={"lo": lo, "hi": hi, "side_lvl": lo}))
 
         # failed upside break -> fade short
         brk = [i for i in range(t - w + 1, t + 1) if b.high[i] > hi]
-        if brk and c < hi and intact(brk[0]):
+        if (self._g("broke_out", bool(brk))
+                and self._g("closed_back_inside", c < hi)
+                and self._g("range_intact_20bars", intact(brk[0]))):
             i0 = brk[0]
-            if b.volume[i0] < 1.2 * vs[i0] and max(r2[i] for i in brk) > 90:
+            if (self._g("break_vol<1.2x", b.volume[i0] < 1.2 * vs[i0])
+                    and self._g("rsi2_extreme", max(r2[i] for i in brk) > 90)):
                 ext = float(max(b.high[i] for i in brk))
                 stop = min(ext + 0.35 * width, c + 1.2 * a)
-                if stop - c > 0 and self._budget(hi, -1):
-                    return Setup(side=-1, entry_kind="close", stop=stop,
-                                 targets=[((hi + lo) / 2, 0.5), (lo, 0.5)],
-                                 time_stop_bars=15, tag="short",
-                                 meta={"lo": lo, "hi": hi, "side_lvl": hi})
+                if self._g("stop_valid", stop - c > 0) and self._g(
+                        "fade_budget<=2", self._budget(hi, -1)):
+                    return self._emit(Setup(
+                        side=-1, entry_kind="close", stop=stop,
+                        targets=[((hi + lo) / 2, 0.5), (lo, 0.5)],
+                        time_stop_bars=15, tag="short",
+                        meta={"lo": lo, "hi": hi, "side_lvl": hi}))
         return None
 
     def manage(self, t, b, ind, pos: Position) -> Optional[str]:
