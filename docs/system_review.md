@@ -202,11 +202,31 @@ With it, `Quote.venue_age_s` measures staleness from the exchange print and
 while `age_s` reads under a second — the exact case fetch-time alone misses. A
 failing extension falls back rather than breaking pricing, which is also tested.
 
+### Feed health is acted on, not just counted
+
+Telemetry nothing reads is bookkeeping. The guard's verdict now reaches both
+consumers:
+
+- **Hermes** (`review(..., feed=...)`) folds it into the per-cycle data-integrity
+  review. A quote the guard **rejected** is a *hard* issue, so the symbol is
+  quarantined — no new risk, while exits still flow, which is exactly the
+  existing quarantine semantics. A merely **suspect** feed (frozen, or a stale
+  venue print) is a soft warning naming the age. The desk therefore stops
+  *opening* positions on a symbol whose feed just failed, without ever trapping
+  itself in one.
+- **The dashboard** gets a `feed` block in `status.json`: accepted/rejected
+  counts, reject rate, whether the venue reports timestamps, and per-symbol
+  frozen / stale-print flags.
+
+Both paths are fault-isolated and tested for it — a guard that raises cannot take
+down the review that exists to catch problems, and a failing feed cannot break
+the report.
+
 ## Verify
 
 ```bash
 python -m py_compile $(git ls-files '*.py')   # syntax gate
-python -m tests.test_optimizations            # 71 equivalence/invariant checks
+python -m tests.test_optimizations            # 78 equivalence/invariant checks
 python -m tests.test_dry_run                  # 8 offline cycles
 python main.py --cycles 8                     # regenerates public/status.json
 ```

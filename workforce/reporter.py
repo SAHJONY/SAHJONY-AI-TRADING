@@ -187,6 +187,26 @@ def _hermes_block(firm, db, cycle_result: Dict[str, Any]) -> Dict[str, Any]:
     return out
 
 
+def _feed_block(firm) -> Dict[str, Any]:
+    """Market-data health for the dashboard — rejected ticks, frozen feeds and
+    stale venue prints, so a degrading feed is visible before it costs money.
+    Fault-isolated: telemetry must never be the thing that breaks the report."""
+    try:
+        feed = getattr(firm, "feed", None)
+        if feed is None:
+            return {"available": False}
+        h = feed.health()
+        return {
+            "available": True,
+            "venue_timestamps": bool(getattr(feed, "venue_timestamps", False)),
+            "accepted": h.total_accepted, "rejected": h.total_rejected,
+            "reject_rate": round(h.reject_rate, 4),
+            "symbols": h.symbols,
+        }
+    except Exception as exc:
+        return {"available": False, "error": str(exc)[:120]}
+
+
 def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[str, Any]) -> Dict[str, Any]:
     db = firm.db
     client = firm.client
@@ -299,6 +319,7 @@ def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[st
         "workforce": [{"role": n, "mandate": m} for n, m in WORKFORCE],
         "executed_this_cycle": cycle_result.get("executed", []),
         "env_catalog": _env_catalog(),
+        "feed": _feed_block(firm),
     }
 
 

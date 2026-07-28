@@ -523,7 +523,7 @@ class Firm:
         # quarantined: no NEW risk, exits still flow) and grading the council's realized
         # accuracy into a small self-improvement tilt. Fault-isolated like everything else.
         try:
-            hermes = self.hermes.review(research, state)
+            hermes = self.hermes.review(research, state, feed=self.feed)
             if hermes.quarantined:
                 log.warning("HERMES quarantined %s — new risk blocked (bad data)",
                             ", ".join(hermes.quarantined))

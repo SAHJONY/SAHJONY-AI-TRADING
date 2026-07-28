@@ -206,6 +206,47 @@ def main() -> int:
     _check(g9.get_price("B") == 100.0,
            "a failing optional extension falls back instead of breaking pricing")
 
+    print("\n── feed health reaches the things that act on it ──")
+    from intelligence.hermes import Hermes
+    _h = Hermes(load_config())
+
+    class _Rejected:
+        stale, suspect, venue_age_s = True, False, None
+    class _Suspect:
+        stale, suspect, venue_age_s = False, True, 612.0
+    class _Good:
+        stale, suspect, venue_age_s = False, False, 1.0
+    class _FeedOf:
+        def __init__(self, q): self.q = q
+        def last_quote(self, sym): return self.q
+
+    hard, soft = _h._feed_issues(_FeedOf(_Rejected()), "BTC/USD", [], [])
+    _check(len(hard) == 1 and not soft,
+           "a guard-rejected quote is a HARD issue — quarantines new risk, exits still flow")
+    hard, soft = _h._feed_issues(_FeedOf(_Suspect()), "BTC/USD", [], [])
+    _check(not hard and len(soft) == 1 and "612" in soft[0],
+           "a stale venue print is a soft warning naming the age")
+    _check(_h._feed_issues(_FeedOf(_Good()), "BTC/USD", [], []) == ([], []),
+           "a healthy quote adds no issues")
+    _check(_h._feed_issues(None, "BTC/USD", [], []) == ([], []),
+           "no feed wired in leaves the review unchanged")
+
+    class _Boom:
+        def last_quote(self, sym): raise RuntimeError("guard exploded")
+    _check(_h._feed_issues(_Boom(), "X", [], []) == ([], []),
+           "a broken guard cannot take down the review that catches problems")
+
+    from workforce.reporter import _feed_block
+    class _NoFeed: pass
+    _check(_feed_block(_NoFeed())["available"] is False,
+           "the status block degrades when no feed is present")
+    class _BadFeed:
+        feed = property(lambda self: (_ for _ in ()).throw(RuntimeError("x")))
+    blk = _feed_block(type("F", (), {"feed": property(
+        lambda self: (_ for _ in ()).throw(RuntimeError("boom")))})())
+    _check(blk["available"] is False and "error" in blk,
+           "a failing feed never breaks the dashboard report")
+
     print("\n── extra strategies (S11-S18) ──")
     from backtest import synth as _syn
     from backtest.strategies import REGISTRY as _REG
