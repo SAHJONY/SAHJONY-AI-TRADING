@@ -9,8 +9,8 @@
     "return_pct": 0.326,
     "alpha_pct": -386.484
   },
-  "ts": "2026-07-29T01:09:14.257079+00:00",
-  "cycle": 64,
+  "ts": "2026-07-29T04:29:57.042185+00:00",
+  "cycle": 65,
   "account": {
     "equity": -5723.15,
     "equity_start": 2000.0,
@@ -46,9 +46,9 @@
       "scale": 1.0
     },
     "cadence": {
-      "degraded": false,
-      "reason": "",
-      "gap_min": 89.1,
+      "degraded": true,
+      "reason": "execution cadence degraded: 201 min since the last cycle (expected ~15 min) \u2014 a new position could not be managed",
+      "gap_min": 201.2,
       "expected_min": 15,
       "tolerance_min": 90.0
     },
@@ -106,9 +106,9 @@
       "quarantined": [],
       "issues": {},
       "hit_rates": {
-        "SPY": 0.099,
-        "QQQ": 0.142,
-        "VTI": 0.095
+        "SPY": 0.096,
+        "QQQ": 0.137,
+        "VTI": 0.092
       },
       "strategy_weights": {
         "daytrade": 0.867
@@ -731,14 +731,14 @@
     "enabled": true,
     "used": true,
     "posture": "neutral",
-    "global_risk_multiplier": 0.85,
-    "commentary": "The council leans modestly long on broad U.S. equity indices (SPY, QQQ, VTI) with conviction around 0.5\u20110.55, but the flat\u2011rated tech names (MSFT, NVDA) carry negative composites, high beta and volatility, and lack alternative data support. This creates concentration risk and fragility in the tech exposure. We therefore stay neutral overall, applying a modest risk scaling (0.85) and trimming the more vulnerable signals while keeping a small constructive tilt on the core index positions.",
+    "global_risk_multiplier": 0.9,
+    "commentary": "The council\u2019s signals are modestly constructive but heavily weighted toward market beta. SPY and VTI provide a solid broad\u2011market anchor, yet they overlap heavily, limiting diversification. QQQ adds growth exposure but its high beta (1.41) and negative alpha make the signal fragile. MSFT and NVDA are flat with strongly negative composites and elevated volatility, marking them as the most fragile positions. To preserve capital we keep the overall stance neutral, apply a modest 10% risk reduction (multiplier 0.90), and tilt convictions slightly upward for the stable broad indices while pulling b",
     "brain_model": "nvidia:openai/gpt-oss-120b",
     "counsellors": {
-      "openai": "Overall posture: modestly constructive on broad U.S. equities, but risk is concentrated through substantial SPY/VTI/QQQ overlap and elevated technology beta. QQQ and especially NVDA add sensitivity to valuation, momentum reversal, and volatility; alternative data are unavailable,",
-      "grok": "**Risk posture:** Moderately long bias via broad indices; elevated beta/vol from QQQ/NVDA warrants caution. Single-name signals weak. Alts unavailable \u2192 fragility across board.\n\n**Adjustments (conviction):**\n- SPY: +0.05\n- QQQ: -0.05\n- VTI: +0.06\n- MSFT: -0.10\n- NVDA: -0.08\n\n**Fl",
-      "gemini": "The portfolio maintains a cautious long bias through broad indices, but underlying momentum in mega",
-      "nvidia": "**Risk posture:** The basket leans heavily toward equity\u2011beta (average\u202f\u03b2\u22481.4) and moderate\u2011high volatility (\u03c3\u22480.20). With two flat\u2011rated, high\u2011beta tech names, the portfolio is slightly over\u2011exposed to market swings and sector\u2011specific risk.\n\n| Symbol | Current conviction | Sugge"
+      "openai": "Overall posture: cautiously constructive but equity-beta heavy. SPY/VTI overlap is substantial, while QQQ adds concentrated growth exposure (\u03b2 1.41). MSFT and NVDA weaken risk-adjusted quality; no alternative diversifiers are available. Consider modest sizing and avoid treating \u201c",
+      "grok": "**Portfolio risk posture:** Modestly constructive but uneven. Broad-index longs (SPY/VTI) show stable positive composites and contained vol; QQQ adds beta/vol drag. Single-name flats (MSFT/NVDA) carry negative alpha and elevated vol\u2014net tilt is equity-beta heavy with weak idiosyn",
+      "gemini": "SPY:* Stable. Adjustment: +0.0",
+      "nvidia": "**Risk posture:** The slate is equity\u2011heavy (all beta\u202f>\u202f0.7) with modest diversification beyond the three broad indices. Aggregate volatility (~0.15) is acceptable, but the high\u2011beta QQQ (\u03b2\u202f1.41) and the tech\u2011heavy NVDA (\u03b2\u202f1.84, vol\u202f0.37) lift portfolio sensitivity to a market ra"
     }
   },
   "positions": [
@@ -1300,9 +1300,35 @@
       "cash": -65708.8065630506,
       "realized_pnl": -43.42332663306,
       "premium": 0.0
+    },
+    {
+      "ts": "2026-07-29T04:29:55.009880+00:00",
+      "cycle": 65,
+      "equity": -5723.152860395608,
+      "cash": -65708.8065630506,
+      "realized_pnl": -43.42332663306,
+      "premium": 0.0
     }
   ],
   "decisions": [
+    {
+      "ts": "2026-07-29T04:29:52.144206+00:00",
+      "kind": "wheel_wait",
+      "symbol": "VTI",
+      "reason": "no put contract found"
+    },
+    {
+      "ts": "2026-07-29T04:29:52.082058+00:00",
+      "kind": "ladder_update",
+      "symbol": "QQQ",
+      "reason": "px 675.75 peak 675.75 gain -2%"
+    },
+    {
+      "ts": "2026-07-29T04:29:52.079432+00:00",
+      "kind": "ladder_update",
+      "symbol": "SPY",
+      "reason": "px 741.04 peak 745.16 gain +1%"
+    },
     {
       "ts": "2026-07-29T01:09:08.690213+00:00",
       "kind": "wheel_wait",
@@ -1434,24 +1460,6 @@
       "kind": "wheel_wait",
       "symbol": "VTI",
       "reason": "no put contract found"
-    },
-    {
-      "ts": "2026-07-28T15:57:26.364538+00:00",
-      "kind": "ladder_update",
-      "symbol": "QQQ",
-      "reason": "px 678.07 peak 682.21 gain -2%"
-    },
-    {
-      "ts": "2026-07-28T15:57:26.362433+00:00",
-      "kind": "ladder_update",
-      "symbol": "SPY",
-      "reason": "px 741.89 peak 745.16 gain +1%"
-    },
-    {
-      "ts": "2026-07-28T13:43:30.378427+00:00",
-      "kind": "halt_block",
-      "symbol": "SCTX",
-      "purpose": "copy_buy"
     }
   ],
   "agents_roster": [
