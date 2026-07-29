@@ -20,7 +20,8 @@ import sys
 from typing import Dict, List
 
 from backtest import metrics
-from backtest.data import Bars, DataUnavailable, fetch, load_csv
+from backtest.data import (Bars, DataUnavailable, desk_coverage, fetch,
+                           load_csv, load_desk_db)
 from backtest.engine import Backtester, CostModel, RiskConfig
 from backtest import portfolio as pf
 from backtest.strategies import REGISTRY
@@ -43,6 +44,10 @@ def _months(spec: str) -> List[str]:
 
 
 def _load(args) -> Bars:
+    if args.desk_db:
+        return load_desk_db(args.desk_db, symbol=args.desk_symbol,
+                            interval_m=args.desk_interval,
+                            min_ticks=args.desk_min_ticks)
     if args.csv:
         return load_csv(args.csv)
     if args.synth:
@@ -122,6 +127,18 @@ def main(argv=None) -> int:
     src.add_argument("--synth", type=int, metavar="DAYS",
                      help="synthetic bars — harness self-test only, NOT evaluation")
     src.add_argument("--seed", type=int, default=7)
+    src.add_argument("--desk-db", metavar="SQLITE",
+                     help="bars recorded from the desk's own live feed "
+                          "(utils/bar_recorder.py) — real prices, real timestamps")
+    src.add_argument("--desk-symbol", default="",
+                     help="e.g. BTC/USD; default = the symbol with the most bars")
+    src.add_argument("--desk-interval", type=int, default=0,
+                     help="bar interval in the recorder DB; default = the busiest")
+    src.add_argument("--desk-min-ticks", type=int, default=2,
+                     help="drop bars observed fewer times than this (default 2: a "
+                          "1-observation bar has no measured range)")
+    src.add_argument("--desk-coverage", action="store_true",
+                     help="report what the recorder has accumulated, then exit")
 
     p.add_argument("--strategies", default="s1,s2,s3,s5,s6,s9")
     p.add_argument("--entry", default="spec", choices=["spec", "next_open"],
@@ -153,11 +170,38 @@ def main(argv=None) -> int:
     p.add_argument("--json", dest="json_out", help="write raw stats JSON here")
     args = p.parse_args(argv)
 
+    if args.desk_coverage:
+        if not args.desk_db:
+            print("--desk-coverage needs --desk-db", file=sys.stderr)
+            return 2
+        try:
+            cov = desk_coverage(args.desk_db)
+        except DataUnavailable as exc:
+            print(f"DATA UNAVAILABLE: {exc}", file=sys.stderr)
+            return 2
+        print(f"{'symbol':<12}{'iv':>4}{'bars':>8}{'days':>8}{'ticks/bar':>11}"
+              f"{'1-tick %':>10}{'expected':>10}")
+        for c in cov:
+            print(f"{c['symbol']:<12}{c['interval_m']:>4}{c['bars']:>8}"
+                  f"{c['span_days']:>8.2f}{c['ticks_per_bar']:>11.2f}"
+                  f"{c['single_tick_pct']:>10.1f}{c['expected_bars']:>10}")
+        print("\n'1-tick %' is the share of bars with open==high==low==close. Those "
+              "have a price but no range;\nATR, wicks and intrabar stop tests are "
+              "meaningless on them. High values mean the recorder\ninterval is "
+              "finer than the desk's poll cadence.")
+        return 0
+
     try:
         bars = _load(args)
     except DataUnavailable as exc:
         print(f"DATA UNAVAILABLE: {exc}", file=sys.stderr)
         return 2
+
+    if args.desk_db:
+        print("note: recorded-feed bars carry a TICK COUNT in the volume column, "
+              "not traded volume.\n      Volume gates (s2 vol_mult, s15, s1's "
+              "capitulation filter) measure sampling\n      frequency here, not "
+              "participation. Read their results accordingly.")
 
     if args.synth:
         print("!" * 78)

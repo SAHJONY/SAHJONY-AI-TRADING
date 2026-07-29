@@ -17,12 +17,21 @@ there is a real BTC series to run `backtest/` against instead of synthetic bars.
    on volume (S2's `vol_mult`, S15's volume spike, S1's capitulation filter) are
    therefore measuring *sampling frequency*, not participation, on these bars.
    Do not read their volume gates as meaningful here.
-2. **Bar resolution is bounded by the poll cadence.** At the desk's default
-   15-minute cycle you get 15-minute bars. Genuine 5-minute bars need a 5-minute
-   (or faster) poll — see `interval_minutes` and the note in the docs.
+2. **Bar resolution is bounded by the poll cadence.** A bar can only have a high
+   above its low if at least two quotes landed inside it. At the desk's observed
+   ~16-minute cycle, a 5-minute bucket gets one observation or none: the bars
+   that do exist have open == high == low == close, so their range — and every
+   ATR, wick and intrabar stop computed from it — is fabricated, not measured.
+   Genuine 5-minute bars need a 5-minute (or faster) poll. Nothing else does it.
 
-Bars are keyed `(symbol, bucket_start)` with an upsert, so re-running a cycle or
-overlapping recorders cannot double-count.
+That is why the recorder writes **several intervals at once** (`intervals`). The
+coarse one is usable today at the current cadence; the fine one costs one extra
+row per cycle and becomes usable the moment the poll speeds up, with no gap in
+the record. `backtest.data.load_desk_db` picks between them and refuses bars
+built from too few observations.
+
+Bars are keyed `(symbol, bucket_start, interval)` with an upsert, so re-running a
+cycle or overlapping recorders cannot double-count.
 """
 from __future__ import annotations
 
@@ -59,9 +68,12 @@ class BarRecorder:
     disturb trading.
     """
 
-    def __init__(self, db, interval_minutes: int = 5, source: str = ""):
+    def __init__(self, db, interval_minutes=5, source: str = ""):
         self.db = db
-        self.interval = max(1, int(interval_minutes))
+        raw = interval_minutes if isinstance(interval_minutes, (list, tuple, set)) \
+            else [interval_minutes]
+        self.intervals = sorted({max(1, int(x)) for x in raw if int(x) > 0}) or [5]
+        self.interval = self.intervals[0]      # the finest — back-compat alias
         self.source = source or "live"
         self._ready = False
         try:
@@ -71,28 +83,33 @@ class BarRecorder:
         except Exception as exc:
             log.error("bar table init failed: %s", exc)
 
-    def _bucket(self, ts: float) -> int:
-        step = self.interval * 60
+    def _bucket(self, ts: float, interval: Optional[int] = None) -> int:
+        step = (interval or self.interval) * 60
         return int(ts // step * step)
 
     def record(self, symbol: str, price: float, ts: Optional[float] = None) -> None:
-        """Fold one observation into its bar. Cheap, idempotent, never raises."""
+        """Fold one observation into its bar, at every configured interval.
+
+        Cheap, idempotent, never raises.
+        """
         if not self._ready or not price or price <= 0 or price != price:
             return
-        try:
-            b = self._bucket(ts if ts is not None else time.time())
-            self.db.conn.execute(
-                """INSERT INTO bars (symbol, ts, interval_m, open, high, low, close,
-                                     volume, source)
-                   VALUES (?,?,?,?,?,?,?,1,?)
-                   ON CONFLICT(symbol, ts, interval_m) DO UPDATE SET
-                       high   = MAX(bars.high, excluded.close),
-                       low    = MIN(bars.low,  excluded.close),
-                       close  = excluded.close,
-                       volume = bars.volume + 1""",
-                (symbol, b, self.interval, price, price, price, price, self.source))
-        except Exception as exc:
-            log.warning("bar record(%s) failed: %s", symbol, exc)
+        when = ts if ts is not None else time.time()
+        for iv in self.intervals:
+            try:
+                self.db.conn.execute(
+                    """INSERT INTO bars (symbol, ts, interval_m, open, high, low,
+                                         close, volume, source)
+                       VALUES (?,?,?,?,?,?,?,1,?)
+                       ON CONFLICT(symbol, ts, interval_m) DO UPDATE SET
+                           high   = MAX(bars.high, excluded.close),
+                           low    = MIN(bars.low,  excluded.close),
+                           close  = excluded.close,
+                           volume = bars.volume + 1""",
+                    (symbol, self._bucket(when, iv), iv, price, price, price,
+                     price, self.source))
+            except Exception as exc:
+                log.warning("bar record(%s@%dm) failed: %s", symbol, iv, exc)
 
     def record_many(self, prices: Dict[str, float], ts: Optional[float] = None) -> None:
         for sym, px in (prices or {}).items():
@@ -110,7 +127,9 @@ class BarRecorder:
             return []
         try:
             rows = self.db.conn.execute(
-                """SELECT symbol, interval_m, COUNT(*) n, MIN(ts) first, MAX(ts) last
+                """SELECT symbol, interval_m, COUNT(*) n, MIN(ts) first, MAX(ts) last,
+                          AVG(volume) tpb,
+                          SUM(CASE WHEN volume <= 1 THEN 1 ELSE 0 END) single
                    FROM bars GROUP BY symbol, interval_m ORDER BY n DESC""").fetchall()
         except Exception as exc:
             log.warning("bar coverage failed: %s", exc)
@@ -118,9 +137,16 @@ class BarRecorder:
         out = []
         for r in rows:
             n, first, last = int(r["n"]), int(r["first"]), int(r["last"])
+            # A bar with one observation has no measured range. Reporting the
+            # count without this share would overstate how backtestable the
+            # record is — which is the whole question `coverage()` is asked.
+            single_pct = round(100.0 * int(r["single"]) / max(1, n), 1)
             out.append({"symbol": r["symbol"], "interval_m": int(r["interval_m"]),
                         "bars": n, "first_ts": first, "last_ts": last,
-                        "span_days": round((last - first) / 86400.0, 2)})
+                        "span_days": round((last - first) / 86400.0, 2),
+                        "ticks_per_bar": round(float(r["tpb"] or 0), 2),
+                        "single_tick_pct": single_pct,
+                        "usable_bars": n - int(r["single"])})
         return out
 
     def export_csv(self, symbol: str, path: str, interval_m: Optional[int] = None) -> int:

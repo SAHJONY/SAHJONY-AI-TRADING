@@ -362,28 +362,54 @@ What Robinhood *can* do is accumulate history going forward, so
 and stores them:
 
 ```bash
-BAR_RECORDER=true BAR_INTERVAL_MINUTES=5   # defaults
+BAR_RECORDER=true BAR_INTERVAL_MINUTES=5,60   # defaults
 ```
 
-Round-trip verified end to end: record → SQLite → `export_csv()` →
-`python -m backtest.run --csv <file>` reads it with no adapter in between.
+The harness reads that database directly — no export step, no adapter:
+
+```bash
+python -m backtest.run --desk-db data/trading.db --desk-coverage   # is it usable yet?
+python -m backtest.run --desk-db data/trading.db --desk-symbol BTC/USD
+python -m backtest.improve --desk-db data/trading.db --strategy s12
+```
+
+`export_csv()` → `--csv` still works and is round-trip verified; `--desk-db` is
+the same data without the intermediate file.
 
 **Two limitations that change what those bars mean:**
 
 1. **Volume is a tick count, not traded volume.** `best_bid_ask` carries no size.
    Strategies gated on volume — S2's `vol_mult`, S15's volume spike, S1's
    capitulation filter — are measuring *sampling frequency* on these bars, not
-   participation. Their volume conditions are not meaningful here.
-2. **Bar resolution is bounded by the poll cadence.** The desk cycles every 15
-   minutes by default, so it produces 15-minute bars. Genuine 5-minute bars need
-   a 5-minute or faster poll.
+   participation. Their volume conditions are not meaningful here. `--desk-db`
+   prints this warning on every run.
+2. **Bar resolution is bounded by the poll cadence** — and more sharply than the
+   word "resolution" suggests. A bar's high can only exceed its low if **two or
+   more** quotes landed inside it. Measured from `public/status.json` on `master`
+   (cycles 432→456), the live desk's gap between cycles is **12.6 min minimum,
+   16.1 min median, 153.7 min maximum**. At that cadence a 5-minute bucket
+   receives one quote or none, so every 5m bar it produces has
+   `open == high == low == close`: a real price, but a **fabricated range**. ATR,
+   wicks, and intrabar stop tests computed on such bars are not conservative
+   approximations — they are fiction.
+
+This is why the recorder writes **several intervals from the same quote stream**
+(`bar_intervals = (5, 60)`). The 60m series is backtestable at today's cadence
+(~3.7 observations per bar); the 5m series costs one extra INSERT per cycle and
+becomes meaningful the moment the poll interval drops, with no gap in the record.
+`load_desk_db()` defaults to `min_ticks=2` and **refuses** a series whose bars are
+all single-tick, naming the cadence as the cause rather than silently handing back
+range-free bars. `--desk-coverage` reports `single_tick_pct` per series so the
+question "is there enough history yet?" has a numeric answer.
 
 And the arithmetic worth doing before relying on this: at a 5-minute cadence,
 288 bars accumulate per day. The harness needs ~400 bars of warmup before the
 first signal and the promotion gate wants 300 out-of-sample trades — so this path
-measures in **months**, not days. It is the right thing to start now precisely
-because it takes that long; it is not a substitute for downloading history from a
-venue that publishes candles.
+measures in **months**, not days, *and only if the poll is sped up to 5 minutes
+first*. At the current 16-minute cadence the usable series is hourly: 24 bars a
+day, which puts a 300-trade out-of-sample record years away. It is the right thing
+to start now precisely because it takes that long; it is not a substitute for
+downloading history from a venue that publishes candles.
 
 ## What was built
 

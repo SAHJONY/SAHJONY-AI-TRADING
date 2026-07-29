@@ -227,7 +227,8 @@ class Firm:
         # window while the quote guard is not.
         self.bars = None
         if getattr(cfg, "bar_recorder_enabled", True):
-            self.bars = BarRecorder(db, cfg.bar_interval_minutes,
+            self.bars = BarRecorder(db, getattr(cfg, "bar_intervals",
+                                                getattr(cfg, "bar_interval_minutes", 5)),
                                     source=getattr(client, "mode", "live"))
         self.council = Council()
         self.brain = AIBrain(cfg)

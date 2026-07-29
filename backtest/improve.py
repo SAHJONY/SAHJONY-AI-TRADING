@@ -24,7 +24,7 @@ from typing import Dict
 import numpy as np
 
 from backtest import optimize as opt
-from backtest.data import DataUnavailable, load_csv
+from backtest.data import DataUnavailable, load_csv, load_desk_db
 from backtest.engine import CostModel, RiskConfig
 from backtest.strategies import REGISTRY
 
@@ -65,6 +65,11 @@ SPACES: Dict[str, Dict] = {
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(description="Walk-forward search + overfitting controls")
     p.add_argument("--csv", help="5m OHLCV CSV")
+    p.add_argument("--desk-db", metavar="SQLITE",
+                   help="bars recorded from the desk's own live feed")
+    p.add_argument("--desk-symbol", default="")
+    p.add_argument("--desk-interval", type=int, default=0)
+    p.add_argument("--desk-min-ticks", type=int, default=2)
     p.add_argument("--source", choices=["public-btc-5m", "public-btc-1h",
                                         "sp500-65y", "sp500-1d", "nasdaq-1d"],
                    help="a bundled/public dataset instead of --csv")
@@ -85,7 +90,15 @@ def main(argv=None) -> int:
     p.add_argument("--out", help="directory to write the JSON proposal into")
     args = p.parse_args(argv)
 
-    if args.csv:
+    if args.desk_db:
+        try:
+            bars = load_desk_db(args.desk_db, symbol=args.desk_symbol,
+                                interval_m=args.desk_interval,
+                                min_ticks=args.desk_min_ticks)
+        except DataUnavailable as exc:
+            print(f"DATA UNAVAILABLE: {exc}", file=sys.stderr)
+            return 2
+    elif args.csv:
         try:
             bars = load_csv(args.csv)
         except DataUnavailable as exc:
@@ -102,7 +115,7 @@ def main(argv=None) -> int:
         print("! it 'finds' is fitted to a random process and means nothing.")
         print("!" * 78)
     else:
-        print("need --csv or --synth", file=sys.stderr)
+        print("need --desk-db, --csv, --source or --synth", file=sys.stderr)
         return 2
 
     cls = REGISTRY[args.strategy]

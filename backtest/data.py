@@ -141,6 +141,100 @@ def save_csv(bars: Bars, path: str) -> str:
     return path
 
 
+# ── the desk's own recorded feed ──────────────────────────────────────────────
+# `utils/bar_recorder.py` folds the live quotes the running desk already receives
+# into OHLCV rows in its SQLite. That is the one data path this repo controls end
+# to end, so it is also the one whose provenance is fully known. These readers
+# expose it to the harness — and, more importantly, tell you when it is not yet
+# good enough to trust, which is the failure mode that would otherwise be silent.
+
+
+def _desk_conn(path: str):
+    import sqlite3
+    if not os.path.exists(path):
+        raise DataUnavailable(f"{path}: no such database. The desk writes it only "
+                              f"when BAR_RECORDER is enabled and a cycle has run.")
+    try:                                   # read-only: never disturb a live desk
+        return sqlite3.connect(f"file:{path}?mode=ro", uri=True)
+    except Exception as exc:
+        raise DataUnavailable(f"{path}: cannot open read-only: {exc}") from exc
+
+
+def desk_coverage(path: str) -> List[dict]:
+    """Per (symbol, interval) accounting of what the recorder has accumulated.
+
+    `ticks_per_bar` and `single_tick_pct` are the fields that matter. A bar built
+    from one observation has open == high == low == close: it carries a price but
+    no *range*, so every ATR, every wick, every intrabar stop test computed on it
+    is fiction. If `single_tick_pct` is high, the recorder's interval is finer
+    than the desk's poll cadence and the bars are not backtestable yet.
+    """
+    conn = _desk_conn(path)
+    try:
+        rows = conn.execute(
+            """SELECT symbol, interval_m, COUNT(*) n, MIN(ts) a, MAX(ts) b,
+                      AVG(volume) tpb,
+                      SUM(CASE WHEN volume <= 1 THEN 1 ELSE 0 END) single
+               FROM bars GROUP BY symbol, interval_m ORDER BY n DESC""").fetchall()
+    except Exception as exc:
+        raise DataUnavailable(f"{path}: no readable 'bars' table ({exc})") from exc
+    finally:
+        conn.close()
+    out = []
+    for sym, iv, n, a, b, tpb, single in rows:
+        span = (int(b) - int(a)) / 86400.0
+        out.append({"symbol": sym, "interval_m": int(iv), "bars": int(n),
+                    "span_days": round(span, 2),
+                    "ticks_per_bar": round(float(tpb or 0), 2),
+                    "single_tick_pct": round(100.0 * int(single) / max(1, int(n)), 1),
+                    "expected_bars": int(span * 1440 / max(1, int(iv))) if span else 0})
+    return out
+
+
+def load_desk_db(path: str, symbol: str = "", interval_m: Optional[int] = None,
+                 min_ticks: int = 2) -> Bars:
+    """Load recorded live bars. Defaults to the busiest (symbol, interval) present.
+
+    `min_ticks` drops bars observed fewer than that many times. The default of 2
+    is the weakest filter that still guarantees a bar has a high different from
+    its low — i.e. that its range is measured rather than assumed. Pass
+    `min_ticks=1` only if you have a reason to want degenerate bars.
+    """
+    cov = desk_coverage(path)
+    if not cov:
+        raise DataUnavailable(f"{path}: 'bars' table is empty — the recorder has "
+                              f"not stored a cycle yet")
+    if symbol:
+        cov = [c for c in cov if c["symbol"] == symbol]
+        if not cov:
+            raise DataUnavailable(f"{path}: no bars for '{symbol}'")
+    if interval_m:
+        cov = [c for c in cov if c["interval_m"] == int(interval_m)]
+        if not cov:
+            raise DataUnavailable(f"{path}: no bars at {interval_m}m")
+    pick = cov[0]
+    sym, iv = pick["symbol"], pick["interval_m"]
+
+    conn = _desk_conn(path)
+    try:
+        raw = conn.execute(
+            """SELECT ts, open, high, low, close, volume FROM bars
+               WHERE symbol=? AND interval_m=? AND volume >= ?
+               ORDER BY ts""", (sym, iv, float(min_ticks))).fetchall()
+    finally:
+        conn.close()
+    if not raw:
+        raise DataUnavailable(
+            f"{path}: {sym} {iv}m has no bar with >= {min_ticks} observations "
+            f"({pick['single_tick_pct']}% of its {pick['bars']} bars are single-tick). "
+            f"The recorder interval is finer than the poll cadence — widen "
+            f"BAR_INTERVAL_MINUTES or poll faster.")
+    rows = [{"ts": int(t) * 1000, "open": float(o), "high": float(h),
+             "low": float(lo), "close": float(c), "volume": float(v)}
+            for t, o, h, lo, c, v in raw]
+    return _to_bars(rows, sym, iv)
+
+
 # ── venue fetchers ────────────────────────────────────────────────────────────
 def _get(url: str, **kw):
     try:

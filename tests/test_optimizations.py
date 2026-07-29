@@ -310,6 +310,54 @@ def main() -> int:
         r2.record("X", 1.0); r2.record_many({"X": 1.0})
         _check(r2.coverage() == [], "a broken database degrades silently, never raises")
 
+    print("\n── recorded feed → harness (multi-interval, tick-quality gate) ──")
+    from backtest.data import (DataUnavailable as _DU, desk_coverage,
+                               load_desk_db)
+    with _tf.TemporaryDirectory() as _d:
+        path = _os.path.join(_d, "desk.db")
+        _db = Database(path)
+        rec = BarRecorder(_db, (5, 60))
+        _check(rec.intervals == [5, 60] and rec.interval == 5,
+               "recorder stores several intervals, finest first")
+        t0 = 1_800_000_000                       # aligned to both 5m and 60m
+        # a 16-minute poll cadence — the desk's actual median gap
+        for k in range(30):
+            rec.record("BTC/USD", 100.0 + (k % 7), ts=t0 + k * 16 * 60)
+        _db.conn.commit()
+
+        cov = {c["interval_m"]: c for c in rec.coverage()}
+        _check(set(cov) == {5, 60}, "both intervals accumulate from one quote stream")
+        _check(cov[5]["single_tick_pct"] == 100.0,
+               "at a 16m cadence every 5m bar is single-tick — reported, not hidden")
+        _check(cov[60]["ticks_per_bar"] > 1.0 and cov[60]["usable_bars"] > 0,
+               "the 60m series has bars with a measured range")
+
+        dc = {c["interval_m"]: c for c in desk_coverage(path)}
+        _check(dc[5]["single_tick_pct"] == cov[5]["single_tick_pct"]
+               and dc[60]["bars"] == cov[60]["bars"],
+               "backtest.desk_coverage agrees with the recorder's own accounting")
+
+        b = load_desk_db(path, symbol="BTC/USD", interval_m=60)
+        _check(b.tf_minutes == 60 and len(b) > 0,
+               "recorded bars load into the harness labelled with their true timeframe")
+        _check(bool((b.high > b.low).all()),
+               "the min_ticks gate admits only bars whose range was observed")
+
+        try:
+            load_desk_db(path, symbol="BTC/USD", interval_m=5)
+            _check(False, "5m single-tick bars are refused")
+        except _DU as exc:
+            _check("single-tick" in str(exc) or "observations" in str(exc),
+                   "5m single-tick bars are refused, with the cadence explained")
+        _check(len(load_desk_db(path, symbol="BTC/USD", interval_m=5,
+                                min_ticks=1)) > 0,
+               "min_ticks=1 is available for anyone who wants the raw record")
+        try:
+            load_desk_db(_os.path.join(_d, "missing.db"))
+            _check(False, "a missing recorder DB raises DataUnavailable")
+        except _DU:
+            _check(True, "a missing recorder DB raises DataUnavailable, not a crash")
+
     print("\n── database indices exist ──")
     import tempfile, os
     with tempfile.TemporaryDirectory() as d:

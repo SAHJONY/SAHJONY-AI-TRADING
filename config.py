@@ -49,6 +49,22 @@ def _list(name: str, default: str) -> List[str]:
     return [t.strip().upper() for t in raw.split(",") if t.strip()]
 
 
+def _intervals(raw: str, default: tuple) -> tuple:
+    """'5,60' -> (5, 60). Accepts a single value for backward compatibility."""
+    out = []
+    for tok in (raw or "").split(","):
+        tok = tok.strip()
+        if not tok:
+            continue
+        try:
+            v = int(float(tok))
+        except ValueError:
+            continue
+        if v > 0:
+            out.append(v)
+    return tuple(sorted(set(out))) if out else default
+
+
 def _clamp(value: float, lo: float, hi: float) -> float:
     return max(lo, min(hi, value))
 
@@ -99,7 +115,12 @@ class Config:
     # otherwise the desk stands down instead of sending a doomed order.
     min_order_notional: float = 1.0
     bar_recorder_enabled: bool = True
-    bar_interval_minutes: int = 5
+    # Bar intervals the recorder writes, finest first. The desk's observed cycle
+    # cadence is ~16 minutes, so a 5m bucket gets at most one quote and its bars
+    # have no measured range; the 60m series is the one that is backtestable at
+    # today's cadence. Both are stored: the 5m rows cost one INSERT per cycle and
+    # become meaningful the moment the poll interval drops, with no gap.
+    bar_intervals: tuple = (5, 60)
     quote_guard_enabled: bool = False
     quote_max_jump_pct: float = 0.10
     quote_stale_after_s: float = 300.0
@@ -262,7 +283,7 @@ def load_config() -> Config:
         # window (evaluation.json lists logging under allowed_during_window) —
         # it observes and writes rows, it never touches a decision.
         bar_recorder_enabled=_b("BAR_RECORDER", True),
-        bar_interval_minutes=max(1, _i("BAR_INTERVAL_MINUTES", 5)),
+        bar_intervals=_intervals(os.getenv("BAR_INTERVAL_MINUTES", ""), (5, 60)),
         quote_guard_enabled=_b("QUOTE_GUARD", False),
         # Reject a single print that jumps more than this
         # against the last good price (a second confirming print is accepted), and
