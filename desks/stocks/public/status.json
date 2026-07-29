@@ -9,8 +9,8 @@
     "return_pct": 0.326,
     "alpha_pct": -386.484
   },
-  "ts": "2026-07-29T07:20:51.581496+00:00",
-  "cycle": 66,
+  "ts": "2026-07-29T10:05:57.183620+00:00",
+  "cycle": 67,
   "account": {
     "equity": -5723.15,
     "equity_start": 2000.0,
@@ -47,8 +47,8 @@
     },
     "cadence": {
       "degraded": true,
-      "reason": "execution cadence degraded: 170 min since the last cycle (expected ~15 min) \u2014 a new position could not be managed",
-      "gap_min": 170.3,
+      "reason": "execution cadence degraded: 165 min since the last cycle (expected ~15 min) \u2014 a new position could not be managed",
+      "gap_min": 165.3,
       "expected_min": 15,
       "tolerance_min": 90.0
     },
@@ -106,9 +106,9 @@
       "quarantined": [],
       "issues": {},
       "hit_rates": {
-        "SPY": 0.093,
-        "QQQ": 0.132,
-        "VTI": 0.089
+        "SPY": 0.089,
+        "QQQ": 0.128,
+        "VTI": 0.086
       },
       "strategy_weights": {
         "daytrade": 0.867
@@ -339,7 +339,7 @@
           "persona": "Regime / cointegration",
           "score": 0.028,
           "confidence": 0.8,
-          "rationale": "state=calm (p_stay=0.65), coint-z=+0.11"
+          "rationale": "state=calm (p_stay=0.65), coint-z=+0.00"
         },
         {
           "name": "Sovereign Wealth",
@@ -731,14 +731,14 @@
     "enabled": true,
     "used": true,
     "posture": "neutral",
-    "global_risk_multiplier": 0.88,
-    "commentary": "The slate leans bullish on broad\u2011market ETFs (SPY, VTI) but is heavily weighted to correlated U.S. equity exposure. QQQ adds sector concentration and a high beta, while MSFT and NVDA are flat with negative composites and elevated volatility, making their signals fragile. Given the lack of alternative assets and the asymmetric tail risk from the two tech names, we keep the overall stance neutral and modestly scale back the more vulnerable bets.",
+    "global_risk_multiplier": 0.85,
+    "commentary": "The portfolio is broadly neutral with a modest tilt toward risk reduction (multiplier 0.85). Broad\u2011market ETFs (SPY, VTI) dominate the beta exposure, while QQQ adds a growth tilt and the single\u2011stock bets (MSFT, NVDA) introduce high beta and volatility. QQQ, MSFT and NVDA are flagged as fragile \u2013 their high beta/volatility and negative composites/alphas could reverse on a tech pull\u2011back. Adjustments modestly boost the low\u2011beta anchors (SPY, VTI) and trim the more vulnerable positions (QQQ, MSFT, NVDA).",
     "brain_model": "nvidia:openai/gpt-oss-120b",
     "counsellors": {
-      "openai": "**Risk posture:** Moderately bullish but highly correlated: SPY/VTI overlap substantially, while QQQ adds growth concentration and higher beta. With alternatives unavailable, diversification is limited. Overall risk is elevated if U.S. equities or mega-cap technology reverse.\n\n**",
-      "grok": "**Portfolio risk view**\n\nOverall posture: Mildly constructive broad-market beta (SPY/VTI), but QQQ\u2019s weak composite/negative alpha and high-vol single names (NVDA beta 1.84, MSFT deep negative alpha) create asymmetric downside. Net risk is moderate-elevated; prefer index overstoc",
-      "gemini": "The portfolio exhibits a defensive tilt toward broad indices while sidelining high-beta growth",
-      "nvidia": "**Risk posture:** The slate is heavily equity\u2011biased (all\u2011cap ETFs plus two large\u2011cap tech names) with an aggregate beta \u22481.3 and volatility clustered around 13\u201120\u202f%. The two tech stocks add asymmetric tail risk (NVDA\u2019s \u03b2\u202f1.84, \u03c3\u202f37\u202f%). Expect higher draw\u2011down potential in a mark"
+      "openai": "**Overall:** Moderately constructive but risk is equity-beta concentrated: SPY, QQQ, and VTI overlap materially, while QQQ/NVDA add growth and volatility sensitivity. With alternative data unavailable, conviction should remain restrained; avoid treating \u201clong\u201d as a strong signal.",
+      "grok": "**Risk posture:** Moderate equity beta (~1.0\u20131.2 blended). Broad-market longs (SPY/VTI) dominate with low vol; QQQ adds growth tilt and higher beta. Single-stock flats (MSFT/NVDA) limit idiosyncratic risk but leave residual high-vol drag. Overall balanced yet vulnerable to tech/m",
+      "gemini": "",
+      "nvidia": "**Risk posture:** The slate is equity\u2011heavy, with three market\u2011wide ETFs (SPY, QQQ, VTI) that together carry ~1.5\u202f\u00d7 market beta and modest volatility (\u224813\u201120%). The two stock\u2011specific bets add high beta (NVDA\u202f1.84) and elevated vol (>30%), pushing overall portfolio volatility abo"
     }
   },
   "positions": [
@@ -1316,9 +1316,35 @@
       "cash": -65708.8065630506,
       "realized_pnl": -43.42332663306,
       "premium": 0.0
+    },
+    {
+      "ts": "2026-07-29T10:05:55.328975+00:00",
+      "cycle": 67,
+      "equity": -5723.152860395608,
+      "cash": -65708.8065630506,
+      "realized_pnl": -43.42332663306,
+      "premium": 0.0
     }
   ],
   "decisions": [
+    {
+      "ts": "2026-07-29T10:05:52.691146+00:00",
+      "kind": "wheel_wait",
+      "symbol": "VTI",
+      "reason": "no put contract found"
+    },
+    {
+      "ts": "2026-07-29T10:05:52.629187+00:00",
+      "kind": "ladder_update",
+      "symbol": "QQQ",
+      "reason": "px 675.75 peak 675.75 gain -2%"
+    },
+    {
+      "ts": "2026-07-29T10:05:52.627047+00:00",
+      "kind": "ladder_update",
+      "symbol": "SPY",
+      "reason": "px 741.04 peak 745.16 gain +1%"
+    },
     {
       "ts": "2026-07-29T07:20:46.731946+00:00",
       "kind": "wheel_wait",
@@ -1447,24 +1473,6 @@
     },
     {
       "ts": "2026-07-28T18:53:53.131014+00:00",
-      "kind": "wheel_wait",
-      "symbol": "VTI",
-      "reason": "no put contract found"
-    },
-    {
-      "ts": "2026-07-28T18:53:53.058811+00:00",
-      "kind": "ladder_update",
-      "symbol": "QQQ",
-      "reason": "px 676.19 peak 682.21 gain -2%"
-    },
-    {
-      "ts": "2026-07-28T18:53:53.055759+00:00",
-      "kind": "ladder_update",
-      "symbol": "SPY",
-      "reason": "px 741.18 peak 745.16 gain +1%"
-    },
-    {
-      "ts": "2026-07-28T17:20:53.763954+00:00",
       "kind": "wheel_wait",
       "symbol": "VTI",
       "reason": "no put contract found"
