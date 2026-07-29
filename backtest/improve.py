@@ -66,7 +66,7 @@ def main(argv=None) -> int:
     p = argparse.ArgumentParser(description="Walk-forward search + overfitting controls")
     p.add_argument("--csv", help="5m OHLCV CSV")
     p.add_argument("--source", choices=["public-btc-5m", "public-btc-1h",
-                                        "sp500-1d", "nasdaq-1d"],
+                                        "sp500-65y", "sp500-1d", "nasdaq-1d"],
                    help="a bundled/public dataset instead of --csv")
     p.add_argument("--synth", type=int, metavar="DAYS",
                    help="synthetic bars — exercises the machinery, proves nothing")

@@ -209,6 +209,37 @@ def _fetch_bybit(symbol: str, start_ms: int, end_ms: int) -> List[dict]:
     return rows
 
 
+_RDATASETS = "https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/master/csv"
+
+
+def _fetch_rdataset_ohlcv(pkg: str, item: str) -> List[dict]:
+    """Real OHLCV from the Rdatasets mirror on GitHub raw — reachable when every
+    market-data API is not.
+
+    `gt/sp500` is the deepest sample available here: **16,607 daily S&P 500 bars,
+    1950-2015**, with open/high/low/close/volume. Sixty-five years covering the
+    1962 break, the 1973-74 bear, Black Monday 1987, the dot-com unwind and the
+    2008 crisis — the only sample large enough to clear the promotion gate's
+    300-trade floor for most strategies.
+
+    Rows arrive newest-first and are sorted by `_to_bars`.
+    """
+    text = _get(f"{_RDATASETS}/{pkg}/{item}.csv").text
+    rows = []
+    for r in csv.DictReader(io.StringIO(text)):
+        try:
+            ts = _parse_ts(r["date"])
+            o, h, l = float(r["open"]), float(r["high"]), float(r["low"])
+            c, v = float(r["close"]), float(r.get("volume", 0) or 0)
+        except (TypeError, ValueError, KeyError):
+            continue
+        if min(o, h, l, c) <= 0 or h < max(o, c) or l > min(o, c) or v < 0:
+            continue
+        rows.append({"ts": ts, "open": o, "high": h, "low": l, "close": c,
+                     "volume": v})
+    return rows
+
+
 def _fetch_bundled_index(which: str) -> List[dict]:
     """Real daily OHLCV for a major US index, bundled offline in the `arch` package.
 
@@ -338,7 +369,9 @@ def fetch(source: str = "binance-vision", symbol: str = "BTCUSDT",
     """Pull 5m bars from a venue. `months` is ['2026-01', ...] for binance-vision."""
     if cache and os.path.exists(cache):
         return load_csv(cache, symbol)
-    if source in ("sp500-1d", "nasdaq-1d"):
+    if source == "sp500-65y":
+        rows = _fetch_rdataset_ohlcv("gt", "sp500")
+    elif source in ("sp500-1d", "nasdaq-1d"):
         rows = _fetch_bundled_index(source.split("-")[0])
     elif source == "public-btc-5m":
         rows = _fetch_public_btc_5m()
@@ -355,7 +388,8 @@ def fetch(source: str = "binance-vision", symbol: str = "BTCUSDT",
     # timeframe is a property of the source, not an assumption: labelling hourly
     # bars "5m" in a report would be a quietly misleading result
     # timeframe is a property of the source, never an assumption
-    _TF = {"public-btc-1h": 60, "sp500-1d": 1440, "nasdaq-1d": 1440}
+    _TF = {"public-btc-1h": 60, "sp500-1d": 1440, "nasdaq-1d": 1440,
+           "sp500-65y": 1440}
     bars = _to_bars(rows, symbol, _TF.get(source, 5))
     if cache:
         save_csv(bars, cache)

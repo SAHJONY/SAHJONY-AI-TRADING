@@ -5,6 +5,64 @@ strategies: the playbook's S1, S2, S3, S5, S6, S9 plus candidates S11–S18.
 
 ---
 
+## Worldwide data, and 65 years of S&P 500
+
+IMF, OECD, BIS, the Bank of England, the Bundesbank and JPX are all blocked
+alongside the US APIs. But the **Rdatasets mirror on GitHub raw is reachable** —
+3,648 curated real datasets, 74 of them financial with ≥250 rows:
+
+| Dataset | Rows | What |
+|---|---|---|
+| `gt/sp500` | **16,607** | **Daily S&P 500 OHLCV, 1950–2015** |
+| `AER/DJIA8012` | 8,610 | Dow Jones, 1980–2012 (close only) |
+| `datasets/EuStockMarkets` | 1,860 | **DAX, SMI, CAC, FTSE** (close only) |
+| `evir/bmw`, `evir/siemens` | 6,146 | Daily log returns, German equities |
+| `stevedata/ukg_eeri` | 8,340 | UK effective exchange rate, 1990– |
+| `tsibbledata/gafa_stock` | 5,032 | Google/Amazon/Facebook/Apple prices |
+
+```bash
+python -m backtest.run --source sp500-65y --split 0.6
+```
+
+Only `gt/sp500` carries full OHLCV, so it is the one wired in — the others are
+close-only, and without intrabar high/low the engine's stop and target fills
+would be fiction. **65 years is the deepest sample available here**, spanning the
+1962 break, the 1973–74 bear, Black Monday, the dot-com unwind and 2008, and it
+is the first sample large enough to clear the 300-trade floor.
+
+### S14: the cleanest overfit in the whole exercise
+
+```
+                 trades  hit_rate  expectancy_r  return_%  Sharpe
+in-sample  (60%)   452     0.573      0.484       113.2     1.58
+out-of-sample      357     0.431     -0.087       -10.6    -0.36
+```
+
+Sharpe 1.58 and +113% in-sample on 452 trades — a sample size that *looks*
+authoritative — inverts to Sharpe −0.36 out-of-sample on 357 more. Nothing was
+tuned; this is the default parameter set. Trade count alone never establishes
+anything.
+
+### Nothing is positive in both halves
+
+```
+       in-sample expectancy_r    out-of-sample expectancy_r
+s11         +0.029                      -0.154
+s12         -0.059                      +0.182
+s13         -0.035                      +0.166
+s14         +0.484                      -0.087
+```
+
+Every strategy flips sign. S12 and S13 are positive out-of-sample but *negative*
+in-sample, which is the same coin landing the other way up — not evidence. And
+buy-and-hold returned +1,948% then +493%, at Sharpe 0.77 and 0.56; nothing here
+comes close.
+
+Sixty-five years of the most-studied equity series in existence, fourteen
+strategies, and **no survivor.** That is the expected result — it is what the
+literature says happens to simple technical rules on liquid indices — and the
+harness reproducing it is the strongest evidence that the harness is honest.
+
 ## Wall Street reference data — and the gate rejecting a real candidate
 
 Bloomberg Terminal is a licensed product whose API needs an authenticated
