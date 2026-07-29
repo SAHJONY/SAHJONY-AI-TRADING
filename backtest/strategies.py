@@ -49,7 +49,18 @@ class S1_VWAPBandFade(Strategy):
         "band_sigma": 2.0, "stop_sigma": 2.5, "stop_atr_mult": 1.2,
         "stop_cap_pct": 0.0055, "adx_max": 20.0, "atr_pct_max": 0.0030,
         "anchor_min_bars": 24.0, "vol_mult": 1.5, "rsi_lo": 5.0, "rsi_hi": 95.0,
-        "min_score": 1.0, "time_stop": 12.0, "adx_exit": 25.0, "tp1_frac": 0.6,
+        # min_score 0.8 = four of the five context conditions must agree.
+        #
+        # The specification's 1.0 (all five) is UNMEASURABLE, and that is a
+        # frequency fact rather than a performance opinion. On real 5m BTC the
+        # band pierce passes 5.8% of bars and the context conditions then pass
+        # 0.62% of those — about 34 trades a year, so the playbook's own
+        # 300-trade out-of-sample floor would need roughly nine years of data.
+        # At 0.8 it is ~305 a year: judgeable in about one.
+        #
+        # Chosen on trade frequency alone; P&L was deliberately not consulted,
+        # and the promotion gate still has to rule on whether it works at all.
+        "min_score": 0.8, "time_stop": 12.0, "adx_exit": 25.0, "tp1_frac": 0.6,
     }
 
     def prepare(self, b: Bars) -> Dict[str, np.ndarray]:

@@ -5,6 +5,55 @@ strategies: the playbook's S1, S2, S3, S5, S6, S9 plus candidates S11–S18.
 
 ---
 
+## Widening the specs — on real 5m data, on frequency only
+
+With real 5m BTC available, the funnel finally ran on the data the specification
+was written for. Two results, one of which corrected an earlier inference.
+
+### S1: the spec as written is unmeasurable
+
+```
+gate                      reached   passed   pass%
+sigma_band_pierce_reject   2,794      162     5.80%   <-- biggest drop
+adx<max_and_flat             162       11     6.79%
+vol>=mult                    162       53    32.72%
+rsi2_extreme                 162       50    30.86%
+confluence_score>=min        162        1     0.62%
+```
+
+`ADX < 20 and flat` passes **6.79%** on real 5m BTC against 28% on synthetic
+bars — BTC trends, so "no trend" is rarer than the specification assumed. That is
+a fact only real data could supply.
+
+Requiring all five context conditions leaves 0.62% of pierces, ≈ **34 trades a
+year** — so the playbook's own 300-trade out-of-sample floor would need about
+**nine years** of data. A strategy that cannot be measured is not a strategy.
+Default `min_score` is now **0.8** (four of five), ≈ **305 trades a year**:
+judgeable in roughly one.
+
+**Chosen on frequency alone. P&L was deliberately not consulted**, and the
+promotion gate still has to rule on whether it works at all — measurability is a
+precondition for that verdict, not a substitute for it.
+
+### S6: an earlier inference did not reproduce
+
+Synthetic bars suggested the redundant Fib-AND-EMA pullback zone was S6's binding
+gate (3 → 9 trades when relaxed). On real 5m BTC, `zone_mode` makes **no
+difference at all**:
+
+```
+zone_mode=both  1 trade      zone_mode=fib  1 trade      zone_mode=ema  1 trade
+```
+
+Only four setups reach that gate in eleven days, so this is inconclusive rather
+than refuted — but it is not evidence, and the default is therefore unchanged.
+The synthetic-data recommendation was wrong to act on, which is exactly why the
+rule was to widen on real data.
+
+S9 is left alone too: each of its gates carries a distinct meaning (an
+unconfirmed break, an RSI extreme, a range that has actually held), and the
+funnel gives no basis for choosing one to drop.
+
 ## Worldwide data, and 65 years of S&P 500
 
 IMF, OECD, BIS, the Bank of England, the Bundesbank and JPX are all blocked

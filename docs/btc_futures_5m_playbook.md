@@ -88,8 +88,12 @@ oscillates around AVWAP and σ-band excursions are inventory imbalances that dec
 six conditions co-occur ~4 times in 51k bars, so the strategy never trades. The
 band pierce is structural (it sets the entry price) and stays mandatory; the five
 context conditions are now **scored**, and `min_score` sets how many must agree.
-`min_score = 1.0` is the specification below, exactly. The right threshold is a
-real-data question — see `docs/btc_futures_5m_backtest.md`.
+**Default is now `min_score = 0.8`** (four of five). `1.0` — the original,
+all-five reading — was measured on real 5m BTC at ~34 trades a year, so this
+document's own 300-trade out-of-sample floor would take about nine years to
+reach. A strategy that cannot be measured is not a strategy. `0.8` gives ~305 a
+year. The value was chosen on frequency alone, with P&L deliberately not
+consulted, and the promotion gate still decides whether it works.
 
 **3. Long entry (all must hold on close of bar *t*)**
 1. `ADX(14) < 20` and ADX not rising for 3 bars (no trend regime).
