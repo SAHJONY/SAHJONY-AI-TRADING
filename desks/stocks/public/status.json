@@ -9,8 +9,8 @@
     "return_pct": 0.326,
     "alpha_pct": -386.484
   },
-  "ts": "2026-07-29T04:29:57.042185+00:00",
-  "cycle": 65,
+  "ts": "2026-07-29T07:20:51.581496+00:00",
+  "cycle": 66,
   "account": {
     "equity": -5723.15,
     "equity_start": 2000.0,
@@ -47,8 +47,8 @@
     },
     "cadence": {
       "degraded": true,
-      "reason": "execution cadence degraded: 201 min since the last cycle (expected ~15 min) \u2014 a new position could not be managed",
-      "gap_min": 201.2,
+      "reason": "execution cadence degraded: 170 min since the last cycle (expected ~15 min) \u2014 a new position could not be managed",
+      "gap_min": 170.3,
       "expected_min": 15,
       "tolerance_min": 90.0
     },
@@ -106,9 +106,9 @@
       "quarantined": [],
       "issues": {},
       "hit_rates": {
-        "SPY": 0.096,
-        "QQQ": 0.137,
-        "VTI": 0.092
+        "SPY": 0.093,
+        "QQQ": 0.132,
+        "VTI": 0.089
       },
       "strategy_weights": {
         "daytrade": 0.867
@@ -173,7 +173,7 @@
     {
       "symbol": "QQQ",
       "scores": {
-        "buffett": 0.143,
+        "buffett": 0.142,
         "munger": 0.3,
         "macro": 0.0,
         "growth": 0.346,
@@ -194,7 +194,7 @@
     {
       "symbol": "VTI",
       "scores": {
-        "buffett": 0.251,
+        "buffett": 0.25,
         "munger": 0.3,
         "macro": 0.0,
         "growth": 0.429,
@@ -215,7 +215,7 @@
     {
       "symbol": "MSFT",
       "scores": {
-        "buffett": -0.012,
+        "buffett": -0.014,
         "munger": 0.3,
         "macro": 0.0,
         "growth": -0.227,
@@ -236,7 +236,7 @@
     {
       "symbol": "NVDA",
       "scores": {
-        "buffett": -0.123,
+        "buffett": -0.124,
         "munger": 0.3,
         "macro": 0.0,
         "growth": 0.22,
@@ -261,8 +261,8 @@
       "price": 741.04,
       "conviction": 0.543,
       "direction": "long",
-      "composite": 0.087,
-      "risk_multiplier": 0.917,
+      "composite": 0.086,
+      "risk_multiplier": 0.916,
       "agents": [
         {
           "name": "Citadel Systematic",
@@ -274,8 +274,8 @@
         {
           "name": "Two Sigma Backtest",
           "persona": "Statistical expectancy",
-          "score": 0.413,
-          "confidence": 0.607,
+          "score": 0.412,
+          "confidence": 0.606,
           "rationale": "ann.Sharpe=+0.88, win-rate=53%"
         },
         {
@@ -309,9 +309,9 @@
         {
           "name": "D.E. Shaw Options",
           "persona": "Vol surface / premium",
-          "score": 0.063,
-          "confidence": 0.682,
-          "rationale": "vol=13%, IV-rank=61% \u2192 premium-sell favorability 61%"
+          "score": 0.058,
+          "confidence": 0.679,
+          "rationale": "vol=13%, IV-rank=60% \u2192 premium-sell favorability 60%"
         },
         {
           "name": "AQR Factor",
@@ -323,23 +323,23 @@
         {
           "name": "Citadel Securities MM",
           "persona": "Order-flow microstructure",
-          "score": 0.129,
-          "confidence": 0.534,
+          "score": 0.128,
+          "confidence": 0.533,
           "rationale": "VPIN order-flow toxicity=0.17 (1=max adverse selection)"
         },
         {
           "name": "Millennium Pod",
           "persona": "Residual alpha / beta-neutral",
-          "score": -0.0,
+          "score": 0.0,
           "confidence": 0.5,
-          "rationale": "ann.alpha=-0.0%, beta=+1.00, beta-neutrality=0.50"
+          "rationale": "ann.alpha=+0.0%, beta=+1.00, beta-neutrality=0.50"
         },
         {
           "name": "Renaissance Medallion",
           "persona": "Regime / cointegration",
           "score": 0.028,
           "confidence": 0.8,
-          "rationale": "state=calm (p_stay=0.66), coint-z=-0.11"
+          "rationale": "state=calm (p_stay=0.65), coint-z=+0.11"
         },
         {
           "name": "Sovereign Wealth",
@@ -353,10 +353,10 @@
     {
       "symbol": "QQQ",
       "price": 675.75,
-      "conviction": 0.516,
+      "conviction": 0.517,
       "direction": "long",
       "composite": 0.033,
-      "risk_multiplier": 0.676,
+      "risk_multiplier": 0.671,
       "agents": [
         {
           "name": "Citadel Systematic",
@@ -368,8 +368,8 @@
         {
           "name": "Two Sigma Backtest",
           "persona": "Statistical expectancy",
-          "score": 0.285,
-          "confidence": 0.542,
+          "score": 0.288,
+          "confidence": 0.544,
           "rationale": "ann.Sharpe=+0.59, win-rate=54%"
         },
         {
@@ -403,9 +403,9 @@
         {
           "name": "D.E. Shaw Options",
           "persona": "Vol surface / premium",
-          "score": 0.252,
-          "confidence": 0.779,
-          "rationale": "vol=20%, IV-rank=93% \u2192 premium-sell favorability 93%"
+          "score": 0.249,
+          "confidence": 0.777,
+          "rationale": "vol=20%, IV-rank=92% \u2192 premium-sell favorability 92%"
         },
         {
           "name": "AQR Factor",
@@ -417,23 +417,23 @@
         {
           "name": "Citadel Securities MM",
           "persona": "Order-flow microstructure",
-          "score": 0.131,
-          "confidence": 0.536,
-          "rationale": "VPIN order-flow toxicity=0.16 (1=max adverse selection)"
+          "score": 0.128,
+          "confidence": 0.533,
+          "rationale": "VPIN order-flow toxicity=0.17 (1=max adverse selection)"
         },
         {
           "name": "Millennium Pod",
           "persona": "Residual alpha / beta-neutral",
-          "score": -0.18,
-          "confidence": 0.637,
-          "rationale": "ann.alpha=-4.6%, beta=+1.41, beta-neutrality=0.29"
+          "score": -0.172,
+          "confidence": 0.631,
+          "rationale": "ann.alpha=-4.4%, beta=+1.41, beta-neutrality=0.29"
         },
         {
           "name": "Renaissance Medallion",
           "persona": "Regime / cointegration",
-          "score": 0.028,
+          "score": 0.029,
           "confidence": 0.8,
-          "rationale": "state=calm (p_stay=0.83), coint-z=-2.95"
+          "rationale": "state=calm (p_stay=0.83), coint-z=-2.94"
         },
         {
           "name": "Sovereign Wealth",
@@ -449,8 +449,8 @@
       "price": 365.26,
       "conviction": 0.553,
       "direction": "long",
-      "composite": 0.106,
-      "risk_multiplier": 0.925,
+      "composite": 0.105,
+      "risk_multiplier": 0.924,
       "agents": [
         {
           "name": "Citadel Systematic",
@@ -462,7 +462,7 @@
         {
           "name": "Two Sigma Backtest",
           "persona": "Statistical expectancy",
-          "score": 0.428,
+          "score": 0.427,
           "confidence": 0.614,
           "rationale": "ann.Sharpe=+0.91, win-rate=53%"
         },
@@ -497,9 +497,9 @@
         {
           "name": "D.E. Shaw Options",
           "persona": "Vol surface / premium",
-          "score": 0.013,
-          "confidence": 0.657,
-          "rationale": "vol=14%, IV-rank=52% \u2192 premium-sell favorability 52%"
+          "score": 0.004,
+          "confidence": 0.652,
+          "rationale": "vol=14%, IV-rank=51% \u2192 premium-sell favorability 51%"
         },
         {
           "name": "AQR Factor",
@@ -512,22 +512,22 @@
           "name": "Citadel Securities MM",
           "persona": "Order-flow microstructure",
           "score": 0.134,
-          "confidence": 0.54,
+          "confidence": 0.539,
           "rationale": "VPIN order-flow toxicity=0.15 (1=max adverse selection)"
         },
         {
           "name": "Millennium Pod",
           "persona": "Residual alpha / beta-neutral",
-          "score": 0.021,
-          "confidence": 0.516,
-          "rationale": "ann.alpha=+0.5%, beta=+1.02, beta-neutrality=0.49"
+          "score": 0.022,
+          "confidence": 0.517,
+          "rationale": "ann.alpha=+0.6%, beta=+1.02, beta-neutrality=0.49"
         },
         {
           "name": "Renaissance Medallion",
           "persona": "Regime / cointegration",
           "score": 0.029,
           "confidence": 0.8,
-          "rationale": "state=calm (p_stay=0.67), coint-z=+0.61"
+          "rationale": "state=calm (p_stay=0.68), coint-z=+0.61"
         },
         {
           "name": "Sovereign Wealth",
@@ -541,10 +541,10 @@
     {
       "symbol": "MSFT",
       "price": 392.38,
-      "conviction": 0.359,
+      "conviction": 0.356,
       "direction": "flat",
-      "composite": -0.282,
-      "risk_multiplier": 0.443,
+      "composite": -0.287,
+      "risk_multiplier": 0.434,
       "agents": [
         {
           "name": "Citadel Systematic",
@@ -556,14 +556,14 @@
         {
           "name": "Two Sigma Backtest",
           "persona": "Statistical expectancy",
-          "score": -0.531,
-          "confidence": 0.666,
-          "rationale": "ann.Sharpe=-1.18, win-rate=48%"
+          "score": -0.54,
+          "confidence": 0.67,
+          "rationale": "ann.Sharpe=-1.21, win-rate=47%"
         },
         {
           "name": "Bridgewater Risk",
           "persona": "Risk parity / vol-target",
-          "score": -0.156,
+          "score": -0.157,
           "confidence": 0.6,
           "rationale": "ann.vol=31% vs target 15%, risk_scale=0.48"
         },
@@ -591,9 +591,9 @@
         {
           "name": "D.E. Shaw Options",
           "persona": "Vol surface / premium",
-          "score": 0.172,
-          "confidence": 0.737,
-          "rationale": "vol=31%, IV-rank=79% \u2192 premium-sell favorability 79%"
+          "score": 0.156,
+          "confidence": 0.729,
+          "rationale": "vol=31%, IV-rank=76% \u2192 premium-sell favorability 76%"
         },
         {
           "name": "AQR Factor",
@@ -605,21 +605,21 @@
         {
           "name": "Citadel Securities MM",
           "persona": "Order-flow microstructure",
-          "score": 0.132,
-          "confidence": 0.537,
-          "rationale": "VPIN order-flow toxicity=0.16 (1=max adverse selection)"
+          "score": 0.119,
+          "confidence": 0.523,
+          "rationale": "VPIN order-flow toxicity=0.19 (1=max adverse selection)"
         },
         {
           "name": "Millennium Pod",
           "persona": "Residual alpha / beta-neutral",
-          "score": -0.948,
+          "score": -0.952,
           "confidence": 0.9,
-          "rationale": "ann.alpha=-45.4%, beta=+0.74, beta-neutrality=0.63"
+          "rationale": "ann.alpha=-46.3%, beta=+0.74, beta-neutrality=0.63"
         },
         {
           "name": "Renaissance Medallion",
           "persona": "Regime / cointegration",
-          "score": -0.087,
+          "score": -0.09,
           "confidence": 0.8,
           "rationale": "state=calm (p_stay=0.92), coint-z=-0.45"
         },
@@ -635,10 +635,10 @@
     {
       "symbol": "NVDA",
       "price": 198.49,
-      "conviction": 0.417,
+      "conviction": 0.416,
       "direction": "flat",
-      "composite": -0.167,
-      "risk_multiplier": 0.374,
+      "composite": -0.169,
+      "risk_multiplier": 0.373,
       "agents": [
         {
           "name": "Citadel Systematic",
@@ -650,14 +650,14 @@
         {
           "name": "Two Sigma Backtest",
           "persona": "Statistical expectancy",
-          "score": 0.038,
-          "confidence": 0.419,
-          "rationale": "ann.Sharpe=+0.08, win-rate=51%"
+          "score": 0.032,
+          "confidence": 0.416,
+          "rationale": "ann.Sharpe=+0.06, win-rate=51%"
         },
         {
           "name": "Bridgewater Risk",
           "persona": "Risk parity / vol-target",
-          "score": -0.207,
+          "score": -0.208,
           "confidence": 0.6,
           "rationale": "ann.vol=37% vs target 15%, risk_scale=0.40"
         },
@@ -699,21 +699,21 @@
         {
           "name": "Citadel Securities MM",
           "persona": "Order-flow microstructure",
-          "score": 0.135,
+          "score": 0.134,
           "confidence": 0.54,
           "rationale": "VPIN order-flow toxicity=0.15 (1=max adverse selection)"
         },
         {
           "name": "Millennium Pod",
           "persona": "Residual alpha / beta-neutral",
-          "score": -0.63,
+          "score": -0.641,
           "confidence": 0.9,
-          "rationale": "ann.alpha=-18.6%, beta=+1.84, beta-neutrality=0.08"
+          "rationale": "ann.alpha=-19.0%, beta=+1.84, beta-neutrality=0.08"
         },
         {
           "name": "Renaissance Medallion",
           "persona": "Regime / cointegration",
-          "score": 0.003,
+          "score": 0.002,
           "confidence": 0.5,
           "rationale": "state=stressed (p_stay=0.71), coint-z=-1.65"
         },
@@ -731,14 +731,14 @@
     "enabled": true,
     "used": true,
     "posture": "neutral",
-    "global_risk_multiplier": 0.9,
-    "commentary": "The council\u2019s signals are modestly constructive but heavily weighted toward market beta. SPY and VTI provide a solid broad\u2011market anchor, yet they overlap heavily, limiting diversification. QQQ adds growth exposure but its high beta (1.41) and negative alpha make the signal fragile. MSFT and NVDA are flat with strongly negative composites and elevated volatility, marking them as the most fragile positions. To preserve capital we keep the overall stance neutral, apply a modest 10% risk reduction (multiplier 0.90), and tilt convictions slightly upward for the stable broad indices while pulling b",
+    "global_risk_multiplier": 0.88,
+    "commentary": "The slate leans bullish on broad\u2011market ETFs (SPY, VTI) but is heavily weighted to correlated U.S. equity exposure. QQQ adds sector concentration and a high beta, while MSFT and NVDA are flat with negative composites and elevated volatility, making their signals fragile. Given the lack of alternative assets and the asymmetric tail risk from the two tech names, we keep the overall stance neutral and modestly scale back the more vulnerable bets.",
     "brain_model": "nvidia:openai/gpt-oss-120b",
     "counsellors": {
-      "openai": "Overall posture: cautiously constructive but equity-beta heavy. SPY/VTI overlap is substantial, while QQQ adds concentrated growth exposure (\u03b2 1.41). MSFT and NVDA weaken risk-adjusted quality; no alternative diversifiers are available. Consider modest sizing and avoid treating \u201c",
-      "grok": "**Portfolio risk posture:** Modestly constructive but uneven. Broad-index longs (SPY/VTI) show stable positive composites and contained vol; QQQ adds beta/vol drag. Single-name flats (MSFT/NVDA) carry negative alpha and elevated vol\u2014net tilt is equity-beta heavy with weak idiosyn",
-      "gemini": "SPY:* Stable. Adjustment: +0.0",
-      "nvidia": "**Risk posture:** The slate is equity\u2011heavy (all beta\u202f>\u202f0.7) with modest diversification beyond the three broad indices. Aggregate volatility (~0.15) is acceptable, but the high\u2011beta QQQ (\u03b2\u202f1.41) and the tech\u2011heavy NVDA (\u03b2\u202f1.84, vol\u202f0.37) lift portfolio sensitivity to a market ra"
+      "openai": "**Risk posture:** Moderately bullish but highly correlated: SPY/VTI overlap substantially, while QQQ adds growth concentration and higher beta. With alternatives unavailable, diversification is limited. Overall risk is elevated if U.S. equities or mega-cap technology reverse.\n\n**",
+      "grok": "**Portfolio risk view**\n\nOverall posture: Mildly constructive broad-market beta (SPY/VTI), but QQQ\u2019s weak composite/negative alpha and high-vol single names (NVDA beta 1.84, MSFT deep negative alpha) create asymmetric downside. Net risk is moderate-elevated; prefer index overstoc",
+      "gemini": "The portfolio exhibits a defensive tilt toward broad indices while sidelining high-beta growth",
+      "nvidia": "**Risk posture:** The slate is heavily equity\u2011biased (all\u2011cap ETFs plus two large\u2011cap tech names) with an aggregate beta \u22481.3 and volatility clustered around 13\u201120\u202f%. The two tech stocks add asymmetric tail risk (NVDA\u2019s \u03b2\u202f1.84, \u03c3\u202f37\u202f%). Expect higher draw\u2011down potential in a mark"
     }
   },
   "positions": [
@@ -1308,9 +1308,35 @@
       "cash": -65708.8065630506,
       "realized_pnl": -43.42332663306,
       "premium": 0.0
+    },
+    {
+      "ts": "2026-07-29T07:20:49.555424+00:00",
+      "cycle": 66,
+      "equity": -5723.152860395608,
+      "cash": -65708.8065630506,
+      "realized_pnl": -43.42332663306,
+      "premium": 0.0
     }
   ],
   "decisions": [
+    {
+      "ts": "2026-07-29T07:20:46.731946+00:00",
+      "kind": "wheel_wait",
+      "symbol": "VTI",
+      "reason": "no put contract found"
+    },
+    {
+      "ts": "2026-07-29T07:20:46.669692+00:00",
+      "kind": "ladder_update",
+      "symbol": "QQQ",
+      "reason": "px 675.75 peak 675.75 gain -2%"
+    },
+    {
+      "ts": "2026-07-29T07:20:46.667664+00:00",
+      "kind": "ladder_update",
+      "symbol": "SPY",
+      "reason": "px 741.04 peak 745.16 gain +1%"
+    },
     {
       "ts": "2026-07-29T04:29:52.144206+00:00",
       "kind": "wheel_wait",
@@ -1439,24 +1465,6 @@
     },
     {
       "ts": "2026-07-28T17:20:53.763954+00:00",
-      "kind": "wheel_wait",
-      "symbol": "VTI",
-      "reason": "no put contract found"
-    },
-    {
-      "ts": "2026-07-28T17:20:53.692219+00:00",
-      "kind": "ladder_update",
-      "symbol": "QQQ",
-      "reason": "px 677.30 peak 682.21 gain -2%"
-    },
-    {
-      "ts": "2026-07-28T17:20:53.689948+00:00",
-      "kind": "ladder_update",
-      "symbol": "SPY",
-      "reason": "px 741.28 peak 745.16 gain +1%"
-    },
-    {
-      "ts": "2026-07-28T15:57:26.408886+00:00",
       "kind": "wheel_wait",
       "symbol": "VTI",
       "reason": "no put contract found"
