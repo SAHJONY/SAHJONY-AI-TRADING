@@ -209,13 +209,61 @@ def _fetch_bybit(symbol: str, start_ms: int, end_ms: int) -> List[dict]:
     return rows
 
 
+_PUBLIC_BTC_1H = ("https://raw.githubusercontent.com/bukosabino/ta/master/"
+                  "test/data/datas.csv")
+
+
+def _fetch_public_btc_1h() -> List[dict]:
+    """Real hourly BTC OHLCV with REAL traded volume, from a public GitHub repo.
+
+    Reachable when exchange APIs are not: `raw.githubusercontent.com` serves
+    arbitrary public repositories, so this works behind egress policies that
+    block binance/bybit/coinbase/kraken/yahoo. ~46k clean bars, 2011-2017.
+
+    It is **hourly, not 5-minute** — see docs/btc_futures_5m_backtest.md for what
+    that does and does not let you conclude about a 5m specification.
+
+    The source is real data and carries real dirt: ~11% of rows are dropped here
+    (implausible prices including one at 1.7e308, OHLC inconsistencies, and
+    impossible single-bar jumps). Cleaning is part of the loader precisely so the
+    same rows are dropped every time and results stay reproducible.
+    """
+    import math
+    rows = []
+    text = _get(_PUBLIC_BTC_1H).text
+    rdr = csv.DictReader(io.StringIO(text))
+    prev_close = None
+    for r in rdr:
+        try:
+            ts = int(float(r["Timestamp"]))
+            o, h, l = float(r["Open"]), float(r["High"]), float(r["Low"])
+            c, v = float(r["Close"]), float(r["Volume_BTC"])
+        except (TypeError, ValueError, KeyError):
+            continue
+        if not all(math.isfinite(x) for x in (o, h, l, c, v)):
+            continue
+        # absolute plausibility: BTC over 2011-2017 never left $0.01..$10,000
+        if not all(0.01 < x < 10_000 for x in (o, h, l, c)) or v < 0:
+            continue
+        if h < max(o, c) or l > min(o, c):           # OHLC must be self-consistent
+            continue
+        if prev_close and (c / prev_close > 5 or prev_close / c > 5):
+            continue                                  # no real 1h bar moves 5x
+        prev_close = c
+        rows.append({"ts": ts * 1000, "open": o, "high": h, "low": l,
+                     "close": c, "volume": v})
+    return rows
+
+
 def fetch(source: str = "binance-vision", symbol: str = "BTCUSDT",
           months: Optional[List[str]] = None, start_ms: int = 0, end_ms: int = 0,
           cache: Optional[str] = None) -> Bars:
     """Pull 5m bars from a venue. `months` is ['2026-01', ...] for binance-vision."""
     if cache and os.path.exists(cache):
         return load_csv(cache, symbol)
-    if source == "binance-vision":
+    if source == "public-btc-1h":
+        rows = _fetch_public_btc_1h()
+    elif source == "binance-vision":
         rows = _fetch_binance_vision(symbol, months or [])
     elif source == "binance":
         rows = _fetch_binance_api(symbol, start_ms, end_ms or int(time.time() * 1000))
@@ -223,7 +271,9 @@ def fetch(source: str = "binance-vision", symbol: str = "BTCUSDT",
         rows = _fetch_bybit(symbol, start_ms, end_ms or int(time.time() * 1000))
     else:
         raise DataUnavailable(f"unknown source '{source}'")
-    bars = _to_bars(rows, symbol, 5)
+    # timeframe is a property of the source, not an assumption: labelling hourly
+    # bars "5m" in a report would be a quietly misleading result
+    bars = _to_bars(rows, symbol, 60 if source == "public-btc-1h" else 5)
     if cache:
         save_csv(bars, cache)
     return bars

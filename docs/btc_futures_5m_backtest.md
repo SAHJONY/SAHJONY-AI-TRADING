@@ -5,7 +5,72 @@ strategies: the playbook's S1, S2, S3, S5, S6, S9 plus candidates S11–S18.
 
 ---
 
-## Status: no real-data results yet
+## FIRST REAL-DATA RESULTS — and the edge did not survive
+
+A public dataset **is** reachable behind this egress policy:
+`raw.githubusercontent.com` serves arbitrary public repositories (200), as does
+PyPI, while every exchange API and Yahoo Finance are denied. That gives
+**46,237 clean hourly BTC bars, 2011–2017, with real traded volume**:
+
+```bash
+python -m backtest.run --source public-btc-1h --split 0.6
+```
+
+**These are hourly bars, not the 5-minute specification.** That invalidates the
+session strategies outright (S2's "opening range = first 3 bars" becomes three
+*hours*; S17's windows are minute-based) and mis-scales every ATR% regime
+threshold — median bar range here is 0.74%, which reads as EXTREME on gates
+calibrated for 5m. Structural strategies (Donchian, RSI(2), %B, NR7, engulfing)
+are the ones this can fairly speak to.
+
+### What happened
+
+S2 looked spectacular, and held up out-of-sample on default parameters with no
+tuning:
+
+```
+                    trades  hit_rate  expectancy_r  return_%  max_DD_%  Sharpe
+in-sample  (60%)      666     0.620      0.507       222.3     -10.75    4.35
+out-of-sample (40%)   399     0.657      0.664       150.8      -2.45    5.99
+buy & hold OOS          —         —          —      1265.9     -38.67    2.23
+```
+
+Two things stop that being a result:
+
+**1. It loses to buy-and-hold by 8×.** +151% against +1,266% over the same
+window. `public/evaluation.json`'s own primary criterion is "net-of-fees return
+beats buy-and-hold BTC" — on this data S2 fails it. Better Sharpe and a far
+smaller drawdown, but 2011–2017 was a once-in-history bull market and any
+long-biased rule looks good in it.
+
+**2. A Sharpe near 6 is a red flag, and the flag was right.** S2 enters with a
+stop-market order, and the engine fills it *at the stop price* whenever the bar
+trades through it. On hourly bars that gap through a level, that is an optimistic
+fill. Raising base slippage from 0.8 bps to 10 bps:
+
+```
+slippage    trades   expectancy_r   return_%   Sharpe
+0.8 bps       399        0.664       150.84     5.99
+ 10 bps        60        0.202         4.27     0.88
+```
+
+Not degradation — **collapse**. Trade count falls 85% because the §0 edge gate
+starts rejecting setups whose targets never really cleared costs, and what
+survives is Sharpe 0.88 on 60 trades, below the 300-trade significance floor.
+The apparent edge was a fill assumption.
+
+Every other strategy lost money on real data at default settings, several
+catastrophically (S15 −96.7%, S11 −88.6%).
+
+### What this establishes
+
+The harness works on real market data, and the first thing it did with real data
+was destroy an apparent edge. That is the machinery behaving correctly. It does
+**not** validate any strategy at 5 minutes — that still needs 5m bars.
+
+---
+
+## Status: no 5-minute real-data results yet
 
 **The backtest has not been run on real BTC data.** This session's egress policy
 denies every market-data host that was tried:
