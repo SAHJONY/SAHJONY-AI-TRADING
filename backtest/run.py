@@ -189,6 +189,15 @@ def main(argv=None) -> int:
               "have a price but no range;\nATR, wicks and intrabar stop tests are "
               "meaningless on them. High values mean the recorder\ninterval is "
               "finer than the desk's poll cadence.")
+        try:
+            from config import bar_intervals_for, load_config
+            cm = load_config().cycle_minutes
+            iv = bar_intervals_for(cm)
+            print(f"\nCYCLE_MINUTES={cm} -> the correct intervals for this cadence "
+                  f"are {', '.join(f'{v}m' for v in iv)}"
+                  f" (backtest the {iv[-1]}m series).")
+        except Exception:
+            pass
         return 0
 
     try:

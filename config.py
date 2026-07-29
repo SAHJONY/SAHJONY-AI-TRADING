@@ -49,8 +49,36 @@ def _list(name: str, default: str) -> List[str]:
     return [t.strip().upper() for t in raw.split(",") if t.strip()]
 
 
+# Standard bar sizes. Recording at a non-standard size makes the series
+# incomparable to any venue's candles, which defeats the point of keeping it.
+_BAR_LADDER = (1, 5, 15, 30, 60, 120, 240, 1440)
+
+
+def bar_intervals_for(cycle_minutes: int) -> tuple:
+    """Bar sizes a poll every `cycle_minutes` can actually populate.
+
+    Derived, never assumed. A bar's high can only exceed its low if two or more
+    quotes land inside it, so the interval a desk *should* record at is a
+    function of how often it looks at the market — not a number someone liked.
+
+    - `native`: the smallest standard bar the cadence fills at all (>= 1 quote).
+      Fine-grained and honest about price, but its range is mostly unmeasured.
+    - `usable`: the smallest standard bar that gets >= 3 quotes, so its high,
+      low and therefore ATR are observed. This is the series backtests should
+      read.
+
+    At the desk's CYCLE_MINUTES=15 that is (15, 60). Set CYCLE_MINUTES=5 and it
+    becomes (5, 15) with no other change — the 5-minute spec starts recording
+    correctly the moment the poll is fast enough to justify it.
+    """
+    c = max(1, int(cycle_minutes))
+    nxt = lambda n: next((b for b in _BAR_LADDER if b >= n), _BAR_LADDER[-1])  # noqa: E731
+    native, usable = nxt(c), nxt(3 * c)
+    return (native,) if native == usable else (native, usable)
+
+
 def _intervals(raw: str, default: tuple) -> tuple:
-    """'5,60' -> (5, 60). Accepts a single value for backward compatibility."""
+    """'5,60' -> (5, 60). Accepts a single value; blank/junk keeps `default`."""
     out = []
     for tok in (raw or "").split(","):
         tok = tok.strip()
@@ -115,12 +143,12 @@ class Config:
     # otherwise the desk stands down instead of sending a doomed order.
     min_order_notional: float = 1.0
     bar_recorder_enabled: bool = True
-    # Bar intervals the recorder writes, finest first. The desk's observed cycle
-    # cadence is ~16 minutes, so a 5m bucket gets at most one quote and its bars
-    # have no measured range; the 60m series is the one that is backtestable at
-    # today's cadence. Both are stored: the 5m rows cost one INSERT per cycle and
-    # become meaningful the moment the poll interval drops, with no gap.
-    bar_intervals: tuple = (5, 60)
+    # Bar intervals the recorder writes, finest first. Derived from cycle_minutes
+    # by bar_intervals_for() rather than fixed at 5 — a desk that looks at the
+    # market every 15 minutes cannot produce a 5-minute bar with a measured high
+    # and low, and recording one anyway stores a fabricated range. Override with
+    # BAR_INTERVAL_MINUTES only if you know why.
+    bar_intervals: tuple = (15, 60)
     quote_guard_enabled: bool = False
     quote_max_jump_pct: float = 0.10
     quote_stale_after_s: float = 300.0
@@ -283,7 +311,8 @@ def load_config() -> Config:
         # window (evaluation.json lists logging under allowed_during_window) —
         # it observes and writes rows, it never touches a decision.
         bar_recorder_enabled=_b("BAR_RECORDER", True),
-        bar_intervals=_intervals(os.getenv("BAR_INTERVAL_MINUTES", ""), (5, 60)),
+        bar_intervals=_intervals(os.getenv("BAR_INTERVAL_MINUTES", ""),
+                                 bar_intervals_for(_i("CYCLE_MINUTES", 15))),
         quote_guard_enabled=_b("QUOTE_GUARD", False),
         # Reject a single print that jumps more than this
         # against the last good price (a second confirming print is accepted), and

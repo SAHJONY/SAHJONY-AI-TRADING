@@ -316,24 +316,36 @@ def main() -> int:
     with _tf.TemporaryDirectory() as _d:
         path = _os.path.join(_d, "desk.db")
         _db = Database(path)
-        rec = BarRecorder(_db, (5, 60))
-        _check(rec.intervals == [5, 60] and rec.interval == 5,
+        from config import bar_intervals_for
+        _check(bar_intervals_for(15) == (15, 60),
+               "a 15-minute cycle records 15m and 60m — not 5m")
+        _check(bar_intervals_for(5) == (5, 15),
+               "a 5-minute cycle records the 5m spec, correctly, with no code change")
+        _check(bar_intervals_for(1) == (1, 5) and bar_intervals_for(60) == (60, 240),
+               "the interval tracks the cadence at both ends")
+        for c in (1, 3, 5, 11, 15, 30, 60, 120):
+            iv = bar_intervals_for(c)
+            _check(iv[-1] >= 3 * c and iv[0] >= c and list(iv) == sorted(iv),
+                   f"cycle {c}m -> {iv}: coarse bar gets >=3 quotes, fine one >=1")
+
+        rec = BarRecorder(_db, bar_intervals_for(15))
+        _check(rec.intervals == [15, 60] and rec.interval == 15,
                "recorder stores several intervals, finest first")
-        t0 = 1_800_000_000                       # aligned to both 5m and 60m
-        # a 16-minute poll cadence — the desk's actual median gap
-        for k in range(30):
+        t0 = 1_800_000_000                       # aligned to both 15m and 60m
+        # the desk's real cadence: CYCLE_MINUTES=15 plus ~1 min of cycle work
+        for k in range(40):
             rec.record("BTC/USD", 100.0 + (k % 7), ts=t0 + k * 16 * 60)
         _db.conn.commit()
 
         cov = {c["interval_m"]: c for c in rec.coverage()}
-        _check(set(cov) == {5, 60}, "both intervals accumulate from one quote stream")
-        _check(cov[5]["single_tick_pct"] == 100.0,
-               "at a 16m cadence every 5m bar is single-tick — reported, not hidden")
-        _check(cov[60]["ticks_per_bar"] > 1.0 and cov[60]["usable_bars"] > 0,
-               "the 60m series has bars with a measured range")
+        _check(set(cov) == {15, 60}, "both intervals accumulate from one quote stream")
+        _check(cov[15]["single_tick_pct"] > 50.0,
+               "the native series is mostly single-tick — reported, not hidden")
+        _check(cov[60]["ticks_per_bar"] >= 3.0 and cov[60]["usable_bars"] > 0,
+               "the coarse series clears 3 observations a bar, so its range is real")
 
         dc = {c["interval_m"]: c for c in desk_coverage(path)}
-        _check(dc[5]["single_tick_pct"] == cov[5]["single_tick_pct"]
+        _check(dc[15]["single_tick_pct"] == cov[15]["single_tick_pct"]
                and dc[60]["bars"] == cov[60]["bars"],
                "backtest.desk_coverage agrees with the recorder's own accounting")
 
@@ -343,13 +355,11 @@ def main() -> int:
         _check(bool((b.high > b.low).all()),
                "the min_ticks gate admits only bars whose range was observed")
 
-        try:
-            load_desk_db(path, symbol="BTC/USD", interval_m=5)
-            _check(False, "5m single-tick bars are refused")
-        except _DU as exc:
-            _check("single-tick" in str(exc) or "observations" in str(exc),
-                   "5m single-tick bars are refused, with the cadence explained")
-        _check(len(load_desk_db(path, symbol="BTC/USD", interval_m=5,
+        auto = load_desk_db(path, symbol="BTC/USD")
+        _check(auto.tf_minutes == 60,
+               "with no interval named it picks the series with measured ranges, "
+               "not the one with the most rows")
+        _check(len(load_desk_db(path, symbol="BTC/USD", interval_m=15,
                                 min_ticks=1)) > 0,
                "min_ticks=1 is available for anyone who wants the raw record")
         try:

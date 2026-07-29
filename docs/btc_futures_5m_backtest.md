@@ -362,7 +362,7 @@ What Robinhood *can* do is accumulate history going forward, so
 and stores them:
 
 ```bash
-BAR_RECORDER=true BAR_INTERVAL_MINUTES=5,60   # defaults
+BAR_RECORDER=true          # BAR_INTERVAL_MINUTES is derived, leave it unset
 ```
 
 The harness reads that database directly — no export step, no adapter:
@@ -393,23 +393,45 @@ the same data without the intermediate file.
    wicks, and intrabar stop tests computed on such bars are not conservative
    approximations — they are fiction.
 
-This is why the recorder writes **several intervals from the same quote stream**
-(`bar_intervals = (5, 60)`). The 60m series is backtestable at today's cadence
-(~3.7 observations per bar); the 5m series costs one extra INSERT per cycle and
-becomes meaningful the moment the poll interval drops, with no gap in the record.
-`load_desk_db()` defaults to `min_ticks=2` and **refuses** a series whose bars are
-all single-tick, naming the cadence as the cause rather than silently handing back
-range-free bars. `--desk-coverage` reports `single_tick_pct` per series so the
-question "is there enough history yet?" has a numeric answer.
+**So the bar size is derived from the cadence, not chosen.** `config.bar_intervals_for(cycle_minutes)`
+returns two standard sizes off the ladder `1, 5, 15, 30, 60, 120, 240, 1440`:
 
-And the arithmetic worth doing before relying on this: at a 5-minute cadence,
-288 bars accumulate per day. The harness needs ~400 bars of warmup before the
-first signal and the promotion gate wants 300 out-of-sample trades — so this path
-measures in **months**, not days, *and only if the poll is sped up to 5 minutes
-first*. At the current 16-minute cadence the usable series is hourly: 24 bars a
-day, which puts a 300-trade out-of-sample record years away. It is the right thing
-to start now precisely because it takes that long; it is not a substitute for
-downloading history from a venue that publishes candles.
+| | rule | at `CYCLE_MINUTES=15` | at `CYCLE_MINUTES=5` |
+|---|---|---|---|
+| **native** | smallest bar the cadence fills at all (≥1 quote) | 15m | 5m |
+| **usable** | smallest bar that gets ≥3 quotes, so its high/low are observed | **60m** | **15m** |
+
+Both are written from the same quote stream; the coarse one is what backtests
+should read. The consequence worth stating plainly: **the desk records a 5-minute
+bar when, and only when, it polls every 5 minutes.** Set `CYCLE_MINUTES=5` and
+`(5, 15)` follows with no code change — the 5-minute spec starts recording the
+moment the poll is fast enough to justify it, and not one cycle before.
+
+The readers enforce the same rule. `load_desk_db()` defaults to `min_ticks=2` and
+**refuses** a series whose bars are all single-tick, naming the cadence as the
+cause rather than silently handing back range-free bars; with no interval named
+it selects the series with the most bars that have a *measured* range, since
+ranking by row count would reliably pick the worst data available.
+`--desk-coverage` reports `single_tick_pct` per series and prints the correct
+intervals for the configured cadence, so "is there enough history yet?" and "am I
+recording the right thing?" both have numeric answers.
+
+And the arithmetic worth doing before relying on this. The harness needs ~400
+bars of warmup before its first signal, and the promotion gate wants 300
+out-of-sample trades:
+
+| cadence | usable series | bars/day | 400-bar warmup |
+|---|---|---|---|
+| `CYCLE_MINUTES=15` (today) | 60m | 24 | ~17 days |
+| `CYCLE_MINUTES=5` | 15m | 96 | ~4 days |
+| `CYCLE_MINUTES=1` | 5m | 288 | ~1.4 days |
+
+Warmup is the easy part; 300 out-of-sample *trades* is the binding one, and at 24
+bars a day that is years away. Speeding the poll up is therefore the lever that
+matters — the desk runs on a GitHub Actions loop (`.github/workflows/desk.yml`),
+so `CYCLE_MINUTES` is a repository variable, not a code change. This path is
+still the right thing to start now precisely because it takes so long; it is not
+a substitute for downloading history from a venue that publishes candles.
 
 ## What was built
 

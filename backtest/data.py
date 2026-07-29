@@ -212,6 +212,13 @@ def load_desk_db(path: str, symbol: str = "", interval_m: Optional[int] = None,
         cov = [c for c in cov if c["interval_m"] == int(interval_m)]
         if not cov:
             raise DataUnavailable(f"{path}: no bars at {interval_m}m")
+    else:
+        # Choose by bars with a *measured* range, not by row count. The finer
+        # series always has more rows and is always the less usable one — ranking
+        # on volume of rows would reliably pick the worst available data.
+        def _usable(c):
+            return int(round(c["bars"] * (100.0 - c["single_tick_pct"]) / 100.0))
+        cov = sorted(cov, key=lambda c: (_usable(c), c["bars"]), reverse=True)
     pick = cov[0]
     sym, iv = pick["symbol"], pick["interval_m"]
 
