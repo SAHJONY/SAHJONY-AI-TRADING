@@ -1,0 +1,79 @@
+version: 1
+status: research_only
+live_activation: false
+owner_approval_required: true
+
+isolation:
+  live_order_imports_allowed: false
+  external_orders_allowed: false
+  overwrite_live_state_allowed: false
+  separate_data_namespace: true
+
+strategies:
+  time_series_momentum:
+    enabled_for_research: true
+    priority: 1
+    horizons_days: [21, 63, 252]
+    volatility_targeting: true
+    proposed_research_weight: 0.30
+  quality_value_momentum:
+    enabled_for_research: true
+    priority: 2
+    point_in_time_fundamentals_required: true
+    sector_neutralization: true
+    proposed_research_weight: 0.20
+  statistical_arbitrage:
+    enabled_for_research: true
+    priority: 3
+    beta_neutral: true
+    structural_break_tests: true
+    proposed_research_weight: 0.15
+  defined_risk_options:
+    enabled_for_research: true
+    priority: 4
+    naked_short_options_allowed: false
+    unlimited_loss_allowed: false
+    assignment_model_required: true
+    proposed_research_weight: 0.10
+  crypto_momentum_mean_reversion:
+    enabled_for_research: true
+    priority: 5
+    proposed_research_weight: 0.10
+  regime_overlay:
+    enabled_for_research: true
+    priority: 6
+    hard_risk_override_allowed: false
+    proposed_research_weight: 0.10
+  execution_research:
+    enabled_for_research: true
+    priority: 7
+    retail_market_making_allowed: false
+    proposed_research_weight: 0.05
+  crypto_basis_carry:
+    enabled_for_research: false
+    requires_two_sided_verified_execution: true
+    requires_collateral_stress_test: true
+  adaptive_market_making:
+    enabled_for_research: false
+    requires_direct_order_book: true
+    requires_cancel_replace: true
+    requires_queue_model: true
+
+promotion:
+  immutable_data_required: true
+  checksum_required: true
+  walk_forward_required: true
+  untouched_holdout_required: true
+  realistic_costs_required: true
+  shadow_execution_required: true
+  paper_execution_required: true
+  independent_review_required: true
+  explicit_owner_approval_required: true
+
+failure_policy:
+  stale_data: fail_close
+  invalid_quote: quarantine_symbol
+  empty_provider_response: reject
+  primary_brain_failure: preserve_or_reduce_risk
+  broker_identity_mismatch: suspend_new_risk
+  accounting_reconciliation_failure: suspend_performance_reporting
