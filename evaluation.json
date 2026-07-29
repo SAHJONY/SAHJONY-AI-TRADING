@@ -20,7 +20,8 @@
     },
     "allowed_during_window": [
       "genuine bug fixes (wrong, not merely improvable)",
-      "infrastructure, logging, dashboard, alerting"
+      "infrastructure, logging, dashboard, alerting",
+      "observation cadence (CYCLE_MINUTES) -- it changes how often the frozen logic is evaluated, not what it decides; any change must be logged in 'amendments'"
     ],
     "not_allowed": [
       "parameter tuning",
@@ -30,9 +31,9 @@
     ]
   },
   "evidence": {
-    "primary": "desks/paper (crypto trainer) and desks/stocks \u2014 enough trade count for statistics",
-    "secondary": "live Robinhood crypto desk \u2014 validates real execution, fills and costs",
-    "caveat": "The paper trainer runs a looser 0.40 conviction gate than the live desk's 0.52, so its results do not directly predict live behaviour. Conviction is also compressed (the 12-agent average lands in 47-53%), which is why the live desk trades rarely. Recalibrate AFTER this window using the hit-rate-by-conviction data it collects \u2014 not before."
+    "primary": "desks/paper (crypto trainer) and desks/stocks — enough trade count for statistics",
+    "secondary": "live Robinhood crypto desk — validates real execution, fills and costs",
+    "caveat": "The paper trainer runs a looser 0.40 conviction gate than the live desk's 0.52, so its results do not directly predict live behaviour. Conviction is also compressed (the 12-agent average lands in 47-53%), which is why the live desk trades rarely. Recalibrate AFTER this window using the hit-rate-by-conviction data it collects — not before."
   },
   "success_criteria": {
     "primary": "net-of-fees return beats buy-and-hold BTC over the window",
@@ -44,5 +45,16 @@
     "paper_trainer_sharpe_at_start": -3.81,
     "paper_trainer_return_pct_at_start": -22.77
   },
-  "decision_rule": "Pass on all criteria \u2192 scale capital deliberately. Fail, or fewer than 30 trades \u2192 do NOT add capital; recalibrate and re-run the window."
+  "decision_rule": "Pass on all criteria → scale capital deliberately. Fail, or fewer than 30 trades → do NOT add capital; recalibrate and re-run the window.",
+  "amendments": [
+    {
+      "at": "2026-07-29T13:09:45+00:00",
+      "day_of_window": 2.65,
+      "change": "CYCLE_MINUTES 15 -> 5 (.github/workflows/desk.yml default)",
+      "what_it_changes": "How often the desk observes the market and re-evaluates, inside an Actions job that runs for DESK_LOOP_MINUTES either way: ~11 cycles per scheduled window instead of ~3. Strategy logic, sizing, the 0.52 conviction gate, the risk ceilings and the fee model are untouched.",
+      "why": "The window's own minimum_sample is 30 closed trades. At cycle 456 it had 1 trade in 2.65 days -- on track for an inconclusive result caused by too few decision points, not by the strategies. Making the change at 2.9% elapsed costs far less comparability than discovering the sample shortfall at day 90. It also lets the bar recorder build genuine 5-minute bars (config.bar_intervals_for), which a 15-minute poll cannot.",
+      "cost": "More broker and LLM calls per hour, and more status.json commits. No additional Actions minutes.",
+      "comparability": "Trades before and after this timestamp are drawn at different observation rates. Report the window's trade count and Sharpe split at this boundary as well as pooled; do not present the pooled figure alone."
+    }
+  ]
 }

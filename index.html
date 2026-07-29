@@ -1000,9 +1000,13 @@ function setStatus(){
   const eb=document.getElementById('evalBadge');
   const ev=(DATA.health||{}).evaluation||{};
   if(eb){
-    if(ev.days){ eb.style.display=''; eb.textContent=`EVAL ${ev.day}/${ev.days}`;
+    const am=Array.isArray(ev.amendments)?ev.amendments:[];
+    if(ev.days){ eb.style.display='';
+      // An amended window is still a valid window, but the reader has to know.
+      eb.textContent=`EVAL ${ev.day}/${ev.days}`+(am.length?` ·${am.length}Δ`:'');
       eb.title=`Out-of-sample window ${ev.pct}% elapsed · frozen at ${ev.frozen_at_commit}`
         +`\nDecision date: ${String(ev.ends_at||'').slice(0,10)}`
+        +(am.length?`\nAmended ${am.length}×: `+am.map(a=>`${String(a.at||'').slice(0,10)} ${a.change||''}`).join('; '):'')
         +(ev.active?'':' · WINDOW CLOSED — time to judge the result'); }
     else eb.style.display='none';
   }
