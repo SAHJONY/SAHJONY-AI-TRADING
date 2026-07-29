@@ -5,7 +5,64 @@ strategies: the playbook's S1, S2, S3, S5, S6, S9 plus candidates S11–S18.
 
 ---
 
-## FIRST REAL-DATA RESULTS — and the edge did not survive
+## Real 5-minute BTC data — the spec's own instrument and timeframe
+
+```bash
+python -m backtest.run --source public-btc-5m        # 3,106 real 5m BTC/USDT bars
+```
+
+Found by cloning a public repo (git clone works for arbitrary public repos here,
+and `raw.githubusercontent.com` serves the file directly over HTTPS). Real prices
+($83,940–$94,034), real traded volume, zero timestamp gaps.
+
+**It is short — ~11 days, about 9 tradeable after warmup.** That is nowhere near
+the 300 out-of-sample trades the promotion gate wants, so it cannot say whether
+anything is profitable. What it *can* do is check that 5m logic behaves as
+designed, and it produced two results worth having.
+
+### The regime classifier was right
+
+§0's volatility buckets were written from priors, before any data existed. On
+real 5m BTC:
+
+```
+ATR% percentiles      p5 0.079%   p25 0.126%   p50 0.172%   p75 0.237%   p95 0.333%
+
+spec bucket                    share of real bars
+LOW      < 0.12%                    22.2%
+NORMAL   0.12% – 0.30%              68.1%
+HIGH     0.30% – 0.60%               9.7%
+EXTREME  ≥ 0.60%                     0.0%
+```
+
+The bulk lands in NORMAL with tails either side — which is what a regime
+classifier should do. (EXTREME is absent because this is a calm eleven-day
+window, not because the bucket is wrong.)
+
+### The over-selectivity finding reproduces on real data
+
+Previously this was inferred from synthetic bars. On real 5m BTC over ~9
+tradeable days:
+
+```
+playbook strategies   S1 1   S2 2   S3 1   S5 3   S6 1   S9 1     trades
+new candidates        S11 47  S12 24  S13 22  S14 24  S16 17  S17 32  S18 57
+```
+
+The original six fire **1–3 times in nine days** — roughly 40–120 trades a year,
+against a gate that wants 300 out-of-sample. That is **3–8 years of data per
+strategy** before any of them could be judged. The S11–S18 candidates, written
+deliberately shallower, run at ~700–2,300 trades a year and could be judged in
+months.
+
+Every strategy lost money over this window, but on 1–57 trades that is noise, not
+a finding. The honest statement is that the sample is too small, which is itself
+the point: **the specification's frequency problem is now confirmed on real
+market data.**
+
+---
+
+## Real hourly data — and the edge did not survive
 
 A public dataset **is** reachable behind this egress policy:
 `raw.githubusercontent.com` serves arbitrary public repositories (200), as does

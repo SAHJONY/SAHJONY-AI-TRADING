@@ -209,6 +209,48 @@ def _fetch_bybit(symbol: str, start_ms: int, end_ms: int) -> List[dict]:
     return rows
 
 
+_PUBLIC_BTC_5M = ("https://raw.githubusercontent.com/freqtrade/freqtrade/develop/"
+                  "tests/testdata/BTC_USDT-5m.feather")
+
+
+def _fetch_public_btc_5m() -> List[dict]:
+    """Real BTC/USDT **5-minute** OHLCV with real traded volume, from a public repo.
+
+    This is the specification's own instrument and timeframe, reachable over
+    plain HTTPS when every exchange API is blocked. Requires `pyarrow` to read
+    the feather file.
+
+    **It is short: ~3,100 bars, about eleven days.** After warmup that leaves
+    roughly nine tradeable days, which is nowhere near the 300 out-of-sample
+    trades the promotion gate requires — for most of this book it produces
+    single-digit trade counts. Treat it as the correct data for checking that 5m
+    logic *behaves* (session windows land where intended, ATR% regimes fall in
+    the designed buckets), not as evidence about profitability.
+    """
+    try:
+        import pandas as pd
+    except ImportError as exc:                        # pragma: no cover
+        raise DataUnavailable("pandas required for the 5m feather source") from exc
+    try:
+        df = pd.read_feather(io.BytesIO(_get(_PUBLIC_BTC_5M).content))
+    except DataUnavailable:
+        raise
+    except Exception as exc:
+        raise DataUnavailable(f"cannot read 5m feather ({exc}); pyarrow installed?") from exc
+    rows = []
+    for r in df.dropna().itertuples(index=False):
+        try:
+            ts = int(pd.Timestamp(r.date).timestamp() * 1000)
+            o, h, l, c, v = (float(r.open), float(r.high), float(r.low),
+                             float(r.close), float(r.volume))
+        except (TypeError, ValueError, AttributeError):
+            continue
+        if min(o, h, l, c) <= 0 or h < max(o, c) or l > min(o, c) or v < 0:
+            continue
+        rows.append({"ts": ts, "open": o, "high": h, "low": l, "close": c, "volume": v})
+    return rows
+
+
 _PUBLIC_BTC_1H = ("https://raw.githubusercontent.com/bukosabino/ta/master/"
                   "test/data/datas.csv")
 
@@ -261,7 +303,9 @@ def fetch(source: str = "binance-vision", symbol: str = "BTCUSDT",
     """Pull 5m bars from a venue. `months` is ['2026-01', ...] for binance-vision."""
     if cache and os.path.exists(cache):
         return load_csv(cache, symbol)
-    if source == "public-btc-1h":
+    if source == "public-btc-5m":
+        rows = _fetch_public_btc_5m()
+    elif source == "public-btc-1h":
         rows = _fetch_public_btc_1h()
     elif source == "binance-vision":
         rows = _fetch_binance_vision(symbol, months or [])
