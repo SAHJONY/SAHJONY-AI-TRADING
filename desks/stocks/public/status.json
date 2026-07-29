@@ -5,30 +5,30 @@
   "benchmark": {
     "symbol": "SPY",
     "start_price": 738.63,
-    "last_price": 741.04,
-    "return_pct": 0.326,
-    "alpha_pct": -386.484
+    "last_price": 740.43,
+    "return_pct": 0.244,
+    "alpha_pct": -520.063
   },
-  "ts": "2026-07-29T10:05:57.183620+00:00",
-  "cycle": 67,
+  "ts": "2026-07-29T12:20:16.962918+00:00",
+  "cycle": 68,
   "account": {
-    "equity": -5723.15,
+    "equity": -8396.38,
     "equity_start": 2000.0,
     "cash": -65708.81,
-    "deployed": 59985.65
+    "deployed": 57312.92
   },
   "pnl": {
     "realized": -43.42,
     "premium_collected": 0.0,
-    "total_return_pct": -386.158
+    "total_return_pct": -519.819
   },
   "capital": {
     "deposits": 0.0,
     "withdrawals": 0.0,
     "net_capital": 0.0,
     "flows": 0,
-    "trading_pnl": -7723.15,
-    "trading_return_pct": -386.158
+    "trading_pnl": -10396.38,
+    "trading_return_pct": -519.819
   },
   "capital_flows": [],
   "health": {
@@ -47,8 +47,8 @@
     },
     "cadence": {
       "degraded": true,
-      "reason": "execution cadence degraded: 165 min since the last cycle (expected ~15 min) \u2014 a new position could not be managed",
-      "gap_min": 165.3,
+      "reason": "execution cadence degraded: 134 min since the last cycle (expected ~15 min) \u2014 a new position could not be managed",
+      "gap_min": 134.1,
       "expected_min": 15,
       "tolerance_min": 90.0
     },
@@ -70,7 +70,7 @@
     "circuit_breaker": {
       "halted": false,
       "reason": "",
-      "day_return": 0.0,
+      "day_return": 0.4668,
       "day_start": -5723.15,
       "limit_pct": 0.1
     },
@@ -106,9 +106,9 @@
       "quarantined": [],
       "issues": {},
       "hit_rates": {
-        "SPY": 0.089,
-        "QQQ": 0.128,
-        "VTI": 0.086
+        "SPY": 0.086,
+        "QQQ": 0.123,
+        "VTI": 0.083
       },
       "strategy_weights": {
         "daytrade": 0.867
@@ -152,22 +152,22 @@
     {
       "symbol": "SPY",
       "scores": {
-        "buffett": 0.25,
+        "buffett": 0.251,
         "munger": 0.3,
         "macro": 0.0,
-        "growth": 0.428,
-        "quant": 0.265
+        "growth": 0.427,
+        "quant": 0.284
       },
       "gate": 1.0,
-      "composite": 0.261,
-      "tilt": 0.0261,
+      "composite": 0.266,
+      "tilt": 0.0266,
       "rationale": {
-        "buffett": "-0.0% vs 200d mean, vol 13%",
-        "munger": "-0.5% vs 50d trend, 5d move -1.0%",
+        "buffett": "+0.0% vs 200d mean, vol 13%",
+        "munger": "-0.6% vs 50d trend, 5d move -1.0%",
         "macro": "insufficient benchmark history",
-        "growth": "6m +6.9%, -2.4% off the high",
-        "quant": "z -1.13, 20/50 trend +0.2%",
-        "risk_gate": "drawdown -2.4%, vol 13% \u2192 gate 1.00"
+        "growth": "6m +6.9%, -2.5% off the high",
+        "quant": "z -1.23, 20/50 trend +0.2%",
+        "risk_gate": "drawdown -2.5%, vol 13% \u2192 gate 1.00"
       }
     },
     {
@@ -215,22 +215,22 @@
     {
       "symbol": "MSFT",
       "scores": {
-        "buffett": -0.014,
+        "buffett": -0.02,
         "munger": 0.3,
         "macro": 0.0,
-        "growth": -0.227,
-        "quant": -0.216
+        "growth": -0.224,
+        "quant": -0.253
       },
-      "gate": 0.903,
-      "composite": -0.048,
-      "tilt": -0.0043,
+      "gate": 0.909,
+      "composite": -0.058,
+      "tilt": -0.0053,
       "rationale": {
-        "buffett": "+0.2% vs 200d mean, vol 31%",
-        "munger": "-1.5% vs 50d trend, 5d move -1.1%",
+        "buffett": "-0.0% vs 200d mean, vol 31%",
+        "munger": "-1.3% vs 50d trend, 5d move -1.1%",
         "macro": "insufficient benchmark history",
-        "growth": "6m -16.4%, -23.2% off the high",
-        "quant": "z +0.50, 20/50 trend -2.4%",
-        "risk_gate": "drawdown -23.2%, vol 31% \u2192 gate 0.90"
+        "growth": "6m -16.4%, -23.0% off the high",
+        "quant": "z +0.65, 20/50 trend -2.4%",
+        "risk_gate": "drawdown -23.0%, vol 31% \u2192 gate 0.91"
       }
     },
     {
@@ -258,10 +258,10 @@
   "council": [
     {
       "symbol": "SPY",
-      "price": 741.04,
-      "conviction": 0.543,
+      "price": 740.5,
+      "conviction": 0.545,
       "direction": "long",
-      "composite": 0.086,
+      "composite": 0.091,
       "risk_multiplier": 0.916,
       "agents": [
         {
@@ -288,9 +288,9 @@
         {
           "name": "Renaissance Patterns",
           "persona": "Mean-reversion",
-          "score": 0.589,
-          "confidence": 0.525,
-          "rationale": "z(20)=-1.13 (mean-revert), autocorr=-0.01"
+          "score": 0.629,
+          "confidence": 0.547,
+          "rationale": "z(20)=-1.23 (mean-revert), autocorr=-0.01"
         },
         {
           "name": "Goldman Technical",
@@ -302,9 +302,9 @@
         {
           "name": "JPMorgan Fundamental",
           "persona": "Valuation proxy",
-          "score": 0.013,
+          "score": 0.012,
           "confidence": 0.45,
-          "rationale": "px/200d=1.00, drawdown-from-1y-high=-2% (proxy)"
+          "rationale": "px/200d=1.00, drawdown-from-1y-high=-3% (proxy)"
         },
         {
           "name": "D.E. Shaw Options",
@@ -344,9 +344,9 @@
         {
           "name": "Sovereign Wealth",
           "persona": "Secular macro / SAA",
-          "score": 0.029,
+          "score": 0.03,
           "confidence": 0.4,
-          "rationale": "secular trend=+0%, structural drawdown=-2% (accumulate dips)"
+          "rationale": "secular trend=-0%, structural drawdown=-3% (accumulate dips)"
         }
       ]
     },
@@ -540,16 +540,16 @@
     },
     {
       "symbol": "MSFT",
-      "price": 392.38,
-      "conviction": 0.356,
+      "price": 393.49,
+      "conviction": 0.354,
       "direction": "flat",
-      "composite": -0.287,
+      "composite": -0.291,
       "risk_multiplier": 0.434,
       "agents": [
         {
           "name": "Citadel Systematic",
           "persona": "Trend/Systematic",
-          "score": -0.816,
+          "score": -0.815,
           "confidence": 1.0,
           "rationale": "MACD=0.68, 20-50 slope=-0.024, Q-mom=-7.4%"
         },
@@ -570,9 +570,9 @@
         {
           "name": "Renaissance Patterns",
           "persona": "Mean-reversion",
-          "score": -0.289,
-          "confidence": 0.399,
-          "rationale": "z(20)=+0.50 (mean-revert), autocorr=+0.07"
+          "score": -0.373,
+          "confidence": 0.431,
+          "rationale": "z(20)=+0.65 (mean-revert), autocorr=+0.07"
         },
         {
           "name": "Goldman Technical",
@@ -584,7 +584,7 @@
         {
           "name": "JPMorgan Fundamental",
           "persona": "Valuation proxy",
-          "score": 0.111,
+          "score": 0.115,
           "confidence": 0.45,
           "rationale": "px/200d=1.00, drawdown-from-1y-high=-23% (proxy)"
         },
@@ -626,9 +626,9 @@
         {
           "name": "Sovereign Wealth",
           "persona": "Secular macro / SAA",
-          "score": 0.271,
+          "score": 0.27,
           "confidence": 0.4,
-          "rationale": "secular trend=-0%, structural drawdown=-23% (accumulate dips)"
+          "rationale": "secular trend=+0%, structural drawdown=-23% (accumulate dips)"
         }
       ]
     },
@@ -731,14 +731,14 @@
     "enabled": true,
     "used": true,
     "posture": "neutral",
-    "global_risk_multiplier": 0.85,
-    "commentary": "The portfolio is broadly neutral with a modest tilt toward risk reduction (multiplier 0.85). Broad\u2011market ETFs (SPY, VTI) dominate the beta exposure, while QQQ adds a growth tilt and the single\u2011stock bets (MSFT, NVDA) introduce high beta and volatility. QQQ, MSFT and NVDA are flagged as fragile \u2013 their high beta/volatility and negative composites/alphas could reverse on a tech pull\u2011back. Adjustments modestly boost the low\u2011beta anchors (SPY, VTI) and trim the more vulnerable positions (QQQ, MSFT, NVDA).",
+    "global_risk_multiplier": 0.9,
+    "commentary": "The portfolio remains mildly constructive but exhibits concentration risk in U.S. equity beta and elevated volatility from QQQ and NVDA. Composite scores are modest and alternative data is unavailable, so we keep sizing disciplined. Signals for QQQ, MSFT, and NVDA appear fragile due to high beta/volatility, negative alpha/composite, and low conviction; adjustments reflect a modest de\u2011risking of those exposures while reinforcing the core broad\u2011market anchors SPY and VTI.",
     "brain_model": "nvidia:openai/gpt-oss-120b",
     "counsellors": {
-      "openai": "**Overall:** Moderately constructive but risk is equity-beta concentrated: SPY, QQQ, and VTI overlap materially, while QQQ/NVDA add growth and volatility sensitivity. With alternative data unavailable, conviction should remain restrained; avoid treating \u201clong\u201d as a strong signal.",
-      "grok": "**Risk posture:** Moderate equity beta (~1.0\u20131.2 blended). Broad-market longs (SPY/VTI) dominate with low vol; QQQ adds growth tilt and higher beta. Single-stock flats (MSFT/NVDA) limit idiosyncratic risk but leave residual high-vol drag. Overall balanced yet vulnerable to tech/m",
-      "gemini": "",
-      "nvidia": "**Risk posture:** The slate is equity\u2011heavy, with three market\u2011wide ETFs (SPY, QQQ, VTI) that together carry ~1.5\u202f\u00d7 market beta and modest volatility (\u224813\u201120%). The two stock\u2011specific bets add high beta (NVDA\u202f1.84) and elevated vol (>30%), pushing overall portfolio volatility abo"
+      "openai": "**Overall posture:** Mildly constructive but risk-concentrated: SPY, QQQ, and VTI create substantial overlapping U.S. equity beta, while QQQ/NVDA add elevated growth and volatility exposure. Limited conviction and unavailable alternative data argue against aggressive sizing.\n\n**S",
+      "grok": "**Risk posture:** Mildly constructive but fragile. Index longs (SPY/VTI/QQQ) dominate with modest composites; single-name flats show clear negative alpha. Elevated beta/vol in QQQ/NVDA plus zero alt data leave the book exposed to equity drawdowns\u2014no meaningful diversifiers.\n\n**Ad",
+      "gemini": "The portfolio exhibits a defensive pivot. While broad indices (SPY,",
+      "nvidia": "**Risk posture:** The slate is equity\u2011heavy with a tech\u2011biased tilt. Aggregate beta \u22481.3 and portfolio\u2011level volatility \u22480.22\u202f\u00d7\u202fmarket, so downside risk is above a neutral index. MSFT and NVDA add outsized volatility and negative alpha, making the whole book more sensitive to a m"
     }
   },
   "positions": [
@@ -768,9 +768,9 @@
       "state": "long",
       "shares": -9.935112,
       "cost_basis": 516.18,
-      "price": 255.11,
-      "market_value": -2534.55,
-      "unrealized": 2593.76
+      "price": 523.56,
+      "market_value": -5201.63,
+      "unrealized": -73.32
     },
     {
       "symbol": "EDRY",
@@ -818,9 +818,9 @@
       "state": "long",
       "shares": 10.0,
       "cost_basis": 735.26,
-      "price": 741.04,
-      "market_value": 7410.4,
-      "unrealized": 57.76
+      "price": 740.44,
+      "market_value": 7404.45,
+      "unrealized": 51.81
     },
     {
       "symbol": "DLHC",
@@ -1324,9 +1324,35 @@
       "cash": -65708.8065630506,
       "realized_pnl": -43.42332663306,
       "premium": 0.0
+    },
+    {
+      "ts": "2026-07-29T12:20:14.764604+00:00",
+      "cycle": 68,
+      "equity": -8396.384325675604,
+      "cash": -65708.8065630506,
+      "realized_pnl": -43.42332663306,
+      "premium": 0.0
     }
   ],
   "decisions": [
+    {
+      "ts": "2026-07-29T12:20:11.633053+00:00",
+      "kind": "wheel_wait",
+      "symbol": "VTI",
+      "reason": "no put contract found"
+    },
+    {
+      "ts": "2026-07-29T12:20:11.560900+00:00",
+      "kind": "ladder_update",
+      "symbol": "QQQ",
+      "reason": "px 675.75 peak 675.75 gain -2%"
+    },
+    {
+      "ts": "2026-07-29T12:20:11.558308+00:00",
+      "kind": "ladder_update",
+      "symbol": "SPY",
+      "reason": "px 740.50 peak 745.16 gain +1%"
+    },
     {
       "ts": "2026-07-29T10:05:52.691146+00:00",
       "kind": "wheel_wait",
@@ -1455,24 +1481,6 @@
     },
     {
       "ts": "2026-07-28T20:15:00.507812+00:00",
-      "kind": "wheel_wait",
-      "symbol": "VTI",
-      "reason": "no put contract found"
-    },
-    {
-      "ts": "2026-07-28T20:15:00.494011+00:00",
-      "kind": "catastrophic_floor",
-      "symbol": "QQQ",
-      "reason": "catastrophic_floor 414.86 hit, realize $-43"
-    },
-    {
-      "ts": "2026-07-28T20:15:00.405535+00:00",
-      "kind": "ladder_update",
-      "symbol": "SPY",
-      "reason": "px 739.27 peak 745.16 gain +1%"
-    },
-    {
-      "ts": "2026-07-28T18:53:53.131014+00:00",
       "kind": "wheel_wait",
       "symbol": "VTI",
       "reason": "no put contract found"
