@@ -158,6 +158,11 @@ def _evaluation_block() -> Dict[str, Any]:
                 "started_at": m["started_at"], "ends_at": m["ends_at"],
                 "pct": round(100.0 * min(elapsed, total) / total, 1),
                 "criteria": m.get("success_criteria", {}),
+                # A window whose behaviour changed silently is worse than one that
+                # never claimed to be frozen. Amendments ride on every snapshot so
+                # the change is visible next to the result it affects.
+                "amendments": [{"at": a.get("at", ""), "change": a.get("change", "")}
+                               for a in m.get("amendments", [])],
                 "frozen_at_commit": m.get("frozen_at_commit", "")[:7]}
     except Exception:
         return {}

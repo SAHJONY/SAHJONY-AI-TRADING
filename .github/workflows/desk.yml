@@ -2,8 +2,10 @@ name: SAHJONY desk (scheduled)
 
 on:
   schedule:
-    # 24/7 desk: every 15 min, all hours, every day. Crypto trades round-the-clock;
-    # equities simply queue while their market is closed.
+    # 24/7 desk, all hours, every day. Crypto trades round-the-clock; equities
+    # simply queue while their market is closed. This cron controls how often a
+    # job STARTS (and GitHub throttles it heavily anyway) — the desk's actual
+    # cycle rate is CYCLE_MINUTES, applied inside the job.
     - cron: '*/15 * * * *'
   workflow_dispatch:
     inputs:
@@ -60,7 +62,15 @@ jobs:
       # 'BTC/USD,ETH/USD,SOL/USD,LTC/USD' (stock symbols can't price on a crypto venue).
       TICKERS: ${{ vars.TICKERS || 'AAPL,MSFT,NVDA,GOOGL,AMZN,TSLA,META,SPY,QQQ,DIA,GLD,SLV,TLT,EEM,BTC/USD,ETH/USD,SOL/USD,LTC/USD' }}
       MARKET_HOURS: ${{ vars.MARKET_HOURS || '24_7' }}
-      CYCLE_MINUTES: ${{ vars.CYCLE_MINUTES || '15' }}
+      # 5, not 15. This governs the GAP between cycles inside one job, and the
+      # job runs for DESK_LOOP_MINUTES either way — so this buys ~11 cycles per
+      # scheduled window instead of ~3 at no extra Actions minutes. It is the
+      # binding constraint on two separate things: the evaluation window needs 30
+      # closed trades to be significant and had 1 trade in its first 2.65 days,
+      # and the bar recorder can only build a 5-minute bar if it sees the market
+      # every 5 minutes (config.bar_intervals_for). Costs more broker/LLM calls
+      # per hour. Set Variable CYCLE_MINUTES to override.
+      CYCLE_MINUTES: ${{ vars.CYCLE_MINUTES || '5' }}
       MAX_ALLOCATION_PCT: ${{ vars.MAX_ALLOCATION_PCT || '0.12' }}
       MAX_TOTAL_DEPLOYED_PCT: ${{ vars.MAX_TOTAL_DEPLOYED_PCT || '0.70' }}
       MIN_COUNCIL_CONVICTION: ${{ vars.MIN_COUNCIL_CONVICTION || '0.52' }}
@@ -185,7 +195,7 @@ jobs:
       # */15 cron, with multi-hour skips) but one job may run for hours. So drive
       # the live desk from INSIDE a single job: a cycle every CYCLE_MINUTES across
       # DESK_LOOP_MINUTES, publishing each snapshot as it goes. That restores true
-      # 15-minute risk checks — stops, floors and the breaker re-evaluate on
+      # CYCLE_MINUTES risk checks — stops, floors and the breaker re-evaluate on
       # schedule — with no paid infrastructure. Manual dispatch runs one pass.
       - name: Run live desk cycles (loops through the scheduled window)
         env:
@@ -204,7 +214,7 @@ jobs:
           git config user.name  "sahjony-desk[bot]"
           git config user.email "noreply@anthropic.com"
           END=$(( SECONDS + 60 * ${LOOP_MINUTES:-0} ))
-          GAP=$(( 60 * ${CYCLE_MINUTES:-15} ))
+          GAP=$(( 60 * ${CYCLE_MINUTES:-5} ))
           n=0
           while : ; do
             n=$(( n + 1 ))
