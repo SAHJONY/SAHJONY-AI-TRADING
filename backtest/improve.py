@@ -65,6 +65,9 @@ SPACES: Dict[str, Dict] = {
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(description="Walk-forward search + overfitting controls")
     p.add_argument("--csv", help="5m OHLCV CSV")
+    p.add_argument("--source", choices=["public-btc-5m", "public-btc-1h",
+                                        "sp500-1d", "nasdaq-1d"],
+                   help="a bundled/public dataset instead of --csv")
     p.add_argument("--synth", type=int, metavar="DAYS",
                    help="synthetic bars — exercises the machinery, proves nothing")
     p.add_argument("--seed", type=int, default=7)
@@ -88,6 +91,9 @@ def main(argv=None) -> int:
         except DataUnavailable as exc:
             print(f"DATA UNAVAILABLE: {exc}", file=sys.stderr)
             return 2
+    elif args.source:
+        from backtest.data import fetch as _fetch
+        bars = _fetch(source=args.source, symbol=args.source)
     elif args.synth:
         from backtest import synth
         bars = synth.make(days=args.synth, seed=args.seed)

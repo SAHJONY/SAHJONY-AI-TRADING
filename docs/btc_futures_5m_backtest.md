@@ -5,6 +5,81 @@ strategies: the playbook's S1, S2, S3, S5, S6, S9 plus candidates S11–S18.
 
 ---
 
+## Wall Street reference data — and the gate rejecting a real candidate
+
+Bloomberg Terminal is a licensed product whose API needs an authenticated
+terminal session; there is no path to it here or from the desk without a
+subscription. Every free institutional API is also blocked by this egress policy
+— **SEC EDGAR, FRED, World Bank, ECB, Nasdaq Data Link and Alpha Vantage all
+fail**. Only GitHub public repos and package registries are reachable.
+
+Package registries turn out to be enough. Serious econometrics libraries *bundle*
+genuine market data offline, no API and no key:
+
+| Source | Span | Data |
+|---|---|---|
+| `arch.data.default` | **1919–2018** | Moody's AAA / BAA corporate credit spreads |
+| `arch.data.wti` | 1986–2019 | WTI crude, 8,611 sessions |
+| `arch.data.sp500` / `nasdaq` | 1999–2018 | Real daily OHLCV, 5,031 sessions each |
+| `arch.data.frenchdata` | monthly | Fama–French factors (Mkt-RF, SMB, HML, RF) |
+| `statsmodels` macrodata | 1959–2009 | US GDP, CPI, unemployment, T-bill |
+
+```bash
+python -m backtest.run    --source sp500-1d --split 0.6
+python -m backtest.improve --source sp500-1d --strategy s12
+```
+
+S&P 500 1999–2018 is **the largest multi-regime sample available here** — the
+dot-com unwind, the 2008 crisis and the 2010s bull, including a first half where
+buy-and-hold returned 2.4% over twelve years with a 57% drawdown.
+
+### One candidate looked real
+
+S12 (Connors RSI(2)) was positive in *both* halves of a walk-forward split, which
+nothing else managed:
+
+```
+                trades  hit_rate  expectancy_r  Sharpe
+in-sample  (60%)   48     0.667       0.134      0.62
+out-of-sample      33     0.727       0.175      0.68
+buy & hold OOS      —         —           —      0.80
+```
+
+Consistent hit rate across a regime change is what a genuine mean-reversion edge
+looks like. So it went through the promotion gate.
+
+### The gate rejected it
+
+```
+PASS  oos_trades        56        (>= 30)
+PASS  oos_expectancy_r  0.0477    (> 0)
+FAIL  pbo               0.5857    (<= 0.35)
+FAIL  deflated_sharpe   0.0017    (>= 0.95)
+PASS  param_stability   0.7654    (>= 0.6)
+PASS  param_drift       0.3536    (<= 0.5)
+PASS  positive_folds    1.000     (>= 0.6)
+
+VERDICT: REJECT
+```
+
+Five checks of seven pass. It fails the two that decide the question:
+
+- **PBO 0.59** — pick the in-sample winner and it lands *below median*
+  out-of-sample 59% of the time. Worse than a coin flip: the search is selecting
+  noise, not skill.
+- **Deflated Sharpe 0.0017** — after charging for 18 trials, the observed
+  per-trade Sharpe of 0.080 sits far under the 0.489 a best-of-18 search would
+  produce by luck alone.
+
+The fold-by-fold expectancy also decays, 0.122 → 0.040 → 0.026, and the whole
+out-of-sample record is 2.67R across 56 trades — negligible before it is
+significant.
+
+**This is the machinery earning its keep.** A strategy that is positive in every
+fold, stable in its parameters and consistent across a regime change is still
+rejected, because the statistics cannot distinguish it from luck. Anyone reading
+only the first table would have promoted it.
+
 ## Real 5-minute BTC data — the spec's own instrument and timeframe
 
 ```bash

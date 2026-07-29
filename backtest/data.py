@@ -209,6 +209,41 @@ def _fetch_bybit(symbol: str, start_ms: int, end_ms: int) -> List[dict]:
     return rows
 
 
+def _fetch_bundled_index(which: str) -> List[dict]:
+    """Real daily OHLCV for a major US index, bundled offline in the `arch` package.
+
+    Institutional reference data with no API and no key: `arch` (Kevin Sheppard's
+    econometrics library) ships S&P 500 and Nasdaq daily bars for 1999-2018 —
+    5,031 sessions spanning the dot-com unwind, the 2008 crisis and the 2018
+    volatility shock. That makes it the largest multi-regime sample available
+    here, and unlike the 5m crypto sample it is long enough for the promotion
+    gate's statistics to mean something.
+
+    Daily bars, so the 5-minute strategies' session and time-stop logic does not
+    transfer; the structural strategies (Donchian, RSI(2), %B, NR7, engulfing) do.
+    """
+    try:
+        import importlib
+        mod = importlib.import_module(f"arch.data.{which}")
+        df = mod.load()
+    except Exception as exc:
+        raise DataUnavailable(
+            f"bundled dataset '{which}' unavailable ({exc}); pip install arch") from exc
+    rows = []
+    for ts, r in df.iterrows():
+        try:
+            o, h, l, c = (float(r["Open"]), float(r["High"]),
+                          float(r["Low"]), float(r["Close"]))
+            v = float(r.get("Volume", 0.0) or 0.0)
+        except (TypeError, ValueError, KeyError):
+            continue
+        if min(o, h, l, c) <= 0 or h < max(o, c) or l > min(o, c):
+            continue
+        rows.append({"ts": int(ts.timestamp() * 1000), "open": o, "high": h,
+                     "low": l, "close": c, "volume": max(v, 0.0)})
+    return rows
+
+
 _PUBLIC_BTC_5M = ("https://raw.githubusercontent.com/freqtrade/freqtrade/develop/"
                   "tests/testdata/BTC_USDT-5m.feather")
 
@@ -303,7 +338,9 @@ def fetch(source: str = "binance-vision", symbol: str = "BTCUSDT",
     """Pull 5m bars from a venue. `months` is ['2026-01', ...] for binance-vision."""
     if cache and os.path.exists(cache):
         return load_csv(cache, symbol)
-    if source == "public-btc-5m":
+    if source in ("sp500-1d", "nasdaq-1d"):
+        rows = _fetch_bundled_index(source.split("-")[0])
+    elif source == "public-btc-5m":
         rows = _fetch_public_btc_5m()
     elif source == "public-btc-1h":
         rows = _fetch_public_btc_1h()
@@ -317,7 +354,9 @@ def fetch(source: str = "binance-vision", symbol: str = "BTCUSDT",
         raise DataUnavailable(f"unknown source '{source}'")
     # timeframe is a property of the source, not an assumption: labelling hourly
     # bars "5m" in a report would be a quietly misleading result
-    bars = _to_bars(rows, symbol, 60 if source == "public-btc-1h" else 5)
+    # timeframe is a property of the source, never an assumption
+    _TF = {"public-btc-1h": 60, "sp500-1d": 1440, "nasdaq-1d": 1440}
+    bars = _to_bars(rows, symbol, _TF.get(source, 5))
     if cache:
         save_csv(bars, cache)
     return bars
