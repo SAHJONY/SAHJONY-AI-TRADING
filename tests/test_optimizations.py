@@ -263,6 +263,53 @@ def main() -> int:
         same = len(Backtester(b4).run(cls(**{}))["trades"])
         _check(base == same, f"{sid}: no-arg construction is the documented spec")
 
+    print("\n── bar recorder (the only path from Robinhood to real bars) ──")
+    from utils.bar_recorder import BarRecorder
+    import tempfile as _tf, os as _os
+    with _tf.TemporaryDirectory() as _d:
+        _db = Database(_os.path.join(_d, "bars.db"))
+        rec = BarRecorder(_db, interval_minutes=5)
+        t0 = 1_800_000_000                      # a 5m bucket boundary
+        for px in (100.0, 105.0, 95.0, 102.0):  # all inside one bucket
+            rec.record("BTC/USD", px, ts=t0 + 10)
+        _db.conn.commit()
+        row = _db.conn.execute("SELECT * FROM bars WHERE symbol='BTC/USD'").fetchone()
+        _check(row["open"] == 100.0 and row["high"] == 105.0
+               and row["low"] == 95.0 and row["close"] == 102.0,
+               "OHLC folds correctly from a stream of quotes")
+        _check(row["volume"] == 4, "volume counts ticks (documented: NOT traded volume)")
+        _check(row["ts"] == t0, "observations bucket to the interval start")
+
+        rec.record("BTC/USD", 111.0, ts=t0 + 300)   # next bucket
+        _db.conn.commit()
+        _check(_db.conn.execute("SELECT COUNT(*) c FROM bars").fetchone()["c"] == 2,
+               "a later observation opens a new bar")
+
+        for bad in (0.0, -5.0, float("nan"), None):
+            rec.record("BTC/USD", bad, ts=t0 + 600)
+        _db.conn.commit()
+        _check(_db.conn.execute("SELECT COUNT(*) c FROM bars").fetchone()["c"] == 2,
+               "bad prices (0, negative, NaN, None) never create a bar")
+
+        cov = rec.coverage()
+        _check(cov and cov[0]["bars"] == 2 and cov[0]["interval_m"] == 5,
+               "coverage reports what has actually accumulated")
+
+        csv_path = _os.path.join(_d, "out.csv")
+        n = rec.export_csv("BTC/USD", csv_path)
+        from backtest.data import load_csv as _lc
+        bars_out = _lc(csv_path)
+        _check(n == 2 and len(bars_out) == 2 and bars_out.close[-1] == 111.0,
+               "exported bars load straight into the backtest harness")
+
+        class _BrokenDB:
+            class conn:
+                @staticmethod
+                def executescript(*a): raise RuntimeError("no db")
+        r2 = BarRecorder(_BrokenDB(), 5)
+        r2.record("X", 1.0); r2.record_many({"X": 1.0})
+        _check(r2.coverage() == [], "a broken database degrades silently, never raises")
+
     print("\n── database indices exist ──")
     import tempfile, os
     with tempfile.TemporaryDirectory() as d:

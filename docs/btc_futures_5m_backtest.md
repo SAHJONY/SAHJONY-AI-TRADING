@@ -40,6 +40,47 @@ python -m backtest.run --csv bars.csv --portfolio --funnel
 
 ---
 
+## Robinhood as a data source — what it can and cannot do
+
+Asked to source the backtest from Robinhood, the answer is a capability limit,
+not an outage:
+
+**Robinhood's crypto trading API has no candles.** It serves
+`/api/v1/crypto/marketdata/best_bid_ask/` — one live quote — and nothing else.
+`utils/brokers/robinhood_crypto.py` says so in its own docstring and backfills
+*daily* closes from CoinGecko for the council. **No amount of network access or
+credentials turns that into 5-minute history.** (Separately, this sandbox cannot
+reach `trading.robinhood.com` or `api.coingecko.com` either, and has no RH
+credentials — but that is the lesser of the two blockers.)
+
+What Robinhood *can* do is accumulate history going forward, so
+`utils/bar_recorder.py` folds the quotes the desk already fetches into OHLCV bars
+and stores them:
+
+```bash
+BAR_RECORDER=true BAR_INTERVAL_MINUTES=5   # defaults
+```
+
+Round-trip verified end to end: record → SQLite → `export_csv()` →
+`python -m backtest.run --csv <file>` reads it with no adapter in between.
+
+**Two limitations that change what those bars mean:**
+
+1. **Volume is a tick count, not traded volume.** `best_bid_ask` carries no size.
+   Strategies gated on volume — S2's `vol_mult`, S15's volume spike, S1's
+   capitulation filter — are measuring *sampling frequency* on these bars, not
+   participation. Their volume conditions are not meaningful here.
+2. **Bar resolution is bounded by the poll cadence.** The desk cycles every 15
+   minutes by default, so it produces 15-minute bars. Genuine 5-minute bars need
+   a 5-minute or faster poll.
+
+And the arithmetic worth doing before relying on this: at a 5-minute cadence,
+288 bars accumulate per day. The harness needs ~400 bars of warmup before the
+first signal and the promotion gate wants 300 out-of-sample trades — so this path
+measures in **months**, not days. It is the right thing to start now precisely
+because it takes that long; it is not a substitute for downloading history from a
+venue that publishes candles.
+
 ## What was built
 
 | File | Role |

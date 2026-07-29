@@ -42,6 +42,7 @@ from strategies.wheel_strategy import WheelStrategy
 from utils.logger import get_logger
 from utils.notify import Notifier
 from utils.quote_cache import CachedBroker
+from utils.bar_recorder import BarRecorder
 from utils.realtime import RealtimeGuard
 from utils.state_store import record_event
 
@@ -219,6 +220,15 @@ class Firm:
                      cfg.quote_max_jump_pct * 100, cfg.quote_max_venue_age_s)
         self.client = client
         self.db = db
+        # Passive history accumulation. Robinhood's API has no candles, so the
+        # only way to get real bars out of it is to record the quotes the desk
+        # already fetches. Pure logging: it observes, writes rows, and influences
+        # no decision — which is why it is allowed to run during the evaluation
+        # window while the quote guard is not.
+        self.bars = None
+        if getattr(cfg, "bar_recorder_enabled", True):
+            self.bars = BarRecorder(db, cfg.bar_interval_minutes,
+                                    source=getattr(client, "mode", "live"))
         self.council = Council()
         self.brain = AIBrain(cfg)
         self.alt = AltData(cfg)   # QuiverQuant insider/congress alt-data overlay
@@ -440,6 +450,13 @@ class Firm:
         cycle = state["cycle"]
         if hasattr(self.client, "begin_cycle"):
             self.client.begin_cycle()  # fresh quotes; pinned for this cycle
+        # Record this cycle's prices as bars (passive; see utils/bar_recorder.py).
+        if self.bars is not None:
+            try:
+                self.bars.record_many({sym: self.client.get_price(sym)
+                                       for sym in self.cfg.tickers})
+            except Exception as exc:      # history keeping never disturbs trading
+                log.warning("bar recording skipped: %s", exc)
         mode = getattr(self.client, "mode", self.cfg.mode)   # broker-accurate
         state["mode"] = mode
         acct = self.client.get_account()

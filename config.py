@@ -98,6 +98,8 @@ class Config:
     # budgets are rounded up to this when it still fits the per-position cap,
     # otherwise the desk stands down instead of sending a doomed order.
     min_order_notional: float = 1.0
+    bar_recorder_enabled: bool = True
+    bar_interval_minutes: int = 5
     quote_guard_enabled: bool = False
     quote_max_jump_pct: float = 0.10
     quote_stale_after_s: float = 300.0
@@ -255,6 +257,12 @@ def load_config() -> Config:
         # freezes desk behaviour for the 90-day out-of-sample window ending
         # 2026-10-24. Set QUOTE_GUARD=true to enable — after the window, or on a
         # desk that is not under evaluation.
+        # Bar recorder: passive logging of prices the desk already fetched, so
+        # real history accumulates for backtest/. Allowed during the evaluation
+        # window (evaluation.json lists logging under allowed_during_window) —
+        # it observes and writes rows, it never touches a decision.
+        bar_recorder_enabled=_b("BAR_RECORDER", True),
+        bar_interval_minutes=max(1, _i("BAR_INTERVAL_MINUTES", 5)),
         quote_guard_enabled=_b("QUOTE_GUARD", False),
         # Reject a single print that jumps more than this
         # against the last good price (a second confirming print is accepted), and
