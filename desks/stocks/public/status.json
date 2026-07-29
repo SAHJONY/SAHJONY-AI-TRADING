@@ -9,8 +9,8 @@
     "return_pct": 0.326,
     "alpha_pct": -386.484
   },
-  "ts": "2026-07-28T23:40:01.138421+00:00",
-  "cycle": 63,
+  "ts": "2026-07-29T01:09:14.257079+00:00",
+  "cycle": 64,
   "account": {
     "equity": -5723.15,
     "equity_start": 2000.0,
@@ -48,7 +48,7 @@
     "cadence": {
       "degraded": false,
       "reason": "",
-      "gap_min": 65.6,
+      "gap_min": 89.1,
       "expected_min": 15,
       "tolerance_min": 90.0
     },
@@ -68,10 +68,10 @@
       "frozen_at_commit": "8a82b4c"
     },
     "circuit_breaker": {
-      "halted": true,
-      "reason": "daily circuit breaker \u2014 down -80.7% (limit 10%)",
-      "day_return": -0.8065,
-      "day_start": -29579.65,
+      "halted": false,
+      "reason": "",
+      "day_return": 0.0,
+      "day_start": -5723.15,
       "limit_pct": 0.1
     },
     "ai_brain": {
@@ -106,9 +106,9 @@
       "quarantined": [],
       "issues": {},
       "hit_rates": {
-        "SPY": 0.103,
-        "QQQ": 0.147,
-        "VTI": 0.099
+        "SPY": 0.099,
+        "QQQ": 0.142,
+        "VTI": 0.095
       },
       "strategy_weights": {
         "daytrade": 0.867
@@ -732,13 +732,13 @@
     "used": true,
     "posture": "neutral",
     "global_risk_multiplier": 0.85,
-    "commentary": "The core exposure (SPY, VTI) remains the most defensible long bias, with modest positive composites and low volatility. QQQ adds growth tilt but its high beta and volatility, together with negative alpha, make it a fragile driver. MSFT and NVDA are flat with strongly negative alpha/composite and elevated volatility, representing tail\u2011risk concentrations. Accordingly we keep the overall stance neutral, scaling back the more speculative legs while reinforcing the broad\u2011market anchors.",
+    "commentary": "The council leans modestly long on broad U.S. equity indices (SPY, QQQ, VTI) with conviction around 0.5\u20110.55, but the flat\u2011rated tech names (MSFT, NVDA) carry negative composites, high beta and volatility, and lack alternative data support. This creates concentration risk and fragility in the tech exposure. We therefore stay neutral overall, applying a modest risk scaling (0.85) and trimming the more vulnerable signals while keeping a small constructive tilt on the core index positions.",
     "brain_model": "nvidia:openai/gpt-oss-120b",
     "counsellors": {
-      "openai": "Overall posture is **cautiously constructive but highly equity-beta dependent**. SPY, VTI, and QQQ overlap materially, while QQQ/NVDA add elevated growth and volatility exposure. Aggregate conviction is only moderate, and alpha is weak or negative\u2014favor measured sizing over aggre",
-      "grok": "**Risk posture:** Moderately constructive but beta-heavy. Broad ETFs (SPY/VTI) show positive composites and contained vol; QQQ adds growth tilt with higher beta. Single names are flat with negative alpha/composites and elevated vol\u2014net risk is market-directional, not stock-specif",
-      "gemini": "The portfolio maintains a cautious long bias via broad indices while neutralizing",
-      "nvidia": "**Risk posture:** The core is a long\u2011biased equity basket (SPY, QQQ, VTI) with near\u2011market beta but elevated volatility (esp. QQQ\u202f\u03b2\u202f1.41, vol\u202f0.20). The two flat\u2011position stocks add sector\u2011specific tail risk: MSFT\u2019s negative alpha and high volatility, NVDA\u2019s steep beta (1.84) and"
+      "openai": "Overall posture: modestly constructive on broad U.S. equities, but risk is concentrated through substantial SPY/VTI/QQQ overlap and elevated technology beta. QQQ and especially NVDA add sensitivity to valuation, momentum reversal, and volatility; alternative data are unavailable,",
+      "grok": "**Risk posture:** Moderately long bias via broad indices; elevated beta/vol from QQQ/NVDA warrants caution. Single-name signals weak. Alts unavailable \u2192 fragility across board.\n\n**Adjustments (conviction):**\n- SPY: +0.05\n- QQQ: -0.05\n- VTI: +0.06\n- MSFT: -0.10\n- NVDA: -0.08\n\n**Fl",
+      "gemini": "The portfolio maintains a cautious long bias through broad indices, but underlying momentum in mega",
+      "nvidia": "**Risk posture:** The basket leans heavily toward equity\u2011beta (average\u202f\u03b2\u22481.4) and moderate\u2011high volatility (\u03c3\u22480.20). With two flat\u2011rated, high\u2011beta tech names, the portfolio is slightly over\u2011exposed to market swings and sector\u2011specific risk.\n\n| Symbol | Current conviction | Sugge"
     }
   },
   "positions": [
@@ -1292,9 +1292,35 @@
       "cash": -65708.8065630506,
       "realized_pnl": -43.42332663306,
       "premium": 0.0
+    },
+    {
+      "ts": "2026-07-29T01:09:11.929171+00:00",
+      "cycle": 64,
+      "equity": -5723.152860395608,
+      "cash": -65708.8065630506,
+      "realized_pnl": -43.42332663306,
+      "premium": 0.0
     }
   ],
   "decisions": [
+    {
+      "ts": "2026-07-29T01:09:08.690213+00:00",
+      "kind": "wheel_wait",
+      "symbol": "VTI",
+      "reason": "no put contract found"
+    },
+    {
+      "ts": "2026-07-29T01:09:08.611927+00:00",
+      "kind": "ladder_update",
+      "symbol": "QQQ",
+      "reason": "px 675.75 peak 675.75 gain -2%"
+    },
+    {
+      "ts": "2026-07-29T01:09:08.609320+00:00",
+      "kind": "ladder_update",
+      "symbol": "SPY",
+      "reason": "px 741.04 peak 745.16 gain +1%"
+    },
     {
       "ts": "2026-07-28T23:39:55.881652+00:00",
       "kind": "wheel_wait",
@@ -1425,24 +1451,6 @@
       "ts": "2026-07-28T13:43:30.378427+00:00",
       "kind": "halt_block",
       "symbol": "SCTX",
-      "purpose": "copy_buy"
-    },
-    {
-      "ts": "2026-07-28T13:43:30.378370+00:00",
-      "kind": "halt_block",
-      "symbol": "MCB",
-      "purpose": "copy_buy"
-    },
-    {
-      "ts": "2026-07-28T13:43:30.378302+00:00",
-      "kind": "halt_block",
-      "symbol": "COE",
-      "purpose": "copy_buy"
-    },
-    {
-      "ts": "2026-07-28T13:43:30.378227+00:00",
-      "kind": "halt_block",
-      "symbol": "AVR",
       "purpose": "copy_buy"
     }
   ],
