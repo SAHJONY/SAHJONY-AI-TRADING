@@ -67,6 +67,8 @@ jobs:
           python -m tests.test_model_registry
           python -m tests.test_copy_trading
           python -m tests.test_circuit_breaker
+          python -m tests.test_robinhood_safety
+          python -m tests.test_order_lifecycle
 
       - uses: actions/setup-node@v4
         with:

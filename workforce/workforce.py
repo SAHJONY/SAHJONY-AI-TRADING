@@ -20,6 +20,7 @@ into one trading cycle:
 """
 from __future__ import annotations
 
+from dataclasses import asdict
 import os
 from datetime import datetime, timezone
 from typing import Any, Dict, List
@@ -126,6 +127,13 @@ class ExecutionTrader:
         done = []
         for intent in intents:
             try:
+                pending = state.setdefault("pending_orders", {})
+                if intent.kind == "equity" and intent.symbol in pending:
+                    log.info("PENDING BLOCK %s %s — prior broker order unresolved",
+                             intent.symbol, intent.purpose)
+                    record_event(state, "pending_order_block",
+                                 {"symbol": intent.symbol, "purpose": intent.purpose})
+                    continue
                 if intent.kind == "state":
                     self._apply(intent, state)
                     record_event(state, intent.purpose, {"symbol": intent.symbol, "reason": intent.reason})
@@ -150,6 +158,24 @@ class ExecutionTrader:
                     price = intent.premium
                 if res.get("status") not in ("filled", "submitted"):
                     log.warning("order not filled %s: %s", intent.symbol, res)
+                    continue
+                if res.get("status") == "submitted":
+                    pending[intent.symbol] = {
+                        "intent": asdict(intent), "cycle": cycle,
+                        "order_id": res.get("order_id"),
+                        "client_order_id": res.get("client_order_id"),
+                        "submitted_at": res.get("submitted_at"),
+                        "mode": getattr(self.client, "mode", self.cfg.mode),
+                    }
+                    record_event(state, "order_submitted", {
+                        "symbol": intent.symbol, "strategy": intent.strategy,
+                        "order_id": res.get("order_id"),
+                        "client_order_id": res.get("client_order_id"),
+                    })
+                    done.append({"symbol": intent.symbol, "purpose": intent.purpose,
+                                 "status": "submitted", "order_id": res.get("order_id")})
+                    log.info("SUBMITTED %s %s — awaiting confirmed broker fill",
+                             intent.symbol, intent.purpose)
                     continue
                 # Transaction costs: charge the estimated round trip when a position
                 # is CLOSED, so realized P&L — and therefore the equity curve and
@@ -186,6 +212,52 @@ class ExecutionTrader:
             except Exception as exc:  # one bad intent never sinks the cycle
                 log.error("execute intent failed (%s %s): %s", intent.symbol, intent.purpose, exc)
         return done, deployed
+
+    def reconcile_pending(self, state: Dict[str, Any], cycle: int) -> List[Dict]:
+        """Apply state and ledger mutations only after the broker confirms a fill."""
+        pending = state.setdefault("pending_orders", {})
+        resolved = []
+        if not pending or not hasattr(self.client, "get_order"):
+            return resolved
+        for symbol, item in list(pending.items()):
+            order = self.client.get_order(item.get("order_id"))
+            status = order.get("status")
+            if status == "filled":
+                intent = OrderIntent(**item["intent"])
+                price = float(order.get("fill_price") or 0)
+                if price <= 0:
+                    log.warning("FILLED order %s has no defensible fill price; keeping pending",
+                                item.get("order_id"))
+                    continue
+                self._apply(intent, state)
+                self.db.log_trade({
+                    "cycle": item.get("cycle", cycle), "symbol": intent.symbol,
+                    "strategy": intent.strategy, "kind": intent.kind, "side": intent.side,
+                    "qty": order.get("filled_qty") or intent.qty, "price": price,
+                    "premium": intent.premium, "notional": intent.est_notional,
+                    "purpose": intent.purpose, "reason": intent.reason,
+                    "mode": item.get("mode"), "simulated": False,
+                    "order_id": order.get("order_id"),
+                    "client_order_id": order.get("client_order_id") or item.get("client_order_id"),
+                    "order_status": "filled", "submitted_at": item.get("submitted_at"),
+                    "filled_at": order.get("filled_at"),
+                })
+                record_event(state, "order_filled", {
+                    "symbol": symbol, "strategy": intent.strategy,
+                    "order_id": order.get("order_id"),
+                    "client_order_id": order.get("client_order_id") or item.get("client_order_id"),
+                    "fill_price": price,
+                })
+                pending.pop(symbol, None)
+                resolved.append({"symbol": symbol, "status": "filled"})
+            elif status in ("cancelled", "rejected"):
+                record_event(state, f"order_{status}", {
+                    "symbol": symbol, "order_id": item.get("order_id"),
+                    "client_order_id": item.get("client_order_id"),
+                })
+                pending.pop(symbol, None)
+                resolved.append({"symbol": symbol, "status": status})
+        return resolved
 
 
 # ── the firm ────────────────────────────────────────────────────────────────
@@ -452,9 +524,14 @@ class Firm:
             pass
         state["equity_last"] = equity
 
+        # Resolve acknowledged orders before broker holdings reconciliation.  A
+        # submitted POST is never treated as a fill or booked into P&L.
+        pending_resolved = self.execution.reconcile_pending(state, cycle)
+
         # Broker reconciliation FIRST: never plan a cycle against a stale view of
         # what we own (see _reconcile_broker for why state alone is not enough).
         recon = self._reconcile_broker(state)
+        recon["orders_resolved"] = pending_resolved
 
         # Circuit breaker / kill switch — suspends NEW risk this cycle if tripped.
         halt = self._halt_check(state, equity)
