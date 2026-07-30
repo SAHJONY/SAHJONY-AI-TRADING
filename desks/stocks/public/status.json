@@ -9,8 +9,8 @@
     "return_pct": -1.355,
     "alpha_pct": -31.249
   },
-  "ts": "2026-07-30T10:01:15.346643+00:00",
-  "cycle": 81,
+  "ts": "2026-07-30T11:50:55.227848+00:00",
+  "cycle": 82,
   "account": {
     "equity": 1347.93,
     "equity_start": 2000.0,
@@ -47,8 +47,8 @@
     },
     "cadence": {
       "degraded": true,
-      "reason": "execution cadence degraded: 158 min since the last cycle (expected ~15 min) \u2014 a new position could not be managed",
-      "gap_min": 158.4,
+      "reason": "execution cadence degraded: 111 min since the last cycle (expected ~15 min) \u2014 a new position could not be managed",
+      "gap_min": 110.6,
       "expected_min": 15,
       "tolerance_min": 90.0
     },
@@ -106,19 +106,19 @@
       "quarantined": [],
       "issues": {},
       "hit_rates": {
-        "SPY": 0.131,
-        "QQQ": 0.155,
-        "VTI": 0.102
+        "SPY": 0.127,
+        "QQQ": 0.15,
+        "VTI": 0.099
       },
       "strategy_weights": {
         "daytrade": 0.867
       },
       "scorecard": {
-        "cycles": 9,
-        "sharpe": -28.62,
-        "sortino": -26.77,
+        "cycles": 10,
+        "sharpe": -26.98,
+        "sortino": -25.44,
         "max_drawdown_pct": -0.51,
-        "volatility_pct": 0.179
+        "volatility_pct": 0.169
       }
     },
     "advisory_board": {
@@ -729,16 +729,16 @@
   ],
   "brain": {
     "enabled": true,
-    "used": false,
+    "used": true,
     "posture": "neutral",
-    "global_risk_multiplier": 1.0,
-    "commentary": "brain error: HTTPSConnectionPool(host='integrate.api.nvidia.com', port=443): Read timed out. (read timeout=45)",
-    "brain_model": "",
+    "global_risk_multiplier": 0.95,
+    "commentary": "The portfolio leans modestly constructive but remains equity\u2011beta heavy with significant overlap between SPY and VTI and a growth tilt via QQQ. Volatility is driven by QQQ and NVDA, and single\u2011name risk from MSFT and NVDA is elevated. Fragile signals identified: QQQ, MSFT, NVDA. Adjustments are modest to keep exposure within a disciplined risk envelope.",
+    "brain_model": "nvidia:openai/gpt-oss-120b",
     "counsellors": {
-      "openai": "Overall posture: **cautiously constructive but equity-beta heavy**. SPY and VTI substantially overlap, while QQQ adds concentrated growth exposure (\u03b2 1.416). With alternatives unavailable, diversification is limited. Avoid interpreting multiple \u201clong\u201d ETF signals as independent c",
-      "grok": "**Risk posture:** Moderate-elevated. Long bias in beta-1 equities (SPY/VTI core; QQQ adds growth tilt). Concentration risk high; NVDA/MSFT vols (0.37/0.31) and NVDA beta (1.84) amplify drawdowns. Neg alphas on QQQ/MSFT/NVDA erode edge. No alts for diversifiers.\n\n**Adjustments (co",
-      "gemini": "The portfolio exhibits a bifurcated risk profile: broad market",
-      "nvidia": ""
+      "openai": "**Risk posture:** Moderately constructive but equity-beta heavy, with substantial SPY/VTI overlap and added growth concentration through QQQ. QQQ and NVDA amplify downside sensitivity; alternatives are unavailable, limiting diversification.\n\n**Suggested conviction adjustments:**\n",
+      "grok": "**Risk posture:** Moderate equity beta, long bias in broad beta (SPY/VTI/QQQ). Elevated single-name vol (NVDA/MSFT) and QQQ beta create drawdown asymmetry; limited alpha diversification.\n\n**Adjustments (conviction \u0394):**\n- SPY: +0.05  \n- QQQ: -0.05  \n- VTI: +0.04  \n- MSFT: -0.10  ",
+      "gemini": "DA show negative composites and high volatility relative to conviction.",
+      "nvidia": "**Risk posture:** The slate is heavily equity\u2011biased (three broad\u2011market ETFs) with a net beta \u22481.2 and portfolio volatility driven by QQQ and NVDA. The mix leans toward growth tech, raising sensitivity to rate moves and sector corrections. Keep an eye on concentration and the hi"
     }
   },
   "positions": [
@@ -1486,9 +1486,65 @@
       "cash": -65623.95773060061,
       "realized_pnl": -43.42332663306,
       "premium": 0.0
+    },
+    {
+      "ts": "2026-07-30T11:50:53.288537+00:00",
+      "cycle": 82,
+      "equity": 1347.9250230243736,
+      "cash": -65623.95773060061,
+      "realized_pnl": -43.42332663306,
+      "premium": 0.0
     }
   ],
   "decisions": [
+    {
+      "ts": "2026-07-30T11:50:50.922940+00:00",
+      "kind": "halt_block",
+      "symbol": "GLSI",
+      "purpose": "copy_buy"
+    },
+    {
+      "ts": "2026-07-30T11:50:50.922862+00:00",
+      "kind": "halt_block",
+      "symbol": "EQBK",
+      "purpose": "copy_buy"
+    },
+    {
+      "ts": "2026-07-30T11:50:50.922782+00:00",
+      "kind": "halt_block",
+      "symbol": "TSM",
+      "purpose": "copy_buy"
+    },
+    {
+      "ts": "2026-07-30T11:50:50.922700+00:00",
+      "kind": "halt_block",
+      "symbol": "NXTC",
+      "purpose": "copy_buy"
+    },
+    {
+      "ts": "2026-07-30T11:50:50.922615+00:00",
+      "kind": "halt_block",
+      "symbol": "COE",
+      "purpose": "copy_buy"
+    },
+    {
+      "ts": "2026-07-30T11:50:50.373553+00:00",
+      "kind": "wheel_wait",
+      "symbol": "VTI",
+      "reason": "no put contract found"
+    },
+    {
+      "ts": "2026-07-30T11:50:50.299421+00:00",
+      "kind": "halt_block",
+      "symbol": "QQQ",
+      "purpose": "ladder_entry"
+    },
+    {
+      "ts": "2026-07-30T11:50:50.296966+00:00",
+      "kind": "ladder_update",
+      "symbol": "SPY",
+      "reason": "px 728.62 peak 745.16 gain -1%"
+    },
     {
       "ts": "2026-07-30T10:01:14.835456+00:00",
       "kind": "halt_block",
@@ -1590,54 +1646,6 @@
       "kind": "halt_block",
       "symbol": "NXTC",
       "purpose": "copy_buy"
-    },
-    {
-      "ts": "2026-07-30T01:33:32.266427+00:00",
-      "kind": "halt_block",
-      "symbol": "OTLK",
-      "purpose": "copy_buy"
-    },
-    {
-      "ts": "2026-07-30T01:33:32.050917+00:00",
-      "kind": "wheel_wait",
-      "symbol": "VTI",
-      "reason": "no put contract found"
-    },
-    {
-      "ts": "2026-07-30T01:33:31.965204+00:00",
-      "kind": "halt_block",
-      "symbol": "QQQ",
-      "purpose": "ladder_entry"
-    },
-    {
-      "ts": "2026-07-30T01:33:31.963483+00:00",
-      "kind": "ladder_update",
-      "symbol": "SPY",
-      "reason": "px 728.62 peak 745.16 gain -1%"
-    },
-    {
-      "ts": "2026-07-29T23:55:58.866182+00:00",
-      "kind": "halt_block",
-      "symbol": "EQBK",
-      "purpose": "copy_buy"
-    },
-    {
-      "ts": "2026-07-29T23:55:58.866128+00:00",
-      "kind": "halt_block",
-      "symbol": "NXTC",
-      "purpose": "copy_buy"
-    },
-    {
-      "ts": "2026-07-29T23:55:58.866063+00:00",
-      "kind": "halt_block",
-      "symbol": "OTLK",
-      "purpose": "copy_buy"
-    },
-    {
-      "ts": "2026-07-29T23:55:58.295353+00:00",
-      "kind": "wheel_wait",
-      "symbol": "VTI",
-      "reason": "no put contract found"
     }
   ],
   "agents_roster": [
