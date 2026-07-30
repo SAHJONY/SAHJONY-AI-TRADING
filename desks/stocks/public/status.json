@@ -9,8 +9,8 @@
     "return_pct": -1.355,
     "alpha_pct": -31.249
   },
-  "ts": "2026-07-30T01:33:33.609882+00:00",
-  "cycle": 78,
+  "ts": "2026-07-30T04:38:07.812280+00:00",
+  "cycle": 79,
   "account": {
     "equity": 1347.93,
     "equity_start": 2000.0,
@@ -47,8 +47,8 @@
     },
     "cadence": {
       "degraded": true,
-      "reason": "execution cadence degraded: 97 min since the last cycle (expected ~15 min) \u2014 a new position could not be managed",
-      "gap_min": 96.5,
+      "reason": "execution cadence degraded: 185 min since the last cycle (expected ~15 min) \u2014 a new position could not be managed",
+      "gap_min": 185.5,
       "expected_min": 15,
       "tolerance_min": 90.0
     },
@@ -106,19 +106,19 @@
       "quarantined": [],
       "issues": {},
       "hit_rates": {
-        "SPY": 0.145,
-        "QQQ": 0.171,
-        "VTI": 0.113
+        "SPY": 0.14,
+        "QQQ": 0.166,
+        "VTI": 0.109
       },
       "strategy_weights": {
         "daytrade": 0.867
       },
       "scorecard": {
-        "cycles": 6,
-        "sharpe": -36.2,
-        "sortino": -32.38,
+        "cycles": 7,
+        "sharpe": -33.05,
+        "sortino": -30.17,
         "max_drawdown_pct": -0.51,
-        "volatility_pct": 0.226
+        "volatility_pct": 0.206
       }
     },
     "advisory_board": {
@@ -729,16 +729,16 @@
   ],
   "brain": {
     "enabled": true,
-    "used": false,
-    "posture": "neutral",
-    "global_risk_multiplier": 1.0,
-    "commentary": "brain error: HTTPSConnectionPool(host='integrate.api.nvidia.com', port=443): Read timed out. (read timeout=45)",
-    "brain_model": "",
+    "used": true,
+    "posture": "risk_off",
+    "global_risk_multiplier": 0.75,
+    "commentary": "The portfolio is heavily weighted toward high\u2011beta equity indices (SPY, VTI) with an overlay of growth\u2011biased QQQ and volatile single\u2011stocks MSFT/NVDA. Composite scores and alpha signals are weak or negative for QQQ, MSFT, and NVDA, and their beta/volatility profiles amplify downside risk. Overlap between SPY and VTI adds redundant exposure. Given the lack of alternative\u2011data confirmation and the fragile nature of several signals, we adopt a risk\u2011off stance and modestly scale back the most vulnerable positions while keeping a small constructive bias in the core broad\u2011market ETFs.",
+    "brain_model": "nvidia:openai/gpt-oss-120b",
     "counsellors": {
-      "openai": "Overall posture is moderately constructive but highly equity-beta concentrated: SPY and VTI substantially overlap, while QQQ adds elevated growth sensitivity (\u03b2 1.41). With alternative data unavailable, confidence should be discounted. Downside risk is amplified by limited divers",
-      "grok": "**Risk posture:** Market-beta heavy (SPY/VTI core longs) with QQQ overlay; single-name tech flat. Aggregate vol moderate but QQQ/NVDA betas and vols elevate drawdown risk. No alt tilts. Stance is constructive-index, cautious-stock\u2014appropriate but crowded-equity exposed.\n\n**Adjust",
+      "openai": "**Risk posture:** Moderately aggressive and equity-beta heavy. SPY/VTI overlap substantially, while QQQ adds concentrated growth exposure; NVDA materially increases volatility and downside sensitivity. No alternative-data confirmation is available, limiting conviction.\n\n- **SPY:*",
+      "grok": "**Risk posture:** Equity-beta heavy (SPY/VTI core longs, QQQ overlay). Aggregate vol moderate but tail risk elevated via QQQ/NVDA betas; MSFT/NVDA flat reduces single-stock drag. No alt hedges. Balanced but procyclical\u2014vulnerable to growth scare.\n\n**Adjustments (conviction):**\n- ",
       "gemini": "The portfolio maintains a high-beta posture, heavily reliant on broad market indices",
-      "nvidia": ""
+      "nvidia": "**Risk posture:** The portfolio leans heavily into high\u2011beta U.S. equities (SPY, QQQ, VTI) with modest diversification. Overall volatility (~13\u201121\u202f%) and beta (>1 for the core ETFs) suggest a medium\u2011to\u2011high market\u2011risk profile; any sharp equity correction could erode returns quic"
     }
   },
   "positions": [
@@ -1402,9 +1402,47 @@
       "cash": -65623.95773060061,
       "realized_pnl": -43.42332663306,
       "premium": 0.0
+    },
+    {
+      "ts": "2026-07-30T04:38:05.643255+00:00",
+      "cycle": 79,
+      "equity": 1347.9250230243736,
+      "cash": -65623.95773060061,
+      "realized_pnl": -43.42332663306,
+      "premium": 0.0
     }
   ],
   "decisions": [
+    {
+      "ts": "2026-07-30T04:38:02.922319+00:00",
+      "kind": "halt_block",
+      "symbol": "EQBK",
+      "purpose": "copy_buy"
+    },
+    {
+      "ts": "2026-07-30T04:38:02.922272+00:00",
+      "kind": "halt_block",
+      "symbol": "NXTC",
+      "purpose": "copy_buy"
+    },
+    {
+      "ts": "2026-07-30T04:38:02.570379+00:00",
+      "kind": "wheel_wait",
+      "symbol": "VTI",
+      "reason": "no put contract found"
+    },
+    {
+      "ts": "2026-07-30T04:38:02.490926+00:00",
+      "kind": "halt_block",
+      "symbol": "QQQ",
+      "purpose": "ladder_entry"
+    },
+    {
+      "ts": "2026-07-30T04:38:02.460476+00:00",
+      "kind": "ladder_update",
+      "symbol": "SPY",
+      "reason": "px 728.62 peak 745.16 gain -1%"
+    },
     {
       "ts": "2026-07-30T01:33:32.266570+00:00",
       "kind": "halt_block",
@@ -1521,36 +1559,6 @@
     },
     {
       "ts": "2026-07-29T21:55:27.492753+00:00",
-      "kind": "halt_block",
-      "symbol": "OTLK",
-      "purpose": "copy_buy"
-    },
-    {
-      "ts": "2026-07-29T21:55:27.321612+00:00",
-      "kind": "wheel_wait",
-      "symbol": "VTI",
-      "reason": "no put contract found"
-    },
-    {
-      "ts": "2026-07-29T21:55:27.276472+00:00",
-      "kind": "halt_block",
-      "symbol": "QQQ",
-      "purpose": "ladder_entry"
-    },
-    {
-      "ts": "2026-07-29T21:55:27.273962+00:00",
-      "kind": "ladder_update",
-      "symbol": "SPY",
-      "reason": "px 728.62 peak 745.16 gain -1%"
-    },
-    {
-      "ts": "2026-07-29T20:57:53.269615+00:00",
-      "kind": "halt_block",
-      "symbol": "EQBK",
-      "purpose": "copy_buy"
-    },
-    {
-      "ts": "2026-07-29T20:57:53.269540+00:00",
       "kind": "halt_block",
       "symbol": "OTLK",
       "purpose": "copy_buy"
