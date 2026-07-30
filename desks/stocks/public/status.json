@@ -9,8 +9,8 @@
     "return_pct": -1.355,
     "alpha_pct": -31.249
   },
-  "ts": "2026-07-29T22:56:25.187891+00:00",
-  "cycle": 76,
+  "ts": "2026-07-29T23:56:03.526947+00:00",
+  "cycle": 77,
   "account": {
     "equity": 1347.93,
     "equity_start": 2000.0,
@@ -48,7 +48,7 @@
     "cadence": {
       "degraded": false,
       "reason": "",
-      "gap_min": 60.8,
+      "gap_min": 60.7,
       "expected_min": 15,
       "tolerance_min": 90.0
     },
@@ -106,19 +106,19 @@
       "quarantined": [],
       "issues": {},
       "hit_rates": {
-        "SPY": 0.155,
-        "QQQ": 0.183,
-        "VTI": 0.121
+        "SPY": 0.15,
+        "QQQ": 0.177,
+        "VTI": 0.117
       },
       "strategy_weights": {
         "daytrade": 0.867
       },
       "scorecard": {
-        "cycles": 4,
-        "sharpe": -46.73,
-        "sortino": -38.16,
+        "cycles": 5,
+        "sharpe": -40.47,
+        "sortino": -35.05,
         "max_drawdown_pct": -0.51,
-        "volatility_pct": 0.292
+        "volatility_pct": 0.253
       }
     },
     "advisory_board": {
@@ -729,16 +729,16 @@
   ],
   "brain": {
     "enabled": true,
-    "used": false,
+    "used": true,
     "posture": "neutral",
-    "global_risk_multiplier": 1.0,
-    "commentary": "brain error: HTTPSConnectionPool(host='integrate.api.nvidia.com', port=443): Read timed out. (read timeout=45)",
-    "brain_model": "",
+    "global_risk_multiplier": 0.8,
+    "commentary": "The portfolio is modestly constructive, anchored by broad\u2011market ETFs (SPY, VTI) with a tech\u2011tilt from QQQ. However, the signal set is highly correlated and alternative data is unavailable, lowering confidence. MSFT and NVDA are flagged as fragile due to negative alpha, high volatility and beta, and flat directional stance. To preserve capital we keep the overall exposure modest (multiplier 0.8) and trim the most vulnerable bets while keeping a small positive bias on the core equity exposure.",
+    "brain_model": "nvidia:openai/gpt-oss-120b",
     "counsellors": {
-      "openai": "**Overall:** Moderately constructive, but risk is concentrated in correlated U.S. large-cap equities. SPY/VTI overlap materially, while QQQ adds higher beta (1.41) and volatility. Limited diversification data (\u201calt unavailable\u201d) warrants restraint.\n\n- **SPY:** **+0.03** \u2014 stronge",
-      "grok": "**Risk posture:** Mildly risk-on via broad beta (SPY/VTI/QQQ longs). Index signals coherent; single-name tech flat with negative alpha/composite and elevated vol/beta\u2014drag and fragility dominate. Overall: moderate equity exposure, watch concentration and vol spikes.\n\n**Adjustment",
-      "gemini": "The portfolio maintains a pro-cyclical stance via broad indices",
-      "nvidia": ""
+      "openai": "Overall posture is moderately constructive but concentrated in correlated US equities: SPY/VTI overlap heavily, while QQQ adds higher beta and volatility. With alternative data unavailable, treat signals as lower-confidence; maintain diversification and avoid over-sizing.\n\n- **SP",
+      "grok": "**Risk posture:** Moderately long equity beta (SPY/VTI core, QQQ tilt) with elevated vol/beta exposure; MSFT/NVDA flat and drag on alpha. No alt diversification. Overall constructive but fragile at the edges\u2014size conservatively.\n\n**Conviction adjustments:**\n- SPY: +0.05  \n- QQQ: ",
+      "gemini": "",
+      "nvidia": "**Risk posture:** The slate is a pure\u2011equity core (SPY, QQQ, VTI) with modest beta\u2011adjusted exposure (\u22481.2\u202f\u00d7\u202fmarket) and a volatility profile near 13\u201120\u202f%. Two single\u2011stock bets (MSFT, NVDA) add a tail\u2011risk overlay: NVDA\u2019s beta\u202f1.85, vol\u202f0.37 and negative alpha make it the most f"
     }
   },
   "positions": [
@@ -1386,9 +1386,53 @@
       "cash": -65623.95773060061,
       "realized_pnl": -43.42332663306,
       "premium": 0.0
+    },
+    {
+      "ts": "2026-07-29T23:56:01.426820+00:00",
+      "cycle": 77,
+      "equity": 1347.9250230243736,
+      "cash": -65623.95773060061,
+      "realized_pnl": -43.42332663306,
+      "premium": 0.0
     }
   ],
   "decisions": [
+    {
+      "ts": "2026-07-29T23:55:58.866182+00:00",
+      "kind": "halt_block",
+      "symbol": "EQBK",
+      "purpose": "copy_buy"
+    },
+    {
+      "ts": "2026-07-29T23:55:58.866128+00:00",
+      "kind": "halt_block",
+      "symbol": "NXTC",
+      "purpose": "copy_buy"
+    },
+    {
+      "ts": "2026-07-29T23:55:58.866063+00:00",
+      "kind": "halt_block",
+      "symbol": "OTLK",
+      "purpose": "copy_buy"
+    },
+    {
+      "ts": "2026-07-29T23:55:58.295353+00:00",
+      "kind": "wheel_wait",
+      "symbol": "VTI",
+      "reason": "no put contract found"
+    },
+    {
+      "ts": "2026-07-29T23:55:58.220909+00:00",
+      "kind": "halt_block",
+      "symbol": "QQQ",
+      "purpose": "ladder_entry"
+    },
+    {
+      "ts": "2026-07-29T23:55:58.218508+00:00",
+      "kind": "ladder_update",
+      "symbol": "SPY",
+      "reason": "px 728.62 peak 745.16 gain -1%"
+    },
     {
       "ts": "2026-07-29T22:56:22.128966+00:00",
       "kind": "halt_block",
@@ -1502,42 +1546,6 @@
       "kind": "halt_block",
       "symbol": "GLSI",
       "purpose": "copy_buy"
-    },
-    {
-      "ts": "2026-07-29T20:02:27.683637+00:00",
-      "kind": "halt_block",
-      "symbol": "ASPS",
-      "purpose": "copy_buy"
-    },
-    {
-      "ts": "2026-07-29T20:02:27.683547+00:00",
-      "kind": "halt_block",
-      "symbol": "EQBK",
-      "purpose": "copy_buy"
-    },
-    {
-      "ts": "2026-07-29T20:02:27.683432+00:00",
-      "kind": "halt_block",
-      "symbol": "NNOX",
-      "purpose": "copy_buy"
-    },
-    {
-      "ts": "2026-07-29T20:02:27.683299+00:00",
-      "kind": "halt_block",
-      "symbol": "OTLK",
-      "purpose": "copy_buy"
-    },
-    {
-      "ts": "2026-07-29T20:02:27.558924+00:00",
-      "kind": "wheel_wait",
-      "symbol": "VTI",
-      "reason": "no put contract found"
-    },
-    {
-      "ts": "2026-07-29T20:02:27.510504+00:00",
-      "kind": "ladder_update",
-      "symbol": "SPY",
-      "reason": "px 728.54 peak 745.16 gain -1%"
     }
   ],
   "agents_roster": [
