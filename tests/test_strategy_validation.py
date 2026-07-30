@@ -14,6 +14,7 @@ from backtest.validation import (
     validate_candidate,
     walk_forward_folds,
 )
+from scripts import strategy_search
 
 FAILURES = []
 
@@ -91,6 +92,30 @@ def main() -> int:
     except ValueError:
         mismatch_rejected = True
     _check(mismatch_rejected, "shape mismatch fails closed")
+
+    print("\n── strategy-search integration ──")
+    prices = np.linspace(100.0, 250.0, 500)
+    strategy_search._init({"BTC": prices})
+    cfg = ("mom", 10, False, "BTC", 0.001, False)
+    returns = strategy_search.strategy_returns(cfg)
+    train, selection_test, selection_end = strategy_search.selection_slices(
+        len(returns)
+    )
+    _check(train.stop == selection_test.start,
+           "selection train/test slices are contiguous")
+    _check(selection_test.stop == selection_end < len(returns),
+           "ranking slices cannot access the final holdout")
+
+    rows = [(cfg, strategy_search.evaluate(cfg))]
+    candidates = strategy_search.validate_shortlist(rows, trials=200_000)
+    _check(len(candidates) == 1 and candidates[0]["research_only"] is True,
+           "search results are permanently research-only")
+    _check("eligible_for_shadow" in candidates[0],
+           "passing a gate grants shadow eligibility only")
+    forbidden = ("broker", "order", "submit", "execute")
+    imports = set(strategy_search.__dict__)
+    _check(not any(name in imports for name in forbidden),
+           "strategy search exposes no broker or order-routing authority")
 
     print()
     if FAILURES:

@@ -140,3 +140,16 @@ Initial activation must use the smallest practical risk budget and include:
 - Automatic suspension on unexplained divergence.
 
 Scaling requires a new review based on realized execution evidence.
+
+## Strategy-search integration
+
+`scripts/strategy_search.py` enforces the research boundary in its output:
+
+- The final 20% of every return series is excluded from candidate ranking.
+- Only a frozen pre-holdout shortlist reaches `backtest.validation`.
+- Every candidate is marked `research_only: true`.
+- A full pass grants only `eligible_for_shadow: true`.
+- `execution_authority` is always `false`.
+
+Shadow eligibility is evidence for another observation phase. It is not approval
+for Canary or Production and cannot alter the Robinhood worker.
