@@ -9,8 +9,8 @@
     "return_pct": 0.553,
     "alpha_pct": -16.512
   },
-  "ts": "2026-07-30T21:25:07.181507+00:00",
-  "cycle": 88,
+  "ts": "2026-07-30T22:37:42.478702+00:00",
+  "cycle": 89,
   "account": {
     "equity": 1680.82,
     "equity_start": 2000.0,
@@ -48,17 +48,17 @@
     "cadence": {
       "degraded": false,
       "reason": "",
-      "gap_min": 76.2,
+      "gap_min": 72.5,
       "expected_min": 15,
       "tolerance_min": 90.0
     },
     "evaluation": {
       "active": true,
-      "day": 3,
+      "day": 4,
       "days": 90,
       "started_at": "2026-07-26T21:38:16.798191+00:00",
       "ends_at": "2026-10-24T21:38:16.798191+00:00",
-      "pct": 3.3,
+      "pct": 4.4,
       "criteria": {
         "primary": "net-of-fees return beats buy-and-hold BTC over the window",
         "risk": "max drawdown stays inside 15%",
@@ -106,15 +106,15 @@
       "quarantined": [],
       "issues": {},
       "hit_rates": {
-        "SPY": 0.224,
+        "SPY": 0.217,
         "QQQ": 0.248,
-        "VTI": 0.169
+        "VTI": 0.163
       },
       "strategy_weights": {
         "daytrade": 0.867
       },
       "scorecard": {
-        "cycles": 1,
+        "cycles": 2,
         "sharpe": null,
         "sortino": null,
         "max_drawdown_pct": null,
@@ -735,9 +735,9 @@
     "commentary": "brain error: HTTPSConnectionPool(host='integrate.api.nvidia.com', port=443): Read timed out. (read timeout=45)",
     "brain_model": "",
     "counsellors": {
-      "openai": "**Overall posture:** Moderately risk-on, but concentrated in overlapping U.S. large-cap equity exposure. VTI/SPY provide broad beta, while QQQ, MSFT, and NVDA add technology sensitivity; NVDA\u2019s 1.83 beta and 37.2% volatility are the key risk. Alternative-data inputs are unavailab",
-      "grok": "**Risk posture: cautious / mixed.** Broad beta (SPY/VTI) carries mild positive composite with contained vol; tech sleeve shows negative alpha, elevated beta/vol and weak composites\u2014concentrated downside risk if growth falters. Alt data unavailable; signals rest on thin quant edge",
-      "gemini": "",
+      "openai": "**Overall:** Moderately constructive but equity-beta heavy, with substantial SPY/VTI overlap and added technology concentration through QQQ, MSFT, and NVDA. Portfolio sensitivity is elevated, especially NVDA (\u03b2 1.83, volatility 37.2%) and QQQ (\u03b2 1.43). Maintain diversification an",
+      "grok": "**Risk posture: cautious/neutral.** Broad beta (SPY/VTI) mildly constructive with contained vol; QQQ/NVDA/MSFT show negative composites, negative alpha, and elevated vol/beta\u2014tech sleeve is the clear risk concentrator. Prefer index over single-name risk.\n\nConviction adjustments: ",
+      "gemini": "The portfolio reflects a defensive pivot. While broad market indices (**SPY**, **",
       "nvidia": ""
     }
   },
@@ -1174,9 +1174,41 @@
       "cash": -65623.95773060061,
       "realized_pnl": -43.42332663306,
       "premium": 0.0
+    },
+    {
+      "ts": "2026-07-30T22:37:42.229250+00:00",
+      "cycle": 89,
+      "equity": 1680.823745664394,
+      "cash": -65623.95773060061,
+      "realized_pnl": -43.42332663306,
+      "premium": 0.0
     }
   ],
   "decisions": [
+    {
+      "ts": "2026-07-30T22:37:41.907519+00:00",
+      "kind": "halt_block",
+      "symbol": "NTRS",
+      "purpose": "copy_buy"
+    },
+    {
+      "ts": "2026-07-30T22:37:41.907401+00:00",
+      "kind": "halt_block",
+      "symbol": "COE",
+      "purpose": "copy_buy"
+    },
+    {
+      "ts": "2026-07-30T22:37:41.731357+00:00",
+      "kind": "wheel_wait",
+      "symbol": "VTI",
+      "reason": "no put contract found"
+    },
+    {
+      "ts": "2026-07-30T22:37:41.680087+00:00",
+      "kind": "ladder_update",
+      "symbol": "SPY",
+      "reason": "px 742.71 peak 745.16 gain +1%"
+    },
     {
       "ts": "2026-07-30T21:25:05.581380+00:00",
       "kind": "halt_block",
@@ -1304,30 +1336,6 @@
       "kind": "halt_block",
       "symbol": "QQQ",
       "purpose": "ladder_entry"
-    },
-    {
-      "ts": "2026-07-30T11:50:50.296966+00:00",
-      "kind": "ladder_update",
-      "symbol": "SPY",
-      "reason": "px 728.62 peak 745.16 gain -1%"
-    },
-    {
-      "ts": "2026-07-30T10:01:14.835456+00:00",
-      "kind": "halt_block",
-      "symbol": "EQBK",
-      "purpose": "copy_buy"
-    },
-    {
-      "ts": "2026-07-30T10:01:14.835363+00:00",
-      "kind": "halt_block",
-      "symbol": "NXTC",
-      "purpose": "copy_buy"
-    },
-    {
-      "ts": "2026-07-30T10:01:14.431762+00:00",
-      "kind": "wheel_wait",
-      "symbol": "VTI",
-      "reason": "no put contract found"
     }
   ],
   "agents_roster": [
