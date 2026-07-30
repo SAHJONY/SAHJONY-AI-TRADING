@@ -5,30 +5,30 @@
   "benchmark": {
     "symbol": "SPY",
     "start_price": 738.63,
-    "last_price": 370.25,
-    "return_pct": -49.873,
-    "alpha_pct": -152.316
+    "last_price": 742.71,
+    "return_pct": 0.553,
+    "alpha_pct": -16.512
   },
-  "ts": "2026-07-30T20:07:41.583040+00:00",
-  "cycle": 87,
+  "ts": "2026-07-30T21:25:07.181507+00:00",
+  "cycle": 88,
   "account": {
-    "equity": -2043.78,
+    "equity": 1680.82,
     "equity_start": 2000.0,
     "cash": -65623.96,
-    "deployed": 63580.18
+    "deployed": 67304.78
   },
   "pnl": {
     "realized": -43.42,
     "premium_collected": 0.0,
-    "total_return_pct": -202.189
+    "total_return_pct": -15.959
   },
   "capital": {
     "deposits": 0.0,
     "withdrawals": 0.0,
     "net_capital": 0.0,
     "flows": 0,
-    "trading_pnl": -4043.78,
-    "trading_return_pct": -202.189
+    "trading_pnl": -319.18,
+    "trading_return_pct": -15.959
   },
   "capital_flows": [],
   "health": {
@@ -48,7 +48,7 @@
     "cadence": {
       "degraded": false,
       "reason": "",
-      "gap_min": 83.3,
+      "gap_min": 76.2,
       "expected_min": 15,
       "tolerance_min": 90.0
     },
@@ -69,8 +69,8 @@
     },
     "circuit_breaker": {
       "halted": true,
-      "reason": "daily circuit breaker \u2014 down -251.6% (limit 10%)",
-      "day_return": -2.5162,
+      "reason": "daily circuit breaker \u2014 down 24.7% (limit 10%)",
+      "day_return": 0.247,
       "day_start": 1347.93,
       "limit_pct": 0.1
     },
@@ -102,25 +102,19 @@
       "agent": "hermes",
       "goal": "Beat buy-and-hold (positive alpha vs BTC) while keeping max drawdown under 15% and never risking the mandate on a single trade \u2014 capital preservation first. Near-term: prove a sustained, fee-aware, positive out-of-sample edge on the paper trainer over ~90 days before scaling any live capital; grow the live account only on demonstrated alpha.",
       "used": true,
-      "data_ok_pct": 0.8,
-      "quarantined": [
-        "SPY"
-      ],
-      "issues": {
-        "SPY": [
-          "extreme jump vs last close"
-        ]
-      },
+      "data_ok_pct": 1.0,
+      "quarantined": [],
+      "issues": {},
       "hit_rates": {
-        "SPY": 0.198,
+        "SPY": 0.224,
         "QQQ": 0.248,
-        "VTI": 0.174
+        "VTI": 0.169
       },
       "strategy_weights": {
         "daytrade": 0.867
       },
       "scorecard": {
-        "cycles": 0,
+        "cycles": 1,
         "sharpe": null,
         "sortino": null,
         "max_drawdown_pct": null,
@@ -158,42 +152,42 @@
     {
       "symbol": "SPY",
       "scores": {
-        "buffett": 0.779,
+        "buffett": 0.246,
         "munger": 0.3,
         "macro": 0.0,
-        "growth": -0.243,
-        "quant": 0.505
+        "growth": 0.426,
+        "quant": 0.117
       },
-      "gate": 0.062,
-      "composite": 0.303,
-      "tilt": 0.0,
+      "gate": 1.0,
+      "composite": 0.223,
+      "tilt": 0.0223,
       "rationale": {
-        "buffett": "+50.1% vs 200d mean, vol 13%",
-        "munger": "-50.3% vs 50d trend, 5d move +0.5%",
+        "buffett": "-0.1% vs 200d mean, vol 13%",
+        "munger": "-0.3% vs 50d trend, 5d move +0.5%",
         "macro": "insufficient benchmark history",
-        "growth": "6m +6.7%, -51.3% off the high",
-        "quant": "z -59.60, 20/50 trend +0.1%",
-        "risk_gate": "drawdown -51.3%, vol 13% \u2192 gate 0.06"
+        "growth": "6m +6.7%, -2.2% off the high",
+        "quant": "z -0.46, 20/50 trend +0.1%",
+        "risk_gate": "drawdown -2.2%, vol 13% \u2192 gate 1.00"
       }
     },
     {
       "symbol": "QQQ",
       "scores": {
-        "buffett": 0.129,
+        "buffett": 0.13,
         "munger": 0.3,
         "macro": 0.0,
         "growth": 0.365,
-        "quant": 0.141
+        "quant": 0.142
       },
       "gate": 1.0,
       "composite": 0.191,
       "tilt": 0.0191,
       "rationale": {
         "buffett": "-0.4% vs 200d mean, vol 21%",
-        "munger": "-4.0% vs 50d trend, 5d move -1.2%",
+        "munger": "-4.1% vs 50d trend, 5d move -1.2%",
         "macro": "insufficient benchmark history",
         "growth": "6m +7.9%, -8.0% off the high",
-        "quant": "z -0.91, 20/50 trend -1.8%",
+        "quant": "z -0.92, 20/50 trend -1.8%",
         "risk_gate": "drawdown -8.0%, vol 21% \u2192 gate 1.00"
       }
     },
@@ -264,18 +258,18 @@
   "council": [
     {
       "symbol": "SPY",
-      "price": 370.25,
-      "conviction": 0.599,
+      "price": 742.71,
+      "conviction": 0.546,
       "direction": "long",
-      "composite": 0.197,
-      "risk_multiplier": 0.936,
+      "composite": 0.091,
+      "risk_multiplier": 0.937,
       "agents": [
         {
           "name": "Citadel Systematic",
           "persona": "Trend/Systematic",
-          "score": -0.057,
-          "confidence": 0.357,
-          "rationale": "MACD=-1.51, 20-50 slope=+0.002, Q-mom=+4.2%"
+          "score": -0.115,
+          "confidence": 0.415,
+          "rationale": "MACD=-1.51, 20-50 slope=+0.001, Q-mom=+4.2%"
         },
         {
           "name": "Two Sigma Backtest",
@@ -294,9 +288,9 @@
         {
           "name": "Renaissance Patterns",
           "persona": "Mean-reversion",
-          "score": 1.0,
-          "confidence": 1.0,
-          "rationale": "z(20)=-59.60 (mean-revert), autocorr=-0.03"
+          "score": 0.267,
+          "confidence": 0.391,
+          "rationale": "z(20)=-0.46 (mean-revert), autocorr=-0.03"
         },
         {
           "name": "Goldman Technical",
@@ -308,9 +302,9 @@
         {
           "name": "JPMorgan Fundamental",
           "persona": "Valuation proxy",
-          "score": -0.632,
+          "score": 0.014,
           "confidence": 0.45,
-          "rationale": "px/200d=0.50, drawdown-from-1y-high=-51% (proxy)"
+          "rationale": "px/200d=1.00, drawdown-from-1y-high=-2% (proxy)"
         },
         {
           "name": "D.E. Shaw Options",
@@ -329,7 +323,7 @@
         {
           "name": "Citadel Securities MM",
           "persona": "Order-flow microstructure",
-          "score": 0.142,
+          "score": 0.143,
           "confidence": 0.549,
           "rationale": "VPIN order-flow toxicity=0.13 (1=max adverse selection)"
         },
@@ -350,24 +344,24 @@
         {
           "name": "Sovereign Wealth",
           "persona": "Secular macro / SAA",
-          "score": 0.349,
+          "score": 0.027,
           "confidence": 0.4,
-          "rationale": "secular trend=-50%, structural drawdown=-51% (accumulate dips)"
+          "rationale": "secular trend=+0%, structural drawdown=-2% (accumulate dips)"
         }
       ]
     },
     {
       "symbol": "QQQ",
-      "price": 686.47,
+      "price": 686.33,
       "conviction": 0.494,
       "direction": "flat",
-      "composite": -0.012,
-      "risk_multiplier": 0.668,
+      "composite": -0.011,
+      "risk_multiplier": 0.669,
       "agents": [
         {
           "name": "Citadel Systematic",
           "persona": "Trend/Systematic",
-          "score": -0.819,
+          "score": -0.82,
           "confidence": 1.0,
           "rationale": "MACD=-3.80, 20-50 slope=-0.019, Q-mom=+3.3%"
         },
@@ -388,9 +382,9 @@
         {
           "name": "Renaissance Patterns",
           "persona": "Mean-reversion",
-          "score": 0.499,
-          "confidence": 0.483,
-          "rationale": "z(20)=-0.91 (mean-revert), autocorr=-0.04"
+          "score": 0.502,
+          "confidence": 0.484,
+          "rationale": "z(20)=-0.92 (mean-revert), autocorr=-0.04"
         },
         {
           "name": "Goldman Technical",
@@ -735,16 +729,16 @@
   ],
   "brain": {
     "enabled": true,
-    "used": true,
+    "used": false,
     "posture": "neutral",
-    "global_risk_multiplier": 0.85,
-    "commentary": "The portfolio is anchored by broad\u2011market long exposure (SPY, VTI) with modest positive composites and low\u2011to\u2011moderate volatility. However, the tech\u2011heavy leg (QQQ, MSFT, NVDA) shows flat\u2011to\u2011negative composites, negative alpha, and elevated beta/volatility, making those signals fragile. Overall risk is contained but tilted toward equity beta, so we stay neutral with a slight risk\u2011off tilt (global multiplier 0.85). Adjustments modestly reinforce the broad market while trimming the weaker, high\u2011beta tech names.",
-    "brain_model": "nvidia:openai/gpt-oss-120b",
+    "global_risk_multiplier": 1.0,
+    "commentary": "brain error: HTTPSConnectionPool(host='integrate.api.nvidia.com', port=443): Read timed out. (read timeout=45)",
+    "brain_model": "",
     "counsellors": {
-      "openai": "**Risk posture:** Moderately aggressive, with substantial equity beta and hidden concentration in U.S. mega-cap/technology. QQQ and NVDA add elevated volatility and correlation risk; unavailable alternative data reduces confidence. Without position weights, sizing risk cannot be ",
-      "grok": "**Portfolio risk view**\n\nOverall posture: mildly constructive but defensive. Broad beta (SPY/VTI) carries low-vol positive composites; high-beta tech (QQQ/NVDA/MSFT) is flat-to-negative with alpha drag and elevated vol\u2014net equity risk is contained, not aggressive. Watch single-na",
+      "openai": "**Overall posture:** Moderately risk-on, but concentrated in overlapping U.S. large-cap equity exposure. VTI/SPY provide broad beta, while QQQ, MSFT, and NVDA add technology sensitivity; NVDA\u2019s 1.83 beta and 37.2% volatility are the key risk. Alternative-data inputs are unavailab",
+      "grok": "**Risk posture: cautious / mixed.** Broad beta (SPY/VTI) carries mild positive composite with contained vol; tech sleeve shows negative alpha, elevated beta/vol and weak composites\u2014concentrated downside risk if growth falters. Alt data unavailable; signals rest on thin quant edge",
       "gemini": "",
-      "nvidia": "**Risk posture:** The portfolio leans heavily into broad\u2011market equity (SPY, VTI) with a tech\u2011heavy tilt (MSFT, NVDA) and a high\u2011beta exposure (QQQ \u03b2\u202f1.43, NVDA \u03b2\u202f1.83). Overall volatility sits near 13\u201120\u202f%\u2011yr\u2011\u207b\u00b9, but the tech leg adds tail\u2011risk, especially in a rising\u2011rate envir"
+      "nvidia": ""
     }
   },
   "positions": [
@@ -824,9 +818,9 @@
       "state": "long",
       "shares": 10.0,
       "cost_basis": 735.26,
-      "price": 370.25,
-      "market_value": 3702.55,
-      "unrealized": -3650.09
+      "price": 742.71,
+      "market_value": 7427.15,
+      "unrealized": 74.51
     },
     {
       "symbol": "DLHC",
@@ -1172,9 +1166,41 @@
       "cash": -65623.95773060061,
       "realized_pnl": -43.42332663306,
       "premium": 0.0
+    },
+    {
+      "ts": "2026-07-30T21:25:06.563563+00:00",
+      "cycle": 88,
+      "equity": 1680.823745664394,
+      "cash": -65623.95773060061,
+      "realized_pnl": -43.42332663306,
+      "premium": 0.0
     }
   ],
   "decisions": [
+    {
+      "ts": "2026-07-30T21:25:05.581380+00:00",
+      "kind": "halt_block",
+      "symbol": "NTRS",
+      "purpose": "copy_buy"
+    },
+    {
+      "ts": "2026-07-30T21:25:05.581315+00:00",
+      "kind": "halt_block",
+      "symbol": "COE",
+      "purpose": "copy_buy"
+    },
+    {
+      "ts": "2026-07-30T21:25:05.294386+00:00",
+      "kind": "wheel_wait",
+      "symbol": "VTI",
+      "reason": "no put contract found"
+    },
+    {
+      "ts": "2026-07-30T21:25:05.162514+00:00",
+      "kind": "ladder_update",
+      "symbol": "SPY",
+      "reason": "px 742.71 peak 745.16 gain +1%"
+    },
     {
       "ts": "2026-07-30T20:07:36.736096+00:00",
       "kind": "wheel_wait",
@@ -1302,30 +1328,6 @@
       "kind": "wheel_wait",
       "symbol": "VTI",
       "reason": "no put contract found"
-    },
-    {
-      "ts": "2026-07-30T10:01:14.388347+00:00",
-      "kind": "halt_block",
-      "symbol": "QQQ",
-      "purpose": "ladder_entry"
-    },
-    {
-      "ts": "2026-07-30T10:01:14.386558+00:00",
-      "kind": "ladder_update",
-      "symbol": "SPY",
-      "reason": "px 728.62 peak 745.16 gain -1%"
-    },
-    {
-      "ts": "2026-07-30T07:22:40.666478+00:00",
-      "kind": "halt_block",
-      "symbol": "EQBK",
-      "purpose": "copy_buy"
-    },
-    {
-      "ts": "2026-07-30T07:22:40.666444+00:00",
-      "kind": "halt_block",
-      "symbol": "NXTC",
-      "purpose": "copy_buy"
     }
   ],
   "agents_roster": [
@@ -1436,14 +1438,7 @@
       "mandate": "This dashboard"
     }
   ],
-  "executed_this_cycle": [
-    {
-      "symbol": "SPY",
-      "purpose": "catastrophic_floor",
-      "status": "submitted",
-      "order_id": null
-    }
-  ],
+  "executed_this_cycle": [],
   "env_catalog": [
     {
       "name": "ALPACA_API_KEY",
