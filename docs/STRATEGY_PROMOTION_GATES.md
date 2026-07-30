@@ -67,6 +67,12 @@ Minimum requirements:
 
 No strategy is promoted based on in-sample Sharpe.
 
+The executable reference implementation is `backtest/validation.py`. It emits
+an auditable pass/fail result for every gate and always labels its output
+`research_only`. The default statistical hurdle controls family-wise false
+discoveries across as many as 200,000 declared trials; reducing the declared
+trial count without an experiment manifest is invalid.
+
 ## Gate 5 — Risk
 
 Candidate must declare:
