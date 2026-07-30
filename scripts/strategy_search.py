@@ -23,14 +23,15 @@ from __future__ import annotations
 
 import json
 import math
+import os
 import sys
 import time
-import urllib.request
 from multiprocessing import Pool
 
 import numpy as np
 
 from backtest.validation import ValidationPolicy, validate_candidate
+from research.market_data import CoinGeckoHistory, MarketDataError
 
 CG_IDS = {"BTC": "bitcoin", "ETH": "ethereum", "SOL": "solana", "LTC": "litecoin"}
 ANN = math.sqrt(365.0)
@@ -49,16 +50,18 @@ _VOLSCALE: dict = {}
 
 
 # ── data ─────────────────────────────────────────────────────────────────────
-def fetch_prices(days: int = 1095) -> dict:
-    out = {}
+def fetch_prices(days: int = 1095, *, offline: bool = False,
+                 cache_dir: str | None = None) -> tuple[dict, dict]:
+    """Load checksum-verified history without exposing broker authority."""
+    provider = CoinGeckoHistory(
+        cache_dir or os.getenv("STRATEGY_DATA_CACHE", ".cache/strategy-data")
+    )
+    out, provenance = {}, {}
     for sym, cg in CG_IDS.items():
-        url = (f"https://api.coingecko.com/api/v3/coins/{cg}/market_chart"
-               f"?vs_currency=usd&days={days}&interval=daily")
-        with urllib.request.urlopen(url, timeout=40) as r:
-            data = json.load(r)
-        out[sym] = np.array([p[1] for p in data.get("prices", [])], dtype=float)
-        time.sleep(2.5)
-    return out
+        rows, meta = provider.load(sym, cg, days, offline=offline)
+        out[sym] = np.array([row[1] for row in rows], dtype=float)
+        provenance[sym] = meta
+    return out, provenance
 
 
 # ── indicators ─────────────────────────────────────────────────────────────────
@@ -273,12 +276,19 @@ def base_configs():
 
 def main(argv=None):
     argv = argv or sys.argv[1:]
-    target = int(argv[0]) if argv else 200000
+    offline = "--offline" in argv
+    positional = [arg for arg in argv if not arg.startswith("--")]
+    target = int(positional[0]) if positional else 200000
     print(f"SAHJONY strategy search — target {target:,} backtests\n" + "=" * 66)
     print("Fetching CoinGecko daily history (BTC/ETH/SOL/LTC)…")
-    prices = fetch_prices()
+    try:
+        prices, provenance = fetch_prices(offline=offline)
+    except MarketDataError as exc:
+        print(f"DATA INTEGRITY FAILURE: {exc}", file=sys.stderr)
+        return 2
     for s, p in prices.items():
-        print(f"  {s}: {len(p)} days  ${p[0]:,.0f} → ${p[-1]:,.0f}  (buy&hold {p[-1]/p[0]-1:+.1%})")
+        print(f"  {s}: {len(p)} days  ${p[0]:,.0f} → ${p[-1]:,.0f}  "
+              f"(buy&hold {p[-1]/p[0]-1:+.1%}; {provenance[s]['source']})")
     min_returns = min(len(p) - 1 for p in prices.values())
     train, test, selection_end = selection_slices(min_returns)
     print(f"  selection train: {train.start}:{train.stop}")
@@ -336,6 +346,7 @@ def main(argv=None):
             "tested": len(rows),
             "research_only": True,
             "execution_authority": False,
+            "data_provenance": provenance,
             "holdout_fraction": HOLDOUT_FRAC,
             "selection_end": selection_end,
             "shortlist_size": len(validated),

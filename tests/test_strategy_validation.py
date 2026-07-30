@@ -5,6 +5,10 @@ Run with ``python -m tests.test_strategy_validation``.
 from __future__ import annotations
 
 import sys
+import json
+import os
+import tempfile
+from pathlib import Path
 
 import numpy as np
 
@@ -15,6 +19,13 @@ from backtest.validation import (
     walk_forward_folds,
 )
 from scripts import strategy_search
+from research.market_data import (
+    CoinGeckoHistory,
+    MarketDataError,
+    _canonical_payload,
+    _checksum,
+    validate_snapshot,
+)
 
 FAILURES = []
 
@@ -37,6 +48,63 @@ def _policy(**overrides):
 
 
 def main() -> int:
+    print("\n── reproducible market-data integrity ──")
+    timestamps = [1_700_000_000_000 + i * 86_400_000 for i in range(40)]
+    rows = [[ts, 100.0 + i] for i, ts in enumerate(timestamps)]
+    payload = _canonical_payload("BTC", "bitcoin", 40, rows)
+    snapshot = {**payload, "fetched_at": "2026-07-30T00:00:00+00:00",
+                "sha256": _checksum(payload)}
+    _check(validate_snapshot(snapshot, expected_symbol="BTC",
+                             expected_days=40) == rows,
+           "valid content-addressed history passes")
+    tampered = {**snapshot, "prices": [*rows[:-1], [rows[-1][0], 999.0]]}
+    rejected = False
+    try:
+        validate_snapshot(tampered, expected_symbol="BTC", expected_days=40)
+    except MarketDataError:
+        rejected = True
+    _check(rejected, "checksum mismatch fails closed")
+    duplicate = {**snapshot, "prices": [*rows[:-1], rows[-2]]}
+    duplicate_payload = _canonical_payload("BTC", "bitcoin", 40,
+                                           duplicate["prices"])
+    duplicate["sha256"] = _checksum(duplicate_payload)
+    rejected = False
+    try:
+        validate_snapshot(duplicate)
+    except MarketDataError:
+        rejected = True
+    _check(rejected, "duplicate timestamps fail closed")
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / f"coingecko-btc-40d-{snapshot['sha256'][:16]}.json"
+        path.write_text(json.dumps(snapshot), encoding="utf-8")
+        loaded, meta = CoinGeckoHistory(tmp).load(
+            "BTC", "bitcoin", 40, offline=True
+        )
+        _check(loaded == rows and meta["source"] == "cache",
+               "offline replay uses a verified immutable snapshot")
+        no_data_rejected = False
+        try:
+            CoinGeckoHistory(tmp).load("ETH", "ethereum", 40, offline=True)
+        except MarketDataError:
+            no_data_rejected = True
+        _check(no_data_rejected, "missing offline data fails closed")
+        saved_demo = os.environ.pop("COINGECKO_API_KEY", None)
+        saved_pro = os.environ.pop("COINGECKO_PRO_API_KEY", None)
+        no_key_rejected = False
+        try:
+            CoinGeckoHistory(tmp, api_key=None).load(
+                "ETH", "ethereum", 40, offline=False
+            )
+        except MarketDataError:
+            no_key_rejected = True
+        finally:
+            if saved_demo is not None:
+                os.environ["COINGECKO_API_KEY"] = saved_demo
+            if saved_pro is not None:
+                os.environ["COINGECKO_PRO_API_KEY"] = saved_pro
+        _check(no_key_rejected,
+               "online download without authentication fails closed")
+
     print("\n── purged walk-forward construction ──")
     p = _policy()
     folds = walk_forward_folds(500, p)

@@ -78,6 +78,25 @@ python -m crm.crm summary
 python -m utils.notify --test
 ```
 
+## Reproducible strategy research
+
+The 200,000-candidate search is offline research and has no broker imports or
+execution authority. Network downloads require an authenticated CoinGecko Demo
+or Pro key and are stored as checksum-verified, content-addressed snapshots:
+
+```bash
+# CoinGecko Demo
+export COINGECKO_API_KEY="..."
+python -m scripts.strategy_search 200000
+
+# Deterministically replay already-downloaded snapshots without network access
+python -m scripts.strategy_search 200000 --offline
+```
+
+Set `COINGECKO_PRO_API_KEY` instead for the Pro endpoint. Snapshots default to
+`.cache/strategy-data` and are never committed. Missing, truncated, duplicated,
+gapped, nonpositive, or checksum-invalid observations stop the run.
+
 ## Going live (Alpaca paper)
 
 1. Create a free **paper** account at alpaca.markets, paste keys into `.env`
