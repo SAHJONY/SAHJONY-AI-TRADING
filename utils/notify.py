@@ -181,6 +181,51 @@ class Notifier:
             results["voice"] = self.voice_call(msg)
         return results or None
 
+    def maybe_risk_alert(self, status: dict, state: dict) -> Optional[dict]:
+        """Fire on RISK events even when nothing traded.
+
+        maybe_alert() only speaks when an order executed or the brain turns
+        risk-off — so a desk that FREEZES (circuit breaker latched) or bleeds
+        while flat stays completely silent, which is the one situation the owner
+        must hear about. Alerts are de-duplicated per reason per day so a latched
+        breaker doesn't page every 15 minutes.
+        """
+        if not self.telegram_configured:
+            return None
+        h = status.get("health", {}) or {}
+        cb = h.get("circuit_breaker", {}) or {}
+        day_ret = float(cb.get("day_return") or 0.0)
+        limit = float(cb.get("limit_pct") or 0.10)
+        events = []
+        if cb.get("halted"):
+            events.append(("halt", f"⛔ NEW RISK HALTED — {cb.get('reason', 'halted')}"))
+        elif limit and day_ret <= -abs(limit) / 2:
+            events.append(("drawdown",
+                           f"⚠️ Down {day_ret:+.1%} today — halfway to the "
+                           f"{limit:.0%} circuit breaker"))
+        if not h.get("broker_online", True):
+            events.append(("broker", "🔌 Broker OFFLINE — the desk cannot trade or exit"))
+        quarantined = ((h.get("hermes") or {}).get("quarantined") or [])
+        if quarantined:
+            events.append(("quarantine",
+                           f"🧪 Data quarantined: {', '.join(map(str, quarantined[:5]))} "
+                           f"— no new risk on those symbols"))
+        if not events:
+            return None
+        from datetime import datetime, timezone
+        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        seen = state.setdefault("alerted_risk", {})
+        fresh = [(k, m) for k, m in events if seen.get(k) != today]
+        if not fresh:
+            return None
+        for k, _ in fresh:
+            seen[k] = today
+        a = status.get("account", {}) or {}
+        body = ("🚨 " + self.cfg.firm_name + " — RISK ALERT\n"
+                + "\n".join(m for _, m in fresh)
+                + f"\nEquity ${a.get('equity', 0):,.2f} · cycle {status.get('cycle')}")
+        return {"telegram": self.telegram_send(body), "events": [k for k, _ in fresh]}
+
     def maybe_weekly_summary(self, status: dict, state: dict) -> Optional[dict]:
         """No-hype weekly performance digest to Telegram. Self-gating: fires at most
         once every 7 days via state['last_weekly_report'] (so it's safe to call every

@@ -61,6 +61,37 @@ def main() -> int:
            "garbage data degrades to neutral, never crashes")
 
     os.environ.pop("VOL_TARGET_ANNUAL", None)
+
+    # ── venue minimum notional (small-account viability) ──
+    os.environ["MIN_ORDER_NOTIONAL_USD"] = "1.0"
+    os.environ["MAX_ALLOCATION_PCT"] = "0.12"
+    from config import load_config as _lc
+    from risk.risk_engine import RiskEngine as _RE
+    rr = _RE(_lc())
+    b = rr.position_budget(10.0, 0.75, 1.0)          # would be $0.90 raw
+    _check(b >= 1.0, f"sub-minimum budget raised to the venue minimum (got ${b:.2f})")
+    _check(b <= 10.0 * 0.12 + 1e-9, "raised budget still inside the per-position cap")
+    _check(rr.position_budget(10.0, 0.0, 1.0) == 0.0, "zero conviction still means no order")
+    tiny = rr.position_budget(2.0, 0.75, 1.0)        # cap $0.24 < $1 minimum
+    _check(tiny == 0.0, "stands down when the minimum exceeds the per-position cap")
+    big = rr.position_budget(100_000.0, 0.60, 0.80)
+    _check(abs(big - 100_000.0 * 0.12 * 0.60 * 0.80) < 1e-6,
+           "large accounts are unaffected by the minimum")
+    os.environ.pop("MIN_ORDER_NOTIONAL_USD", None); os.environ.pop("MAX_ALLOCATION_PCT", None)
+
+    # ── transaction costs (fee-aware scorecard) ──
+    os.environ["FEE_BPS_CRYPTO"] = "60"; os.environ["FEE_BPS_EQUITY"] = "4"
+    from config import load_config as _lc2
+    from strategies.base import fee_cost as _fc
+    c = _lc2()
+    _check(abs(_fc("BTC/USD", 100.0, c) - 0.60) < 1e-9, "crypto round trip = 60bps of notional")
+    _check(abs(_fc("SPY", 100.0, c) - 0.04) < 1e-9, "equity round trip = 4bps of notional")
+    _check(_fc("BTC/USD", 0.0, c) == 0.0 and _fc("BTC/USD", None, c) == 0.0,
+           "no notional / bad input → no cost, never crashes")
+    # a $2 crypto round trip costs more than a 1% move on a $2 position earns
+    _check(_fc("BTC/USD", 2.0, c) > 0, "small orders are not cost-free")
+    os.environ.pop("FEE_BPS_CRYPTO", None); os.environ.pop("FEE_BPS_EQUITY", None)
+
     print("\nVOL TARGETING CHECKS PASSED ✓")
     return 0
 

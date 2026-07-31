@@ -30,19 +30,23 @@ from utils.logger import get_logger
 log = get_logger("model_registry")
 
 _DEFAULT_TTL_HOURS = 24.0
-# substrings that mark a variant we never want as a chat counsellor — non-chat
-# utility models (embeddings, audio, image, moderation, …). Applies to every
-# provider.
+# substrings that mark a variant we never want as a chat counsellor:
+#  - non-chat utility models (embeddings, audio, image, moderation, …)
+#  - "-pro" tier models: OpenAI's gpt-*-pro are Responses-API-only and 404 on
+#    v1/chat/completions; Gemini's *-pro-preview carry a tiny free quota and 429.
+#    Our counsellors speak only chat/completions and want a model that actually
+#    answers, so we steer to the standard/flash tier (plenty for a <120-word view).
 _EXCLUDE = ("embed", "whisper", "tts", "audio", "realtime", "moderation",
             "dall-e", "image", "vision-only", "search", "transcribe", "instruct")
-# "-pro" tier models: OpenAI's gpt-*-pro are Responses-API-only and 404 on
-# v1/chat/completions, so they're excluded for every provider EXCEPT Gemini,
-# whose stable *-pro IS the flagship we want (and is what the prefer-list below
-# and the owner directive ask for). Our counsellors speak only chat/completions.
-_PRO_EXCLUDE = ("-pro",)
-# Gemini-only: its *-pro-preview / *-exp variants carry a tiny free quota (429),
-# so we keep steering away from those while still allowing the stable flagship.
-_GEMINI_EXCLUDE = ("preview", "-exp", "-thinking")
+# Provider-specific exclusions. A blanket "-pro" ban was too broad: it also threw
+# away Gemini's stable *-pro tier (the configured default and the stronger model),
+# leaving only flash. Ban precisely what actually fails:
+#   • OpenAI  gpt-*-pro  → Responses-API only, 404 on v1/chat/completions
+#   • Gemini  *-pro-preview → tiny free quota, 429s in practice (stable -pro is fine)
+_EXCLUDE_BY_PROVIDER = {
+    "openai": ("-pro",),
+    "gemini": ("-pro-preview",),
+}
 
 
 def _refresh_hours() -> float:
@@ -52,16 +56,15 @@ def _refresh_hours() -> float:
         return _DEFAULT_TTL_HOURS
 
 
-def _ok_id(model_id: str, provider: str = "") -> bool:
+def _ok_id(model_id: str, provider: Optional[str] = None) -> bool:
     mid = model_id.lower()
     if any(x in mid for x in _EXCLUDE):
         return False
-    if provider == "gemini":
-        return not any(x in mid for x in _GEMINI_EXCLUDE)
-    return not any(x in mid for x in _PRO_EXCLUDE)
+    return not any(x in mid for x in _EXCLUDE_BY_PROVIDER.get(provider or "", ()))
 
 
-def _pick_latest(models: List[Dict], prefer: Tuple[str, ...], provider: str = "") -> Optional[str]:
+def _pick_latest(models: List[Dict], prefer: Tuple[str, ...],
+                 provider: Optional[str] = None) -> Optional[str]:
     """models: [{'id','created'}] with created as a sortable number (epoch).
     Prefer the newest id whose name contains any 'prefer' keyword; if none match,
     the newest acceptable chat id overall."""
@@ -115,8 +118,7 @@ _GEMINI_MODELS_URL = "https://generativelanguage.googleapis.com/v1beta/openai/mo
 _PROVIDERS: Dict[str, Tuple[Callable[[str], List[Dict]], Tuple[str, ...]]] = {
     "anthropic": (lambda k: _anthropic_models(k), ("fable", "opus", "sonnet", "haiku")),
     "openai":    (lambda k: _openai_compatible_models(k, "https://api.openai.com/v1/models"),
-                  ("gpt-5.6-sol", "gpt-5.6", "gpt-5.5", "gpt-5.4",
-                   "gpt-5", "gpt-4.1", "gpt-4o", "gpt")),
+                  ("gpt-5", "gpt-4.1", "gpt-4o", "gpt-4", "gpt")),
     "xai":       (lambda k: _openai_compatible_models(k, "https://api.x.ai/v1/models"),
                   ("grok-4", "grok-3", "grok-2", "grok")),
     "gemini":    (lambda k: _openai_compatible_models(k, _GEMINI_MODELS_URL),

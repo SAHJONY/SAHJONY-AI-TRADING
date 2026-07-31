@@ -81,6 +81,12 @@
     background:linear-gradient(90deg,#fff,#c3d3ee);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
   .brand .sub{font-size:9.5px;color:var(--amber);letter-spacing:2.8px;text-transform:uppercase;font-weight:600;margin-top:1px}
   .spacer{flex:1}
+  .deskSw{display:inline-flex;gap:2px;margin-left:12px;border:1px solid var(--line);border-radius:8px;padding:2px;background:var(--panel2)}
+  .deskSw button{border:0;background:transparent;color:var(--mut);font:600 10.5px var(--mono);letter-spacing:.4px;padding:4px 9px;border-radius:6px;cursor:pointer}
+  .deskSw button.active{background:var(--amber);color:#151004}
+  .liveBadge{margin-left:10px;font:700 10.5px var(--mono);letter-spacing:.6px;color:#ff5c6c;border:1px solid #ff5c6c55;border-radius:8px;padding:4px 9px;animation:livePulse 1.6s ease-in-out infinite}
+  .evalBadge{margin-left:8px;font:600 10.5px var(--mono);letter-spacing:.4px;color:var(--amber);border:1px solid #ffb00055;border-radius:8px;padding:4px 9px}
+  @keyframes livePulse{0%,100%{opacity:1}50%{opacity:.45}}
   .badge{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;
     padding:4px 9px;border-radius:6px;color:var(--cyan);border:1px solid rgba(42,216,240,.35);
     background:rgba(42,216,240,.08);box-shadow:0 0 14px rgba(42,216,240,.12)}
@@ -299,11 +305,16 @@
     <div class="logo">S</div>
     <div><h1 id="firm">SAHJONY CAPITAL</h1><div class="sub">Parquet</div></div>
   </div>
+  <span class="deskSw" id="deskSw" role="tablist" aria-label="Desk switcher">
+    <button data-desk="live" class="active">LIVE · CRYPTO</button><button data-desk="trainer">TRAINER</button><button data-desk="stocks">STOCKS</button>
+  </span>
+  <span class="liveBadge" id="liveBadge" style="display:none">● REAL MONEY</span>
+  <span class="evalBadge" id="evalBadge" style="display:none" title="90-day out-of-sample evaluation window"></span>
   <span class="spacer"></span>
   <span class="stat"><span class="dot" id="dBroker"></span><span id="brokerTxt">—</span></span>
   <span class="stat"><span class="dot" id="dMkt"></span>MKT <b id="mktTxt">—</b></span>
   <span class="stat">CYC <b id="cycTxt">—</b></span>
-  <span class="stat"><span class="dot" id="dStream"></span>STREAM</span>
+  <span class="stat"><span class="dot" id="dStream"></span><span id="streamTxt">STREAM</span></span>
   <span class="stat mono" id="clock">--:--:-- UTC</span>
   <span class="stat mono" id="freshStat" title="Data freshness — time since the desk last updated this snapshot" style="display:none"><span class="dot" id="dFresh"></span><span id="freshTxt">—</span></span>
   <span class="badge" id="viewerBadge" style="display:none" title="Shareable read-only view — no changes can be made from here">◇ VIEW ONLY</span>
@@ -415,16 +426,35 @@ async function refreshCreds(){
 }
 // Prefer the snapshot shipped with this deployment. GitHub is only a fallback.
 const STATUS_REMOTE='https://raw.githubusercontent.com/SAHJONY/SAHJONY-AI-TRADING/master/public/status.json';
+// The firm is several desks: the LIVE Robinhood crypto desk plus the paper
+// sandboxes (Alpaca crypto trainer, Alpaca stock desk). Each publishes its own
+// status.json; all are readable via GitHub raw, so the switcher needs no deploy.
+const RAW='https://raw.githubusercontent.com/SAHJONY/SAHJONY-AI-TRADING/master/';
+const DESKS={
+  live:   {label:'LIVE · CRYPTO', remote:STATUS_REMOTE, local:'./status.json'},
+  trainer:{label:'TRAINER · PAPER', remote:RAW+'desks/paper/public/status.json', local:null},
+  stocks: {label:'STOCKS · PAPER', remote:RAW+'desks/stocks/public/status.json', local:null},
+};
+let ACTIVE_DESK='live';
 async function load(){
+  const d=DESKS[ACTIVE_DESK]||DESKS.live;
   try{
-    await refreshDesk();
-    if(DESK && DESK.last_status){ DATA=DESK.last_status; }
-    else {
-      try{ const r=await fetch('./status.json?_='+Date.now(),{cache:'no-store'}); if(!r.ok)throw 0; DATA=await r.json(); }
-      catch(_){ const r=await fetch(STATUS_REMOTE+'?_='+Date.now(),{cache:'no-store'}); DATA=await r.json(); }
+    if(ACTIVE_DESK==='live'){
+      await refreshDesk();
+      if(DESK && DESK.last_status){ DATA=DESK.last_status; }
+      else {
+        try{ const r=await fetch(d.remote+'?_='+Date.now(),{cache:'no-store'}); if(!r.ok)throw 0; DATA=await r.json(); }
+        catch(_){ const r=await fetch(d.local+'?_='+Date.now()); DATA=await r.json(); }
+      }
+    } else {
+      const r=await fetch(d.remote+'?_='+Date.now(),{cache:'no-store'});
+      if(!r.ok)throw new Error(d.label+' snapshot not published yet');
+      DATA=await r.json();
     }
   }catch(e){
-    try{const r=await fetch('./status.json?_='+Date.now());DATA=await r.json();}catch(_){DATA={_error:String(e)};}
+    if(ACTIVE_DESK==='live'){
+      try{const r=await fetch('./status.json?_='+Date.now());DATA=await r.json();}catch(_){DATA={_error:String(e)};}
+    } else { DATA={_error:String(e)}; }
   }
   await fetchRobinhood();                       // live real-money account (read-only)
   buildNav(); render();
@@ -535,32 +565,137 @@ async function fetchSymbolNews(sym){    // per-ticker headlines (Finnhub key, el
 
 // ── realtime streaming over WebSocket ───────────────────────────────────────
 const BINANCE_SYMS=['btc','eth','sol','bnb','xrp','ada','doge','avax','link','dot','ltc','trx'];
-function setStreamDot(){const d=document.getElementById('dStream'); if(d)d.className='dot '+(STREAM.connected?'live':'');}
+function setStreamDot(){
+  const d=document.getElementById('dStream'); if(d)d.className='dot '+(STREAM.connected?'live':'');
+  // Say what is actually streaming and how fresh it is — a green dot alone can
+  // stay lit while ticks have silently stopped arriving.
+  const el=document.getElementById('streamTxt'); if(!el)return;
+  const ts=Object.values(STREAM.live).map(v=>v.t||0);
+  const n=ts.length, age=n?Math.round((Date.now()-Math.max(...ts))/1000):null;
+  const srcName=(STREAM.src||'').toUpperCase();
+  el.textContent = !STREAM.connected ? 'STREAM' :
+    (n? `${srcName||'STREAM'} ${n}·${age<=2?'now':age+'s'}` : (srcName? srcName+' …' : 'STREAM …'));
+  el.title = n? `${n} symbol(s) live from ${srcName||'feed'} · last tick ${age}s ago · `
+               +`positions marked to market in realtime`
+              : 'connecting to live price feeds (Binance → Coinbase fallback)';
+}
 function cryptoRows(){
   if((MARKETS.list||[]).length) return MARKETS.list.map(m=>({sym:(m.symbol||'').toUpperCase(),price:m.current_price,pct:m.price_change_percentage_24h}));
   return Object.entries(STREAM.live).filter(([k,v])=>v.pct!=null).map(([k,v])=>({sym:k,price:v.price,pct:v.pct}));
 }
+// Realtime mark-to-market. Ticks used to feed only the Markets tab, so the
+// owner's positions, P&L and equity stayed frozen on the 15-minute snapshot
+// while live prices were already streaming. Overlay every tick on the snapshot
+// so the book moves continuously; load() re-baselines from the desk each cycle.
+function liveTick(sym){
+  const s=String(sym||'').toUpperCase();
+  const base=s.replace('/USD','').replace('-USD','').replace('USDT','').replace('/USDT','');
+  return STREAM.live[base]||STREAM.live[s]||null;
+}
+function applyLivePrices(){
+  const ps=DATA.positions||[]; let touched=0, signed=0;
+  ps.forEach(p=>{
+    const sh=+p.shares||0, t=liveTick(p.symbol);
+    if(t&&t.price>0&&sh){
+      p.price=t.price; p.market_value=sh*t.price;
+      p.unrealized=(t.price-(+p.cost_basis||0))*sh; p._liveTs=t.t; touched++;
+    }
+    signed+=(+p.market_value||0);
+  });
+  if(touched&&DATA.account){
+    DATA.account.deployed=signed;
+    DATA.account.equity=(+DATA.account.cash||0)+signed;
+  }
+  // council table prices track the same ticks
+  (DATA.council||[]).forEach(c=>{const t=liveTick(c.symbol); if(t&&t.price>0)c.price=t.price;});
+  return touched;
+}
 let _tick=null;
 function scheduleTick(){ if(_tick)return; _tick=setTimeout(()=>{ _tick=null;
   (MARKETS.list||[]).forEach(m=>{const l=STREAM.live[(m.symbol||'').toUpperCase()]; if(l){m.current_price=l.price; if(l.pct!=null)m.price_change_percentage_24h=l.pct;}});
-  buildTape(); if(TAB==='Markets')render(); }, 900); }
+  const touched=applyLivePrices();
+  buildTape(); setStreamDot();
+  // Re-render any tab whose numbers just moved (not just Markets).
+  if(TAB==='Markets'||(touched&&['Overview','Positions','Council','Risk'].includes(TAB))) render();
+}, 900); }
+// Crypto ticks: Binance first, Coinbase as the fallback. Binance's global feed
+// is unreachable from US networks, where this desk actually runs — without a
+// fallback the socket silently never delivers and every "live" number on the
+// page is really the 15-minute snapshot. Whichever source answers first wins,
+// and a watchdog fails over if ticks stop arriving.
+function cryptoUniverse(){
+  const fromDesk=((DATA&&DATA.council)||[]).map(c=>String(c.symbol||'').toUpperCase())
+    .filter(s=>s.includes('/')||s.includes('-')).map(s=>s.replace('/USD','').replace('-USD',''));
+  const base=fromDesk.length?fromDesk:BINANCE_SYMS.map(s=>s.toUpperCase());
+  return [...new Set(base)];
+}
+function noteTick(base, price, pct){
+  if(!base||!(price>0))return;
+  STREAM.live[base]={price:+price, pct:(pct==null?undefined:+pct), t:Date.now()};
+  STREAM.lastTick=Date.now(); scheduleTick();
+}
 function connectCrypto(){
   if(!('WebSocket' in window)) return;
   try{
     const ws=new WebSocket('wss://stream.binance.com:9443/stream?streams='+BINANCE_SYMS.map(s=>s+'usdt@ticker').join('/'));
-    STREAM.cryptoWS=ws;
+    STREAM.cryptoWS=ws; STREAM.src='binance';
+    // If Binance is geo-blocked the socket may "open" yet never deliver: give it
+    // a short grace period, then fail over rather than sitting silently dead.
+    clearTimeout(STREAM.probe);
+    STREAM.probe=setTimeout(()=>{ if(!STREAM.lastTick) connectCoinbase(); }, 6000);
     ws.onopen=()=>{STREAM.connected=true;STREAM.tries=0;setStreamDot();};
     ws.onmessage=(ev)=>{try{const m=JSON.parse(ev.data);const d=m.data||m;if(!d||!d.s)return;
-      STREAM.live[d.s.replace('USDT','')]={price:+d.c,pct:+d.P,t:Date.now()};scheduleTick();}catch(e){}};
+      noteTick(d.s.replace('USDT',''), +d.c, +d.P);}catch(e){}};
     ws.onclose=()=>{STREAM.connected=!!(STREAM.stockWS&&STREAM.stockWS.readyState===1);setStreamDot();
+      if(!STREAM.lastTick){ connectCoinbase(); return; }      // never worked → switch source
       STREAM.tries++;setTimeout(connectCrypto,Math.min(30000,1000*Math.pow(2,STREAM.tries)));};
+    ws.onerror=()=>{try{ws.close();}catch(e){}};
+  }catch(e){ connectCoinbase(); }
+}
+function connectCoinbase(){
+  if(!('WebSocket' in window)) return;
+  if(STREAM.cbWS && STREAM.cbWS.readyState<=1) return;        // already connecting/open
+  try{ if(STREAM.cryptoWS) STREAM.cryptoWS.close(); }catch(e){}
+  const products=cryptoUniverse().map(b=>b+'-USD');
+  try{
+    const ws=new WebSocket('wss://ws-feed.exchange.coinbase.com');
+    STREAM.cbWS=ws; STREAM.src='coinbase';
+    ws.onopen=()=>{ STREAM.connected=true; STREAM.tries=0; setStreamDot();
+      ws.send(JSON.stringify({type:'subscribe', product_ids:products, channels:['ticker']})); };
+    ws.onmessage=(ev)=>{try{const m=JSON.parse(ev.data);
+      if(m.type!=='ticker'||!m.product_id)return;
+      const base=String(m.product_id).replace('-USD','');
+      const px=+m.price, open=+m.open_24h;
+      noteTick(base, px, (open>0? (px/open-1)*100 : null));
+    }catch(e){}};
+    ws.onclose=()=>{STREAM.connected=!!(STREAM.stockWS&&STREAM.stockWS.readyState===1);setStreamDot();
+      STREAM.tries++;setTimeout(connectCoinbase,Math.min(30000,1000*Math.pow(2,STREAM.tries)));};
     ws.onerror=()=>{try{ws.close();}catch(e){}};
   }catch(e){}
 }
+// Staleness watchdog: a socket can stay "open" while the feed dies. If no tick
+// has landed in 90s, tear down and reconnect (alternating source).
+setInterval(()=>{
+  if(!STREAM.started) return;
+  const age=STREAM.lastTick? Date.now()-STREAM.lastTick : null;
+  if(age!=null && age>90000){
+    STREAM.lastTick=0;
+    try{ if(STREAM.cbWS) STREAM.cbWS.close(); }catch(e){}
+    try{ if(STREAM.cryptoWS) STREAM.cryptoWS.close(); }catch(e){}
+    (STREAM.src==='coinbase'? connectCrypto : connectCoinbase)();
+  }
+}, 30000);
 function connectStocks(){
   if(!FINNHUB||!('WebSocket' in window)) return;
   const syms=((DATA&&DATA.council)||[]).map(c=>c.symbol).filter(s=>!String(s).includes('/'));
-  if(!syms.length) return;
+  // Streams start before the first snapshot lands, so an empty council used to
+  // abort permanently — no stock stream for the whole session. Retry instead.
+  if(!syms.length){ clearTimeout(STREAM.stockRetry);
+    STREAM.stockRetry=setTimeout(connectStocks,5000); return; }
+  const key=syms.slice().sort().join(',');
+  if(STREAM.stockSyms===key && STREAM.stockWS && STREAM.stockWS.readyState<=1) return;
+  STREAM.stockSyms=key;
+  try{ if(STREAM.stockWS) STREAM.stockWS.close(); }catch(e){}
   try{
     const ws=new WebSocket('wss://ws.finnhub.io?token='+encodeURIComponent(FINNHUB)); STREAM.stockWS=ws;
     ws.onopen=()=>{syms.forEach(s=>ws.send(JSON.stringify({type:'subscribe',symbol:s})));STREAM.connected=true;setStreamDot();};
@@ -914,6 +1049,19 @@ function setStatus(){
     (venue?venue.toUpperCase()+' ':'') + (rt?'AUTHENTICATED':(h.broker_online?'LIVE FEED':'OFFLINE SIM'));
   db.className='dot '+(rt||h.broker_online?'g':'a');
   document.getElementById('mktTxt').textContent = h.market_open?'OPEN':'CLOSED';
+  // 90-day evaluation countdown — the window is what makes the final number mean
+  // something, so keep it in sight rather than buried in a file.
+  const eb=document.getElementById('evalBadge');
+  const ev=(DATA.health||{}).evaluation||{};
+  if(eb){
+    if(ev.days){ eb.style.display=''; eb.textContent=`EVAL ${ev.day}/${ev.days}`;
+      eb.title=`Out-of-sample window ${ev.pct}% elapsed · frozen at ${ev.frozen_at_commit}`
+        +`\nDecision date: ${String(ev.ends_at||'').slice(0,10)}`
+        +(ev.active?'':' · WINDOW CLOSED — time to judge the result'); }
+    else eb.style.display='none';
+  }
+  const lb=document.getElementById('liveBadge');
+  if(lb) lb.style.display = (String(DATA.mode||'').toUpperCase()==='LIVE' && ACTIVE_DESK==='live') ? '' : 'none';
   dm.className='dot '+(h.market_open?'g':'r');
   document.getElementById('cycTxt').textContent = (DATA&&DATA.cycle)||'0';
   const acc=document.getElementById('account');
@@ -1908,6 +2056,16 @@ function voiceWakeToggle(){VOICE.mode==='wake'?voiceStop():voiceRun('wake');}
 })();
 
 load();
+// Desk switcher: swap the whole dashboard between the firm's desks.
+(function(){
+  const sw=document.getElementById('deskSw'); if(!sw)return;
+  sw.addEventListener('click',(e)=>{
+    const b=e.target.closest('button[data-desk]'); if(!b||b.dataset.desk===ACTIVE_DESK)return;
+    ACTIVE_DESK=b.dataset.desk;
+    sw.querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));
+    DATA={}; render(); load();
+  });
+})();
 setInterval(load,30000);
 if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));}
 </script>

@@ -72,10 +72,68 @@ def main() -> int:
     h0 = firm._halt_check(s, 100_000.0)
     _check(not h0["halted"], "breaker not tripped at day open")
     drop = 100_000.0 * (1 - cfg.max_daily_drawdown_pct - 0.01)
+    # A flat desk that lost money has BOOKED that loss — realized P&L moves with it.
+    s["realized_pnl"] = drop - 100_000.0
     h1 = firm._halt_check(s, drop)
     _check(h1["halted"], "breaker trips after daily loss exceeds limit")
     h2 = firm._halt_check(s, 99_999.0)  # equity recovers same day
     _check(h2["halted"], "breaker stays LATCHED for the rest of the day")
+
+    # Capital-flow guard: equity moving while the desk is FLAT and has booked no
+    # realized P&L is a deposit / withdrawal / sleeve change — never a drawdown.
+    firm2 = Firm(cfg, client, db)
+    s2 = default_state()
+    firm2._halt_check(s2, 50.0)                    # day opens on a $50 sleeve
+    h3 = firm2._halt_check(s2, 10.0)               # sleeve switched to $10
+    _check(not h3["halted"], "sleeve/deposit change does NOT trip the breaker")
+    _check(abs(h3["day_return"]) < 1e-9, "baseline re-anchored to the new capital base")
+    _check(h3["day_start"] == 10.0, "day-start now reflects the new base")
+    # …but a genuine loss on top of the new base still trips it
+    s2["realized_pnl"] = -5.0
+    h4 = firm2._halt_check(s2, 5.0)
+    _check(h4["halted"], "real trading loss after re-anchoring still trips the breaker")
+
+    # A latch left over from a capital-base artifact must not freeze the desk:
+    # flat + no realized P&L today means nothing was ever lost.
+    firm3 = Firm(cfg, client, db)
+    s3 = default_state()
+    firm3._halt_check(s3, 50.0)
+    s3["breaker_latched"] = True                 # stale latch from a prior mis-read
+    h5 = firm3._halt_check(s3, 50.0)
+    _check(not h5["halted"], "stale latch clears when the desk never traded")
+
+    # ── broker reconciliation: the broker is the truth about what we own ──
+    firm4 = Firm(cfg, client, db)
+    client.get_broker_positions = lambda: {"BTC-USD": {"qty": 0.0005, "avg_price": 64000.0,
+                                                       "market_value": 32.0}}
+    s4 = {"positions": {}}
+    r = firm4._reconcile_broker(s4)
+    _check(len(r["adopted"]) == 1 and "BTC" in r["adopted"][0].upper(),
+           f"untracked broker holding is ADOPTED, not ignored (got {r['adopted']})")
+    adopted = s4["positions"][r["adopted"][0]]
+    _check(adopted["strategy"] == "ladder" and adopted["hard_floor"] > 0,
+           "adopted position immediately gets stop/floor protection")
+    _check(adopted["cost_basis"] == 64000.0, "adopted basis comes from the broker, not a guess")
+    r2 = firm4._reconcile_broker(s4)
+    _check(not r2["adopted"] and not r2["dropped"], "reconciliation is idempotent")
+
+    client.get_broker_positions = lambda: {}
+    s5 = {"positions": {"ETH/USD": {"strategy": "ladder", "shares": 1.0, "cost_basis": 1800.0}}}
+    _check(firm4._reconcile_broker(s5)["dropped"] == ["ETH/USD"] and not s5["positions"],
+           "ghost position the broker does not hold is dropped")
+
+    s6 = {"positions": {"AAPL": {"strategy": "wheel", "stage": "csp", "shares": 0,
+                                 "contract": "AAPL240119P00150000"}}}
+    _check(not firm4._reconcile_broker(s6)["dropped"] and "AAPL" in s6["positions"],
+           "option/wheel legs are never mistaken for ghosts")
+
+    def _boom():
+        raise RuntimeError("broker api down")
+    client.get_broker_positions = _boom
+    s7 = {"positions": {"BTC/USD": {"strategy": "ladder", "shares": 1.0, "cost_basis": 100.0}}}
+    rr = firm4._reconcile_broker(s7)
+    _check(rr["ok"] is False and "BTC/USD" in s7["positions"],
+           "a broker failure never mutates state")
 
     db.close()
     print("\nCIRCUIT BREAKER CHECKS PASSED ✓")

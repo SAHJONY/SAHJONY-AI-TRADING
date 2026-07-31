@@ -33,6 +33,7 @@ import json
 import os
 import time
 import uuid
+from datetime import datetime, timezone
 from typing import Dict, List
 
 import numpy as np
@@ -80,14 +81,22 @@ class RobinhoodCryptoBroker:
 
     def __init__(self, cfg: Config):
         self.cfg = cfg
-        self.api_key = (os.getenv("ROBINHOOD_API_KEY", "") or "").strip()
+        self.api_key = (os.getenv("ROBINHOOD_API_KEY", "") or "").strip().strip('"\'')
         # Base64-encoded Ed25519 private-key seed (single line — NOT a PEM block).
-        priv_b64 = (os.getenv("ROBINHOOD_PRIVATE_KEY", "") or "").strip()
+        # Normalized to survive common paste accidents: surrounding quotes, internal
+        # whitespace/line breaks, base64url alphabet, and dropped '=' padding.
+        priv_b64 = (os.getenv("ROBINHOOD_PRIVATE_KEY", "") or "").strip().strip('"\'')
+        priv_b64 = "".join(priv_b64.split()).replace("-", "+").replace("_", "/")
+        if len(priv_b64) % 4:
+            priv_b64 += "=" * (4 - len(priv_b64) % 4)
         self._signer = None
         if self.api_key and priv_b64:
             try:
                 import nacl.signing  # lazy: package optional until you go live
                 seed = base64.b64decode(priv_b64)
+                if len(seed) not in (32, 64):
+                    raise ValueError(f"decoded key is {len(seed)} bytes — expected a "
+                                     "32-byte seed (44 base64 chars) or 64-byte signing key")
                 # RH provides a 32-byte seed; some tooling exports the 64-byte
                 # signing key — take the first 32 (the seed) either way.
                 self._signer = nacl.signing.SigningKey(seed[:32])
@@ -251,7 +260,8 @@ class RobinhoodCryptoBroker:
                         side, rh, notional, self.max_order_usd)
             return {"status": "rejected", "reason": "exceeds ROBINHOOD_MAX_ORDER_USD"}
 
-        body = {"client_order_id": str(uuid.uuid4()), "side": side, "symbol": rh,
+        client_order_id = str(uuid.uuid4())
+        body = {"client_order_id": client_order_id, "side": side, "symbol": rh,
                 "type": "market", "market_order_config": {"asset_quantity": f"{qty}"}}
 
         if not self.armed:
@@ -259,15 +269,66 @@ class RobinhoodCryptoBroker:
                         "Set LIVE_TRADING_ACK + ROBINHOOD_LIVE=true to place real orders.",
                         side, rh, qty, notional)
             return {"status": "filled", "symbol": rh, "qty": qty, "side": side,
-                    "fill_price": px, "simulated": True, "dry_run": True}
+                    "fill_price": px, "simulated": True, "dry_run": True,
+                    "client_order_id": client_order_id}
         try:
             res = self._request("POST", "/api/v1/crypto/trading/orders/", body)
             log.info("ROBINHOOD LIVE ORDER placed: %s %s qty=%s → %s", side, rh, qty, res.get("id"))
             return {"status": "submitted", "symbol": rh, "qty": qty, "side": side,
-                    "fill_price": px, "simulated": False, "order_id": res.get("id")}
+                    "simulated": False, "order_id": res.get("id"),
+                    "client_order_id": res.get("client_order_id") or client_order_id,
+                    "submitted_at": datetime.now(timezone.utc).isoformat()}
         except Exception as exc:
             log.error("Robinhood live order failed: %s", exc)
             return {"status": "rejected", "reason": str(exc)}
+
+    def get_order(self, order_id: str) -> Dict:
+        """Return a normalized Robinhood order lifecycle snapshot.
+
+        A POST acknowledgement is not a fill.  The workforce uses this read-only
+        endpoint on later cycles before mutating positions or booking a trade.
+        Unknown provider states stay pending (fail closed).
+        """
+        if not order_id:
+            return {"status": "unknown", "reason": "missing order_id"}
+        try:
+            raw = self._request("GET", f"/api/v1/crypto/trading/orders/{order_id}/")
+            provider_state = str(raw.get("state") or raw.get("status") or "").lower()
+            status = {
+                "filled": "filled", "partially_filled": "partially_filled",
+                "partially-filled": "partially_filled", "canceled": "cancelled",
+                "cancelled": "cancelled", "rejected": "rejected", "failed": "rejected",
+                "queued": "pending", "new": "pending", "open": "pending",
+                "confirmed": "pending", "submitted": "pending",
+            }.get(provider_state, "pending")
+            executions = raw.get("executions") or []
+            prices = []
+            quantities = []
+            for execution in executions:
+                try:
+                    prices.append(float(execution.get("price") or 0))
+                    quantities.append(float(execution.get("quantity") or 0))
+                except (TypeError, ValueError):
+                    continue
+            avg = float(raw.get("average_price") or 0)
+            filled_qty = float(raw.get("filled_asset_quantity") or 0)
+            if avg <= 0 and prices:
+                denom = sum(quantities)
+                avg = (sum(p * q for p, q in zip(prices, quantities)) / denom
+                       if denom > 0 else prices[-1])
+            if filled_qty <= 0 and quantities:
+                filled_qty = sum(quantities)
+            return {
+                "status": status, "provider_status": provider_state or "unknown",
+                "order_id": raw.get("id") or order_id,
+                "client_order_id": raw.get("client_order_id"),
+                "fill_price": avg, "filled_qty": filled_qty,
+                "filled_at": raw.get("last_transaction_at") or raw.get("updated_at"),
+                "raw": raw,
+            }
+        except Exception as exc:
+            log.error("Robinhood get_order(%s) failed: %s", order_id, exc)
+            return {"status": "unknown", "order_id": order_id, "reason": str(exc)}
 
     def submit_option_order(self, contract: str, qty: int, side: str, premium: float = 0.0) -> Dict:
         return {"status": "rejected", "reason": "Robinhood Crypto has no options"}

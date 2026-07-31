@@ -1,103 +1,129 @@
 {
   "firm": "SAHJONY CAPITAL LLC",
-  "tagline": "Autonomous multi-agent quant trading \u2014 OFFLINE SIM",
-  "mode": "offline-sim",
-  "broker": "alpaca",
+  "tagline": "Autonomous multi-agent quant trading \u2014 PAPER",
+  "mode": "LIVE",
   "benchmark": {
-    "symbol": "SPY",
-    "start_price": 181.04,
-    "last_price": 182.58,
-    "return_pct": 0.853,
-    "alpha_pct": -1.966
+    "symbol": "BTC-USD",
+    "start_price": 64337.05,
+    "last_price": 64273.06,
+    "return_pct": -0.099,
+    "alpha_pct": 0.081
   },
-  "ts": "2026-07-14T06:36:58.832906+00:00",
-  "cycle": 35,
+  "ts": "2026-07-31T05:27:52.464620+00:00",
+  "cycle": 552,
   "account": {
-    "equity": 98887.08,
-    "equity_start": 100000.0,
-    "cash": 110032.55,
-    "deployed": 0.0
+    "equity": 49.99,
+    "equity_start": 50.0,
+    "cash": 48.98,
+    "deployed": 1.01
   },
   "pnl": {
-    "realized": 1584.21,
+    "realized": 0.0,
     "premium_collected": 0.0,
-    "total_return_pct": -1.113,
-    "source": "offline-sim",
-    "broker_verified": false
+    "total_return_pct": -0.018
   },
   "capital": {
     "deposits": 0.0,
     "withdrawals": 0.0,
     "net_capital": 0.0,
     "flows": 0,
-    "trading_pnl": -1112.92,
-    "trading_return_pct": -1.113
+    "trading_pnl": -0.01,
+    "trading_return_pct": -0.018
   },
   "capital_flows": [],
   "health": {
-    "mode": "offline-sim",
-    "broker": "alpaca",
-    "live_armed": false,
-    "broker_online": false,
-    "market_open": false,
+    "mode": "LIVE",
+    "broker_online": true,
+    "market_open": true,
     "risk_caps": {
-      "per_position_pct": 0.1,
-      "total_deployed_pct": 0.6,
-      "min_conviction": 0.55,
-      "daily_drawdown_pct": 0.06
+      "per_position_pct": 0.12,
+      "total_deployed_pct": 0.7,
+      "min_conviction": 0.52,
+      "daily_drawdown_pct": 0.1
     },
     "vol_targeting": {
       "target_annual": 0.2,
       "scale": 0.5
     },
+    "cadence": {
+      "degraded": false,
+      "reason": "",
+      "gap_min": 16.0,
+      "expected_min": 15,
+      "tolerance_min": 90.0
+    },
+    "evaluation": {
+      "active": true,
+      "day": 4,
+      "days": 90,
+      "started_at": "2026-07-26T21:38:16.798191+00:00",
+      "ends_at": "2026-10-24T21:38:16.798191+00:00",
+      "pct": 4.4,
+      "criteria": {
+        "primary": "net-of-fees return beats buy-and-hold BTC over the window",
+        "risk": "max drawdown stays inside 15%",
+        "quality": "positive Sharpe on the equity curve",
+        "minimum_sample": "at least 30 closed trades, else the result is not significant"
+      },
+      "frozen_at_commit": "8a82b4c"
+    },
     "circuit_breaker": {
       "halted": false,
       "reason": "",
-      "day_return": -0.0111,
-      "day_start": 100000.0,
-      "limit_pct": 0.06
+      "day_return": -0.0001,
+      "day_start": 50.0,
+      "limit_pct": 0.1
     },
     "ai_brain": {
-      "enabled": false,
-      "brain_claude": false,
-      "counsellor_openai": false,
-      "counsellor_grok": false,
-      "counsellor_gemini": false,
-      "counsellor_nvidia": false,
-      "nvidia_fallback": false,
+      "enabled": true,
+      "brain_claude": true,
+      "counsellor_openai": true,
+      "counsellor_grok": true,
+      "counsellor_gemini": true,
+      "counsellor_nvidia": true,
+      "nvidia_fallback": true,
       "auto_update_models": true,
       "models": {
         "brain": "claude-fable-5",
-        "openai": "gpt-4o",
-        "grok": "grok-4",
-        "gemini": "gemini-2.5-pro",
-        "nvidia": ""
+        "openai": "gpt-5.6-luna",
+        "grok": "grok-4.5",
+        "gemini": "gemini-3-flash-preview",
+        "nvidia": "openai/gpt-oss-120b"
       }
     },
     "alt_data": {
-      "enabled": false,
+      "enabled": true,
       "provider": "quiverquant",
-      "key_set": false,
+      "key_set": true,
       "cached_symbols": 0
     },
     "hermes": {
       "enabled": true,
       "agent": "hermes",
-      "goal": "Maximize risk-adjusted return (Sharpe) within the hard risk ceilings \u2014 capital preservation first, paper trading only.",
+      "goal": "Beat buy-and-hold (positive alpha vs BTC) while keeping max drawdown under 15% and never risking the mandate on a single trade \u2014 capital preservation first. Near-term: prove a sustained, fee-aware, positive out-of-sample edge on the paper trainer over ~90 days before scaling any live capital; grow the live account only on demonstrated alpha.",
       "used": true,
-      "data_ok_pct": 1.0,
+      "data_ok_pct": 0.8,
       "quarantined": [],
-      "issues": {},
-      "hit_rates": {},
+      "issues": {
+        "XRP/USD": [
+          "short history"
+        ]
+      },
+      "hit_rates": {
+        "BTC/USD": 0.584,
+        "ETH/USD": 0.414,
+        "SOL/USD": 0.558,
+        "XRP/USD": 0.414
+      },
       "strategy_weights": {
-        "daytrade": 0.993
+        "daytrade": 0.867
       },
       "scorecard": {
-        "cycles": 35,
-        "sharpe": -0.91,
-        "sortino": -1.33,
-        "max_drawdown_pct": -7.84,
-        "volatility_pct": 1.692
+        "cycles": 150,
+        "sharpe": -6.63,
+        "sortino": -6.61,
+        "max_drawdown_pct": -28.59,
+        "volatility_pct": 2.34
       }
     },
     "advisory_board": {
@@ -120,337 +146,191 @@
       "max_tilt": 0.1
     },
     "voice": {
-      "enabled": false,
+      "enabled": true,
       "voice_configured": false,
-      "owner_phone_set": false,
-      "telegram_configured": false,
+      "owner_phone_set": true,
+      "telegram_configured": true,
       "whatsapp_configured": false
     }
   },
   "advisors": [
     {
-      "symbol": "AAPL",
+      "symbol": "BTC/USD",
       "scores": {
-        "buffett": 0.047,
+        "buffett": 0.097,
         "munger": 0.3,
-        "macro": 0.0,
-        "growth": -0.095,
-        "quant": -0.027
+        "macro": -0.968,
+        "growth": -0.224,
+        "quant": 0.118
       },
-      "gate": 0.805,
-      "composite": 0.039,
-      "tilt": 0.0031,
+      "gate": 0.59,
+      "composite": -0.085,
+      "tilt": -0.005,
       "rationale": {
-        "buffett": "+0.0% vs 200d mean, vol 27%",
-        "munger": "+3.9% vs 50d trend, 5d move -2.3%",
-        "macro": "insufficient benchmark history",
-        "growth": "6m -4.6%, -26.5% off the high",
-        "quant": "z +0.42, 20/50 trend +1.9%",
-        "risk_gate": "drawdown -26.5%, vol 27% \u2192 gate 0.81"
+        "buffett": "+10.2% vs 200d mean, vol 38%",
+        "munger": "+1.4% vs 50d trend, 5d move +0.0%",
+        "macro": "benchmark 50/200 spread -11.4% (risk-off)",
+        "growth": "6m -6.4%, -33.7% off the high",
+        "quant": "z -0.20, 20/50 trend +1.7%",
+        "risk_gate": "drawdown -33.7%, vol 38% \u2192 gate 0.59"
       }
     },
     {
-      "symbol": "MSFT",
+      "symbol": "ETH/USD",
       "scores": {
-        "buffett": 0.032,
+        "buffett": -0.121,
         "munger": 0.3,
-        "macro": 0.0,
-        "growth": -0.127,
-        "quant": -0.368
+        "macro": -0.968,
+        "growth": -0.375,
+        "quant": 0.095
       },
-      "gate": 0.79,
-      "composite": -0.056,
-      "tilt": -0.0044,
+      "gate": 0.269,
+      "composite": -0.169,
+      "tilt": -0.0045,
       "rationale": {
-        "buffett": "+0.0% vs 200d mean, vol 28%",
-        "munger": "-9.0% vs 50d trend, 5d move +1.9%",
-        "macro": "insufficient benchmark history",
-        "growth": "6m -6.1%, -27.0% off the high",
-        "quant": "z +0.22, 20/50 trend -9.2%",
-        "risk_gate": "drawdown -27.0%, vol 28% \u2192 gate 0.79"
+        "buffett": "+10.2% vs 200d mean, vol 52%",
+        "munger": "+7.6% vs 50d trend, 5d move +1.7%",
+        "macro": "benchmark 50/200 spread -11.4% (risk-off)",
+        "growth": "6m -7.5%, -43.2% off the high",
+        "quant": "z +0.54, 20/50 trend +6.2%",
+        "risk_gate": "drawdown -43.2%, vol 52% \u2192 gate 0.27"
       }
     },
     {
-      "symbol": "SPY",
+      "symbol": "SOL/USD",
       "scores": {
-        "buffett": 0.074,
+        "buffett": -0.05,
         "munger": 0.3,
-        "macro": 0.0,
-        "growth": -0.177,
-        "quant": 0.059
+        "macro": -0.968,
+        "growth": -0.564,
+        "quant": 0.32
       },
-      "gate": 0.952,
-      "composite": 0.05,
-      "tilt": 0.0048,
+      "gate": 0.076,
+      "composite": -0.135,
+      "tilt": -0.001,
       "rationale": {
-        "buffett": "+0.0% vs 200d mean, vol 25%",
-        "munger": "-2.7% vs 50d trend, 5d move +0.1%",
-        "macro": "insufficient benchmark history",
-        "growth": "6m -14.4%, -21.6% off the high",
-        "quant": "z -0.55, 20/50 trend -1.9%",
-        "risk_gate": "drawdown -21.6%, vol 25% \u2192 gate 0.95"
+        "buffett": "+14.8% vs 200d mean, vol 53%",
+        "munger": "-0.7% vs 50d trend, 5d move -0.3%",
+        "macro": "benchmark 50/200 spread -11.4% (risk-off)",
+        "growth": "6m -14.3%, -49.4% off the high",
+        "quant": "z -1.15, 20/50 trend +1.5%",
+        "risk_gate": "drawdown -49.4%, vol 53% \u2192 gate 0.08"
+      }
+    },
+    {
+      "symbol": "LTC/USD",
+      "scores": {
+        "buffett": 0.119,
+        "munger": 0.3,
+        "macro": -0.968,
+        "growth": -0.576,
+        "quant": 0.237
+      },
+      "gate": 0.167,
+      "composite": -0.121,
+      "tilt": -0.002,
+      "rationale": {
+        "buffett": "+15.1% vs 200d mean, vol 42%",
+        "munger": "+1.8% vs 50d trend, 5d move -2.3%",
+        "macro": "benchmark 50/200 spread -11.4% (risk-off)",
+        "growth": "6m -16.7%, -47.8% off the high",
+        "quant": "z -0.49, 20/50 trend +3.0%",
+        "risk_gate": "drawdown -47.8%, vol 42% \u2192 gate 0.17"
+      }
+    },
+    {
+      "symbol": "XRP/USD",
+      "scores": {
+        "buffett": 0.45,
+        "munger": 0.3,
+        "macro": -0.968,
+        "growth": 0.35,
+        "quant": 0.0
+      },
+      "gate": 1.0,
+      "composite": 0.078,
+      "tilt": 0.0078,
+      "rationale": {
+        "buffett": "+0.0% vs 200d mean, vol 0%",
+        "munger": "+0.0% vs 50d trend, 5d move +0.0%",
+        "macro": "benchmark 50/200 spread -11.4% (risk-off)",
+        "growth": "6m +0.0%, +0.0% off the high",
+        "quant": "insufficient history",
+        "risk_gate": "drawdown +0.0%, vol 0% \u2192 gate 1.00"
       }
     }
   ],
   "council": [
     {
-      "symbol": "AAPL",
-      "price": 159.44,
-      "conviction": 0.474,
+      "symbol": "BTC/USD",
+      "price": 64269.91,
+      "conviction": 0.469,
       "direction": "flat",
-      "composite": -0.052,
-      "risk_multiplier": 0.522,
+      "composite": -0.062,
+      "risk_multiplier": 0.373,
       "agents": [
         {
           "name": "Citadel Systematic",
           "persona": "Trend/Systematic",
-          "score": 0.878,
-          "confidence": 1.0,
-          "rationale": "MACD=0.43, 20-50 slope=+0.019, Q-mom=+4.5%"
+          "score": 0.147,
+          "confidence": 0.447,
+          "rationale": "MACD=-102.98, 20-50 slope=+0.017, Q-mom=-12.6%"
         },
         {
           "name": "Two Sigma Backtest",
           "persona": "Statistical expectancy",
-          "score": -0.628,
-          "confidence": 0.714,
-          "rationale": "ann.Sharpe=-1.48, win-rate=44%"
+          "score": -0.381,
+          "confidence": 0.59,
+          "rationale": "ann.Sharpe=-0.80, win-rate=48%"
         },
         {
           "name": "Bridgewater Risk",
           "persona": "Risk parity / vol-target",
-          "score": -0.117,
+          "score": -0.213,
           "confidence": 0.6,
-          "rationale": "ann.vol=27% vs target 15%, risk_scale=0.56"
+          "rationale": "ann.vol=38% vs target 15%, risk_scale=0.40"
         },
         {
           "name": "Renaissance Patterns",
           "persona": "Mean-reversion",
-          "score": -0.249,
-          "confidence": 0.385,
-          "rationale": "z(20)=+0.42 (mean-revert), autocorr=+0.03"
+          "score": 0.122,
+          "confidence": 0.341,
+          "rationale": "z(20)=-0.20 (mean-revert), autocorr=-0.07"
         },
         {
           "name": "Goldman Technical",
           "persona": "Technical analysis",
-          "score": 0.002,
+          "score": -0.338,
           "confidence": 0.5,
-          "rationale": "RSI=57, MACD-hist=+0.43"
+          "rationale": "RSI=53, MACD-hist=-102.98"
         },
         {
           "name": "JPMorgan Fundamental",
           "persona": "Valuation proxy",
-          "score": 0.132,
+          "score": -0.036,
           "confidence": 0.45,
-          "rationale": "px/200d=1.00, drawdown-from-1y-high=-26% (proxy)"
+          "rationale": "px/200d=0.90, drawdown-from-1y-high=-34% (proxy)"
         },
         {
           "name": "D.E. Shaw Options",
           "persona": "Vol surface / premium",
-          "score": 0.19,
-          "confidence": 0.746,
-          "rationale": "vol=27%, IV-rank=82% \u2192 premium-sell favorability 82%"
+          "score": -0.155,
+          "confidence": 0.572,
+          "rationale": "vol=38%, IV-rank=24% \u2192 premium-sell favorability 24%"
         },
         {
           "name": "AQR Factor",
           "persona": "Multi-factor",
-          "score": -0.231,
+          "score": -0.093,
           "confidence": 0.55,
-          "rationale": "mom(12-1)=-10.1%, value=-4.5%, quality=-0.27"
+          "rationale": "mom(12-1)=-1.8%, value=+12.6%, quality=-0.38"
         },
         {
           "name": "Citadel Securities MM",
           "persona": "Order-flow microstructure",
-          "score": 0.141,
-          "confidence": 0.548,
-          "rationale": "VPIN order-flow toxicity=0.13 (1=max adverse selection)"
-        },
-        {
-          "name": "Millennium Pod",
-          "persona": "Residual alpha / beta-neutral",
-          "score": -0.879,
-          "confidence": 0.9,
-          "rationale": "ann.alpha=-34.3%, beta=+0.25, beta-neutrality=0.87"
-        },
-        {
-          "name": "Renaissance Medallion",
-          "persona": "Regime / cointegration",
-          "score": -0.094,
-          "confidence": 0.8,
-          "rationale": "state=calm (p_stay=0.76), coint-z=+0.39"
-        },
-        {
-          "name": "Sovereign Wealth",
-          "persona": "Secular macro / SAA",
-          "score": 0.308,
-          "confidence": 0.4,
-          "rationale": "secular trend=+0%, structural drawdown=-26% (accumulate dips)"
-        }
-      ]
-    },
-    {
-      "symbol": "MSFT",
-      "price": 85.73,
-      "conviction": 0.346,
-      "direction": "flat",
-      "composite": -0.308,
-      "risk_multiplier": 0.484,
-      "agents": [
-        {
-          "name": "Citadel Systematic",
-          "persona": "Trend/Systematic",
-          "score": -1.0,
-          "confidence": 1.0,
-          "rationale": "MACD=0.62, 20-50 slope=-0.101, Q-mom=-20.8%"
-        },
-        {
-          "name": "Two Sigma Backtest",
-          "persona": "Statistical expectancy",
-          "score": -0.613,
-          "confidence": 0.707,
-          "rationale": "ann.Sharpe=-1.43, win-rate=50%"
-        },
-        {
-          "name": "Bridgewater Risk",
-          "persona": "Risk parity / vol-target",
-          "score": -0.126,
-          "confidence": 0.6,
-          "rationale": "ann.vol=28% vs target 15%, risk_scale=0.54"
-        },
-        {
-          "name": "Renaissance Patterns",
-          "persona": "Mean-reversion",
-          "score": -0.13,
-          "confidence": 0.344,
-          "rationale": "z(20)=+0.22 (mean-revert), autocorr=+0.03"
-        },
-        {
-          "name": "Goldman Technical",
-          "persona": "Technical analysis",
-          "score": 0.368,
-          "confidence": 0.5,
-          "rationale": "RSI=46, MACD-hist=+0.62"
-        },
-        {
-          "name": "JPMorgan Fundamental",
-          "persona": "Valuation proxy",
-          "score": 0.134,
-          "confidence": 0.45,
-          "rationale": "px/200d=1.00, drawdown-from-1y-high=-27% (proxy)"
-        },
-        {
-          "name": "D.E. Shaw Options",
-          "persona": "Vol surface / premium",
-          "score": -0.211,
-          "confidence": 0.543,
-          "rationale": "vol=28%, IV-rank=14% \u2192 premium-sell favorability 14%"
-        },
-        {
-          "name": "AQR Factor",
-          "persona": "Multi-factor",
-          "score": 0.068,
-          "confidence": 0.55,
-          "rationale": "mom(12-1)=+5.5%, value=+20.8%, quality=-0.28"
-        },
-        {
-          "name": "Citadel Securities MM",
-          "persona": "Order-flow microstructure",
-          "score": 0.117,
-          "confidence": 0.521,
-          "rationale": "VPIN order-flow toxicity=0.20 (1=max adverse selection)"
-        },
-        {
-          "name": "Millennium Pod",
-          "persona": "Residual alpha / beta-neutral",
-          "score": -0.93,
-          "confidence": 0.9,
-          "rationale": "ann.alpha=-41.4%, beta=-0.08, beta-neutrality=0.96"
-        },
-        {
-          "name": "Renaissance Medallion",
-          "persona": "Regime / cointegration",
-          "score": -0.094,
-          "confidence": 0.8,
-          "rationale": "state=calm (p_stay=0.78), coint-z=-1.69"
-        },
-        {
-          "name": "Sovereign Wealth",
-          "persona": "Secular macro / SAA",
-          "score": 0.313,
-          "confidence": 0.4,
-          "rationale": "secular trend=+0%, structural drawdown=-27% (accumulate dips)"
-        }
-      ]
-    },
-    {
-      "symbol": "SPY",
-      "price": 182.58,
-      "conviction": 0.457,
-      "direction": "flat",
-      "composite": -0.085,
-      "risk_multiplier": 0.555,
-      "agents": [
-        {
-          "name": "Citadel Systematic",
-          "persona": "Trend/Systematic",
-          "score": -0.672,
-          "confidence": 0.972,
-          "rationale": "MACD=0.16, 20-50 slope=-0.020, Q-mom=-4.6%"
-        },
-        {
-          "name": "Two Sigma Backtest",
-          "persona": "Statistical expectancy",
-          "score": -0.39,
-          "confidence": 0.595,
-          "rationale": "ann.Sharpe=-0.82, win-rate=46%"
-        },
-        {
-          "name": "Bridgewater Risk",
-          "persona": "Risk parity / vol-target",
-          "score": -0.1,
-          "confidence": 0.6,
-          "rationale": "ann.vol=25% vs target 15%, risk_scale=0.60"
-        },
-        {
-          "name": "Renaissance Patterns",
-          "persona": "Mean-reversion",
-          "score": 0.319,
-          "confidence": 0.41,
-          "rationale": "z(20)=-0.55 (mean-revert), autocorr=-0.06"
-        },
-        {
-          "name": "Goldman Technical",
-          "persona": "Technical analysis",
-          "score": 0.519,
-          "confidence": 0.5,
-          "rationale": "RSI=40, MACD-hist=+0.16"
-        },
-        {
-          "name": "JPMorgan Fundamental",
-          "persona": "Valuation proxy",
-          "score": 0.108,
-          "confidence": 0.45,
-          "rationale": "px/200d=1.00, drawdown-from-1y-high=-22% (proxy)"
-        },
-        {
-          "name": "D.E. Shaw Options",
-          "persona": "Vol surface / premium",
-          "score": -0.265,
-          "confidence": 0.514,
-          "rationale": "vol=25%, IV-rank=5% \u2192 premium-sell favorability 5%"
-        },
-        {
-          "name": "AQR Factor",
-          "persona": "Multi-factor",
-          "score": -0.023,
-          "confidence": 0.55,
-          "rationale": "mom(12-1)=+5.0%, value=+4.6%, quality=-0.25"
-        },
-        {
-          "name": "Citadel Securities MM",
-          "persona": "Order-flow microstructure",
-          "score": 0.137,
-          "confidence": 0.543,
-          "rationale": "VPIN order-flow toxicity=0.14 (1=max adverse selection)"
+          "score": 0.144,
+          "confidence": 0.551,
+          "rationale": "VPIN order-flow toxicity=0.12 (1=max adverse selection)"
         },
         {
           "name": "Millennium Pod",
@@ -462,177 +342,422 @@
         {
           "name": "Renaissance Medallion",
           "persona": "Regime / cointegration",
-          "score": -0.049,
+          "score": -0.072,
           "confidence": 0.8,
-          "rationale": "state=calm (p_stay=0.56), coint-z=-0.77"
+          "rationale": "state=calm (p_stay=0.94), coint-z=-1.30"
         },
         {
           "name": "Sovereign Wealth",
           "persona": "Secular macro / SAA",
-          "score": 0.254,
+          "score": 0.339,
           "confidence": 0.4,
-          "rationale": "secular trend=+0%, structural drawdown=-22% (accumulate dips)"
+          "rationale": "secular trend=-10%, structural drawdown=-34% (accumulate dips)"
+        }
+      ]
+    },
+    {
+      "symbol": "ETH/USD",
+      "price": 1903.74,
+      "conviction": 0.515,
+      "direction": "long",
+      "composite": 0.03,
+      "risk_multiplier": 0.265,
+      "agents": [
+        {
+          "name": "Citadel Systematic",
+          "persona": "Trend/Systematic",
+          "score": 0.984,
+          "confidence": 1.0,
+          "rationale": "MACD=-1.68, 20-50 slope=+0.057, Q-mom=-5.1%"
+        },
+        {
+          "name": "Two Sigma Backtest",
+          "persona": "Statistical expectancy",
+          "score": -0.356,
+          "confidence": 0.578,
+          "rationale": "ann.Sharpe=-0.74, win-rate=50%"
+        },
+        {
+          "name": "Bridgewater Risk",
+          "persona": "Risk parity / vol-target",
+          "score": -0.316,
+          "confidence": 0.6,
+          "rationale": "ann.vol=52% vs target 15%, risk_scale=0.29"
+        },
+        {
+          "name": "Renaissance Patterns",
+          "persona": "Mean-reversion",
+          "score": -0.316,
+          "confidence": 0.409,
+          "rationale": "z(20)=+0.54 (mean-revert), autocorr=+0.01"
+        },
+        {
+          "name": "Goldman Technical",
+          "persona": "Technical analysis",
+          "score": -0.409,
+          "confidence": 0.5,
+          "rationale": "RSI=56, MACD-hist=-1.68"
+        },
+        {
+          "name": "JPMorgan Fundamental",
+          "persona": "Valuation proxy",
+          "score": 0.011,
+          "confidence": 0.45,
+          "rationale": "px/200d=0.90, drawdown-from-1y-high=-43% (proxy)"
+        },
+        {
+          "name": "D.E. Shaw Options",
+          "persona": "Vol surface / premium",
+          "score": -0.196,
+          "confidence": 0.551,
+          "rationale": "vol=52%, IV-rank=17% \u2192 premium-sell favorability 17%"
+        },
+        {
+          "name": "AQR Factor",
+          "persona": "Multi-factor",
+          "score": -0.265,
+          "confidence": 0.55,
+          "rationale": "mom(12-1)=-9.2%, value=+5.1%, quality=-0.52"
+        },
+        {
+          "name": "Citadel Securities MM",
+          "persona": "Order-flow microstructure",
+          "score": 0.135,
+          "confidence": 0.54,
+          "rationale": "VPIN order-flow toxicity=0.15 (1=max adverse selection)"
+        },
+        {
+          "name": "Millennium Pod",
+          "persona": "Residual alpha / beta-neutral",
+          "score": -0.051,
+          "confidence": 0.538,
+          "rationale": "ann.alpha=-1.3%, beta=+1.24, beta-neutrality=0.38"
+        },
+        {
+          "name": "Renaissance Medallion",
+          "persona": "Regime / cointegration",
+          "score": -0.092,
+          "confidence": 0.8,
+          "rationale": "state=calm (p_stay=0.74), coint-z=+0.93"
+        },
+        {
+          "name": "Sovereign Wealth",
+          "persona": "Secular macro / SAA",
+          "score": 0.436,
+          "confidence": 0.4,
+          "rationale": "secular trend=-10%, structural drawdown=-43% (accumulate dips)"
+        }
+      ]
+    },
+    {
+      "symbol": "SOL/USD",
+      "price": 74.11,
+      "conviction": 0.437,
+      "direction": "flat",
+      "composite": -0.126,
+      "risk_multiplier": 0.264,
+      "agents": [
+        {
+          "name": "Citadel Systematic",
+          "persona": "Trend/Systematic",
+          "score": 0.183,
+          "confidence": 0.483,
+          "rationale": "MACD=-0.39, 20-50 slope=+0.015, Q-mom=-9.5%"
+        },
+        {
+          "name": "Two Sigma Backtest",
+          "persona": "Statistical expectancy",
+          "score": -0.495,
+          "confidence": 0.648,
+          "rationale": "ann.Sharpe=-1.09, win-rate=46%"
+        },
+        {
+          "name": "Bridgewater Risk",
+          "persona": "Risk parity / vol-target",
+          "score": -0.319,
+          "confidence": 0.6,
+          "rationale": "ann.vol=53% vs target 15%, risk_scale=0.28"
+        },
+        {
+          "name": "Renaissance Patterns",
+          "persona": "Mean-reversion",
+          "score": 0.598,
+          "confidence": 0.53,
+          "rationale": "z(20)=-1.15 (mean-revert), autocorr=+0.02"
+        },
+        {
+          "name": "Goldman Technical",
+          "persona": "Technical analysis",
+          "score": -0.122,
+          "confidence": 0.5,
+          "rationale": "RSI=46, MACD-hist=-0.39"
+        },
+        {
+          "name": "JPMorgan Fundamental",
+          "persona": "Valuation proxy",
+          "score": -0.048,
+          "confidence": 0.45,
+          "rationale": "px/200d=0.85, drawdown-from-1y-high=-49% (proxy)"
+        },
+        {
+          "name": "D.E. Shaw Options",
+          "persona": "Vol surface / premium",
+          "score": -0.188,
+          "confidence": 0.555,
+          "rationale": "vol=53%, IV-rank=18% \u2192 premium-sell favorability 18%"
+        },
+        {
+          "name": "AQR Factor",
+          "persona": "Multi-factor",
+          "score": -0.105,
+          "confidence": 0.55,
+          "rationale": "mom(12-1)=+4.8%, value=+9.5%, quality=-0.53"
+        },
+        {
+          "name": "Citadel Securities MM",
+          "persona": "Order-flow microstructure",
+          "score": 0.137,
+          "confidence": 0.542,
+          "rationale": "VPIN order-flow toxicity=0.14 (1=max adverse selection)"
+        },
+        {
+          "name": "Millennium Pod",
+          "persona": "Residual alpha / beta-neutral",
+          "score": -0.663,
+          "confidence": 0.9,
+          "rationale": "ann.alpha=-20.0%, beta=+1.23, beta-neutrality=0.38"
+        },
+        {
+          "name": "Renaissance Medallion",
+          "persona": "Regime / cointegration",
+          "score": -0.135,
+          "confidence": 0.8,
+          "rationale": "state=calm (p_stay=0.73), coint-z=+0.12"
+        },
+        {
+          "name": "Sovereign Wealth",
+          "persona": "Secular macro / SAA",
+          "score": 0.477,
+          "confidence": 0.4,
+          "rationale": "secular trend=-15%, structural drawdown=-49% (accumulate dips)"
+        }
+      ]
+    },
+    {
+      "symbol": "LTC/USD",
+      "price": 45.38,
+      "conviction": 0.438,
+      "direction": "flat",
+      "composite": -0.125,
+      "risk_multiplier": 0.334,
+      "agents": [
+        {
+          "name": "Citadel Systematic",
+          "persona": "Trend/Systematic",
+          "score": 0.676,
+          "confidence": 0.976,
+          "rationale": "MACD=-0.14, 20-50 slope=+0.030, Q-mom=-12.0%"
+        },
+        {
+          "name": "Two Sigma Backtest",
+          "persona": "Statistical expectancy",
+          "score": -0.623,
+          "confidence": 0.712,
+          "rationale": "ann.Sharpe=-1.46, win-rate=44%"
+        },
+        {
+          "name": "Bridgewater Risk",
+          "persona": "Risk parity / vol-target",
+          "score": -0.246,
+          "confidence": 0.6,
+          "rationale": "ann.vol=42% vs target 15%, risk_scale=0.36"
+        },
+        {
+          "name": "Renaissance Patterns",
+          "persona": "Mean-reversion",
+          "score": 0.283,
+          "confidence": 0.397,
+          "rationale": "z(20)=-0.49 (mean-revert), autocorr=-0.07"
+        },
+        {
+          "name": "Goldman Technical",
+          "persona": "Technical analysis",
+          "score": -0.338,
+          "confidence": 0.5,
+          "rationale": "RSI=53, MACD-hist=-0.14"
+        },
+        {
+          "name": "JPMorgan Fundamental",
+          "persona": "Valuation proxy",
+          "score": -0.063,
+          "confidence": 0.45,
+          "rationale": "px/200d=0.85, drawdown-from-1y-high=-48% (proxy)"
+        },
+        {
+          "name": "D.E. Shaw Options",
+          "persona": "Vol surface / premium",
+          "score": -0.262,
+          "confidence": 0.516,
+          "rationale": "vol=42%, IV-rank=5% \u2192 premium-sell favorability 5%"
+        },
+        {
+          "name": "AQR Factor",
+          "persona": "Multi-factor",
+          "score": -0.132,
+          "confidence": 0.55,
+          "rationale": "mom(12-1)=-3.8%, value=+12.0%, quality=-0.42"
+        },
+        {
+          "name": "Citadel Securities MM",
+          "persona": "Order-flow microstructure",
+          "score": 0.139,
+          "confidence": 0.545,
+          "rationale": "VPIN order-flow toxicity=0.14 (1=max adverse selection)"
+        },
+        {
+          "name": "Millennium Pod",
+          "persona": "Residual alpha / beta-neutral",
+          "score": -0.88,
+          "confidence": 0.9,
+          "rationale": "ann.alpha=-34.3%, beta=+0.88, beta-neutrality=0.56"
+        },
+        {
+          "name": "Renaissance Medallion",
+          "persona": "Regime / cointegration",
+          "score": -0.144,
+          "confidence": 0.8,
+          "rationale": "state=calm (p_stay=0.89), coint-z=-0.22"
+        },
+        {
+          "name": "Sovereign Wealth",
+          "persona": "Secular macro / SAA",
+          "score": 0.46,
+          "confidence": 0.4,
+          "rationale": "secular trend=-15%, structural drawdown=-48% (accumulate dips)"
+        }
+      ]
+    },
+    {
+      "symbol": "XRP/USD",
+      "price": 1.08,
+      "conviction": 0.513,
+      "direction": "long",
+      "composite": 0.026,
+      "risk_multiplier": 1.0,
+      "agents": [
+        {
+          "name": "Citadel Systematic",
+          "persona": "Trend/Systematic",
+          "score": 0.0,
+          "confidence": 0.3,
+          "rationale": "MACD=0.00, 20-50 slope=+0.000, Q-mom=+0.0%"
+        },
+        {
+          "name": "Two Sigma Backtest",
+          "persona": "Statistical expectancy",
+          "score": 0.0,
+          "confidence": 0.2,
+          "rationale": "insufficient history"
+        },
+        {
+          "name": "Bridgewater Risk",
+          "persona": "Risk parity / vol-target",
+          "score": 0.146,
+          "confidence": 0.6,
+          "rationale": "ann.vol=0% vs target 15%, risk_scale=1.00"
+        },
+        {
+          "name": "Renaissance Patterns",
+          "persona": "Mean-reversion",
+          "score": 0.0,
+          "confidence": 0.2,
+          "rationale": "insufficient history"
+        },
+        {
+          "name": "Goldman Technical",
+          "persona": "Technical analysis",
+          "score": 0.0,
+          "confidence": 0.5,
+          "rationale": "RSI=50, MACD-hist=+0.00"
+        },
+        {
+          "name": "JPMorgan Fundamental",
+          "persona": "Valuation proxy",
+          "score": 0.0,
+          "confidence": 0.45,
+          "rationale": "px/200d=1.00, drawdown-from-1y-high=+0% (proxy)"
+        },
+        {
+          "name": "D.E. Shaw Options",
+          "persona": "Vol surface / premium",
+          "score": 0.0,
+          "confidence": 0.65,
+          "rationale": "vol=25%, IV-rank=50% \u2192 premium-sell favorability 50%"
+        },
+        {
+          "name": "AQR Factor",
+          "persona": "Multi-factor",
+          "score": -0.1,
+          "confidence": 0.55,
+          "rationale": "mom(12-1)=+0.0%, value=-0.0%, quality=-0.25"
+        },
+        {
+          "name": "Citadel Securities MM",
+          "persona": "Order-flow microstructure",
+          "score": 0.185,
+          "confidence": 0.6,
+          "rationale": "VPIN order-flow toxicity=0.00 (1=max adverse selection)"
+        },
+        {
+          "name": "Millennium Pod",
+          "persona": "Residual alpha / beta-neutral",
+          "score": 0.0,
+          "confidence": 0.5,
+          "rationale": "ann.alpha=+0.0%, beta=+1.00, beta-neutrality=0.50"
+        },
+        {
+          "name": "Renaissance Medallion",
+          "persona": "Regime / cointegration",
+          "score": 0.0,
+          "confidence": 0.8,
+          "rationale": "state=calm (p_stay=0.50), coint-z=+0.00"
+        },
+        {
+          "name": "Sovereign Wealth",
+          "persona": "Secular macro / SAA",
+          "score": 0.0,
+          "confidence": 0.4,
+          "rationale": "secular trend=+0%, structural drawdown=+0% (accumulate dips)"
         }
       ]
     }
   ],
   "brain": {
-    "enabled": false,
-    "used": false,
-    "posture": "neutral",
-    "global_risk_multiplier": 1.0,
-    "commentary": "AI brain disabled or no data",
-    "brain_model": "",
-    "counsellors": {}
-  },
-  "positions": [],
-  "broker_account": {
-    "venue": "alpaca",
-    "mode": "offline-sim",
-    "online": false,
-    "live_armed": false,
-    "equity": 98887.08,
-    "cash": 110032.55,
-    "buying_power": 110032.55,
-    "holdings": [
-      {
-        "symbol": "GBP/USD",
-        "qty": -109.051562,
-        "avg_price": 89.25,
-        "market_value": 0.0
-      }
-    ]
-  },
-  "reconciliation": {
-    "status": "unavailable",
-    "reconciled": false,
-    "execution_blocked": true,
-    "differences": [],
-    "error": "offline simulation is not broker reconciliation evidence"
-  },
-  "audit_chain": {
-    "valid": false,
-    "entries": 0,
-    "error": "snapshot predates the institutional audit ledger"
-  },
-  "institutional_health": {
-    "score": 60,
-    "execution_authority": false,
-    "controls": {
-      "audit_integrity": false,
-      "data_quality": true,
-      "cost_model": true,
-      "evidence_delivery": true,
-      "broker_connection": false,
-      "position_reconciliation": null,
-      "shadow_coverage": false,
-      "pnl_broker_verified": false
-    },
-    "incidents": [
-      {"severity": "critical", "code": "audit_chain_unverified"},
-      {"severity": "warning", "code": "insufficient_shadow_evidence"},
-      {"severity": "warning", "code": "pnl_not_broker_verified"}
-    ],
-    "stages": {
-      "research_ready": false,
-      "paper_ready": false,
-      "canary_ready": false,
-      "production_ready": false
+    "enabled": true,
+    "used": true,
+    "posture": "risk_off",
+    "global_risk_multiplier": 0.7,
+    "commentary": "The crypto slice shows modest to negative composites, elevated volatilities (especially ETH and SOL) and several negative alphas. All three counsellors advise a defensive tilt. Signals for BTC, ETH, SOL, LTC and especially XRP appear fragile \u2013 BTC and SOL due to high beta/vol and XRP because of a zero\u2011vol data anomaly. Accordingly we keep the overall exposure tight and reduce convictions modestly.",
+    "brain_model": "nvidia:openai/gpt-oss-120b",
+    "counsellors": {
+      "openai": "**Risk posture:** Cautious/defensive. Most signals are flat-to-negative, while ETH and XRP longs have only marginal positive composites. Volatility and beta make ETH/SOL particularly sensitive; avoid aggressive gross exposure and leverage.\n\n**Suggested conviction adjustments:**\n-",
+      "grok": "**Risk posture:** Neutral-to-cautious. Composites near zero or negative; elevated vols (ETH/SOL ~0.52) and negative alphas (SOL/LTC) imply limited edge amid beta-heavy exposure. No strong risk-on tilt.\n\n**Adjustments (advise only):**\n- BTC: -0.05 (flat, mild drag)\n- ETH: +0.05 (l",
+      "gemini": "",
+      "nvidia": "**Risk posture:** The crypto slice leans toward \u201cmoderate\u2011high\u201d volatility (vol\u202f\u2248\u202f0.4\u20110.5) with betas clustered around market (0.9\u20111.2). Composite scores are flat\u2011to\u2011slightly negative, and two assets show negative alphas, signalling fragile upside. Keep the allocation tight and m"
     }
   },
-  "institutional_intelligence": {
-    "version": "institutional-research-v1",
-    "point_in_time": true,
-    "execution_authority": false,
-    "coverage": 0.0,
-    "universe": [],
-    "market": {
-      "regime": "unknown",
-      "regime_probabilities": {},
-      "breadth_50d": 0.0,
-      "median_correlation_60d": 0.0,
-      "expected_shortfall_95": 0.0,
-      "advisory_risk_multiplier": 0.5
-    },
-    "factors": {},
-    "provenance": {
-      "inputs": [],
-      "future_data_used": false
+  "positions": [
+    {
+      "symbol": "ETH/USD",
+      "strategy": "ladder",
+      "state": "long",
+      "shares": 0.000531,
+      "cost_basis": 1883.82,
+      "price": 1903.81,
+      "market_value": 1.01,
+      "unrealized": 0.01
     }
-  },
-  "accounts": {
-    "count": 3,
-    "enabled": 3,
-    "accounts": [
-      {
-        "id": "sahjony_brokerage",
-        "display_name": "SAHJONY",
-        "institution": "robinhood",
-        "account_type": "RHS",
-        "account_number_masked": "***1100",
-        "broker": "robinhood_brokerage",
-        "asset_class": "equity",
-        "strategy": "balanced",
-        "execution_mode": "monitor_only",
-        "live_requested": true,
-        "adapter_ready": false,
-        "symbols": [
-          "VTI",
-          "SPY",
-          "QQQ"
-        ],
-        "paper": true,
-        "max_risk": 0.01,
-        "max_position": 0.1,
-        "max_daily_loss": 0.03
-      },
-      {
-        "id": "agentic_brokerage",
-        "display_name": "Agentic",
-        "institution": "robinhood",
-        "account_type": "RHS",
-        "account_number_masked": "***1131",
-        "broker": "robinhood_brokerage",
-        "asset_class": "equity",
-        "strategy": "growth",
-        "execution_mode": "monitor_only",
-        "live_requested": true,
-        "adapter_ready": false,
-        "symbols": [
-          "VTI",
-          "QQQ",
-          "NVDA",
-          "MSFT"
-        ],
-        "paper": true,
-        "max_risk": 0.015,
-        "max_position": 0.12,
-        "max_daily_loss": 0.04
-      },
-      {
-        "id": "robinhood_crypto",
-        "display_name": "SAHJONY CRYPTO",
-        "institution": "robinhood",
-        "account_type": "RHS",
-        "account_number_masked": "***5744",
-        "broker": "robinhood",
-        "asset_class": "crypto",
-        "strategy": "crypto",
-        "execution_mode": "api",
-        "live_requested": true,
-        "adapter_ready": true,
-        "symbols": [
-          "BTC/USD",
-          "ETH/USD",
-          "XRP/USD"
-        ],
-        "paper": true,
-        "max_risk": 0.005,
-        "max_position": 0.05,
-        "max_daily_loss": 0.02
-      }
-    ]
-  },
+  ],
   "crm": {
     "investors": 0,
     "contacts": 0,
@@ -642,693 +767,1380 @@
   },
   "recent_trades": [
     {
-      "id": 34,
-      "ts": "2026-07-14T06:36:58.667562+00:00",
-      "cycle": 34,
-      "symbol": "GBP/USD",
-      "strategy": "daytrade",
-      "kind": "equity",
-      "side": "sell",
-      "qty": 34.214859,
-      "price": 101.06,
-      "premium": 0.0,
-      "notional": 0.0,
-      "purpose": "daytrade_target",
-      "reason": "target +2.66% @ 101.0593, realize $89.62",
-      "mode": "offline-sim",
-      "simulated": 1
-    },
-    {
-      "id": 33,
-      "ts": "2026-07-14T06:36:58.554755+00:00",
-      "cycle": 33,
-      "symbol": "GBP/USD",
-      "strategy": "daytrade",
+      "id": 1,
+      "ts": "2026-07-28T00:39:46.389833+00:00",
+      "cycle": 384,
+      "symbol": "ETH/USD",
+      "strategy": "ladder",
       "kind": "equity",
       "side": "buy",
-      "qty": 34.214859,
-      "price": 98.44,
+      "qty": 0.000531,
+      "price": 1885.6125062,
       "premium": 0.0,
-      "notional": 3368.108227551401,
-      "purpose": "daytrade_entry",
-      "reason": "intraday long @ 98.4399 (rsi 60.1, macd 0.4108)",
-      "mode": "offline-sim",
-      "simulated": 1
-    },
-    {
-      "id": 32,
-      "ts": "2026-07-14T06:36:58.312312+00:00",
-      "cycle": 31,
-      "symbol": "EUR/USD",
-      "strategy": "daytrade",
-      "kind": "equity",
-      "side": "sell",
-      "qty": 52.48507,
-      "price": 63.83,
-      "premium": 0.0,
-      "notional": 0.0,
-      "purpose": "daytrade_stop",
-      "reason": "stop 65.1642 hit, realize $-104.34",
-      "mode": "offline-sim",
-      "simulated": 1
-    },
-    {
-      "id": 31,
-      "ts": "2026-07-14T06:36:58.185210+00:00",
-      "cycle": 30,
-      "symbol": "EUR/USD",
-      "strategy": "daytrade",
-      "kind": "equity",
-      "side": "buy",
-      "qty": 52.48507,
-      "price": 65.82,
-      "premium": 0.0,
-      "notional": 3454.69699344077,
-      "purpose": "daytrade_entry",
-      "reason": "intraday long @ 65.8225 (rsi 51.6, macd 0.0678)",
-      "mode": "offline-sim",
-      "simulated": 1
-    },
-    {
-      "id": 30,
-      "ts": "2026-07-14T06:36:57.948291+00:00",
-      "cycle": 28,
-      "symbol": "GBP/USD",
-      "strategy": "daytrade",
-      "kind": "equity",
-      "side": "sell",
-      "qty": 109.051562,
-      "price": 92.13,
-      "premium": 0.0,
-      "notional": 0.0,
-      "purpose": "daytrade_eod",
-      "reason": "end-of-day flatten @ 92.1332, realize $2,551.22",
-      "mode": "offline-sim",
-      "simulated": 1
-    },
-    {
-      "id": 29,
-      "ts": "2026-07-07T14:00:54.377034+00:00",
-      "cycle": 24,
-      "symbol": "GBP/USD",
-      "strategy": "daytrade",
-      "kind": "equity",
-      "side": "buy",
-      "qty": 109.051562,
-      "price": 68.74,
-      "premium": 0.0,
-      "notional": 7496.049179715073,
-      "purpose": "daytrade_entry",
-      "reason": "intraday long @ 68.7386 (rsi 29.0, macd 0.3328)",
-      "mode": "offline-sim",
-      "simulated": 1
-    },
-    {
-      "id": 28,
-      "ts": "2026-07-07T14:00:54.190774+00:00",
-      "cycle": 22,
-      "symbol": "GBP/USD",
-      "strategy": "daytrade",
-      "kind": "equity",
-      "side": "sell",
-      "qty": 111.128855,
-      "price": 68.51,
-      "premium": 0.0,
-      "notional": 0.0,
-      "purpose": "daytrade_target",
-      "reason": "target +1.68% @ 68.5076, realize $125.93",
-      "mode": "offline-sim",
-      "simulated": 1
-    },
-    {
-      "id": 27,
-      "ts": "2026-07-07T14:00:54.029880+00:00",
-      "cycle": 20,
-      "symbol": "GBP/USD",
-      "strategy": "daytrade",
-      "kind": "equity",
-      "side": "buy",
-      "qty": 111.128855,
-      "price": 67.37,
-      "premium": 0.0,
-      "notional": 7487.233891993044,
-      "purpose": "daytrade_entry",
-      "reason": "intraday long @ 67.3743 (rsi 17.4, macd -0.0895)",
-      "mode": "offline-sim",
-      "simulated": 1
-    },
-    {
-      "id": 26,
-      "ts": "2026-07-07T14:00:53.954768+00:00",
-      "cycle": 19,
-      "symbol": "GBP/USD",
-      "strategy": "daytrade",
-      "kind": "equity",
-      "side": "sell",
-      "qty": 108.222708,
-      "price": 69.07,
-      "premium": 0.0,
-      "notional": 0.0,
-      "purpose": "daytrade_trendbreak",
-      "reason": "trend break @ 69.0730, realize $-26.15",
-      "mode": "offline-sim",
-      "simulated": 1
-    },
-    {
-      "id": 25,
-      "ts": "2026-07-07T14:00:53.943768+00:00",
-      "cycle": 19,
-      "symbol": "EUR/USD",
-      "strategy": "daytrade",
-      "kind": "equity",
-      "side": "sell",
-      "qty": 84.916836,
-      "price": 86.26,
-      "premium": 0.0,
-      "notional": 0.0,
-      "purpose": "daytrade_stop",
-      "reason": "stop 87.4551 hit, realize $-176.57",
-      "mode": "offline-sim",
-      "simulated": 1
-    },
-    {
-      "id": 24,
-      "ts": "2026-07-07T14:00:53.887806+00:00",
-      "cycle": 18,
-      "symbol": "USD/JPY",
-      "strategy": "daytrade",
-      "kind": "equity",
-      "side": "sell",
-      "qty": 28.74378,
-      "price": 238.74,
-      "premium": 0.0,
-      "notional": 0.0,
-      "purpose": "daytrade_stop",
-      "reason": "stop 241.0956 hit, realize $-137.62",
-      "mode": "offline-sim",
-      "simulated": 1
-    },
-    {
-      "id": 23,
-      "ts": "2026-07-07T14:00:53.877450+00:00",
-      "cycle": 18,
-      "symbol": "GBP/USD",
-      "strategy": "daytrade",
-      "kind": "equity",
-      "side": "buy",
-      "qty": 108.222708,
-      "price": 69.31,
-      "premium": 0.0,
-      "notional": 7501.424330072228,
-      "purpose": "daytrade_entry",
-      "reason": "intraday long @ 69.3147 (rsi 29.0, macd -0.2182)",
-      "mode": "offline-sim",
-      "simulated": 1
-    },
-    {
-      "id": 22,
-      "ts": "2026-07-07T14:00:53.866449+00:00",
-      "cycle": 18,
-      "symbol": "EUR/USD",
-      "strategy": "daytrade",
-      "kind": "equity",
-      "side": "buy",
-      "qty": 84.916836,
-      "price": 88.34,
-      "premium": 0.0,
-      "notional": 7501.424330232896,
-      "purpose": "daytrade_entry",
-      "reason": "intraday long @ 88.3385 (rsi 25.2, macd -0.594)",
-      "mode": "offline-sim",
-      "simulated": 1
-    },
-    {
-      "id": 21,
-      "ts": "2026-07-07T14:00:53.806076+00:00",
-      "cycle": 17,
-      "symbol": "USD/JPY",
-      "strategy": "daytrade",
-      "kind": "equity",
-      "side": "buy",
-      "qty": 28.74378,
-      "price": 243.53,
-      "premium": 0.0,
-      "notional": 6999.9999558761565,
-      "purpose": "daytrade_entry",
-      "reason": "intraday long @ 243.5309 (rsi 55.0, macd 1.6124)",
-      "mode": "offline-sim",
-      "simulated": 1
-    },
-    {
-      "id": 20,
-      "ts": "2026-07-07T14:00:53.794073+00:00",
-      "cycle": 17,
-      "symbol": "GBP/USD",
-      "strategy": "daytrade",
-      "kind": "equity",
-      "side": "sell",
-      "qty": 108.575746,
-      "price": 67.24,
-      "premium": 0.0,
-      "notional": 0.0,
-      "purpose": "daytrade_stop",
-      "reason": "stop 68.0512 hit, realize $-162.51",
-      "mode": "offline-sim",
-      "simulated": 1
+      "notional": 1.00030779017559,
+      "purpose": "ladder_entry",
+      "reason": "open 0.000531 sh @ 1883.82, floor 40%",
+      "mode": "LIVE",
+      "simulated": 0,
+      "order_id": null,
+      "client_order_id": null,
+      "order_status": null,
+      "submitted_at": null,
+      "filled_at": null
     }
   ],
   "equity_curve": [
     {
-      "ts": "2026-07-07T13:08:14.475746+00:00",
-      "cycle": 1,
-      "equity": 100000.0,
-      "cash": 93000.00004412384,
+      "ts": "2026-07-28T12:30:45.721848+00:00",
+      "cycle": 403,
+      "equity": 69.97735010970428,
+      "cash": 68.98,
       "realized_pnl": 0.0,
       "premium": 0.0
     },
     {
-      "ts": "2026-07-07T13:08:14.568243+00:00",
-      "cycle": 2,
-      "equity": 99862.37687304578,
-      "cash": 85881.64416536776,
-      "realized_pnl": -137.62312695422528,
+      "ts": "2026-07-28T12:48:03.803489+00:00",
+      "cycle": 404,
+      "equity": 69.9831472373851,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
       "premium": 0.0
     },
     {
-      "ts": "2026-07-07T13:08:14.659217+00:00",
-      "cycle": 3,
-      "equity": 99673.46750904743,
-      "cash": 99673.46750904743,
-      "realized_pnl": -326.53249095256047,
+      "ts": "2026-07-28T13:44:38.300523+00:00",
+      "cycle": 405,
+      "equity": 69.97171620916934,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
       "premium": 0.0
     },
     {
-      "ts": "2026-07-07T13:08:14.750471+00:00",
-      "cycle": 4,
-      "equity": 99673.46750904743,
-      "cash": 92696.32478821132,
-      "realized_pnl": -326.53249095256047,
+      "ts": "2026-07-28T14:00:44.652936+00:00",
+      "cycle": 406,
+      "equity": 69.97538390397412,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
       "premium": 0.0
     },
     {
-      "ts": "2026-07-07T13:08:14.844921+00:00",
-      "cycle": 5,
-      "equity": 99768.37952142718,
-      "cash": 92696.32478821132,
-      "realized_pnl": -326.53249095256047,
+      "ts": "2026-07-28T14:16:43.195676+00:00",
+      "cycle": 407,
+      "equity": 69.97201869812756,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
       "premium": 0.0
     },
     {
-      "ts": "2026-07-07T13:08:14.956891+00:00",
-      "cycle": 6,
-      "equity": 99790.8203298369,
-      "cash": 99790.8203298369,
-      "realized_pnl": -209.17967016309012,
+      "ts": "2026-07-28T14:32:50.422880+00:00",
+      "cycle": 408,
+      "equity": 69.97681483875445,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
       "premium": 0.0
     },
     {
-      "ts": "2026-07-07T13:08:15.050116+00:00",
-      "cycle": 7,
-      "equity": 99790.8203298369,
-      "cash": 99790.8203298369,
-      "realized_pnl": -209.17967016309012,
+      "ts": "2026-07-28T15:59:24.124044+00:00",
+      "cycle": 409,
+      "equity": 69.99800981147311,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
       "premium": 0.0
     },
     {
-      "ts": "2026-07-07T13:08:15.144412+00:00",
-      "cycle": 8,
-      "equity": 99790.8203298369,
-      "cash": 92805.46289489126,
-      "realized_pnl": -209.17967016309012,
+      "ts": "2026-07-28T16:16:19.267151+00:00",
+      "cycle": 410,
+      "equity": 69.9967832488038,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
       "premium": 0.0
     },
     {
-      "ts": "2026-07-07T13:28:31.416134+00:00",
-      "cycle": 9,
-      "equity": 106833.25095714322,
-      "cash": 99833.25100126705,
-      "realized_pnl": -361.286147965519,
+      "ts": "2026-07-28T16:33:16.879653+00:00",
+      "cycle": 411,
+      "equity": 69.99730367913729,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
       "premium": 0.0
     },
     {
-      "ts": "2026-07-07T13:28:31.519379+00:00",
-      "cycle": 10,
-      "equity": 106695.62783018898,
-      "cash": 91758.23994936586,
-      "realized_pnl": -498.90927491974423,
+      "ts": "2026-07-28T16:50:11.648664+00:00",
+      "cycle": 412,
+      "equity": 69.99981254104756,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
       "premium": 0.0
     },
     {
-      "ts": "2026-07-07T13:28:31.625507+00:00",
-      "cycle": 11,
-      "equity": 106493.79202439636,
-      "cash": 106493.79202439636,
-      "realized_pnl": -700.7450807123539,
+      "ts": "2026-07-28T17:21:42.749785+00:00",
+      "cycle": 413,
+      "equity": 69.99436874448374,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
       "premium": 0.0
     },
     {
-      "ts": "2026-07-07T13:28:31.722959+00:00",
-      "cycle": 12,
-      "equity": 106493.79202439636,
-      "cash": 99039.2266051375,
-      "realized_pnl": -700.7450807123539,
+      "ts": "2026-07-28T17:37:40.494928+00:00",
+      "cycle": 414,
+      "equity": 69.98616535000001,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
       "premium": 0.0
     },
     {
-      "ts": "2026-07-07T13:28:31.817706+00:00",
-      "cycle": 13,
-      "equity": 106595.19855048697,
-      "cash": 99039.2266051375,
-      "realized_pnl": -700.7450807123539,
+      "ts": "2026-07-28T17:53:33.982442+00:00",
+      "cycle": 415,
+      "equity": 69.98739196000001,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
       "premium": 0.0
     },
     {
-      "ts": "2026-07-07T13:28:31.906706+00:00",
-      "cycle": 14,
-      "equity": 106619.17490886812,
-      "cash": 106619.17490886812,
-      "realized_pnl": -575.3621962405807,
+      "ts": "2026-07-28T18:09:15.423559+00:00",
+      "cycle": 416,
+      "equity": 69.99296215000001,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
       "premium": 0.0
     },
     {
-      "ts": "2026-07-07T13:28:31.986267+00:00",
-      "cycle": 15,
-      "equity": 106619.17490886812,
-      "cash": 106619.17490886812,
-      "realized_pnl": -575.3621962405807,
+      "ts": "2026-07-28T18:55:56.480144+00:00",
+      "cycle": 417,
+      "equity": 69.99333119500001,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
       "premium": 0.0
     },
     {
-      "ts": "2026-07-07T13:28:32.070049+00:00",
-      "cycle": 16,
-      "equity": 106619.17490886812,
-      "cash": 99155.83264385544,
-      "realized_pnl": -575.3621962405807,
+      "ts": "2026-07-28T19:12:44.252077+00:00",
+      "cycle": 418,
+      "equity": 69.995035941826,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
       "premium": 0.0
     },
     {
-      "ts": "2026-07-07T14:00:53.819615+00:00",
-      "cycle": 17,
-      "equity": 107300.82764566252,
-      "cash": 100300.82768978635,
-      "realized_pnl": -737.8768155907521,
+      "ts": "2026-07-28T19:28:36.090756+00:00",
+      "cycle": 419,
+      "equity": 69.99593497750121,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
       "premium": 0.0
     },
     {
-      "ts": "2026-07-07T14:00:53.900359+00:00",
-      "cycle": 18,
-      "equity": 107163.20451870828,
-      "cash": 92160.35585840316,
-      "realized_pnl": -875.4999425449774,
+      "ts": "2026-07-28T19:44:33.518317+00:00",
+      "cycle": 420,
+      "equity": 69.99618255272006,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
       "premium": 0.0
     },
     {
-      "ts": "2026-07-07T14:00:53.977309+00:00",
-      "cycle": 19,
-      "equity": 106960.48419909948,
-      "cash": 106960.48419909948,
-      "realized_pnl": -1078.220262153773,
+      "ts": "2026-07-28T20:16:57.343204+00:00",
+      "cycle": 421,
+      "equity": 69.99935683734671,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
       "premium": 0.0
     },
     {
-      "ts": "2026-07-07T14:00:54.053599+00:00",
-      "cycle": 20,
-      "equity": 106960.48419909948,
-      "cash": 99473.25030710643,
-      "realized_pnl": -1078.220262153773,
+      "ts": "2026-07-28T20:33:50.127732+00:00",
+      "cycle": 422,
+      "equity": 69.99783410245536,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
       "premium": 0.0
     },
     {
-      "ts": "2026-07-07T14:00:54.134887+00:00",
-      "cycle": 21,
-      "equity": 107062.33512350793,
-      "cash": 99473.25030710643,
-      "realized_pnl": -1078.220262153773,
+      "ts": "2026-07-28T20:51:00.635523+00:00",
+      "cycle": 423,
+      "equity": 69.99694562700017,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
       "premium": 0.0
     },
     {
-      "ts": "2026-07-07T14:00:54.227625+00:00",
-      "cycle": 22,
-      "equity": 107086.41655454806,
-      "cash": 107086.41655454806,
-      "realized_pnl": -952.2879067051783,
+      "ts": "2026-07-28T21:08:06.610654+00:00",
+      "cycle": 424,
+      "equity": 69.99828191516434,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
       "premium": 0.0
     },
     {
-      "ts": "2026-07-07T14:00:54.322295+00:00",
-      "cycle": 23,
-      "equity": 107086.41655454806,
-      "cash": 107086.41655454806,
-      "realized_pnl": -952.2879067051783,
+      "ts": "2026-07-28T21:27:24.926286+00:00",
+      "cycle": 425,
+      "equity": 69.99840736903319,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
       "premium": 0.0
     },
     {
-      "ts": "2026-07-07T14:00:54.400989+00:00",
-      "cycle": 24,
-      "equity": 107086.41655454806,
-      "cash": 99590.36737483299,
-      "realized_pnl": -952.2879067051783,
+      "ts": "2026-07-28T21:44:23.164768+00:00",
+      "cycle": 426,
+      "equity": 70.00008879506666,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
       "premium": 0.0
     },
     {
-      "ts": "2026-07-13T18:16:20.429555+00:00",
-      "cycle": 25,
-      "equity": 100000.0,
-      "cash": 100000.0,
-      "realized_pnl": -952.2879067051783,
+      "ts": "2026-07-28T22:01:19.669300+00:00",
+      "cycle": 427,
+      "equity": 70.00047102861986,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
       "premium": 0.0
     },
     {
-      "ts": "2026-07-13T18:16:20.545516+00:00",
-      "cycle": 26,
-      "equity": 100000.0,
-      "cash": 100000.0,
-      "realized_pnl": -952.2879067051783,
+      "ts": "2026-07-28T22:18:30.332894+00:00",
+      "cycle": 428,
+      "equity": 69.9996925558309,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
       "premium": 0.0
     },
     {
-      "ts": "2026-07-13T18:16:20.661397+00:00",
-      "cycle": 27,
-      "equity": 100000.0,
-      "cash": 100000.0,
-      "realized_pnl": -952.2879067051783,
+      "ts": "2026-07-28T22:37:16.908528+00:00",
+      "cycle": 429,
+      "equity": 69.99726078400946,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
       "premium": 0.0
     },
     {
-      "ts": "2026-07-14T06:36:58.001374+00:00",
-      "cycle": 28,
-      "equity": 100000.0,
-      "cash": 110047.26707053019,
-      "realized_pnl": 1598.929984109937,
+      "ts": "2026-07-28T22:54:09.774232+00:00",
+      "cycle": 430,
+      "equity": 69.9931520951251,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
       "premium": 0.0
     },
     {
-      "ts": "2026-07-14T06:36:58.132863+00:00",
-      "cycle": 29,
-      "equity": 99866.71628876597,
-      "cash": 110047.26707053019,
-      "realized_pnl": 1598.929984109937,
+      "ts": "2026-07-28T23:11:03.984040+00:00",
+      "cycle": 431,
+      "equity": 69.99043944671186,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
       "premium": 0.0
     },
     {
-      "ts": "2026-07-14T06:36:58.256771+00:00",
-      "cycle": 30,
-      "equity": 99602.04757415503,
-      "cash": 106592.57007708942,
-      "realized_pnl": 1598.929984109937,
+      "ts": "2026-07-28T23:27:58.697371+00:00",
+      "cycle": 432,
+      "equity": 69.99129811730695,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
       "premium": 0.0
     },
     {
-      "ts": "2026-07-14T06:36:58.377996+00:00",
-      "cycle": 31,
-      "equity": 99565.00328540606,
-      "cash": 109942.92824186207,
-      "realized_pnl": 1494.5911554418276,
+      "ts": "2026-07-28T23:40:34.002046+00:00",
+      "cycle": 433,
+      "equity": 69.99659346359996,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
       "premium": 0.0
     },
     {
-      "ts": "2026-07-14T06:36:58.492410+00:00",
-      "cycle": 32,
-      "equity": 99189.77206690134,
-      "cash": 109942.92824186207,
-      "realized_pnl": 1494.5911554418276,
+      "ts": "2026-07-28T23:56:19.862062+00:00",
+      "cycle": 434,
+      "equity": 69.99986944516343,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
       "premium": 0.0
     },
     {
-      "ts": "2026-07-14T06:36:58.606492+00:00",
-      "cycle": 33,
-      "equity": 99207.90042252978,
-      "cash": 106574.82001431067,
-      "realized_pnl": 1494.5911554418276,
+      "ts": "2026-07-29T00:12:17.299192+00:00",
+      "cycle": 435,
+      "equity": 69.99990653976143,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
       "premium": 0.0
     },
     {
-      "ts": "2026-07-14T06:36:58.717369+00:00",
-      "cycle": 34,
-      "equity": 99011.87480550821,
-      "cash": 110032.54989244147,
-      "realized_pnl": 1584.2128060212326,
+      "ts": "2026-07-29T00:28:06.652818+00:00",
+      "cycle": 436,
+      "equity": 69.99896294246268,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
       "premium": 0.0
     },
     {
-      "ts": "2026-07-14T06:36:58.828193+00:00",
-      "cycle": 35,
-      "equity": 98887.08083703218,
-      "cash": 110032.54989244147,
-      "realized_pnl": 1584.2128060212326,
+      "ts": "2026-07-29T01:10:07.394499+00:00",
+      "cycle": 437,
+      "equity": 69.99560920552847,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-29T01:25:41.967258+00:00",
+      "cycle": 438,
+      "equity": 69.99540660149611,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-29T01:41:36.707449+00:00",
+      "cycle": 439,
+      "equity": 69.99406999175304,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-29T01:57:26.723974+00:00",
+      "cycle": 440,
+      "equity": 69.99091135877353,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-29T04:31:09.813319+00:00",
+      "cycle": 441,
+      "equity": 69.9850832332243,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-29T04:46:49.593575+00:00",
+      "cycle": 442,
+      "equity": 69.98790642385819,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-29T05:02:55.868063+00:00",
+      "cycle": 443,
+      "equity": 69.9912083274106,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-29T05:19:09.622860+00:00",
+      "cycle": 444,
+      "equity": 69.99082575740519,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-29T07:21:34.553983+00:00",
+      "cycle": 445,
+      "equity": 69.99770567894778,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-29T07:37:19.493320+00:00",
+      "cycle": 446,
+      "equity": 69.99587794171593,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-29T07:53:29.917417+00:00",
+      "cycle": 447,
+      "equity": 69.99592759950312,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-29T08:10:22.336807+00:00",
+      "cycle": 448,
+      "equity": 69.9970149491192,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-29T10:06:44.948834+00:00",
+      "cycle": 449,
+      "equity": 69.99853100630058,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-29T10:23:18.164051+00:00",
+      "cycle": 450,
+      "equity": 69.99810611958829,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-29T10:39:03.117549+00:00",
+      "cycle": 451,
+      "equity": 69.99725268694975,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-29T10:55:06.973954+00:00",
+      "cycle": 452,
+      "equity": 69.99488519435096,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-29T12:21:31.690476+00:00",
+      "cycle": 453,
+      "equity": 69.99118206498427,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-29T12:37:25.493531+00:00",
+      "cycle": 454,
+      "equity": 69.9909603561985,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-29T12:53:34.946524+00:00",
+      "cycle": 455,
+      "equity": 69.99065515943767,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-29T13:09:44.664196+00:00",
+      "cycle": 456,
+      "equity": 69.99086871944434,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-29T14:44:17.949538+00:00",
+      "cycle": 457,
+      "equity": 69.98314218505286,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-29T15:01:16.003520+00:00",
+      "cycle": 458,
+      "equity": 69.98485088357555,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-29T15:18:11.604652+00:00",
+      "cycle": 459,
+      "equity": 69.9858640633798,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-29T15:35:11.062035+00:00",
+      "cycle": 460,
+      "equity": 69.98510918119243,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-29T16:12:15.573508+00:00",
+      "cycle": 461,
+      "equity": 69.98370328742162,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-29T16:28:26.417814+00:00",
+      "cycle": 462,
+      "equity": 69.98587454642161,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-29T16:44:48.491680+00:00",
+      "cycle": 463,
+      "equity": 69.98148732164125,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-29T17:00:53.899326+00:00",
+      "cycle": 464,
+      "equity": 69.98565587787104,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-29T17:38:58.807625+00:00",
+      "cycle": 465,
+      "equity": 69.9862471738078,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-29T17:55:07.010987+00:00",
+      "cycle": 466,
+      "equity": 69.9945636058803,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-29T18:11:21.764018+00:00",
+      "cycle": 467,
+      "equity": 69.9986250921011,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-29T18:27:28.095127+00:00",
+      "cycle": 468,
+      "equity": 69.9912293390514,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-29T18:42:24.917807+00:00",
+      "cycle": 469,
+      "equity": 69.99648291293909,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-29T18:58:29.097658+00:00",
+      "cycle": 470,
+      "equity": 69.99912724327466,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-29T19:14:33.471391+00:00",
+      "cycle": 471,
+      "equity": 69.99538892803196,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-29T19:30:39.384478+00:00",
+      "cycle": 472,
+      "equity": 69.99092370766705,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-29T20:04:22.642632+00:00",
+      "cycle": 473,
+      "equity": 69.97948838547732,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-29T20:21:20.421058+00:00",
+      "cycle": 474,
+      "equity": 69.9820505777354,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-29T20:38:16.757414+00:00",
+      "cycle": 475,
+      "equity": 69.98168826003545,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-29T20:55:11.608733+00:00",
+      "cycle": 476,
+      "equity": 69.98128449557126,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-29T20:58:57.585711+00:00",
+      "cycle": 477,
+      "equity": 69.9790316799308,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-29T21:14:41.648367+00:00",
+      "cycle": 478,
+      "equity": 69.97970998529127,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-29T21:30:45.930033+00:00",
+      "cycle": 479,
+      "equity": 69.98277613356801,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-29T21:46:25.496827+00:00",
+      "cycle": 480,
+      "equity": 69.98324895479462,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-29T21:57:20.797143+00:00",
+      "cycle": 481,
+      "equity": 69.98457563459343,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-29T22:14:16.210060+00:00",
+      "cycle": 482,
+      "equity": 69.99161059469375,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-29T22:31:10.313849+00:00",
+      "cycle": 483,
+      "equity": 69.99139427648724,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-29T22:48:04.787098+00:00",
+      "cycle": 484,
+      "equity": 69.99111386256105,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-29T22:58:22.192755+00:00",
+      "cycle": 485,
+      "equity": 69.99148206870849,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-29T23:15:17.321159+00:00",
+      "cycle": 486,
+      "equity": 69.9896848163831,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-29T23:32:15.579029+00:00",
+      "cycle": 487,
+      "equity": 69.99292319145394,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-29T23:49:13.994998+00:00",
+      "cycle": 488,
+      "equity": 69.99358371049418,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-29T23:56:56.318428+00:00",
+      "cycle": 489,
+      "equity": 69.99399972422833,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-30T00:12:53.273266+00:00",
+      "cycle": 490,
+      "equity": 69.9946168379692,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-30T00:28:59.718873+00:00",
+      "cycle": 491,
+      "equity": 69.99365914281958,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-30T00:44:34.581939+00:00",
+      "cycle": 492,
+      "equity": 69.9862881520867,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-30T01:35:26.795397+00:00",
+      "cycle": 493,
+      "equity": 69.9967134719576,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-30T01:52:21.569231+00:00",
+      "cycle": 494,
+      "equity": 69.99702837485152,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-30T02:09:18.853292+00:00",
+      "cycle": 495,
+      "equity": 69.99770016066569,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-30T02:26:12.794910+00:00",
+      "cycle": 496,
+      "equity": 69.996316336285,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-30T04:39:07.946918+00:00",
+      "cycle": 497,
+      "equity": 69.99006068159756,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-30T04:54:43.911491+00:00",
+      "cycle": 498,
+      "equity": 69.98979771746771,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-30T05:10:20.058282+00:00",
+      "cycle": 499,
+      "equity": 69.98893927459196,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-30T05:25:55.991680+00:00",
+      "cycle": 500,
+      "equity": 69.98819169875486,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-30T07:24:40.034579+00:00",
+      "cycle": 501,
+      "equity": 69.99060207904483,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-30T07:41:39.110236+00:00",
+      "cycle": 502,
+      "equity": 69.989720395,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-30T07:58:38.712672+00:00",
+      "cycle": 503,
+      "equity": 69.98931455344965,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-30T08:15:39.197549+00:00",
+      "cycle": 504,
+      "equity": 69.989789425,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-30T10:03:12.071050+00:00",
+      "cycle": 505,
+      "equity": 69.99774357919756,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-30T10:20:08.738847+00:00",
+      "cycle": 506,
+      "equity": 69.99784204000001,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-30T10:37:07.997685+00:00",
+      "cycle": 507,
+      "equity": 69.99768274,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-30T10:54:07.068154+00:00",
+      "cycle": 508,
+      "equity": 69.9969085109843,
+      "cash": 68.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-30T11:52:31.652310+00:00",
+      "cycle": 509,
+      "equity": 50.00053421,
+      "cash": 48.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-30T12:08:31.873345+00:00",
+      "cycle": 510,
+      "equity": 50.000863429999995,
+      "cash": 48.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-30T12:24:41.365941+00:00",
+      "cycle": 511,
+      "equity": 49.9995731,
+      "cash": 48.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-30T12:40:57.593654+00:00",
+      "cycle": 512,
+      "equity": 49.998264185,
+      "cash": 48.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-30T13:35:37.413746+00:00",
+      "cycle": 513,
+      "equity": 49.99765268423711,
+      "cash": 48.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-30T13:52:34.709295+00:00",
+      "cycle": 514,
+      "equity": 50.00342738901455,
+      "cash": 48.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-30T14:09:33.040527+00:00",
+      "cycle": 515,
+      "equity": 49.9980411125133,
+      "cash": 48.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-30T14:26:37.397101+00:00",
+      "cycle": 516,
+      "equity": 49.99969966948656,
+      "cash": 48.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-30T15:34:04.423529+00:00",
+      "cycle": 517,
+      "equity": 49.99683459429483,
+      "cash": 48.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-30T15:50:12.854823+00:00",
+      "cycle": 518,
+      "equity": 49.9979678567861,
+      "cash": 48.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-30T16:05:53.352716+00:00",
+      "cycle": 519,
+      "equity": 50.00066165,
+      "cash": 48.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-30T16:21:34.877808+00:00",
+      "cycle": 520,
+      "equity": 49.999444031085815,
+      "cash": 48.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-30T17:13:55.171986+00:00",
+      "cycle": 521,
+      "equity": 49.996410299129806,
+      "cash": 48.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-30T17:30:50.333665+00:00",
+      "cycle": 522,
+      "equity": 49.99989139356521,
+      "cash": 48.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-30T17:47:47.277993+00:00",
+      "cycle": 523,
+      "equity": 50.000264988497115,
+      "cash": 48.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-30T18:04:44.848606+00:00",
+      "cycle": 524,
+      "equity": 49.99893863621379,
+      "cash": 48.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-30T18:45:54.452201+00:00",
+      "cycle": 525,
+      "equity": 49.997702255235005,
+      "cash": 48.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-30T19:01:31.258788+00:00",
+      "cycle": 526,
+      "equity": 49.99699777210553,
+      "cash": 48.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-30T19:17:08.416154+00:00",
+      "cycle": 527,
+      "equity": 50.000013152165224,
+      "cash": 48.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-30T19:33:11.478787+00:00",
+      "cycle": 528,
+      "equity": 50.00175452494721,
+      "cash": 48.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-30T20:08:22.637741+00:00",
+      "cycle": 529,
+      "equity": 50.00077635462875,
+      "cash": 48.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-30T20:24:09.520982+00:00",
+      "cycle": 530,
+      "equity": 50.001156894610546,
+      "cash": 48.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-30T20:39:52.214545+00:00",
+      "cycle": 531,
+      "equity": 50.000036930703644,
+      "cash": 48.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-30T20:55:33.012133+00:00",
+      "cycle": 532,
+      "equity": 50.00041803784654,
+      "cash": 48.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-30T21:26:59.103119+00:00",
+      "cycle": 533,
+      "equity": 50.000428979446696,
+      "cash": 48.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-30T21:43:55.550355+00:00",
+      "cycle": 534,
+      "equity": 49.99987688348045,
+      "cash": 48.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-30T22:01:01.417468+00:00",
+      "cycle": 535,
+      "equity": 49.9982234606745,
+      "cash": 48.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-30T22:17:57.997165+00:00",
+      "cycle": 536,
+      "equity": 50.00206760495529,
+      "cash": 48.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-30T22:39:33.261433+00:00",
+      "cycle": 537,
+      "equity": 50.00388381344436,
+      "cash": 48.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-30T22:56:25.686091+00:00",
+      "cycle": 538,
+      "equity": 50.002228099999996,
+      "cash": 48.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-30T23:13:20.198352+00:00",
+      "cycle": 539,
+      "equity": 50.002992739999996,
+      "cash": 48.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-30T23:30:14.354632+00:00",
+      "cycle": 540,
+      "equity": 50.00241702669365,
+      "cash": 48.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-30T23:46:04.201630+00:00",
+      "cycle": 541,
+      "equity": 50.001125110161226,
+      "cash": 48.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-31T00:03:04.102556+00:00",
+      "cycle": 542,
+      "equity": 49.999084579999995,
+      "cash": 48.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-31T00:19:59.049408+00:00",
+      "cycle": 543,
+      "equity": 49.99722608,
+      "cash": 48.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-31T00:36:56.086537+00:00",
+      "cycle": 544,
+      "equity": 49.997005715,
+      "cash": 48.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-31T01:13:44.759832+00:00",
+      "cycle": 545,
+      "equity": 50.00446931105495,
+      "cash": 48.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-31T01:29:30.319847+00:00",
+      "cycle": 546,
+      "equity": 50.0039760558359,
+      "cash": 48.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-31T01:45:11.427512+00:00",
+      "cycle": 547,
+      "equity": 49.99823856551112,
+      "cash": 48.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-31T02:00:47.587988+00:00",
+      "cycle": 548,
+      "equity": 49.993214333263396,
+      "cash": 48.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-31T04:39:52.026635+00:00",
+      "cycle": 549,
+      "equity": 49.99076381,
+      "cash": 48.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-31T04:55:47.918022+00:00",
+      "cycle": 550,
+      "equity": 49.990997449999995,
+      "cash": 48.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-31T05:11:47.431824+00:00",
+      "cycle": 551,
+      "equity": 49.99199573,
+      "cash": 48.98,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-07-31T05:27:51.768630+00:00",
+      "cycle": 552,
+      "equity": 49.99094396867828,
+      "cash": 48.98,
+      "realized_pnl": 0.0,
       "premium": 0.0
     }
   ],
   "decisions": [
     {
-      "ts": "2026-07-14T06:36:58.828163+00:00",
-      "kind": "pairs_wait",
-      "symbol": "GLD",
-      "reason": "GLD/SLV z -0.05 inside \u00b12.0 band"
+      "ts": "2026-07-31T05:27:49.749397+00:00",
+      "kind": "ladder_update",
+      "symbol": "ETH/USD",
+      "reason": "px 1903.74 peak 1932.58 gain +1%"
     },
     {
-      "ts": "2026-07-14T06:36:58.717340+00:00",
-      "kind": "pairs_wait",
-      "symbol": "GLD",
-      "reason": "GLD/SLV z -0.07 inside \u00b12.0 band"
+      "ts": "2026-07-31T05:11:45.620617+00:00",
+      "kind": "ladder_update",
+      "symbol": "ETH/USD",
+      "reason": "px 1905.74 peak 1932.58 gain +1%"
     },
     {
-      "ts": "2026-07-14T06:36:58.668490+00:00",
-      "kind": "daytrade_target",
-      "symbol": "GBP/USD",
-      "reason": "target +2.66% @ 101.0593, realize $89.62"
+      "ts": "2026-07-31T04:55:46.064523+00:00",
+      "kind": "ladder_update",
+      "symbol": "ETH/USD",
+      "reason": "px 1903.89 peak 1932.58 gain +1%"
     },
     {
-      "ts": "2026-07-14T06:36:58.606456+00:00",
-      "kind": "pairs_wait",
-      "symbol": "GLD",
-      "reason": "GLD/SLV z -0.34 inside \u00b12.0 band"
+      "ts": "2026-07-31T04:39:50.009304+00:00",
+      "kind": "ladder_update",
+      "symbol": "ETH/USD",
+      "reason": "px 1903.52 peak 1932.58 gain +1%"
     },
     {
-      "ts": "2026-07-14T06:36:58.555782+00:00",
-      "kind": "daytrade_entry",
-      "symbol": "GBP/USD",
-      "reason": "intraday long @ 98.4399 (rsi 60.1, macd 0.4108)"
+      "ts": "2026-07-31T02:00:45.927686+00:00",
+      "kind": "ladder_update",
+      "symbol": "ETH/USD",
+      "reason": "px 1908.59 peak 1932.58 gain +1%"
     },
     {
-      "ts": "2026-07-14T06:36:58.492379+00:00",
-      "kind": "pairs_wait",
-      "symbol": "GLD",
-      "reason": "GLD/SLV z -0.70 inside \u00b12.0 band"
+      "ts": "2026-07-31T01:45:09.637339+00:00",
+      "kind": "ladder_update",
+      "symbol": "ETH/USD",
+      "reason": "px 1917.25 peak 1932.58 gain +2%"
     },
     {
-      "ts": "2026-07-14T06:36:58.377932+00:00",
-      "kind": "pairs_wait",
-      "symbol": "GLD",
-      "reason": "GLD/SLV z -0.84 inside \u00b12.0 band"
+      "ts": "2026-07-31T01:29:28.779146+00:00",
+      "kind": "ladder_update",
+      "symbol": "ETH/USD",
+      "reason": "px 1928.22 peak 1932.58 gain +2%"
     },
     {
-      "ts": "2026-07-14T06:36:58.313295+00:00",
-      "kind": "daytrade_stop",
-      "symbol": "EUR/USD",
-      "reason": "stop 65.1642 hit, realize $-104.34"
+      "ts": "2026-07-31T01:13:43.149906+00:00",
+      "kind": "ladder_update",
+      "symbol": "ETH/USD",
+      "reason": "px 1929.86 peak 1932.58 gain +2%"
     },
     {
-      "ts": "2026-07-14T06:36:58.256736+00:00",
-      "kind": "pairs_wait",
-      "symbol": "GLD",
-      "reason": "GLD/SLV z -0.54 inside \u00b12.0 band"
+      "ts": "2026-07-31T00:36:54.802325+00:00",
+      "kind": "ladder_update",
+      "symbol": "ETH/USD",
+      "reason": "px 1915.36 peak 1932.58 gain +2%"
     },
     {
-      "ts": "2026-07-14T06:36:58.186222+00:00",
-      "kind": "daytrade_entry",
-      "symbol": "EUR/USD",
-      "reason": "intraday long @ 65.8225 (rsi 51.6, macd 0.0678)"
+      "ts": "2026-07-31T00:19:57.447777+00:00",
+      "kind": "ladder_update",
+      "symbol": "ETH/USD",
+      "reason": "px 1916.71 peak 1932.58 gain +2%"
     },
     {
-      "ts": "2026-07-14T06:36:58.132822+00:00",
-      "kind": "pairs_wait",
-      "symbol": "GLD",
-      "reason": "GLD/SLV z -1.29 inside \u00b12.0 band"
+      "ts": "2026-07-31T00:03:02.641082+00:00",
+      "kind": "ladder_update",
+      "symbol": "ETH/USD",
+      "reason": "px 1917.14 peak 1932.58 gain +2%"
     },
     {
-      "ts": "2026-07-14T06:36:58.001343+00:00",
-      "kind": "pairs_wait",
-      "symbol": "GLD",
-      "reason": "GLD/SLV z -1.84 inside \u00b12.0 band"
+      "ts": "2026-07-30T23:46:02.732358+00:00",
+      "kind": "ladder_update",
+      "symbol": "ETH/USD",
+      "reason": "px 1922.86 peak 1932.58 gain +2%"
     },
     {
-      "ts": "2026-07-14T06:36:57.949699+00:00",
-      "kind": "daytrade_eod",
-      "symbol": "GBP/USD",
-      "reason": "end-of-day flatten @ 92.1332, realize $2,551.22"
+      "ts": "2026-07-30T23:30:13.666920+00:00",
+      "kind": "ladder_update",
+      "symbol": "ETH/USD",
+      "reason": "px 1925.31 peak 1932.58 gain +2%"
     },
     {
-      "ts": "2026-07-07T14:00:54.377922+00:00",
-      "kind": "daytrade_entry",
-      "symbol": "GBP/USD",
-      "reason": "intraday long @ 68.7386 (rsi 29.0, macd 0.3328)"
+      "ts": "2026-07-30T23:13:19.539271+00:00",
+      "kind": "ladder_update",
+      "symbol": "ETH/USD",
+      "reason": "px 1925.91 peak 1932.58 gain +2%"
     },
     {
-      "ts": "2026-07-07T14:00:54.191941+00:00",
-      "kind": "daytrade_target",
-      "symbol": "GBP/USD",
-      "reason": "target +1.68% @ 68.5076, realize $125.93"
+      "ts": "2026-07-30T22:56:25.064551+00:00",
+      "kind": "ladder_update",
+      "symbol": "ETH/USD",
+      "reason": "px 1925.58 peak 1932.58 gain +2%"
     },
     {
-      "ts": "2026-07-07T14:00:54.111872+00:00",
-      "kind": "daytrade_hold",
-      "symbol": "GBP/USD",
-      "reason": "hold 68.2909 peak 68.2909 gain +1.36%"
+      "ts": "2026-07-30T22:39:32.349279+00:00",
+      "kind": "ladder_update",
+      "symbol": "ETH/USD",
+      "reason": "px 1929.35 peak 1932.58 gain +2%"
     },
     {
-      "ts": "2026-07-07T14:00:54.031453+00:00",
-      "kind": "daytrade_entry",
-      "symbol": "GBP/USD",
-      "reason": "intraday long @ 67.3743 (rsi 17.4, macd -0.0895)"
+      "ts": "2026-07-30T22:17:57.136259+00:00",
+      "kind": "ladder_update",
+      "symbol": "ETH/USD",
+      "reason": "px 1925.02 peak 1932.58 gain +2%"
     },
     {
-      "ts": "2026-07-07T14:00:54.005513+00:00",
-      "kind": "wheel_wait",
-      "symbol": "AAPL",
-      "reason": "IV-rank 0% too low to sell premium"
+      "ts": "2026-07-30T22:01:00.416328+00:00",
+      "kind": "ladder_update",
+      "symbol": "ETH/USD",
+      "reason": "px 1916.89 peak 1932.58 gain +2%"
     },
     {
-      "ts": "2026-07-07T14:00:53.955631+00:00",
-      "kind": "daytrade_trendbreak",
-      "symbol": "GBP/USD",
-      "reason": "trend break @ 69.0730, realize $-26.15"
+      "ts": "2026-07-30T21:43:54.774004+00:00",
+      "kind": "ladder_update",
+      "symbol": "ETH/USD",
+      "reason": "px 1921.03 peak 1932.58 gain +2%"
     },
     {
-      "ts": "2026-07-07T14:00:53.944690+00:00",
-      "kind": "daytrade_stop",
-      "symbol": "EUR/USD",
-      "reason": "stop 87.4551 hit, realize $-176.57"
+      "ts": "2026-07-30T21:26:58.208044+00:00",
+      "kind": "ladder_update",
+      "symbol": "ETH/USD",
+      "reason": "px 1921.40 peak 1932.58 gain +2%"
     },
     {
-      "ts": "2026-07-07T14:00:53.929510+00:00",
-      "kind": "wheel_wait",
-      "symbol": "AAPL",
-      "reason": "IV-rank 0% too low to sell premium"
+      "ts": "2026-07-30T20:55:30.630102+00:00",
+      "kind": "ladder_update",
+      "symbol": "ETH/USD",
+      "reason": "px 1921.69 peak 1932.58 gain +2%"
     },
     {
-      "ts": "2026-07-07T14:00:53.888650+00:00",
-      "kind": "daytrade_stop",
-      "symbol": "USD/JPY",
-      "reason": "stop 241.0956 hit, realize $-137.62"
+      "ts": "2026-07-30T20:39:49.661541+00:00",
+      "kind": "ladder_update",
+      "symbol": "ETH/USD",
+      "reason": "px 1921.01 peak 1932.58 gain +2%"
     },
     {
-      "ts": "2026-07-07T14:00:53.878296+00:00",
-      "kind": "daytrade_entry",
-      "symbol": "GBP/USD",
-      "reason": "intraday long @ 69.3147 (rsi 29.0, macd -0.2182)"
+      "ts": "2026-07-30T20:24:07.183778+00:00",
+      "kind": "ladder_update",
+      "symbol": "ETH/USD",
+      "reason": "px 1922.88 peak 1932.58 gain +2%"
     },
     {
-      "ts": "2026-07-07T14:00:53.867343+00:00",
-      "kind": "daytrade_entry",
-      "symbol": "EUR/USD",
-      "reason": "intraday long @ 88.3385 (rsi 25.2, macd -0.594)"
+      "ts": "2026-07-30T20:08:20.149172+00:00",
+      "kind": "ladder_update",
+      "symbol": "ETH/USD",
+      "reason": "px 1922.64 peak 1932.58 gain +2%"
     },
     {
-      "ts": "2026-07-07T14:00:53.806923+00:00",
-      "kind": "daytrade_entry",
-      "symbol": "USD/JPY",
-      "reason": "intraday long @ 243.5309 (rsi 55.0, macd 1.6124)"
+      "ts": "2026-07-30T19:33:09.053694+00:00",
+      "kind": "ladder_update",
+      "symbol": "ETH/USD",
+      "reason": "px 1925.01 peak 1932.58 gain +2%"
     }
   ],
   "agents_roster": [
@@ -1446,42 +2258,42 @@
       "category": "Broker",
       "secret": true,
       "description": "Alpaca paper API key",
-      "set": false
+      "set": true
     },
     {
       "name": "ALPACA_SECRET_KEY",
       "category": "Broker",
       "secret": true,
       "description": "Alpaca paper secret",
-      "set": false
+      "set": true
     },
     {
       "name": "ALPACA_PAPER",
       "category": "Broker",
       "secret": false,
       "description": "true = paper (keep true)",
-      "set": false
+      "set": true
     },
     {
       "name": "TICKERS",
       "category": "Universe",
       "secret": false,
       "description": "Tickers (AAPL\u2026 or BTC/USD\u2026)",
-      "set": false
+      "set": true
     },
     {
       "name": "BENCHMARK",
       "category": "Universe",
       "secret": false,
       "description": "Benchmark for beta-neutrality",
-      "set": false
+      "set": true
     },
     {
       "name": "MARKET_HOURS",
       "category": "Universe",
       "secret": false,
       "description": "us | 24_7 (crypto auto-24/7)",
-      "set": false
+      "set": true
     },
     {
       "name": "SAHJONY_HOME",
@@ -1495,70 +2307,70 @@
       "category": "AI Brain",
       "secret": true,
       "description": "Claude \u2014 PRIMARY brain",
-      "set": false
+      "set": true
     },
     {
       "name": "ANTHROPIC_MODEL",
       "category": "AI Brain",
       "secret": false,
       "description": "default claude-fable-5",
-      "set": false
+      "set": true
     },
     {
       "name": "OPENAI_API_KEY",
       "category": "AI Counsellor",
       "secret": true,
       "description": "OpenAI (GPT) counsellor",
-      "set": false
+      "set": true
     },
     {
       "name": "OPENAI_MODEL",
       "category": "AI Counsellor",
       "secret": false,
       "description": "default gpt-4o",
-      "set": false
+      "set": true
     },
     {
       "name": "XAI_API_KEY",
       "category": "AI Counsellor",
       "secret": true,
       "description": "Grok (xAI) counsellor",
-      "set": false
+      "set": true
     },
     {
       "name": "XAI_MODEL",
       "category": "AI Counsellor",
       "secret": false,
       "description": "default grok-2-latest",
-      "set": false
+      "set": true
     },
     {
       "name": "GEMINI_API_KEY",
       "category": "AI Counsellor",
       "secret": true,
       "description": "Gemini (Google) counsellor",
-      "set": false
+      "set": true
     },
     {
       "name": "GEMINI_MODEL",
       "category": "AI Counsellor",
       "secret": false,
       "description": "default gemini-2.5-pro",
-      "set": false
+      "set": true
     },
     {
       "name": "NVIDIA_API_KEY",
       "category": "AI Counsellor",
       "secret": true,
       "description": "NVIDIA NIM \u2014 free counsellor + fallback brain",
-      "set": false
+      "set": true
     },
     {
       "name": "NVIDIA_MODEL",
       "category": "AI Counsellor",
       "secret": false,
       "description": "default openai/gpt-oss-120b",
-      "set": false
+      "set": true
     },
     {
       "name": "AI_BRAIN_ENABLED",
@@ -1572,14 +2384,14 @@
       "category": "AI Brain",
       "secret": false,
       "description": "true = always latest model",
-      "set": false
+      "set": true
     },
     {
       "name": "QUIVER_API_KEY",
       "category": "Alt-Data",
       "secret": true,
       "description": "QuiverQuant insider/congress alt-data",
-      "set": false
+      "set": true
     },
     {
       "name": "QUIVER_ENABLED",
@@ -1593,42 +2405,42 @@
       "category": "Advisory Board",
       "secret": false,
       "description": "6-agent council overlay (default on)",
-      "set": false
+      "set": true
     },
     {
       "name": "HERMES_ENABLED",
       "category": "Hermes",
       "secret": false,
       "description": "background guardian agent (default on)",
-      "set": false
+      "set": true
     },
     {
       "name": "HERMES_GOAL",
       "category": "Hermes",
       "secret": false,
       "description": "the desk's well-defined objective",
-      "set": false
+      "set": true
     },
     {
       "name": "CREDIT_SPREADS_ENABLED",
       "category": "Options",
       "secret": false,
       "description": "defined-risk put-spread desk (default on)",
-      "set": false
+      "set": true
     },
     {
       "name": "PAIRS_ENABLED",
       "category": "Pairs / StatArb",
       "secret": false,
       "description": "market-neutral pairs desk (default on)",
-      "set": false
+      "set": true
     },
     {
       "name": "PAIRS",
       "category": "Pairs / StatArb",
       "secret": false,
       "description": "pairs, e.g. SPY:QQQ,GLD:SLV",
-      "set": false
+      "set": true
     },
     {
       "name": "PAIRS_ENTRY_Z",
@@ -1670,70 +2482,70 @@
       "category": "Voice (Bland.ai)",
       "secret": false,
       "description": "owner phone for alerts (+1\u2026)",
-      "set": false
+      "set": true
     },
     {
       "name": "VOICE_ALERTS",
       "category": "Voice (Bland.ai)",
       "secret": false,
       "description": "true to enable phone alerts",
-      "set": false
+      "set": true
     },
     {
       "name": "MAX_ALLOCATION_PCT",
       "category": "Risk",
       "secret": false,
       "description": "per-position cap (\u22640.15)",
-      "set": false
+      "set": true
     },
     {
       "name": "MAX_TOTAL_DEPLOYED_PCT",
       "category": "Risk",
       "secret": false,
       "description": "total deployed cap (\u22640.80)",
-      "set": false
+      "set": true
     },
     {
       "name": "MIN_COUNCIL_CONVICTION",
       "category": "Risk",
       "secret": false,
       "description": "min conviction to trade",
-      "set": false
+      "set": true
     },
     {
       "name": "MAX_DAILY_DRAWDOWN_PCT",
       "category": "Risk",
       "secret": false,
       "description": "daily-loss halt (\u22640.25)",
-      "set": false
+      "set": true
     },
     {
       "name": "TRADING_HALT",
       "category": "Risk",
       "secret": false,
       "description": "true = kill switch (suspend new risk)",
-      "set": false
+      "set": true
     },
     {
       "name": "VOL_TARGET_ANNUAL",
       "category": "Risk",
       "secret": false,
       "description": "vol targeting (0.20 = 20%; 0 disables)",
-      "set": false
+      "set": true
     },
     {
       "name": "DAY_TRADING_ENABLED",
       "category": "Day Trading / Forex",
       "secret": false,
       "description": "intraday FX desk on/off",
-      "set": false
+      "set": true
     },
     {
       "name": "FOREX_PAIRS",
       "category": "Day Trading / Forex",
       "secret": false,
       "description": "FX universe, e.g. EUR/USD,GBP/USD",
-      "set": false
+      "set": true
     },
     {
       "name": "DAY_TRADE_SYMBOLS",
@@ -1747,28 +2559,28 @@
       "category": "Day Trading / Forex",
       "secret": false,
       "description": "intraday profit target",
-      "set": false
+      "set": true
     },
     {
       "name": "DAY_TRADE_STOP_PCT",
       "category": "Day Trading / Forex",
       "secret": false,
       "description": "intraday stop loss",
-      "set": false
+      "set": true
     },
     {
       "name": "CYCLE_MINUTES",
       "category": "Ops",
       "secret": false,
       "description": "run cadence",
-      "set": false
+      "set": true
     },
     {
       "name": "LOG_LEVEL",
       "category": "Ops",
       "secret": false,
       "description": "INFO / DEBUG",
-      "set": false
+      "set": true
     }
   ]
 }

@@ -26,7 +26,7 @@ permissions:
 jobs:
   run:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 70
     env:
       # ── Broker selection ──────────────────────────────────────────────────────
       # Default 'alpaca' (paper) keeps the desk 100% paper. Set repo Variable
@@ -86,8 +86,8 @@ jobs:
       XAI_MODEL: ${{ vars.XAI_MODEL || 'grok-4' }}
       GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-2.5-pro' }}
       TRADING_HALT: ${{ vars.TRADING_HALT || 'false' }}
-      VOL_TARGET_ANNUAL: ${{ vars.VOL_TARGET_ANNUAL || '0.20' }}
-      TRADING_CAPITAL: ${{ vars.TRADING_CAPITAL || '0' }}
+      VOL_TARGET_ANNUAL: ${{ vars.VOL_TARGET_ANNUAL == '' && '0.20' || vars.VOL_TARGET_ANNUAL }}
+      TRADING_CAPITAL: ${{ vars.TRADING_CAPITAL == '' && '0' || vars.TRADING_CAPITAL }}
       FOREX_PAIRS: ${{ vars.FOREX_PAIRS || 'EUR/USD,GBP/USD,USD/JPY,AUD/USD' }}
       DAY_TRADE_SYMBOLS: ${{ vars.DAY_TRADE_SYMBOLS || '' }}
       DAY_TRADE_TARGET_PCT: ${{ vars.DAY_TRADE_TARGET_PCT || '0.015' }}
@@ -151,7 +151,7 @@ jobs:
           LIVE_TRADING_ACK: ''
           ROBINHOOD_LIVE: 'false'
           TICKERS: ${{ vars.PAPER_TICKERS || vars.TICKERS || 'BTC/USD,ETH/USD,SOL/USD,LTC/USD' }}
-          TRADING_CAPITAL: ${{ vars.PAPER_TRADING_CAPITAL || '2000' }}
+          TRADING_CAPITAL: ${{ vars.PAPER_TRADING_CAPITAL == '' && '2000' || vars.PAPER_TRADING_CAPITAL }}
           MIN_COUNCIL_CONVICTION: ${{ vars.PAPER_MIN_CONVICTION || '0.40' }}
           KNOWLEDGE_ROLE: alpaca-paper-trainer
           # Alpaca crypto uses the slash form (BTC/USD); BTC-USD 400s there.
@@ -161,8 +161,119 @@ jobs:
           COPY_TRADING_ENABLED: 'false'
         run: python main.py --once --force || true
 
-      - name: Run one trading cycle
-        run: python main.py --once --force
+      # Paper STOCK desk — Alpaca paper (zero real money): the owner's equity
+      # universe (SPY/QQQ/VTI/MSFT/NVDA). Robinhood has no official stock API,
+      # so stocks run here; the live Robinhood desk below stays crypto-only.
+      - name: Run paper stock desk cycle (Alpaca paper — stocks)
+        if: ${{ vars.STOCK_DESK_ENABLED != 'false' }}
+        env:
+          SAHJONY_HOME: desks/stocks
+          BROKER: alpaca
+          ALPACA_PAPER: 'true'
+          LIVE_TRADING_ACK: ''
+          ROBINHOOD_LIVE: 'false'
+          TICKERS: ${{ vars.STOCK_TICKERS || 'SPY,QQQ,VTI,MSFT,NVDA' }}
+          BENCHMARK: SPY
+          MARKET_HOURS: us
+          PAIRS: SPY:QQQ
+          PAIRS_ENABLED: 'true'
+          KNOWLEDGE_ROLE: alpaca-paper-stocks
+          TRADING_CAPITAL: ${{ vars.STOCK_TRADING_CAPITAL == '' && '2000' || vars.STOCK_TRADING_CAPITAL }}
+        run: python main.py --once --force || true
+
+      # The scheduler THROTTLES how often it STARTS a job (observed: ~hourly for a
+      # */15 cron, with multi-hour skips) but one job may run for hours. So drive
+      # the live desk from INSIDE a single job: a cycle every CYCLE_MINUTES across
+      # DESK_LOOP_MINUTES, publishing each snapshot as it goes. That restores true
+      # 15-minute risk checks — stops, floors and the breaker re-evaluate on
+      # schedule — with no paid infrastructure. Manual dispatch runs one pass.
+      - name: Run live desk cycles (loops through the scheduled window)
+        env:
+          LOOP_MINUTES: ${{ github.event_name == 'schedule' && (vars.DESK_LOOP_MINUTES == '' && '55' || vars.DESK_LOOP_MINUTES) || '0' }}
+          # Live crypto universe: vars.TICKERS_LIVE overrides; XRP/USD included
+          # per owner directive (Robinhood-supported crypto only).
+          TICKERS: ${{ vars.TICKERS_LIVE || 'BTC/USD,ETH/USD,SOL/USD,LTC/USD,XRP/USD' }}
+          DAY_TRADE_SYMBOLS: ''
+          # Owner directive: 0 = size against the FULL live Robinhood balance
+          # (equity curve, sizing and Hermes' scorecard all track the real
+          # account and follow deposits automatically). Set Variable
+          # LIVE_TRADING_CAPITAL to a number to risk only part of the balance.
+          TRADING_CAPITAL: ${{ vars.LIVE_TRADING_CAPITAL == '' && '0' || vars.LIVE_TRADING_CAPITAL }}
+        run: |
+          set +e
+          git config user.name  "sahjony-desk[bot]"
+          git config user.email "noreply@anthropic.com"
+          END=$(( SECONDS + 60 * ${LOOP_MINUTES:-0} ))
+          GAP=$(( 60 * ${CYCLE_MINUTES:-15} ))
+          n=0
+          while : ; do
+            n=$(( n + 1 ))
+            echo "── live cycle $n (window ${LOOP_MINUTES:-0} min, gap ${GAP}s) ──"
+            python main.py --once --force
+            # Publish each cycle immediately so the dashboard and its freshness
+            # indicator track the DESK, not the scheduler.
+            git add public/status.json public/knowledge.json 2>/dev/null
+            if ! git diff --cached --quiet; then
+              git commit -q -m "Desk snapshot: live cycle ${{ github.run_number }}.$n"
+              git pull --rebase -q origin master || git rebase --abort
+              git push -q origin HEAD:master || echo "push deferred to the final commit step"
+            fi
+            [ $SECONDS -ge $END ] && break
+            [ $(( END - SECONDS )) -lt $GAP ] && break
+            sleep $GAP
+          done
+
+      # Robinhood crypto desk — DRY-RUN stage: live market data + real account
+      # reads via the official Crypto API, but the broker only LOGS the orders it
+      # would place until the operator deliberately arms BOTH gates
+      # (Variable ROBINHOOD_LIVE=true AND secret LIVE_TRADING_ACK=I_UNDERSTAND_REAL_MONEY).
+      # Isolated under SAHJONY_HOME=desks/robinhood (own state/db/status); runs by
+      # default once Robinhood secrets exist — disable with ROBINHOOD_DESK_ENABLED=false.
+      # ── Alpaca LIVE stock desk (REAL MONEY) ──────────────────────────────────
+      # Deliberately isolated from every paper desk and triple-gated: it runs only
+      # when Variable ALPACA_LIVE_ENABLED=true AND separate LIVE keys exist AND the
+      # LIVE_TRADING_ACK secret is set. It uses ALPACA_LIVE_* secrets — never the
+      # paper keys — so a live flag can never be paired with a paper credential
+      # (or vice versa) by accident.
+      #
+      # Day trading is FORCED OFF here: US pattern-day-trader rules restrict
+      # accounts under $25k to 3 day trades per 5 business days, and a violation
+      # freezes the account. The swing desks (ladder/wheel) are unaffected.
+      - name: Run Alpaca LIVE stock desk cycle (REAL MONEY — gated)
+        if: ${{ vars.ALPACA_LIVE_ENABLED == 'true' }}
+        env:
+          SAHJONY_HOME: desks/alpaca-live
+          BROKER: alpaca
+          ALPACA_PAPER: 'false'
+          ALPACA_API_KEY: ${{ secrets.ALPACA_LIVE_API_KEY }}
+          ALPACA_SECRET_KEY: ${{ secrets.ALPACA_LIVE_SECRET_KEY }}
+          ROBINHOOD_LIVE: 'false'
+          TICKERS: ${{ vars.ALPACA_LIVE_TICKERS || 'SPY,QQQ,VTI,MSFT,NVDA' }}
+          BENCHMARK: SPY
+          MARKET_HOURS: us
+          KNOWLEDGE_ROLE: alpaca-live-stocks
+          DAY_TRADING_ENABLED: 'false'
+          COPY_TRADING_ENABLED: 'false'
+          PAIRS_ENABLED: 'false'
+          CREDIT_SPREADS_ENABLED: 'false'
+          TRADING_CAPITAL: ${{ vars.ALPACA_LIVE_CAPITAL == '' && '0' || vars.ALPACA_LIVE_CAPITAL }}
+        run: python main.py --once --force || true
+
+      # Skipped when the MAIN desk already runs on robinhood_crypto (vars.BROKER),
+      # so one account can never be traded by two desks at once.
+      - name: Run Robinhood crypto desk cycle (DRY-RUN unless armed)
+        if: ${{ vars.ROBINHOOD_DESK_ENABLED != 'false' && vars.BROKER != 'robinhood_crypto' }}
+        env:
+          SAHJONY_HOME: desks/robinhood
+          BROKER: robinhood_crypto
+          TICKERS: ${{ vars.ROBINHOOD_TICKERS || 'BTC/USD,ETH/USD,SOL/USD,LTC/USD' }}
+          BENCHMARK: BTC/USD
+          PAIRS: BTC/USD:ETH/USD
+          KNOWLEDGE_ROLE: robinhood-crypto
+          COPY_TRADING_ENABLED: 'false'
+          TRADING_CAPITAL: ${{ vars.ROBINHOOD_TRADING_CAPITAL == '' && '100' || vars.ROBINHOOD_TRADING_CAPITAL }}
+          ROBINHOOD_MAX_ORDER_USD: ${{ vars.ROBINHOOD_MAX_ORDER_USD || '10' }}
+        run: python main.py --once --force || true
 
       - name: Preflight (read-only) summary
         if: always()
@@ -174,6 +285,9 @@ jobs:
           git config user.email "noreply@anthropic.com"
           git add public/status.json public/copy_signals.json public/knowledge.json 2>/dev/null || true
           git add desks/paper/public/status.json 2>/dev/null || true
+          git add desks/robinhood/public/status.json 2>/dev/null || true
+          git add desks/stocks/public/status.json 2>/dev/null || true
+          git add desks/alpaca-live/public/status.json 2>/dev/null || true
           if ! git diff --cached --quiet; then
             git commit -m "Desk snapshot: cycle ${{ github.run_number }} update"
             for i in 1 2 3 4; do git push && break || sleep $((2**i)); done

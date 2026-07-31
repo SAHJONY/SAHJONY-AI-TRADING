@@ -101,6 +101,15 @@ class Config:
     max_daily_drawdown_pct: float = 0.06
     # Kill switch: hard-stop all new risk regardless of P&L (env or a HALT file).
     trading_halt: bool = False
+    # Smallest notional a venue will accept (Robinhood/Alpaca ≈ $1). Sub-minimum
+    # budgets are rounded up to this when it still fits the per-position cap,
+    # otherwise the desk stands down instead of sending a doomed order.
+    min_order_notional: float = 1.0
+    # Estimated ROUND-TRIP transaction cost in basis points. Commission-free
+    # venues still charge the spread; realized P&L is booked net of this so the
+    # scorecard measures a fee-aware edge (the desk's stated mandate).
+    fee_bps_crypto: float = 60.0
+    fee_bps_equity: float = 4.0
     # Volatility targeting: when realized portfolio vol (annualized, from the
     # equity curve) exceeds this, new-position budgets scale down proportionally
     # (never below ×0.5, never above ×1.0 — it de-risks, never levers up).
@@ -146,6 +155,11 @@ class Config:
     copy_trading_source_url: str = ""
     copy_trading_api_key: str = ""
     copy_trading_max_symbols: int = 10
+    # Protective exits for mirrored positions — enforced even when the signal
+    # feed is empty or unreachable (0 disables the hard stop).
+    copy_stop_pct: float = 0.15
+    copy_trail_trigger_pct: float = 0.15
+    copy_trail_pct: float = 0.08
 
     # pairs / statistical arbitrage (market-neutral desk)
     pairs_enabled: bool = True
@@ -268,6 +282,9 @@ def load_config() -> Config:
         min_council_conviction=_clamp(_f("MIN_COUNCIL_CONVICTION", 0.55), HARD_MIN_CONVICTION, 1.0),
         max_daily_drawdown_pct=_clamp(_f("MAX_DAILY_DRAWDOWN_PCT", 0.06), 0.01, HARD_MAX_DAILY_DRAWDOWN_PCT),
         trading_halt=_b("TRADING_HALT", False),
+        min_order_notional=max(0.0, _f("MIN_ORDER_NOTIONAL_USD", 1.0)),
+        fee_bps_crypto=_clamp(_f("FEE_BPS_CRYPTO", 60.0), 0.0, 500.0),
+        fee_bps_equity=_clamp(_f("FEE_BPS_EQUITY", 4.0), 0.0, 500.0),
         vol_target_annual=_clamp(_f("VOL_TARGET_ANNUAL", 0.20), 0.0, 2.0),
         trading_capital=max(0.0, _f("TRADING_CAPITAL", 0.0)),
         allow_fractional=_b("ALLOW_FRACTIONAL", True),
@@ -288,6 +305,9 @@ def load_config() -> Config:
         copy_trading_source_url=(os.getenv("COPY_TRADING_SOURCE_URL", "") or "").strip(),
         copy_trading_api_key=os.getenv("COPY_TRADING_API_KEY", "").strip(),
         copy_trading_max_symbols=max(1, _i("COPY_TRADING_MAX_SYMBOLS", 10)),
+        copy_stop_pct=_clamp(_f("COPY_STOP_PCT", 0.15), 0.0, 0.50),
+        copy_trail_trigger_pct=_clamp(_f("COPY_TRAIL_TRIGGER_PCT", 0.15), 0.02, 1.0),
+        copy_trail_pct=_clamp(_f("COPY_TRAIL_PCT", 0.08), 0.01, 0.50),
         pairs_enabled=_b("PAIRS_ENABLED", True),
         pairs=_list("PAIRS", "SPY:QQQ,GLD:SLV"),
         pairs_entry_z=_clamp(_f("PAIRS_ENTRY_Z", 2.0), 1.0, 5.0),

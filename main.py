@@ -275,6 +275,14 @@ def run_once(firm: Firm, state, force: bool) -> dict:
     alert = firm.notifier.maybe_alert(status)
     if alert:
         log.info("Alert sent: %s", alert)
+    # Risk alerts fire even on a silent cycle: a halted or bleeding desk is
+    # exactly what the owner must hear about, and the trade alert above stays mute.
+    try:
+        risk_alert = firm.notifier.maybe_risk_alert(status, state)
+        if risk_alert:
+            log.warning("RISK ALERT sent: %s", risk_alert.get("events"))
+    except Exception as exc:
+        log.error("risk alert failed: %s", exc)
     weekly = firm.notifier.maybe_weekly_summary(status, state)  # self-gates to once/7 days
     if weekly:
         log.info("Weekly performance summary sent to Telegram.")

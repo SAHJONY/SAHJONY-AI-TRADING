@@ -16,6 +16,25 @@ def is_crypto(symbol: str) -> bool:
     return "/" in symbol
 
 
+def fee_cost(symbol: str, notional: float, cfg) -> float:
+    """Estimated ROUND-TRIP transaction cost in dollars for `notional` traded.
+
+    Commission-free venues are not cost-free: the spread/markup is the real fee,
+    and on the small orders this desk places it can exceed a day-trade's target.
+    Booking it against realized P&L keeps the equity curve, the scorecard and
+    Hermes' learning honest instead of flattering gross numbers.
+    """
+    try:
+        n = abs(float(notional or 0.0))
+    except (TypeError, ValueError):
+        return 0.0
+    if n <= 0:
+        return 0.0
+    bps = float(getattr(cfg, "fee_bps_crypto", 0.0) if is_crypto(symbol)
+                else getattr(cfg, "fee_bps_equity", 0.0) or 0.0)
+    return max(0.0, n * bps / 10_000.0)
+
+
 def size_qty(symbol: str, budget: float, price: float, max_units: int,
              fractional: bool = False) -> float:
     """Position size in units. Crypto is always fractional. Equities are whole

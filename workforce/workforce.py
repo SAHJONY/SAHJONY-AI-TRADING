@@ -20,6 +20,7 @@ into one trading cycle:
 """
 from __future__ import annotations
 
+from dataclasses import asdict
 import os
 from dataclasses import asdict
 from datetime import datetime, timezone
@@ -41,7 +42,7 @@ from intelligence.institutional_research import (
     multiplier_enabled,
 )
 from risk.risk_engine import RiskEngine
-from strategies.base import OrderIntent, validate_order_intent
+from strategies.base import OrderIntent, fee_cost, validate_order_intent
 from strategies.copy_trading import CopyTrader
 from strategies.credit_spreads import CreditSpreads
 from strategies.day_trading import DayTrading
@@ -250,6 +251,18 @@ class ExecutionTrader:
         for intent in intents:
             intent_id = ""
             try:
+                pending = state.setdefault("pending_orders", {})
+                if intent.kind == "equity" and intent.symbol in pending:
+                    log.info("PENDING BLOCK %s %s — prior broker order unresolved",
+                             intent.symbol, intent.purpose)
+                    record_event(state, "pending_order_block",
+                                 {"symbol": intent.symbol, "purpose": intent.purpose})
+                    self.db.append_audit("pending_order_block", {
+                        "cycle": cycle, "symbol": intent.symbol,
+                        "purpose": intent.purpose,
+                        "pending": pending[intent.symbol],
+                    })
+                    continue
                 if intent.kind == "state":
                     self._apply(intent, state)
                     record_event(state, intent.purpose, {"symbol": intent.symbol, "reason": intent.reason})
@@ -357,6 +370,17 @@ class ExecutionTrader:
                 price = (res.get("fill_price") if res.get("fill_price") is not None
                          else self.client.get_price(intent.symbol)
                          if intent.kind == "equity" else intent.premium)
+                # Transaction costs: charge the estimated round trip when a position
+                # is CLOSED, so realized P&L — and therefore the equity curve and
+                # Hermes' scorecard — are NET of spread rather than gross.
+                if intent.realized_delta:
+                    gross = float(intent.realized_delta)
+                    cost = fee_cost(intent.symbol, abs(float(intent.qty or 0) * float(price or 0)),
+                                    self.cfg)
+                    if cost > 0:
+                        intent.realized_delta = gross - cost
+                        log.info("%s %s realized $%.4f gross → $%.4f net (est. cost $%.4f)",
+                                 intent.symbol, intent.purpose, gross, intent.realized_delta, cost)
                 self._apply(intent, state)
                 transaction_cost = max(0.0, float(res.get("transaction_cost", 0.0) or 0.0))
                 state["transaction_costs"] = state.get("transaction_costs", 0.0) + transaction_cost
@@ -401,6 +425,52 @@ class ExecutionTrader:
                         pass
                 log.error("execute intent failed (%s %s): %s", intent.symbol, intent.purpose, exc)
         return done, deployed
+
+    def reconcile_pending(self, state: Dict[str, Any], cycle: int) -> List[Dict]:
+        """Apply state and ledger mutations only after the broker confirms a fill."""
+        pending = state.setdefault("pending_orders", {})
+        resolved = []
+        if not pending or not hasattr(self.client, "get_order"):
+            return resolved
+        for symbol, item in list(pending.items()):
+            order = self.client.get_order(item.get("order_id"))
+            status = order.get("status")
+            if status == "filled":
+                intent = OrderIntent(**item["intent"])
+                price = float(order.get("fill_price") or 0)
+                if price <= 0:
+                    log.warning("FILLED order %s has no defensible fill price; keeping pending",
+                                item.get("order_id"))
+                    continue
+                self._apply(intent, state)
+                self.db.log_trade({
+                    "cycle": item.get("cycle", cycle), "symbol": intent.symbol,
+                    "strategy": intent.strategy, "kind": intent.kind, "side": intent.side,
+                    "qty": order.get("filled_qty") or intent.qty, "price": price,
+                    "premium": intent.premium, "notional": intent.est_notional,
+                    "purpose": intent.purpose, "reason": intent.reason,
+                    "mode": item.get("mode"), "simulated": False,
+                    "order_id": order.get("order_id"),
+                    "client_order_id": order.get("client_order_id") or item.get("client_order_id"),
+                    "order_status": "filled", "submitted_at": item.get("submitted_at"),
+                    "filled_at": order.get("filled_at"),
+                })
+                record_event(state, "order_filled", {
+                    "symbol": symbol, "strategy": intent.strategy,
+                    "order_id": order.get("order_id"),
+                    "client_order_id": order.get("client_order_id") or item.get("client_order_id"),
+                    "fill_price": price,
+                })
+                pending.pop(symbol, None)
+                resolved.append({"symbol": symbol, "status": "filled"})
+            elif status in ("cancelled", "rejected"):
+                record_event(state, f"order_{status}", {
+                    "symbol": symbol, "order_id": item.get("order_id"),
+                    "client_order_id": item.get("client_order_id"),
+                })
+                pending.pop(symbol, None)
+                resolved.append({"symbol": symbol, "status": status})
+        return resolved
 
 
 # ── the firm ────────────────────────────────────────────────────────────────
@@ -483,6 +553,7 @@ class Firm:
         if state.get("equity_day") != today:
             state["equity_day"] = today
             state["equity_day_start"] = equity
+            state["realized_day_start"] = float(state.get("realized_pnl", 0.0) or 0.0)
             state["breaker_latched"] = False
         day_start = float(state.get("equity_day_start") or 0.0)
 
@@ -494,8 +565,26 @@ class Firm:
             state["breaker_latched"] = False
         else:
             day_return = equity / day_start - 1.0
-            if day_return <= -abs(self.cfg.max_daily_drawdown_pct):
-                state["breaker_latched"] = True
+
+            # Capital-flow guard. A flat desk with no realized P&L did not suffer
+            # a trading drawdown, so re-anchor deposits, withdrawals, and sleeve changes.
+            realized_today = (float(state.get("realized_pnl", 0.0) or 0.0)
+                              - float(state.get("realized_day_start", 0.0) or 0.0))
+            no_activity = (not (state.get("positions") or {})) and abs(realized_today) < 1e-9
+            if no_activity:
+                if abs(day_return) > 1e-9:
+                    log.info("circuit breaker baseline re-anchored $%.2f → $%.2f "
+                             "(capital change, no trading activity today)", day_start, equity)
+                    state["equity_day_start"] = equity
+                    state["realized_day_start"] = float(
+                        state.get("realized_pnl", 0.0) or 0.0
+                    )
+                    day_start, day_return = equity, 0.0
+                if state.get("breaker_latched"):
+                    state["breaker_latched"] = False
+
+        if day_return <= -abs(self.cfg.max_daily_drawdown_pct):
+            state["breaker_latched"] = True
 
         if self._kill_switch():
             reason = "kill switch (TRADING_HALT / HALT file)"
@@ -509,6 +598,104 @@ class Firm:
             log.warning("NEW RISK HALTED: %s", reason)
         return {"halted": halted, "reason": reason, "day_return": round(day_return, 4),
                 "day_start": round(day_start, 2), "limit_pct": self.cfg.max_daily_drawdown_pct}
+
+    def _reconcile_broker(self, state: Dict[str, Any]) -> Dict[str, Any]:
+        """Make the broker the source of truth for WHAT WE OWN.
+
+        The desk's positions live in state.json, which is runtime-only (gitignored,
+        cached by the runner). If that state is ever lost — killed job, evicted
+        cache, fresh machine — the desk would believe it is flat while the broker
+        still holds the asset: it would re-buy (double exposure) and never manage
+        or exit the orphan, since no strategy tracks it.
+
+        So every cycle we compare the two:
+          • broker holds something state doesn't know → ADOPT it under the ladder
+            desk so stops and floors start protecting it immediately (basis from
+            the broker when available, else the live price — conservative: it
+            protects from here on rather than inventing a P&L history),
+          • state holds something the broker doesn't → drop the ghost so it can't
+            block new entries or emit sells for shares that do not exist.
+        Fault-isolated: any broker hiccup leaves state untouched.
+        """
+        out = {"adopted": [], "dropped": [], "ok": True}
+        try:
+            broker = self.client.get_broker_positions() or {}
+        except Exception as exc:
+            log.warning("broker reconciliation skipped: %s", exc)
+            out["ok"] = False
+            return out
+        if not isinstance(broker, dict):
+            out["ok"] = False
+            return out
+        positions = state.setdefault("positions", {})
+
+        def _norm(sym: str) -> str:
+            return str(sym or "").upper().replace("-", "/").replace("/USD", "")
+
+        held = {_norm(k): (k, v) for k, v in broker.items()
+                if abs(float((v or {}).get("qty", 0) or 0)) > 0}
+        known = {_norm(k) for k, v in positions.items()
+                 if abs(float((v or {}).get("shares", 0) or 0)) > 0}
+
+        for base, (raw_sym, info) in held.items():
+            if base in known:
+                continue
+            qty = float(info.get("qty", 0) or 0)
+            basis = float(info.get("avg_price", 0) or 0)
+            if basis <= 0:
+                try:
+                    basis = float(self.client.get_price(raw_sym) or 0.0)
+                except Exception:
+                    basis = 0.0
+            if basis <= 0:
+                continue                      # no defensible basis → leave it alone
+            sym = next((s for s in self.cfg.tickers if _norm(s) == base), raw_sym)
+            positions[sym] = {"strategy": "ladder", "shares": qty, "cost_basis": basis,
+                              "entry_price": basis, "peak": basis, "adopted": True,
+                              "hard_floor": basis * (1 - self.cfg.ladder_catastrophic_pct
+                                                     if self.cfg.ladder_enable_averaging
+                                                     else 1 - self.cfg.ladder_hard_floor_pct)}
+            out["adopted"].append(sym)
+            log.warning("ADOPTED untracked broker position %s: %s @ %.6f — now under "
+                        "ladder risk management", sym, qty, basis)
+
+        for sym in [s for s in list(positions) if _norm(s) not in held
+                    and abs(float((positions[s] or {}).get("shares", 0) or 0)) > 0]:
+            # options/spreads are not equity holdings — never treat them as ghosts
+            if (positions[sym] or {}).get("stage") or (positions[sym] or {}).get("contract"):
+                continue
+            out["dropped"].append(sym)
+            log.warning("DROPPED ghost position %s — the broker reports no such holding", sym)
+            positions.pop(sym, None)
+        return out
+
+    def _cadence_check(self, state: Dict[str, Any]) -> Dict[str, Any]:
+        """Measure the real gap between cycles and flag a degraded schedule.
+
+        The configured CYCLE_MINUTES is an intention, not a guarantee: shared
+        schedulers throttle high-frequency crons, so the observed cadence is what
+        actually bounds our risk management. Tolerate 3x the configured interval
+        (or 90 minutes, whichever is larger) before declaring the schedule
+        unreliable for opening new positions.
+        """
+        now = datetime.now(timezone.utc)
+        expected = max(1, int(getattr(self.cfg, "cycle_minutes", 15)))
+        prev = state.get("last_cycle_ts")
+        gap = None
+        if prev:
+            try:
+                gap = (now - datetime.fromisoformat(str(prev))).total_seconds() / 60.0
+            except Exception:
+                gap = None
+        state["last_cycle_ts"] = now.isoformat()
+        tolerance = max(expected * 3.0, 90.0)
+        degraded = gap is not None and gap > tolerance
+        reason = ("" if not degraded else
+                  f"execution cadence degraded: {gap:.0f} min since the last cycle "
+                  f"(expected ~{expected} min) — a new position could not be managed")
+        return {"degraded": bool(degraded), "reason": reason,
+                "gap_min": (round(gap, 1) if gap is not None else None),
+                "expected_min": expected, "tolerance_min": round(tolerance, 1)}
 
     def run_cycle(self, state: Dict[str, Any], trade: bool = True) -> Dict[str, Any]:
         state["cycle"] = state.get("cycle", 0) + 1
@@ -535,6 +722,22 @@ class Firm:
             equity = acct["equity"]
         if state.get("equity_start") is None:
             state["equity_start"] = equity
+        # Capital-flow guard on the RETURN baseline (same principle as the daily
+        # breaker): deposits, withdrawals and sleeve changes move equity without
+        # any trading. If the desk is FLAT and has booked no realized P&L, a moved
+        # equity cannot be performance — re-anchor, or the dashboard reports a
+        # capital change as profit (a $10 → $50 sleeve read as "+400% return").
+        try:
+            flat = not (state.get("positions") or {})
+            no_pnl = (abs(float(state.get("realized_pnl", 0.0) or 0.0)) < 1e-9
+                      and abs(float(state.get("premium_collected", 0.0) or 0.0)) < 1e-9)
+            base = float(state.get("equity_start") or 0.0)
+            if flat and no_pnl and base > 0 and abs(equity - base) > 1e-9:
+                log.info("return baseline re-anchored $%.2f → $%.2f (capital change, "
+                         "no trading activity)", base, equity)
+                state["equity_start"] = equity
+        except Exception:
+            pass
         state["equity_last"] = equity
 
         # A LIVE venue must reconcile broker positions before adding any risk.
@@ -561,6 +764,11 @@ class Firm:
                     f"audit ledger unavailable: {type(exc).__name__}"
                 )
 
+        # Broker reconciliation FIRST: never plan a cycle against a stale view of
+        # what we own (see _reconcile_broker for why state alone is not enough).
+        recon = self._reconcile_broker(state)
+        recon["orders_resolved"] = []
+
         # Circuit breaker / kill switch — suspends NEW risk this cycle if tripped.
         halt = self._halt_check(state, equity)
         allow_new_risk = trade and not halt["halted"]
@@ -570,6 +778,17 @@ class Firm:
             halt = {**halt, "halted": True,
                     "reason": f"{halt.get('reason')}; {reason}".strip("; ")}
             log.error("NEW RISK HALTED: %s", reason)
+
+        # Execution-cadence guard. Every protective rail (trailing stops, hard
+        # floors, the daily breaker) only evaluates WHEN A CYCLE RUNS. Scheduled
+        # runners throttle and skip, so cycles can be hours apart — and a position
+        # opened into a multi-hour blind spot cannot be managed. When the gap runs
+        # far beyond the configured cadence we keep EXITS flowing but refuse to
+        # open NEW risk: better to miss a trade than to hold what we cannot watch.
+        cadence = self._cadence_check(state)
+        if cadence["degraded"] and allow_new_risk:
+            log.warning("NEW RISK PAUSED — %s", cadence["reason"])
+            allow_new_risk = False
 
         # Volatility targeting — realized portfolio vol above target scales every
         # new-position budget down ([0.5, 1.0]); fault-isolated, neutral on failure.
@@ -761,6 +980,19 @@ class Firm:
         # 6b) Copy-trading desk — mirror external disclosure feed (risk-gated)
         if trade and self.cfg.copy_trading_enabled:
             try:
+                # Protective exits run FIRST and unconditionally: the feed can go
+                # empty or 404, but held positions must still be risk-managed.
+                m_intents = self.copy.manage(state, self.client.get_price)
+                if m_intents:
+                    done, deployed = self.execution.execute(
+                        m_intents, state, cycle, equity, deployed,
+                        max(self.cfg.min_council_conviction, 0.6), allow_new_risk)
+                    executed += done
+                    if done:
+                        log.info("COPY desk protective exit: %d order(s)", len(done))
+            except Exception as exc:
+                log.error("copy-trading risk management failed: %s", exc)
+            try:
                 signals = self.copy.fetch_signals()
                 if signals:
                     c_intents = self.copy.decide(signals, state, equity, self.client.get_price)
@@ -847,6 +1079,8 @@ class Firm:
                 "research": research, "brain": brain, "executed": executed,
                 "ai_shadow": learning,
                 "deployed": self._position_value(state), "halt": halt,
-                "reconciliation": reconciliation,
+                "reconciliation": recon,
+                "execution_reconciliation": reconciliation,
                 "institutional_intelligence": institutional_intelligence,
-                "hermes": hermes, "board": board, "vol_scale": round(vol_scale, 3)}
+                "hermes": hermes, "board": board, "vol_scale": round(vol_scale, 3),
+                "cadence": cadence}

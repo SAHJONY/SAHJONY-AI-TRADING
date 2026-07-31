@@ -63,6 +63,48 @@ def main() -> int:
     os.environ["COPY_TRADING_ENABLED"] = "false"
     _check(CopyTrader(load_config()).fetch_signals() == [], "disabled → no signals (no network)")
 
+    # ── protective exits: must work with NO signal feed at all ──
+    os.environ["COPY_TRADING_ENABLED"] = "true"
+    os.environ["COPY_STOP_PCT"] = "0.15"
+    cfg2 = load_config()
+    ct = CopyTrader(cfg2)
+    st = {"positions": {"AMPY": {"strategy": "copy", "shares": 60.0,
+                                 "cost_basis": 3.95, "entry_price": 3.95}}}
+
+    # deep loser → hard stop fires without any signal
+    outs = ct.manage(st, lambda s: 1.73)
+    _check(len(outs) == 1 and outs[0].purpose == "copy_stop" and outs[0].side == "sell",
+           "orphaned loser is stopped out with no feed (the AMPY case)")
+    _check(outs[0].qty == 60.0 and outs[0].clear_position, "stop exits the full position")
+    _check(abs(outs[0].realized_delta - (1.73 - 3.95) * 60.0) < 1e-6, "books the realized loss once")
+
+    # inside the stop → hold, tracking the peak
+    hold = ct.manage(st, lambda s: 3.80)
+    _check(hold[0].purpose == "copy_hold" and hold[0].kind == "state", "small drawdown holds")
+    _check(hold[0].merge_position.get("peak") == 3.95, "peak tracked from the basis")
+
+    # winner ratchets: +30% then gives back past the trail → exit in profit
+    st2 = {"positions": {"WIN": {"strategy": "copy", "shares": 10.0, "cost_basis": 10.0,
+                                 "entry_price": 10.0, "peak": 13.0}}}
+    win = ct.manage(st2, lambda s: 11.5)
+    _check(win[0].purpose == "copy_stop", "trailing stop fires after a ratcheted gain")
+    _check(win[0].realized_delta > 0, "trailing exit still books a PROFIT")
+
+    # bad tick must never liquidate
+    _check(ct.manage(st2, lambda s: 0.0) == [], "zero/failed price never triggers an exit")
+
+    # non-copy positions are untouched
+    other = {"positions": {"SPY": {"strategy": "ladder", "shares": 5.0, "cost_basis": 100.0}}}
+    _check(ct.manage(other, lambda s: 10.0) == [], "never touches another desk's position")
+    os.environ.pop("COPY_STOP_PCT", None)
+
+    # junk tickers from SEC filings must never become orders
+    junk = CopyTrader._normalize([{"symbol": "NONE", "side": "buy"},
+                                  {"symbol": "N/A", "side": "buy"},
+                                  {"symbol": "", "side": "buy"},
+                                  {"symbol": "AAPL", "side": "buy"}])
+    _check([j["symbol"] for j in junk] == ["AAPL"], "placeholder tickers are filtered out")
+
     print("\nCOPY-TRADING CHECKS PASSED ✓")
     return 0
 

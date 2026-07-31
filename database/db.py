@@ -66,6 +66,11 @@ CREATE TABLE IF NOT EXISTS trades (
     reason        TEXT,
     mode          TEXT,
     simulated     INTEGER DEFAULT 1
+    ,order_id      TEXT
+    ,client_order_id TEXT
+    ,order_status  TEXT
+    ,submitted_at  TEXT
+    ,filled_at     TEXT
 );
 CREATE TABLE IF NOT EXISTS equity_curve (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -211,6 +216,10 @@ class Database:
         cols = {r["name"] for r in self.conn.execute("PRAGMA table_info(investors)").fetchall()}
         if "share_token" not in cols:
             self.conn.execute("ALTER TABLE investors ADD COLUMN share_token TEXT")
+        trade_cols = {r["name"] for r in self.conn.execute("PRAGMA table_info(trades)").fetchall()}
+        for name in ("order_id", "client_order_id", "order_status", "submitted_at", "filled_at"):
+            if name not in trade_cols:
+                self.conn.execute(f"ALTER TABLE trades ADD COLUMN {name} TEXT")
 
     def close(self) -> None:
         try:
@@ -222,11 +231,14 @@ class Database:
     def log_trade(self, t: Dict[str, Any]) -> None:
         self.conn.execute(
             """INSERT INTO trades (ts,cycle,symbol,strategy,kind,side,qty,price,premium,
-                                   notional,purpose,reason,mode,simulated)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                                   notional,purpose,reason,mode,simulated,order_id,
+                                   client_order_id,order_status,submitted_at,filled_at)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (_now(), t.get("cycle"), t.get("symbol"), t.get("strategy"), t.get("kind"),
              t.get("side"), t.get("qty"), t.get("price"), t.get("premium"), t.get("notional"),
-             t.get("purpose"), t.get("reason"), t.get("mode"), 1 if t.get("simulated", True) else 0))
+             t.get("purpose"), t.get("reason"), t.get("mode"), 1 if t.get("simulated", True) else 0,
+             t.get("order_id"), t.get("client_order_id"), t.get("order_status"),
+             t.get("submitted_at"), t.get("filled_at")))
         self.conn.commit()
 
     def log_equity(self, cycle, equity, cash, deployed, realized, premium, mode) -> None:
