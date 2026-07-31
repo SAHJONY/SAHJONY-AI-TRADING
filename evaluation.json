@@ -1,0 +1,48 @@
+{
+  "protocol": "SAHJONY 90-day out-of-sample evaluation",
+  "started_at": "2026-07-26T21:38:16.798191+00:00",
+  "ends_at": "2026-10-24T21:38:16.798191+00:00",
+  "days": 90,
+  "frozen_at_commit": "8a82b4cb3e53d058823f20fdf468a1973206b207",
+  "why": "Every strategy/risk change invalidates prior data. This window is the first period during which the desk's behaviour is held constant, so the result actually means something.",
+  "frozen": {
+    "strategy_logic": "no changes to entries, exits, sizing or the conviction gate",
+    "risk_parameters": {
+      "max_allocation_pct": 0.12,
+      "max_total_deployed_pct": 0.7,
+      "min_council_conviction": 0.52,
+      "max_daily_drawdown_pct": 0.1,
+      "vol_target_annual": 0.2
+    },
+    "fee_assumptions": {
+      "crypto_bps_round_trip": 60,
+      "equity_bps_round_trip": 4
+    },
+    "allowed_during_window": [
+      "genuine bug fixes (wrong, not merely improvable)",
+      "infrastructure, logging, dashboard, alerting"
+    ],
+    "not_allowed": [
+      "parameter tuning",
+      "new strategies",
+      "changing the fee model",
+      "changing the conviction gate"
+    ]
+  },
+  "evidence": {
+    "primary": "desks/paper (crypto trainer) and desks/stocks \u2014 enough trade count for statistics",
+    "secondary": "live Robinhood crypto desk \u2014 validates real execution, fills and costs",
+    "caveat": "The paper trainer runs a looser 0.40 conviction gate than the live desk's 0.52, so its results do not directly predict live behaviour. Conviction is also compressed (the 12-agent average lands in 47-53%), which is why the live desk trades rarely. Recalibrate AFTER this window using the hit-rate-by-conviction data it collects \u2014 not before."
+  },
+  "success_criteria": {
+    "primary": "net-of-fees return beats buy-and-hold BTC over the window",
+    "risk": "max drawdown stays inside 15%",
+    "quality": "positive Sharpe on the equity curve",
+    "minimum_sample": "at least 30 closed trades, else the result is not significant"
+  },
+  "baseline_to_beat": {
+    "paper_trainer_sharpe_at_start": -3.81,
+    "paper_trainer_return_pct_at_start": -22.77
+  },
+  "decision_rule": "Pass on all criteria \u2192 scale capital deliberately. Fail, or fewer than 30 trades \u2192 do NOT add capital; recalibrate and re-run the window."
+}
