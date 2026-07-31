@@ -135,6 +135,9 @@ jobs:
       - name: Refresh copy-trading signals (SEC Form 4 insider buys)
         run: python -m scripts.build_copy_signals || true
 
+      - name: NVIDIA API/model health check (read-only)
+        run: python -m scripts.check_nvidia || true
+
       # Paper "trainer" desk — Alpaca crypto, SAME universe as the live bot but
       # more capital + a looser conviction gate, so it explores more setups. It
       # trades zero real money and feeds realized outcomes into public/knowledge.json.

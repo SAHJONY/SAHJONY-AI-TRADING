@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import json
 import os
+import time
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
@@ -75,6 +76,15 @@ class AIBrain:
                             or "https://integrate.api.nvidia.com/v1").strip().rstrip("/")
         self.nvidia_model = (os.getenv("NVIDIA_MODEL", "openai/gpt-oss-120b")
                              or "openai/gpt-oss-120b").strip()
+        # Keep NVIDIA inside a bounded cycle budget. A slow provider must reduce
+        # risk rather than delaying the desk for the historical 45-second timeout.
+        try:
+            self.nvidia_timeout = max(
+                5.0, min(45.0, float(os.getenv("NVIDIA_TIMEOUT_SECONDS", "20")))
+            )
+        except (TypeError, ValueError):
+            self.nvidia_timeout = 20.0
+        self.nvidia_failure_multiplier = 0.70
         # Autonomously resolve each provider's latest model (cached ~daily). Falls
         # back to the configured defaults whenever the lookup can't run.
         self.brain_model = cfg.anthropic_model
@@ -134,7 +144,10 @@ class AIBrain:
             counsellors["grok"] = self._ask_grok(question)
         if self.gemini_key:
             counsellors["gemini"] = self._ask_gemini(question)
-        if self.nvidia_key:
+        # Do not ask NVIDIA twice when it is already the primary brain. The old
+        # path first used the 120B model as a counsellor and immediately called it
+        # again for the structured verdict, doubling latency and timeout exposure.
+        if self.nvidia_key and self.anthropic_key:
             counsellors["nvidia"] = self._ask_nvidia(question)
 
         def _wrap(v: BrainVerdict) -> BrainVerdict:
@@ -154,7 +167,7 @@ class AIBrain:
                         return _wrap(self._ask_nim_brain(question, counsellors, symbols))
                     except Exception as exc2:
                         log.error("NVIDIA NIM fallback failed: %s", exc2)
-                        return _wrap(BrainVerdict(used=False, commentary=f"brain error: {exc2}"))
+                        return _wrap(self._nvidia_failure_verdict(exc2))
                 return _wrap(BrainVerdict(used=False, commentary=f"brain error: {exc}"))
         # No Claude key → NVIDIA NIM is the brain (free testing / last resort).
         if self.nvidia_key:
@@ -162,8 +175,73 @@ class AIBrain:
                 return _wrap(self._ask_nim_brain(question, counsellors, symbols))
             except Exception as exc:
                 log.error("NVIDIA NIM brain failed: %s", exc)
-                return _wrap(BrainVerdict(used=False, commentary=f"brain error: {exc}"))
+                return _wrap(self._nvidia_failure_verdict(exc))
         return _wrap(BrainVerdict(used=False, commentary="no brain provider configured"))
+
+    def _nvidia_failure_verdict(self, exc: Exception) -> BrainVerdict:
+        """Fail closed when the primary provider is unavailable.
+
+        ``used`` remains false because no model opinion was produced, while the
+        multiplier is deliberately defensive so provider failure can never
+        increase position size to 1.0.
+        """
+        return BrainVerdict(
+            used=False,
+            posture="risk_off",
+            global_risk_multiplier=self.nvidia_failure_multiplier,
+            commentary=f"nvidia unavailable; defensive fallback: {exc}",
+        )
+
+    def nvidia_healthcheck(self) -> Dict[str, object]:
+        """Make one tiny, read-only model request without exposing the API key."""
+        if not self.nvidia_key:
+            return {
+                "ok": False, "provider": "nvidia", "model": self.nvidia_model,
+                "status": "missing_key", "latency_ms": 0,
+            }
+        import requests
+        started = time.monotonic()
+        payload = {
+            "model": self.nvidia_model,
+            "max_tokens": 8,
+            "temperature": 0,
+            "messages": [{"role": "user", "content": "Reply with exactly: OK"}],
+        }
+        headers = {
+            "Authorization": "Bearer " + self.nvidia_key,
+            "Content-Type": "application/json",
+        }
+        try:
+            response = requests.post(
+                self.nvidia_base + "/chat/completions",
+                timeout=min(15.0, self.nvidia_timeout),
+                headers=headers,
+                json=payload,
+            )
+            latency_ms = int((time.monotonic() - started) * 1000)
+            if not response.ok:
+                return {
+                    "ok": False, "provider": "nvidia", "model": self.nvidia_model,
+                    "status": f"http_{response.status_code}", "latency_ms": latency_ms,
+                }
+            data = response.json()
+            content = str(data["choices"][0]["message"]["content"]).strip()
+            return {
+                "ok": bool(content), "provider": "nvidia", "model": self.nvidia_model,
+                "status": "ok" if content else "empty_response",
+                "latency_ms": latency_ms,
+            }
+        except requests.Timeout:
+            return {
+                "ok": False, "provider": "nvidia", "model": self.nvidia_model,
+                "status": "timeout", "latency_ms": int((time.monotonic() - started) * 1000),
+            }
+        except Exception as exc:
+            return {
+                "ok": False, "provider": "nvidia", "model": self.nvidia_model,
+                "status": f"error:{type(exc).__name__}",
+                "latency_ms": int((time.monotonic() - started) * 1000),
+            }
 
     def _build_question(self, portfolio: List[Dict]) -> str:
         rows = [{k: (round(v, 4) if isinstance(v, float) else v) for k, v in p.items()}
@@ -256,7 +334,7 @@ class AIBrain:
     def _ask_nvidia(self, question: str) -> Optional[str]:
         return self._chat_completions(
             self.nvidia_base + "/chat/completions", self.nvidia_key,
-            self.nvidia_model, question, label="nvidia")
+            self.nvidia_model, question, label="nvidia", timeout=self.nvidia_timeout)
 
     # ── FALLBACK BRAIN: NVIDIA NIM produces the structured overlay itself ──────
     # Used when Claude is absent or fails. OpenAI-compatible JSON-mode request.
@@ -292,11 +370,11 @@ class AIBrain:
                    "messages": [{"role": "system", "content": _SYSTEM.format(firm=self.cfg.firm_name)},
                                 {"role": "user", "content": instr}]}
         headers = {"Authorization": "Bearer " + key, "Content-Type": "application/json"}
-        r = requests.post(url, timeout=45, headers=headers, json=payload)
+        r = requests.post(url, timeout=self.nvidia_timeout, headers=headers, json=payload)
         if not r.ok and r.status_code in (400, 404, 415, 422):
             # some NIM models reject json_object response_format → retry plain
             payload.pop("response_format", None)
-            r = requests.post(url, timeout=45, headers=headers, json=payload)
+            r = requests.post(url, timeout=self.nvidia_timeout, headers=headers, json=payload)
         if not r.ok:
             raise RuntimeError(f"{label} HTTP {r.status_code}: {r.text[:200]}")
         text = r.json()["choices"][0]["message"]["content"]
@@ -312,7 +390,8 @@ class AIBrain:
             brain_model=f"{label}:{model}",
         )
 
-    def _chat_completions(self, url, key, model, question, label) -> Optional[str]:
+    def _chat_completions(self, url, key, model, question, label,
+                          timeout: float = 45) -> Optional[str]:
         """OpenAI-compatible chat endpoint (both OpenAI and xAI speak it)."""
         try:
             import requests
@@ -324,7 +403,7 @@ class AIBrain:
                             f"{self.cfg.firm_name}. Give a concise (<120 words) risk-"
                             f"aware view on the portfolio. You advise; you do not decide."},
                            {"role": "user", "content": question}]}
-            r = requests.post(url, timeout=45, headers=headers, json=payload)
+            r = requests.post(url, timeout=timeout, headers=headers, json=payload)
             # GPT-5-family reasoning models reject the classic chat params: they want
             # 'max_completion_tokens' (not 'max_tokens') and only the default
             # temperature. The API reports these ONE AT A TIME, so a single-param
@@ -334,7 +413,7 @@ class AIBrain:
                                          or "temperature" in (r.text or "").lower()):
                 payload["max_completion_tokens"] = payload.pop("max_tokens", 400)
                 payload.pop("temperature", None)
-                r = requests.post(url, timeout=45, headers=headers, json=payload)
+                r = requests.post(url, timeout=timeout, headers=headers, json=payload)
             if not r.ok:
                 # Log the model tried AND the provider's error body: a 4xx body says
                 # exactly why (model_not_found vs invalid_api_key vs quota), which the
