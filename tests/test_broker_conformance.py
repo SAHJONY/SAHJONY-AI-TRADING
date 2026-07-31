@@ -14,7 +14,8 @@ import sys
 
 os.environ.setdefault("LOG_LEVEL", "WARNING")
 # ensure no adapter sees credentials and tries a real connection
-for _k in ("ALPACA_API_KEY", "ALPACA_SECRET_KEY", "CCXT_API_KEY", "CCXT_SECRET"):
+for _k in ("ALPACA_API_KEY", "ALPACA_SECRET_KEY", "CCXT_API_KEY", "CCXT_SECRET",
+           "DEX_API_KEY", "DEX_WALLET_ADDRESS"):
     os.environ.pop(_k, None)
 
 import numpy as np
@@ -22,7 +23,7 @@ import numpy as np
 from config import load_config
 from utils.broker import REQUIRED, get_broker
 
-VENUES = ["alpaca", "ibkr", "ccxt"]
+VENUES = ["alpaca", "ibkr", "ccxt", "dex"]
 
 
 def _check(cond, msg):
@@ -35,7 +36,7 @@ def _check(cond, msg):
 def main() -> int:
     for venue in VENUES:
         os.environ["BROKER"] = venue
-        os.environ["TICKERS"] = "BTC/USD" if venue == "ccxt" else "AAPL"
+        os.environ["TICKERS"] = "BTC/USD" if venue in ("ccxt", "dex") else "AAPL"
         cfg = load_config()
         b = get_broker(cfg)
         sym = cfg.tickers[0]

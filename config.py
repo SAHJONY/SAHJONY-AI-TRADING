@@ -74,6 +74,16 @@ class Config:
     ccxt_password: str = ""        # some exchanges require an API passphrase
     ccxt_sandbox: bool = True      # testnet/paper by default
     ccxt_quote: str = "USDT"       # quote currency for equity valuation
+    # DEX router (BROKER=dex) — quote/simulate by default. It never stores a
+    # private key. A wallet must sign the prepared transaction externally.
+    dex_provider: str = "0x"
+    dex_api_key: str = ""
+    dex_chain_id: int = 8453
+    dex_wallet_address: str = ""
+    dex_token_allowlist: List[str] = field(default_factory=list)
+    dex_max_slippage_bps: int = 50
+    dex_max_order_usd: float = 25.0
+    dex_live: bool = False
     # Real-money safety: live orders are refused unless this is explicitly set.
     # Set LIVE_TRADING_ACK="I_UNDERSTAND_REAL_MONEY" to arm live (with ALPACA_PAPER=false).
     live_trading_ack: bool = False
@@ -236,6 +246,14 @@ def load_config() -> Config:
         ccxt_password=os.getenv("CCXT_PASSWORD", "").strip(),
         ccxt_sandbox=_b("CCXT_SANDBOX", True),
         ccxt_quote=(os.getenv("CCXT_QUOTE", "USDT") or "USDT").strip().upper(),
+        dex_provider=(os.getenv("DEX_PROVIDER", "0x") or "0x").strip().lower(),
+        dex_api_key=os.getenv("DEX_API_KEY", "").strip(),
+        dex_chain_id=max(1, _i("DEX_CHAIN_ID", 8453)),
+        dex_wallet_address=(os.getenv("DEX_WALLET_ADDRESS", "") or "").strip(),
+        dex_token_allowlist=_list("DEX_TOKEN_ALLOWLIST", ""),
+        dex_max_slippage_bps=max(1, min(100, _i("DEX_MAX_SLIPPAGE_BPS", 50))),
+        dex_max_order_usd=max(0.0, min(100.0, _f("DEX_MAX_ORDER_USD", 25.0))),
+        dex_live=_b("DEX_LIVE", False),
         live_trading_ack=(os.getenv("LIVE_TRADING_ACK", "").strip() == "I_UNDERSTAND_REAL_MONEY"),
         tickers=_list("TICKERS", "AAPL,MSFT,SPY"),
         benchmark=(os.getenv("BENCHMARK", "SPY") or "SPY").strip().upper(),
