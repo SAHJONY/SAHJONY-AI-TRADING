@@ -9,8 +9,8 @@
     "return_pct": 0.553,
     "alpha_pct": -16.512
   },
-  "ts": "2026-07-31T01:13:11.085188+00:00",
-  "cycle": 91,
+  "ts": "2026-07-31T04:39:20.214936+00:00",
+  "cycle": 92,
   "account": {
     "equity": 1680.82,
     "equity_start": 2000.0,
@@ -47,8 +47,8 @@
     },
     "cadence": {
       "degraded": true,
-      "reason": "execution cadence degraded: 90 min since the last cycle (expected ~15 min) \u2014 a new position could not be managed",
-      "gap_min": 90.5,
+      "reason": "execution cadence degraded: 206 min since the last cycle (expected ~15 min) \u2014 a new position could not be managed",
+      "gap_min": 206.2,
       "expected_min": 15,
       "tolerance_min": 90.0
     },
@@ -106,15 +106,15 @@
       "quarantined": [],
       "issues": {},
       "hit_rates": {
-        "SPY": 0.203,
+        "SPY": 0.196,
         "QQQ": 0.248,
-        "VTI": 0.153
+        "VTI": 0.148
       },
       "strategy_weights": {
         "daytrade": 0.867
       },
       "scorecard": {
-        "cycles": 4,
+        "cycles": 5,
         "sharpe": null,
         "sortino": null,
         "max_drawdown_pct": 0.0,
@@ -731,14 +731,14 @@
     "enabled": true,
     "used": true,
     "posture": "neutral",
-    "global_risk_multiplier": 0.85,
-    "commentary": "The council leans modestly constructive on broad\u2011market ETFs (SPY, VTI) but the tech\u2011heavy flat names (MSFT, NVDA) carry high beta, elevated volatility and negative alpha, making their signals fragile. Overall exposure is equity\u2011concentrated with beta near 1.2, so we stay near a neutral stance and apply a modest risk scaling. Adjustments modestly reinforce the long ETFs while trimming the two fragile tech names.",
+    "global_risk_multiplier": 0.8,
+    "commentary": "The portfolio leans heavily toward equity beta (overall \u03b2\u22481.2) with core low\u2011vol long exposure in SPY and VTI. Tech\u2011heavy names (QQQ, MSFT, NVDA) add high\u2011beta, high\u2011volatility tail risk and are flagged as fragile. Given the mixed signals, we stay modestly constructive but limit overall risk exposure. Adjustments are small, nudging the core long ETFs slightly higher and trimming the fragile, high\u2011beta positions.",
     "brain_model": "nvidia:openai/gpt-oss-120b",
     "counsellors": {
-      "openai": "**Risk posture:** Moderately constructive but equity-concentrated, with substantial overlap between SPY/VTI and growth exposure through QQQ/NVDA. Portfolio beta is elevated, and NVDA/MSFT carry high volatility. Maintain disciplined sizing; avoid treating ETF diversification as tr",
-      "grok": "**Risk posture:** Mixed-to-cautious. Broad beta (SPY/VTI) offers mild positive composite at contained vol; tech sleeve (QQQ/MSFT/NVDA) is flat-to-negative with weaker alpha and elevated vol/beta\u2014net portfolio skews defensive, liquidity-sensitive.\n\n**Conviction adjustments** (rang",
+      "openai": "Overall posture: **moderately constructive but equity-beta heavy**, with substantial overlap between SPY/VTI and latent technology exposure. QQQ/NVDA add high-beta concentration; diversification benefit is limited. Volatility and downside sensitivity warrant disciplined sizing ra",
+      "grok": "**Risk-aware view (advisory only):**\n\nOverall posture: Mildly constructive but uneven. Broad beta (SPY/VTI) offers stable low-vol longs; QQQ/NVDA add pro-cyclical risk; MSFT drags on negative alpha. Net: moderate equity risk with tech fragility\u2014favor diversification over concentr",
       "gemini": "",
-      "nvidia": "**Risk posture:** The slate is equity\u2011heavy with market\u2011beta \u22481.2 and aggregate volatility \u22480.18. Two flat, high\u2011beta names (MSFT, NVDA) carry negative alpha and elevated vol, making the tilt vulnerable to a market pull\u2011back or sector shock.  \n\n**Conviction tweaks (\u00b10.15):**  \n- "
+      "nvidia": "**Risk posture:** The mix leans heavily toward equity\u2011beta exposure (\u03b2\u22481.2 overall) with two high\u2011vol, high\u2011beta names (NVDA, MSFT) that dominate tail risk. Broad\u2011market ETFs (SPY, VTI) provide a modest cushion, but the net tilt is slightly aggressive given the negative composite"
     }
   },
   "positions": [
@@ -1198,9 +1198,41 @@
       "cash": -65623.95773060061,
       "realized_pnl": -43.42332663306,
       "premium": 0.0
+    },
+    {
+      "ts": "2026-07-31T04:39:18.123223+00:00",
+      "cycle": 92,
+      "equity": 1680.823745664394,
+      "cash": -65623.95773060061,
+      "realized_pnl": -43.42332663306,
+      "premium": 0.0
     }
   ],
   "decisions": [
+    {
+      "ts": "2026-07-31T04:39:15.551897+00:00",
+      "kind": "halt_block",
+      "symbol": "NTRS",
+      "purpose": "copy_buy"
+    },
+    {
+      "ts": "2026-07-31T04:39:15.551766+00:00",
+      "kind": "halt_block",
+      "symbol": "COE",
+      "purpose": "copy_buy"
+    },
+    {
+      "ts": "2026-07-31T04:39:14.908878+00:00",
+      "kind": "wheel_wait",
+      "symbol": "VTI",
+      "reason": "no put contract found"
+    },
+    {
+      "ts": "2026-07-31T04:39:14.833372+00:00",
+      "kind": "ladder_update",
+      "symbol": "SPY",
+      "reason": "px 742.71 peak 745.16 gain +1%"
+    },
     {
       "ts": "2026-07-31T01:13:07.359522+00:00",
       "kind": "halt_block",
@@ -1325,30 +1357,6 @@
     },
     {
       "ts": "2026-07-30T17:11:42.464415+00:00",
-      "kind": "wheel_wait",
-      "symbol": "VTI",
-      "reason": "no put contract found"
-    },
-    {
-      "ts": "2026-07-30T17:11:42.373546+00:00",
-      "kind": "ladder_update",
-      "symbol": "SPY",
-      "reason": "px 739.88 peak 745.16 gain +1%"
-    },
-    {
-      "ts": "2026-07-30T15:33:17.767045+00:00",
-      "kind": "wheel_wait",
-      "symbol": "VTI",
-      "reason": "no put contract found"
-    },
-    {
-      "ts": "2026-07-30T15:33:17.689535+00:00",
-      "kind": "ladder_update",
-      "symbol": "SPY",
-      "reason": "px 735.30 peak 745.16 gain +0%"
-    },
-    {
-      "ts": "2026-07-30T13:33:29.055807+00:00",
       "kind": "wheel_wait",
       "symbol": "VTI",
       "reason": "no put contract found"
