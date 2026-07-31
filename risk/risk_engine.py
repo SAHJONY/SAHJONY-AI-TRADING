@@ -7,6 +7,7 @@ No proposal that fails ANY check is allowed to reach the broker.
 """
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 
 from config import Config, HARD_MAX_ALLOCATION_PCT
@@ -29,13 +30,11 @@ class RiskEngine:
     def position_budget(self, equity: float, conviction: float, risk_mult: float) -> float:
         """Notional a single new position may use, scaled by conviction × risk.
 
-        Venue minimums matter for small accounts: on a $10 sleeve even a maximum
-        -conviction signal sizes ~$0.75, below the $1 minimum every venue enforces,
-        so *every* order would be rejected and the desk could never trade. A
-        sub-minimum budget is therefore rounded UP to the venue minimum — but only
-        when that still fits inside the per-position cap. If it doesn't, return 0
-        rather than sending an order that is guaranteed to bounce.
+        Venue minimums matter for small accounts: a sub-minimum budget is rounded
+        up only when the venue minimum still fits inside the position cap.
         """
+        if not all(math.isfinite(value) for value in (equity, conviction, risk_mult)):
+            return 0.0
         cap = equity * self.cfg.max_allocation_pct
         budget = max(0.0, cap * max(0.0, min(1.0, conviction)) * max(0.0, min(1.0, risk_mult)))
         floor = max(0.0, float(getattr(self.cfg, "min_order_notional", 0.0) or 0.0))
@@ -53,8 +52,23 @@ class RiskEngine:
 
     def approve(self, equity: float, deployed_value: float, intended_notional: float,
                 conviction: float, symbol: str) -> RiskDecision:
+        values = {
+            "equity": equity,
+            "deployed value": deployed_value,
+            "intended notional": intended_notional,
+            "conviction": conviction,
+        }
+        for name, value in values.items():
+            if not math.isfinite(value):
+                return RiskDecision(False, f"invalid {name}")
         if equity <= 0:
             return RiskDecision(False, "non-positive equity")
+        if deployed_value < 0:
+            return RiskDecision(False, "negative deployed value")
+        if intended_notional < 0:
+            return RiskDecision(False, "negative intended notional")
+        if not symbol or not symbol.strip():
+            return RiskDecision(False, "missing symbol")
         if conviction < self.cfg.min_council_conviction:
             return RiskDecision(False, f"conviction {conviction:.0%} < floor "
                                        f"{self.cfg.min_council_conviction:.0%}")

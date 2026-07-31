@@ -74,6 +74,13 @@ class Config:
     ccxt_password: str = ""        # some exchanges require an API passphrase
     ccxt_sandbox: bool = True      # testnet/paper by default
     ccxt_quote: str = "USDT"       # quote currency for equity valuation
+    # Robinhood (BROKER=robinhood) — official Crypto Trading API (Ed25519-signed).
+    # There is NO paper venue; this is real money, so it is double-locked: it only
+    # arms when robinhood_live is set AND the desk-wide live_trading_ack is set.
+    robinhood_api_key: str = ""
+    robinhood_private_key: str = ""   # base64 Ed25519 private key from the RH app
+    robinhood_live: bool = False      # arm THIS venue for real orders (ROBINHOOD_LIVE)
+    robinhood_quote: str = "USD"      # quote currency for crypto pairs (BTC-USD)
     # Real-money safety: live orders are refused unless this is explicitly set.
     # Set LIVE_TRADING_ACK="I_UNDERSTAND_REAL_MONEY" to arm live (with ALPACA_PAPER=false).
     live_trading_ack: bool = False
@@ -115,6 +122,11 @@ class Config:
     # Dollar-based (fractional) equity orders — lets a small account buy a slice of
     # an expensive stock instead of rounding to 0 shares. Crypto is always fractional.
     allow_fractional: bool = True
+    # Conservative simulation costs. These affect research accounting only and
+    # cannot change broker execution permissions.
+    sim_slippage_bps: float = 5.0
+    sim_commission_per_share: float = 0.005
+    sim_option_fee_per_contract: float = 0.65
 
     # wheel
     wheel_put_otm_pct: float = 0.10
@@ -181,14 +193,18 @@ class Config:
     ai_brain_enabled: bool = False
     # These are FALLBACK defaults. With auto_update_models on (default), the brain
     # autonomously resolves each provider's latest model at run time (latest Fable
-    # for Claude, latest flagship GPT / Grok for the counsellors) and only falls
+    # for Claude, latest frontier GPT / Grok for the co-strategists) and only falls
     # back to these IDs when the lookup can't run (no key / offline / API error).
     anthropic_model: str = "claude-fable-5"    # PRIMARY brain (Claude Fable 5)
-    openai_model: str = "gpt-4o"               # counsellor (OpenAI / GPT)
+    openai_model: str = "gpt-5.6"              # frontier co-strategist + fallback brain
     xai_model: str = "grok-4"                  # counsellor (Grok / xAI); grok-2 retired
     gemini_model: str = "gemini-2.5-pro"       # counsellor (Gemini / Google)
     # Autonomously keep every provider on its newest model (owner directive).
     auto_update_models: bool = True
+    ai_shadow_enabled: bool = True
+    ai_shadow_min_observations: int = 100
+    institutional_multiplier_enabled: bool = False
+    institutional_max_data_age_seconds: int = 345600
 
     # Cross-desk shared knowledge: pool Hermes strategy-calibration across a paper
     # "trainer" desk and the live desk (both trading the same universe). Bounded by
@@ -204,6 +220,23 @@ class Config:
     @property
     def has_credentials(self) -> bool:
         return bool(self.alpaca_api_key and self.alpaca_secret_key)
+
+    @property
+    def venue_configured(self) -> bool:
+        """True when the selected broker has enough credentials/config to attempt a
+        real connection. When True but the adapter is still offline-sim, that's a
+        genuine connection failure worth flagging; when False, offline-sim is the
+        expected safe default (no creds) and not an error."""
+        b = self.broker
+        if b == "alpaca":
+            return self.has_credentials
+        if b == "ibkr":
+            return True   # always attempts a local TWS/Gateway connection
+        if b == "ccxt":
+            return bool(self.ccxt_api_key and self.ccxt_secret)
+        if b == "robinhood":
+            return bool(self.robinhood_api_key and self.robinhood_private_key)
+        return False
 
     @property
     def always_on(self) -> bool:
@@ -236,6 +269,10 @@ def load_config() -> Config:
         ccxt_password=os.getenv("CCXT_PASSWORD", "").strip(),
         ccxt_sandbox=_b("CCXT_SANDBOX", True),
         ccxt_quote=(os.getenv("CCXT_QUOTE", "USDT") or "USDT").strip().upper(),
+        robinhood_api_key=os.getenv("ROBINHOOD_API_KEY", "").strip(),
+        robinhood_private_key=os.getenv("ROBINHOOD_PRIVATE_KEY", "").strip(),
+        robinhood_live=_b("ROBINHOOD_LIVE", False),
+        robinhood_quote=(os.getenv("ROBINHOOD_QUOTE", "USD") or "USD").strip().upper(),
         live_trading_ack=(os.getenv("LIVE_TRADING_ACK", "").strip() == "I_UNDERSTAND_REAL_MONEY"),
         tickers=_list("TICKERS", "AAPL,MSFT,SPY"),
         benchmark=(os.getenv("BENCHMARK", "SPY") or "SPY").strip().upper(),
@@ -284,6 +321,9 @@ def load_config() -> Config:
         day_trade_stop_pct=_clamp(_f("DAY_TRADE_STOP_PCT", 0.01), 0.002, 0.10),
         day_trade_max_units=max(1, _i("DAY_TRADE_MAX_UNITS", 100)),
         day_trade_min_signal=_clamp(_f("DAY_TRADE_MIN_SIGNAL", 0.55), 0.50, 0.95),
+        sim_slippage_bps=_clamp(_f("SIM_SLIPPAGE_BPS", 5.0), 0.0, 100.0),
+        sim_commission_per_share=_clamp(_f("SIM_COMMISSION_PER_SHARE", 0.005), 0.0, 1.0),
+        sim_option_fee_per_contract=_clamp(_f("SIM_OPTION_FEE_PER_CONTRACT", 0.65), 0.0, 10.0),
         firm_name=(os.getenv("FIRM_NAME", "SAHJONY CAPITAL LLC") or "SAHJONY CAPITAL LLC").strip(),
         public_base_url=(os.getenv("PUBLIC_BASE_URL", "") or "").strip().rstrip("/"),
         voice_alerts=_b("VOICE_ALERTS", False),
@@ -291,10 +331,16 @@ def load_config() -> Config:
         voice_name=(os.getenv("VOICE_NAME", "june") or "june").strip(),
         ai_brain_enabled=_b("AI_BRAIN_ENABLED", False),
         anthropic_model=(os.getenv("ANTHROPIC_MODEL", "claude-fable-5") or "claude-fable-5").strip(),
-        openai_model=(os.getenv("OPENAI_MODEL", "gpt-4o") or "gpt-4o").strip(),
+        openai_model=(os.getenv("OPENAI_MODEL", "gpt-5.6") or "gpt-5.6").strip(),
         xai_model=(os.getenv("XAI_MODEL", "grok-4") or "grok-4").strip(),
         gemini_model=(os.getenv("GEMINI_MODEL", "gemini-2.5-pro") or "gemini-2.5-pro").strip(),
         auto_update_models=_b("AUTO_UPDATE_MODELS", True),
+        ai_shadow_enabled=_b("AI_SHADOW_ENABLED", True),
+        ai_shadow_min_observations=max(20, _i("AI_SHADOW_MIN_OBSERVATIONS", 100)),
+        institutional_multiplier_enabled=_b("INSTITUTIONAL_MULTIPLIER_ENABLED", False),
+        institutional_max_data_age_seconds=max(
+            60, _i("INSTITUTIONAL_MAX_DATA_AGE_SECONDS", 345600)
+        ),
         shared_knowledge=_b("SHARED_KNOWLEDGE", True),
         knowledge_role=(os.getenv("KNOWLEDGE_ROLE", "") or os.getenv("BROKER", "desk") or "desk").strip().lower(),
         cycle_minutes=max(1, _i("CYCLE_MINUTES", 15)),

@@ -96,6 +96,10 @@ ENV_CATALOG = [
     ("TRADING_HALT", "Risk", False, "true = kill switch (suspend new risk)"),
     ("VOL_TARGET_ANNUAL", "Risk", False, "vol targeting (0.20 = 20%; 0 disables)"),
     ("DAY_TRADING_ENABLED", "Day Trading / Forex", False, "intraday FX desk on/off"),
+    ("INSTITUTIONAL_MULTIPLIER_ENABLED", "Institutional Multiplier", False,
+     "requires governed canary promotion before sizing orders"),
+    ("INSTITUTIONAL_MAX_DATA_AGE_SECONDS", "Institutional Multiplier", False,
+     "reject older research bars (default 4 days)"),
     ("FOREX_PAIRS", "Day Trading / Forex", False, "FX universe, e.g. EUR/USD,GBP/USD"),
     ("DAY_TRADE_SYMBOLS", "Day Trading / Forex", False, "extra intraday symbols"),
     ("DAY_TRADE_TARGET_PCT", "Day Trading / Forex", False, "intraday profit target"),
@@ -191,10 +195,24 @@ def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[st
     db = firm.db
     client = firm.client
     mode = getattr(client, "mode", cfg.mode)   # broker-accurate (Alpaca/IBKR/sim)
-    eq = cycle_result.get("equity", state.get("equity_last") or 0.0)
-    eq0 = state.get("equity_start") or eq or 1.0
+    # Real-money armed = a LIVE venue that the operator has deliberately acked.
+    live_armed = bool(mode == "LIVE" and cfg.live_trading_ack)
+    _tag_mode = {"LIVE": "LIVE — REAL MONEY", "paper": "PAPER",
+                 "offline-sim": "OFFLINE SIM"}.get(mode, str(mode).upper())
+    eq = float(cycle_result.get("equity", state.get("equity_last") or 0.0) or 0.0)
+    raw_eq0 = float(state.get("equity_start") or 0.0)
+
+    # An unfunded account has no valid performance baseline.
+    # Do not invent a $1 starting value or report a false -100% return.
+    eq0 = raw_eq0 if raw_eq0 > 0.0 else eq
     realized = state.get("realized_pnl", 0.0)
     premium = state.get("premium_collected", 0.0)
+    # Internal strategy-book P&L is not broker-verified unless a future
+    # reconciliation process explicitly attests it against venue records.
+    pnl_source = str(state.get("pnl_source") or mode)
+    pnl_broker_verified = bool(
+        state.get("pnl_broker_verified", False) and mode == "LIVE" and live_armed
+    )
 
     council = []
     for r in cycle_result.get("research", []):
@@ -221,6 +239,45 @@ def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[st
             "unrealized": round((price - pos.get("cost_basis", price)) * shares, 2) if shares else 0.0,
         })
 
+    # Broker-reported account + holdings straight from the adapter (e.g. Robinhood's
+    # own numbers), shown next to the desk's internal book so the two reconcile.
+    # Every call is fault-isolated in the adapter; guard again here so the snapshot
+    # never fails to build.
+    try:
+        b_acct = client.get_account() or {}
+    except Exception:
+        b_acct = {}
+    broker_holdings = []
+    try:
+        for sym, h in (client.get_broker_positions() or {}).items():
+            broker_holdings.append({
+                "symbol": sym,
+                "qty": round(float(h.get("qty", 0.0) or 0.0), 8),
+                "avg_price": round(float(h.get("avg_price", 0.0) or 0.0), 2),
+                "market_value": round(float(h.get("market_value", 0.0) or 0.0), 2),
+            })
+    except Exception:
+        pass
+    broker_account = {
+        "venue": cfg.broker,
+        "mode": mode,
+        "online": client.online,
+        "live_armed": live_armed,
+        "equity": round(float(b_acct.get("equity", 0.0) or 0.0), 2),
+        "cash": round(float(b_acct.get("cash", 0.0) or 0.0), 2),
+        "buying_power": round(float(b_acct.get("buying_power", 0.0) or 0.0), 2),
+        "holdings": broker_holdings,
+    }
+
+    # Robinhood/venue account roster from accounts.yaml (AccountOrchestrator) —
+    # masked identifiers only (***last4), so the snapshot stays secret-free.
+    # Fault-isolated: a missing/broken accounts.yaml never sinks the snapshot.
+    try:
+        from accounts.orchestrator import AccountOrchestrator
+        accounts_block = AccountOrchestrator(os.path.join(_ROOT, "accounts.yaml")).summary()
+    except Exception:
+        accounts_block = {"count": 0, "enabled": 0, "accounts": []}
+
     brain = cycle_result.get("brain")
     brain_block = {"enabled": cfg.ai_brain_enabled, "used": getattr(brain, "used", False)}
     if brain is not None:
@@ -228,7 +285,9 @@ def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[st
             "posture": brain.posture, "global_risk_multiplier": round(brain.global_risk_multiplier, 3),
             "commentary": brain.commentary, "brain_model": brain.brain_model,
             "counsellors": brain.counsellors,
+            "telemetry": brain.telemetry,
         })
+    brain_block["shadow_evaluation"] = cycle_result.get("ai_shadow") or {}
 
     # Benchmark (buy-and-hold SPY) anchored at the desk's first cycle, persisted in
     # state — gives an HONEST alpha-vs-market number instead of a bare return.
@@ -246,13 +305,53 @@ def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[st
     except Exception:  # benchmark is informational — never break the cycle
         bench = {}
 
+    from intelligence.strategy_ranking import rank_strategies
+    from intelligence.global_performance import global_performance
+    from intelligence.self_improvement import self_improvement_score
+    strategy_ranking = rank_strategies(state, cycle_result.get("ai_shadow") or {})
+    from intelligence.promotion_pipeline import PromotionPipeline
+    promotion_engine = PromotionPipeline(db)  # Canary and Production remain disabled.
+    promotion_engine.sync({"key": row["key"], "name": row["name"], "kind": "strategy"}
+                          for row in strategy_ranking)
+    promotion = promotion_engine.snapshot()
+    from promotion import producer_health
+    promotion["producer_health"] = producer_health()
+    promotion_by_key = {row["key"]: row for row in promotion["candidates"]}
+    for row in strategy_ranking:
+        row["promotion_stage"] = promotion_by_key[row["key"]]["stage"]
+    performance = global_performance(db.equity_history_regime(500))
+    improvement = self_improvement_score(
+        state, cycle_result.get("ai_shadow") or {}, cfg.ai_shadow_min_observations
+    )
+    try:
+        audit_chain = db.verify_audit_chain()
+    except Exception as exc:
+        audit_chain = {"valid": False, "entries": 0, "error": type(exc).__name__}
+    from observability.firm_health import assess_firm_health
+    hermes_report = cycle_result.get("hermes")
+    institutional_health = assess_firm_health(
+        mode=mode, audit_chain=audit_chain,
+        reconciliation=cycle_result.get("reconciliation") or {},
+        producer_health=promotion.get("producer_health") or {},
+        quarantined=list(getattr(hermes_report, "quarantined", []) or []),
+        shadow_observations=int(improvement.get("observation_count", 0) or 0),
+        shadow_minimum=cfg.ai_shadow_min_observations,
+        cost_model_enabled=(cfg.sim_slippage_bps > 0),
+        broker_online=bool(client.online), pnl_broker_verified=pnl_broker_verified,
+        production_policy_enabled=bool(promotion.get("production_enabled", False)),
+    )
     return {
         "firm": cfg.firm_name,
-        "tagline": "Autonomous multi-agent quant trading — PAPER",
+        "tagline": f"Autonomous multi-agent quant trading — {_tag_mode}",
         "mode": mode,
+        "broker": cfg.broker,
         "benchmark": bench,
         "ts": _now(),
         "cycle": state.get("cycle", 0),
+        "strategy_ranking": strategy_ranking,
+        "promotion_pipeline": promotion,
+        "global_performance": performance,
+        "self_improvement": improvement,
         "account": {
             "equity": round(eq, 2), "equity_start": round(eq0, 2),
             "cash": round(cycle_result.get("cash", 0.0), 2),
@@ -260,12 +359,16 @@ def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[st
         },
         "pnl": {
             "realized": round(realized, 2), "premium_collected": round(premium, 2),
-            "total_return_pct": round((eq / eq0 - 1.0) * 100, 3) if eq0 else 0.0,
+            "transaction_costs": round(float(state.get("transaction_costs", 0.0) or 0.0), 2),
+            "total_return_pct": round((eq / eq0 - 1.0) * 100, 3) if eq0 > 0.0 else 0.0,
+            "source": pnl_source, "broker_verified": pnl_broker_verified,
         },
         "capital": _capital_block(db, eq, eq0),
         "capital_flows": db.capital_ledger(20),
         "health": {
             "mode": mode,
+            "broker": cfg.broker,
+            "live_armed": live_armed,
             "broker_online": client.online,
             "market_open": client.is_market_open(),
             "risk_caps": {"per_position_pct": cfg.max_allocation_pct,
@@ -291,6 +394,19 @@ def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[st
         "council": council,
         "brain": brain_block,
         "positions": positions,
+        "broker_account": broker_account,
+        "reconciliation": cycle_result.get("reconciliation") or {
+            "status": "unavailable", "reconciled": False,
+            "execution_blocked": True, "error": "no reconciliation evidence",
+        },
+        "audit_chain": audit_chain,
+        "institutional_health": institutional_health,
+        "institutional_intelligence": cycle_result.get("institutional_intelligence") or {
+            "execution_authority": False, "coverage": 0.0,
+            "market": {"regime": "unknown", "advisory_risk_multiplier": 0.5},
+            "factors": {},
+        },
+        "accounts": accounts_block,
         "crm": db.fund_summary(),
         "recent_trades": db.recent_trades(15),
         "equity_curve": db.equity_history_regime(150),

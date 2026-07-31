@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 
@@ -28,6 +28,10 @@ class MarketSnapshot:
     closes: np.ndarray
     volumes: np.ndarray
     bench_closes: np.ndarray = field(default_factory=lambda: np.array([]))
+    bar_timestamps: np.ndarray = field(default_factory=lambda: np.array([], dtype=object))
+    retrieved_at: Optional[str] = None
+    feed_timestamp: Optional[str] = None
+    exchange_timestamp: Optional[str] = None
 
     @property
     def returns(self) -> np.ndarray:

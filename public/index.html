@@ -107,6 +107,14 @@
   @keyframes fd{0%{background:rgba(255,92,108,.22)}100%{background:transparent}}
   .mpill{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:1px;padding:5px 11px;border-radius:7px;
     border:1px solid var(--line2);text-transform:uppercase;box-shadow:inset 0 0 12px rgba(255,255,255,.02)}
+  #liveBanner{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;
+    text-align:center;padding:7px 12px;color:#fff;background:linear-gradient(90deg,#5c0f16,#a01824,#5c0f16);
+    border-bottom:1px solid var(--down);box-shadow:0 2px 18px rgba(255,92,108,.35);animation:livePulse 2.4s ease-in-out infinite}
+  #liveBanner b{color:var(--amber2)}
+  @keyframes livePulse{0%,100%{opacity:1}50%{opacity:.72}}
+  #haltBanner{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;
+    text-align:center;padding:7px 12px;color:#1a1205;background:linear-gradient(90deg,#c8890f,#ffb000,#c8890f);
+    border-bottom:1px solid var(--amber2)}
   .btn{font-family:var(--mono);font-size:11px;background:rgba(255,255,255,.025);border:1px solid var(--line2);color:var(--txt);
     border-radius:7px;padding:6px 11px;cursor:pointer;white-space:nowrap;transition:all .18s}
   .btn:hover{border-color:var(--amber);color:var(--amber2);box-shadow:0 0 14px rgba(255,176,0,.18)}
@@ -311,12 +319,15 @@
   <span class="stat mono" id="freshStat" title="Data freshness — time since the desk last updated this snapshot" style="display:none"><span class="dot" id="dFresh"></span><span id="freshTxt">—</span></span>
   <span class="badge" id="viewerBadge" style="display:none" title="Shareable read-only view — no changes can be made from here">◇ VIEW ONLY</span>
   <span class="mpill" id="mode">—</span>
+  <button class="btn" id="killBtn" style="display:none" title="Kill switch — suspend all new orders instantly (exits still allowed)">⛔ STOP</button>
   <a class="btn" id="account" href="./login.html">SIGN IN</a>
   <button class="btn" id="voiceLang" title="Voice language — English / Español" aria-label="Toggle voice language, English or Spanish">🌐 EN</button>
   <button class="btn" id="voiceWake" title="Hands-free — say “Hey Sahjony …” to command" aria-label="Toggle hands-free wake word">👂 WAKE</button>
   <button class="btn" id="voiceBtn" title="Voice control — click and speak (English / Español)" aria-label="Voice control — click and speak">🎙️ VOICE</button>
   <button class="btn" onclick="load()" title="Refresh data now" aria-label="Refresh data now">↻</button>
 </header>
+<div id="liveBanner" style="display:none">⚠ LIVE — REAL MONEY ARMED · orders use real funds on <b id="liveVenue">—</b> · hard risk ceilings enforced</div>
+<div id="haltBanner" style="display:none">⛔ TRADING HALTED · new risk suspended (kill switch) · exits still allowed · tap RESUME to trade again</div>
 
 <div class="tape"><div class="track" id="tape"></div></div>
 <nav id="nav"></nav>
@@ -329,7 +340,7 @@
 <script src="./config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const TABS = ["Parquet","Perf","Markets","Macro","News","Council","Book","Brain","Controls","Workforce","Env"];
+const TABS = ["Parquet","Perf","Markets","Macro","News","Council","Book","Brain","War Room","Operations","Controls","Workforce","Env"];
 let DATA=null, TAB="Parquet", SESSION=null, DESK=null, CREDS=[];
 let MARKETS={list:[],err:null,ts:0};            // CoinGecko crypto (no key)
 let NEWS={list:[],err:null,ts:0,src:''};        // Finnhub (key) or GDELT (no key)
@@ -366,9 +377,26 @@ function relAge(ms){const s=Math.max(0,Math.round(ms/1000));
   if(m<60)return m+"m ago";const h=Math.round(m/60);
   if(h<48)return h+"h ago";return Math.round(h/24)+"d ago";}
 const FRESH_WARN_MS=20*60*1000, FRESH_STALE_MS=45*60*1000;  // snapshot cadence ~15min
+function snapshotAgeMs(){
+  const t=(typeof DATA!=='undefined'&&DATA&&DATA.ts)?tsMs(DATA.ts):null;
+  return t==null?Infinity:Math.max(0,Date.now()-t);
+}
+function snapshotIsFresh(){return snapshotAgeMs()<FRESH_STALE_MS;}
+function runtimeAgeMs(){
+  const t=(typeof RH!=='undefined'&&RH&&RH.updated)?tsMs(RH.updated):null;
+  return t==null?Infinity:Math.max(0,Date.now()-t);
+}
+function runtimeIsFresh(){return !!(RH&&RH.read_only&&RH.agentic&&RH.agentic.identity_verified&&runtimeAgeMs()<10*60*1000);}
+function runtimeAccount(){
+  if(!runtimeIsFresh())return null;
+  return {equity:+RH.total_value||+RH.agentic.equity||0,cash:+RH.cash||+RH.agentic.cash||0,
+    buying_power:+RH.buying_power||+RH.agentic.buying_power||0,
+    deployed:Math.max(0,(+RH.total_value||0)-(+RH.cash||0)),positions:RH.positions||[]};
+}
 function updateFreshness(){
   const stat=document.getElementById('freshStat');if(!stat)return;
-  const t=(typeof DATA!=='undefined'&&DATA&&DATA.ts)?tsMs(DATA.ts):null;
+  const live=runtimeIsFresh();
+  const t=live?tsMs(RH.updated):((typeof DATA!=='undefined'&&DATA&&DATA.ts)?tsMs(DATA.ts):null);
   if(t==null){stat.style.display='none';return;}
   stat.style.display='';
   const age=Date.now()-t,dot=document.getElementById('dFresh'),txt=document.getElementById('freshTxt');
@@ -376,7 +404,7 @@ function updateFreshness(){
   stat.classList.remove('warn','stale');
   if(age>=FRESH_STALE_MS){stat.classList.add('stale');dot.className='dot r';stat.title='STALE — the desk has not updated this snapshot recently. The worker may be stopped.';}
   else if(age>=FRESH_WARN_MS){stat.classList.add('warn');dot.className='dot a';stat.title='Aging — snapshot older than one update cycle.';}
-  else{dot.className='dot g';stat.title='Fresh — snapshot within the normal update cadence.';}
+  else{dot.className='dot g';stat.title=live?'Fresh authenticated Robinhood runtime data.':'Fresh desk snapshot within the normal update cadence.';}
 }
 setInterval(()=>{const el=document.getElementById('clock');if(el)el.textContent=new Date().toISOString().slice(11,19)+" UTC";updateFreshness();},1000);
 
@@ -396,8 +424,7 @@ async function refreshCreds(){
   try{ const {data}=await SB.from('broker_credentials').select('name').eq('desk_id',DESK.id);
     CREDS=(data||[]).map(r=>r.name); }catch(e){ CREDS=[]; }
 }
-// Live data straight from GitHub (raw) so the dashboard is always current and never
-// frozen by Vercel deploy limits; falls back to the co-located snapshot if needed.
+// Prefer the snapshot shipped with this deployment. GitHub is only a fallback.
 const STATUS_REMOTE='https://raw.githubusercontent.com/SAHJONY/SAHJONY-AI-TRADING/master/public/status.json';
 // The firm is several desks: the LIVE Robinhood crypto desk plus the paper
 // sandboxes (Alpaca crypto trainer, Alpaca stock desk). Each publishes its own
@@ -438,16 +465,20 @@ async function load(){
 // Live real-money Robinhood snapshot (managed via the Robinhood MCP, written to
 // public/robinhood.json). Read-only on the dashboard — displayed alongside, and
 // kept strictly separate from, the paper desk. Absent file = panel hidden.
-// Fetch from GitHub raw FIRST (same as status.json): a fresh MCP snapshot is
-// published the instant it's committed to master, with no Vercel deploy needed
-// (the free tier caps deploys/day, and the 15-min desk commits burn that quota).
+// Prefer the snapshot deployed with this dashboard, then fall back to GitHub.
 const RH_REMOTE='https://raw.githubusercontent.com/SAHJONY/SAHJONY-AI-TRADING/master/public/robinhood.json';
+const RH_RUNTIME='./api/runtime-status';
 let RH=null;
 async function fetchRobinhood(){
-  try{ const r=await fetch(RH_REMOTE+'?_='+Date.now(),{cache:'no-store'}); if(!r.ok)throw 0; RH=await r.json(); return; }
+  try{ const r=await fetch(RH_RUNTIME+'?_='+Date.now(),{cache:'no-store'}); if(!r.ok)throw 0; RH=await r.json(); return; }
   catch(_){}
-  try{ const r=await fetch('./robinhood.json?_='+Date.now(),{cache:'no-store'}); RH=r.ok?await r.json():null; }
-  catch(_){ RH=null; }
+  // Local files are useful for development only. In production they are static
+  // deployment artifacts and must never masquerade as current broker evidence.
+  if(/^(localhost|127\.0\.0\.1)$/.test(location.hostname)){
+    try{ const r=await fetch('./robinhood.json?_='+Date.now(),{cache:'no-store'}); if(!r.ok)throw 0; RH=await r.json(); return; }
+    catch(_){}
+  }
+  RH=null;
 }
 
 // ── free live market & news feeds (run in the browser) ──────────────────────
@@ -925,7 +956,7 @@ function heatColor(s){const v=Math.max(-1,Math.min(1,+s||0));const a=(0.16+0.66*
 
 // ── animated KPI count-up (ticks from previous value on each refresh) ──
 const LASTKPI={};
-function fmtVal(type,n){return type==='pct'?pct(n):money(n);}
+function fmtVal(type,n){return type==='pct'?pct(n):type==='text'?'UNAVAILABLE':type==='disabled'?'DISABLED':type==='count'?String(Math.round(n||0)):money(n);}
 function animateCounts(scope){
   scope.querySelectorAll('[data-to]').forEach(el=>{
     const key=el.getAttribute('data-key'),to=+el.getAttribute('data-to'),type=el.getAttribute('data-fmt')||'money';
@@ -988,12 +1019,35 @@ function ringGauge(frac,big,label,color){
 function setStatus(){
   const h=(DATA&&DATA.health)||{};
   const md=document.getElementById('mode'); const m=(DATA&&DATA.mode)||'—';
-  md.textContent=m;
-  const c = m==='LIVE'?'var(--down)':(m==='paper'?'var(--up)':'var(--amber)');
+  const rt=runtimeIsFresh(),venue=rt?'Robinhood':((DATA&&DATA.broker)||h.broker||'');
+  const mLabel = rt?'LIVE DATA · READ ONLY':(m==='LIVE'?'LIVE':(m==='paper'?'PAPER':(m==='offline-sim'?'SIM':(m==='live-data'?'LIVE DATA':m))));
+  md.textContent = venue ? `${venue.toUpperCase()} · ${mLabel}` : mLabel;
+  const c = rt?'var(--cyan)':(m==='LIVE'?'var(--down)':(m==='paper'?'var(--up)':(m==='live-data'?'var(--cyan)':'var(--amber)')));
   md.style.color=c; md.style.borderColor=c;
+  // Honest real-money banner: only when a LIVE venue is deliberately armed.
+  const armed=!!h.live_armed;
+  const lb=document.getElementById('liveBanner');
+  if(lb){ lb.style.display=armed?'':'none';
+    const lv=document.getElementById('liveVenue'); if(lv)lv.textContent=(venue||'broker').toUpperCase(); }
+  // Always-visible kill switch (owner + Supabase desk): one tap from any device.
+  // Writes desk.halt → the worker turns it into TRADING_HALT next cycle.
+  const kb=document.getElementById('killBtn');
+  if(kb){
+    if(SESSION && DESK){
+      kb.style.display='';
+      if(DESK.halt){ kb.textContent='▶ RESUME'; kb.style.color='var(--up)'; kb.style.borderColor='var(--up)';
+        kb.onclick=()=>sbUpdate({halt:false}); }
+      else { kb.textContent='⛔ STOP'; kb.style.color='var(--down)'; kb.style.borderColor='var(--down)';
+        kb.onclick=()=>sbUpdate({halt:true}); }
+    } else { kb.style.display='none'; }
+  }
+  // Halt banner: owner's remote kill switch OR the engine's circuit breaker.
+  const halted=(DESK&&DESK.halt)||((h.circuit_breaker||{}).halted);
+  const hbn=document.getElementById('haltBanner'); if(hbn)hbn.style.display=halted?'':'none';
   const db=document.getElementById('dBroker'), dm=document.getElementById('dMkt');
-  document.getElementById('brokerTxt').textContent = h.broker_online?'LIVE FEED':'OFFLINE SIM';
-  db.className='dot '+(h.broker_online?'g':'a');
+  document.getElementById('brokerTxt').textContent =
+    (venue?venue.toUpperCase()+' ':'') + (rt?'AUTHENTICATED':(h.broker_online?'LIVE FEED':'OFFLINE SIM'));
+  db.className='dot '+(rt||h.broker_online?'g':'a');
   document.getElementById('mktTxt').textContent = h.market_open?'OPEN':'CLOSED';
   // 90-day evaluation countdown — the window is what makes the final number mean
   // something, so keep it in sight rather than buried in a file.
@@ -1006,8 +1060,9 @@ function setStatus(){
         +(ev.active?'':' · WINDOW CLOSED — time to judge the result'); }
     else eb.style.display='none';
   }
-  const lb=document.getElementById('liveBadge');
-  if(lb) lb.style.display = (String(DATA.mode||'').toUpperCase()==='LIVE' && ACTIVE_DESK==='live') ? '' : 'none';
+  const liveBadge=document.getElementById('liveBadge');
+  if(liveBadge) liveBadge.style.display =
+    (String(DATA.mode||'').toUpperCase()==='LIVE' && ACTIVE_DESK==='live') ? '' : 'none';
   dm.className='dot '+(h.market_open?'g':'r');
   document.getElementById('cycTxt').textContent = (DATA&&DATA.cycle)||'0';
   const acc=document.getElementById('account');
@@ -1027,9 +1082,10 @@ function setStatus(){
 function buildTape(){
   const t=document.getElementById('tape'); if(!t)return;
   const parts=[];
+  const archive=!snapshotIsFresh();
   ((DATA&&DATA.council)||[]).forEach(c=>{const upd=c.direction==='long';const col=upd?'var(--up)':(c.direction==='short'?'var(--down)':'var(--mut)');
     const arr=upd?'▲':(c.direction==='short'?'▼':'■');
-    parts.push(`<span class="tk"><b>${esc(c.symbol)}</b> ${money(c.price)} <span style="color:${col}">${arr} ${(c.conviction*100).toFixed(0)}%</span></span>`);});
+    parts.push(`<span class="tk" title="${archive?'Archived simulation snapshot':'Current desk snapshot'}"><b>${archive?'ARCHIVE · ':''}${esc(c.symbol)}</b> ${money(c.price)} <span style="color:${col}">${arr} ${(c.conviction*100).toFixed(0)}%</span></span>`);});
   cryptoRows().slice(0,14).forEach(m=>{const up=(m.pct||0)>=0;const col=up?'var(--up)':'var(--down)';
     parts.push(`<span class="tk"><b>${esc(m.sym)}</b> ${money(m.price)} <span style="color:${col}">${up?'▲':'▼'} ${(m.pct||0).toFixed(2)}%</span></span>`);});
   if(!parts.length){t.innerHTML='<span class="tk mut">awaiting market data…</span>';return;}
@@ -1044,11 +1100,52 @@ function render(){
   document.getElementById('firm').textContent=(DATA.firm||'SAHJONY CAPITAL').replace(/ LLC$/,'');
   setStatus(); buildTape();
   const _tms=tsMs(DATA.ts), _when=_tms!=null?`${new Date(_tms).toLocaleString()} (${relAge(Date.now()-_tms)})`:'time unknown';
+  const _fresh=snapshotIsFresh();
   document.getElementById('foot').textContent =
-    `cycle ${DATA.cycle} · ${_when} · ${DESK?'LIVE via Supabase':'static snapshot'} · auto-refresh 30s`;
+    runtimeIsFresh()?`Robinhood Agentic ••••${esc(RH.agentic.account_number_last4)} · authenticated ${relAge(runtimeAgeMs())} · read-only · auto-refresh 30s`:
+    `cycle ${DATA.cycle} · ${_when} · ${_fresh&&DESK?'LIVE via Supabase':(_fresh?'current snapshot':'ARCHIVED simulation snapshot')} · auto-refresh 30s`;
   updateFreshness();
   v.innerHTML="";
-  ({Parquet,Perf,Markets,Macro,News,Council,Book,Brain,Controls,Workforce,Env}[TAB]||Parquet)(v);
+  if(!_fresh&&!runtimeIsFresh()){
+    v.appendChild($(`<div class="cb span12" style="border-color:var(--amber);background:rgba(255,184,77,.08);color:var(--amber)">
+      ⚠ <b>ARCHIVED SIMULATION DATA</b> — equities, NAV, P&amp;L, council signals, positions, and activity below are ${esc(relAge(snapshotAgeMs()))} old and are not real-time broker truth. Live crypto/market widgets are labeled separately. Trading authority remains disabled.
+    </div>`));
+  } else if(runtimeIsFresh()&&!_fresh){
+    v.appendChild($(`<div class="cb span12" style="border-color:var(--cyan);background:rgba(42,216,240,.08);color:var(--cyan)">
+      ● <b>AUTHENTICATED ROBINHOOD DATA</b> — account balances and positions below are current read-only broker telemetry. Research analytics remain archived and are labeled separately. Trading authority remains disabled.
+    </div>`));
+  }
+  ({Parquet,Perf,Markets,Macro,News,Council,Book,Brain,"War Room":WarRoom,Operations,Controls,Workforce,Env}[TAB]||Parquet)(v);
+}
+
+// ── AI War Room: permanent shadow-learning leaderboard ──
+function WarRoom(v){
+  const wrap=$(`<div class="panel span12"></div>`);
+  wrap.innerHTML=`<div class="ph"><h3>AI War Room</h3><span class="x">shadow evaluation · no order authority</span></div>
+    <div class="pb" style="padding:0;overflow:hidden">
+      <div class="row" style="padding:10px 14px;border-bottom:1px solid var(--line2)">
+        <span class="commentary">Live model leaderboard, promotion gates, calibration, latency, and learning progress.</span>
+        <a class="btn" href="./ai-war-room" target="_blank" rel="noopener">OPEN FULL SCREEN ↗</a>
+      </div>
+      <iframe src="./ai-war-room.html" title="SAHJONY AI War Room" loading="eager"
+        style="display:block;width:100%;height:clamp(620px,78vh,1050px);border:0;background:#070a10"></iframe>
+    </div>`;
+  v.appendChild(wrap);
+}
+
+// ── Operations: account, broker, workforce, risk, and execution command center ──
+function Operations(v){
+  const wrap=$(`<div class="panel span12"></div>`);
+  wrap.innerHTML=`<div class="ph"><h3>Operations Command Center</h3><span class="x">read-only operational visibility</span></div>
+    <div class="pb" style="padding:0;overflow:hidden">
+      <div class="row" style="padding:10px 14px;border-bottom:1px solid var(--line2)">
+        <span class="commentary">Broker identity, funding readiness, AI workforce, risk controls, strategies, and execution pipeline.</span>
+        <a class="btn" href="./operations" target="_blank" rel="noopener">OPEN FULL SCREEN ↗</a>
+      </div>
+      <iframe src="./operations.html" title="SAHJONY Operations Command Center" loading="eager"
+        style="display:block;width:100%;height:clamp(680px,82vh,1150px);border:0;background:#070a10"></iframe>
+    </div>`;
+  v.appendChild(wrap);
 }
 
 // ── Performance: honest, data-driven scorecard (proves or disproves the desk) ──
@@ -1182,23 +1279,24 @@ function treemap(positions,H=300){
 }
 
 function kpis(){
-  const a=DATA.account||{},p=DATA.pnl||{}; const ret=p.total_return_pct||0;
+  const live=runtimeAccount(),a=live||(DATA.account||{}),p=DATA.pnl||{}; const ret=p.total_return_pct||0;
+  const verified=p.broker_verified===true;
   const CY='#2ad8f0',VI='#9b8cff',AM='#ffb000',UP='#34e3a8',DN='#ff5c6c';
   const eqVals=(DATA.equity_curve||[]).map(x=>+x.equity||0);
   // [label, numericValue, fmt, cssClass, accentColor, sparkSVG]
   const tiles=[
-    ['Equity / NAV',a.equity,'money','',CY, miniSpark(eqVals,CY)],
-    ['Total Return',ret,'pct',ret>=0?'up':'down', ret>=0?UP:DN, ''],
+    [live?'Robinhood Account Value':'Equity / NAV',a.equity,'money','',CY, live?'':miniSpark(eqVals,CY)],
+    [live?'Broker Return':'Total Return',live?null:ret,live?'text':'pct',ret>=0?'up':'down', live?AM:(ret>=0?UP:DN), ''],
     ['Cash',a.cash,'money','',VI,''],
     ['Deployed',a.deployed,'money','',AM,''],
-    ['Realized P&L',p.realized,'money',(p.realized||0)>=0?'up':'down',(p.realized||0)>=0?UP:DN,''],
-    ['Premium',p.premium_collected,'money','',AM,''],
+    [live?'Authenticated Positions':'Simulated Realized P&L',live?a.positions.length:p.realized,live?'count':'money','',live?UP:((p.realized||0)>=0?UP:DN),''],
+    [live?'Execution Authority':'Premium',live?null:p.premium_collected,live?'disabled':'money','',AM,''],
   ];
   const g=$(`<div class="kpis"></div>`);
   tiles.forEach(([l,val,fmt,c,accent,spark],i)=>g.appendChild($(
     `<div class="kpi" style="--accent:${accent}">
        <div class="l">${l}</div>
-       <div class="v ${c}" data-key="k${i}" data-to="${Number(val||0)}" data-fmt="${fmt}">${fmtVal(fmt,val||0)}</div>
+       <div class="v ${c}" data-key="k${i}" data-to="${Number(val||0)}" data-fmt="${fmt}">${fmt==='text'?'UNAVAILABLE':fmt==='count'?String(val||0):fmt==='disabled'?'DISABLED':fmtVal(fmt,val||0)}</div>
        ${spark}
      </div>`)));
   animateCounts(g);
@@ -1207,13 +1305,31 @@ function kpis(){
 
 function cbBanner(){
   const cb=(DATA.health&&DATA.health.circuit_breaker)||{};
+  if(runtimeIsFresh()) return `<div class="cb ok">● <b>AUTHENTICATED READ-ONLY BROKER DATA</b> — Agentic ••••${esc(RH.agentic.account_number_last4)} · execution authority disabled · no order routes.</div>`;
+  if(DATA.mode!=='LIVE') return `<div class="cb" style="border-color:var(--amber);background:linear-gradient(90deg,rgba(255,176,0,.12),transparent);color:#ffe9b0">⚠ <b>SIMULATION / RESEARCH ACCOUNTING</b> — P&amp;L is not reconciled to Robinhood fills or statements.</div>`;
   if(cb.halted) return `<div class="cb halt">⛔ <b>NEW RISK HALTED</b> — ${esc(cb.reason||'')}</div>`;
   return `<div class="cb ok">● TRADING ACTIVE · day P&L ${pct((cb.day_return||0)*100)} · auto-halt at −${((cb.limit_pct||0)*100).toFixed(0)}%</div>`;
 }
 
 function Parquet(v){
   const root=$(`<div></div>`);
+  root.appendChild($(cbBanner()));
   root.appendChild(kpis());
+  if(runtimeIsFresh()){
+    const liveGrid=$(`<div class="grid c12" style="margin-top:12px"></div>`);
+    liveGrid.appendChild(robinhoodPanel());
+    liveGrid.appendChild(panel('Live Data Safety State',
+      `<div class="row"><span class="mut">Source</span><span class="tag on">ROBINHOOD MCP · AUTHENTICATED</span></div>
+       <div class="row"><span class="mut">Account</span><span class="mono">Agentic ••••${esc(RH.agentic.account_number_last4)}</span></div>
+       <div class="row"><span class="mut">Data age</span><span class="mono">${esc(relAge(runtimeAgeMs()))}</span></div>
+       <div class="row"><span class="mut">Execution authority</span><span class="tag off">DISABLED</span></div>
+       <div class="row"><span class="mut">Trading ready</span><span class="tag off">FALSE</span></div>`,
+      'broker truth only', 'span6'));
+    liveGrid.appendChild(panel('Research Archive',
+      `<div class="commentary">Simulation NAV, P&amp;L, council signals, and activity are ${esc(relAge(snapshotAgeMs()))} old and are intentionally excluded from this real-time account view. Use PERF or COUNCIL only as archived research context.</div>`,
+      'not broker truth', 'span6'));
+    root.appendChild(liveGrid); v.appendChild(root); return;
+  }
   const g=$(`<div class="grid c12" style="margin-top:12px"></div>`);
 
   // AI market read (synthesis of council + brain + macro intelligence)
@@ -1268,6 +1384,15 @@ function Parquet(v){
    ['Daily-loss halt',(rc.daily_drawdown_pct*100||0).toFixed(0)+'%']]
    .forEach(([k,val])=>riskBody.appendChild($(`<div class="row"><span class="mut">${k}</span><span class="tag amber">${val}</span></div>`)));
   g.appendChild(panel('Risk Gatekeeper', riskBody, '', 'span4'));
+
+  // broker/venue account (e.g. Robinhood) — the venue's own numbers
+  const bh=(DATA.broker_account&&DATA.broker_account.holdings||[]).length;
+  g.appendChild(panel('Venue Account', brokerPanel(),
+    ((DATA.broker_account&&DATA.broker_account.venue)||DATA.broker||'—').toUpperCase()+' · '+bh+' held', 'span4'));
+
+  // Robinhood account roster (masked ids from accounts.yaml)
+  g.appendChild(panel('Robinhood Accounts', accountsPanel(),
+    (((DATA.accounts||{}).accounts)||[]).length+' configured', 'span8'));
 
   // positions blotter
   const posBody=positionsTable();
@@ -1391,6 +1516,67 @@ function Council(v){
   v.appendChild(g);
 }
 
+// ── broker/venue account + holdings (the venue's own numbers, e.g. Robinhood) ──
+function brokerPanel(){
+  const b=DATA.broker_account||{};
+  const venue=(b.venue||DATA.broker||'broker').toUpperCase();
+  const feed = b.online?(b.live_armed?'LIVE · REAL MONEY':'LIVE FEED'):'OFFLINE SIM';
+  const feedCol = b.online?(b.live_armed?'var(--down)':'var(--up)'):'var(--amber)';
+  const box=$(`<div></div>`);
+  box.appendChild($(`<div class="row" style="margin-bottom:9px">
+    <span class="mut">Venue</span><span><b>${esc(venue)}</b>
+    <span class="tag" style="color:${feedCol};border-color:${feedCol}">${feed}</span></span></div>`));
+  const stat=(k,val)=>`<div class="row"><span class="mut">${k}</span><span class="mono"><b>${val}</b></span></div>`;
+  box.appendChild($(`<div>${stat('Equity',money(b.equity))}${stat('Cash',money(b.cash))}${stat('Buying power',money(b.buying_power))}</div>`));
+  // Reconciliation: broker-reported equity vs the desk's internal book. A drift
+  // beyond ~1% flags an unaccounted fill or account activity outside the desk.
+  const deskEq=(DATA.account||{}).equity||0;
+  const drift=(+b.equity||0)-deskEq, driftPct=deskEq?drift/deskEq*100:0;
+  const ok=Math.abs(driftPct)<=1;
+  const dcol=ok?'var(--up)':'var(--down)';
+  box.appendChild($(`<div class="row" title="Broker-reported equity minus the desk's internal book equity">
+    <span class="mut">Recon vs desk</span>
+    <span class="mono"><b style="color:${dcol}">${drift>=0?'+':''}${money(drift)} · ${driftPct>=0?'+':''}${driftPct.toFixed(2)}%</b>
+    <span class="tag" style="color:${dcol};border-color:${dcol};margin-left:6px">${ok?'✓ IN SYNC':'⚠ DRIFT'}</span></span></div>`));
+  const hold=b.holdings||[];
+  if(!hold.length){ box.appendChild($(`<div class="empty" style="margin-top:9px">no broker-reported holdings ${b.online?'':'(run the desk on this venue to populate)'}</div>`)); }
+  else{
+    const wrap=$(`<div class="scroll" style="margin-top:9px"></div>`);
+    const t=$(`<table><thead><tr><th>ASSET</th><th class="n">QTY</th><th class="n">AVG</th><th class="n">MKT VALUE</th></tr></thead><tbody></tbody></table>`);
+    const tb=t.querySelector('tbody');
+    hold.slice().sort((a,b)=>(+b.market_value||0)-(+a.market_value||0)).forEach(h=>tb.appendChild($(`<tr>
+      <td class="amber">${esc(h.symbol)}</td><td class="n">${num(h.qty,8)}</td>
+      <td class="n">${h.avg_price?money(h.avg_price):'—'}</td><td class="n">${money(h.market_value)}</td></tr>`)));
+    wrap.appendChild(t); box.appendChild(wrap);
+  }
+  return box;
+}
+// ── Robinhood/venue account roster (accounts.yaml via AccountOrchestrator) ──
+// Masked identifiers only (***last4) — the snapshot is secret-free by design.
+function accountsPanel(){
+  const accs=((DATA.accounts||{}).accounts)||[];
+  if(!accs.length) return $(`<div class="empty">no accounts configured — add them to accounts.yaml</div>`);
+  const wrap=$(`<div class="scroll"></div>`);
+  const t=$(`<table><thead><tr><th>ACCOUNT</th><th>NUMBER</th><th>TYPE</th><th>ASSETS</th><th>EXECUTION</th><th>MODE</th></tr></thead><tbody></tbody></table>`);
+  const tb=t.querySelector('tbody');
+  accs.forEach(a=>{
+    const exec = a.execution_mode==='api'
+      ? (a.adapter_ready?'<span class="tag on">API · READY</span>':'<span class="tag amber">API · NOT READY</span>')
+      : '<span class="tag">MONITOR ONLY</span>';
+    const modeTag = a.paper?'<span class="tag on">PAPER</span>'
+      : '<span class="tag" style="color:var(--down);border-color:var(--down)">LIVE</span>';
+    tb.appendChild($(`<tr>
+      <td class="amber">${esc(a.display_name||a.id)}</td>
+      <td class="mono">${esc(a.account_number_masked||'—')}</td>
+      <td class="mut">${esc((a.institution||'')+' '+(a.account_type||''))}</td>
+      <td class="mut">${esc(a.asset_class||'')}${a.symbols&&a.symbols.length?' · '+esc(a.symbols.slice(0,4).join(', ')):''}</td>
+      <td>${exec}</td><td>${modeTag}</td></tr>`));
+  });
+  wrap.appendChild(t);
+  const box=$(`<div></div>`); box.appendChild(wrap);
+  box.appendChild($(`<div class="empty" style="margin-top:8px">Numbers are masked (***last4). The engine's live connection is the Venue Account panel; MONITOR ONLY accounts are tracked but never traded.</div>`));
+  return box;
+}
 // ── LIVE real-money Robinhood account (read-only mirror of the MCP account) ──
 function robinhoodPanel(){
   const r=RH||{}, pos=r.positions||[], ord=r.orders||[];
@@ -1399,13 +1585,13 @@ function robinhoodPanel(){
   body.innerHTML=`
     <div class="cb" style="border-color:var(--down);background:linear-gradient(90deg,rgba(255,92,108,.13),transparent);color:#ffd0d5;margin-bottom:10px">
       🔴 <b>REAL MONEY</b> — live ${esc(r.broker||'Robinhood')} account ${esc(r.account_mask||'')}${r.nickname?` · “${esc(r.nickname)}”`:''}.
-      Managed autonomously via the Robinhood MCP. This is <b>separate from the paper desk</b> above and is shown read-only.
+      Authenticated through the Robinhood MCP. This is <b>separate from the paper desk</b> above and is strictly read-only.
     </div>
     <div class="kpis" style="margin-bottom:10px">
       <div class="kpi" style="--accent:var(--down)"><div class="l">Account Value</div><div class="v">${money(r.total_value)}</div></div>
       <div class="kpi" style="--accent:var(--cyan)"><div class="l">Buying Power</div><div class="v">${money(r.buying_power)}</div></div>
       <div class="kpi"><div class="l">Cash</div><div class="v">${money(r.cash)}</div></div>
-      <div class="kpi" style="--accent:var(--amber)"><div class="l">In Open Orders</div><div class="v">${money(r.committed_open_orders)}</div></div>
+      <div class="kpi" style="--accent:var(--amber)"><div class="l">Robinhood Realized P&amp;L</div><div class="v">Unavailable</div></div>
     </div>`;
   // holdings
   if(pos.length){
@@ -1437,6 +1623,11 @@ function robinhoodPanel(){
 function Book(v){
   const g=$(`<div class="grid c12"></div>`);
   if(RH&&RH.live) g.appendChild(robinhoodPanel());
+  const bh=(DATA.broker_account&&DATA.broker_account.holdings||[]).length;
+  g.appendChild(panel('Robinhood Accounts · roster', accountsPanel(),
+    (((DATA.accounts||{}).accounts)||[]).length+' accounts', 'span12'));
+  g.appendChild(panel('Venue Account · broker-reported', brokerPanel(),
+    ((DATA.broker_account&&DATA.broker_account.venue)||DATA.broker||'—').toUpperCase()+' · '+bh+' holdings', 'span12'));
   g.appendChild(panel('Positions Treemap · value × P&L', treemap(DATA.positions), (DATA.positions||[]).length+' holdings', 'span12'));
   g.appendChild(panel('Positions Blotter', positionsTable(), (DATA.positions||[]).length+' open', 'span12'));
   // recent trades

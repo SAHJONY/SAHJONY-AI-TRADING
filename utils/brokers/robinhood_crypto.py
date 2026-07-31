@@ -28,6 +28,7 @@ API shape (official): host https://trading.robinhood.com
 from __future__ import annotations
 
 import base64
+from datetime import datetime, timezone
 import json
 import os
 import time
@@ -221,14 +222,18 @@ class RobinhoodCryptoBroker:
                 log.warning("CoinGecko %s → HTTP %s; using flat fallback", cid, r.status_code)
                 return None
             data = r.json() or {}
-            closes = np.array([p[1] for p in (data.get("prices") or []) if p and p[1] is not None],
-                              dtype=float)
+            prices = [(p[0], p[1]) for p in (data.get("prices") or [])
+                      if p and len(p) >= 2 and p[1] is not None and np.isfinite(float(p[1]))]
+            closes = np.array([p[1] for p in prices], dtype=float)
+            timestamps = np.array([p[0] for p in prices], dtype=object)
             vols = np.array([v[1] for v in (data.get("total_volumes") or []) if v and v[1] is not None],
                             dtype=float)
-            closes = closes[np.isfinite(closes)]
             if closes.size < 2:
                 return None
-            return {"closes": closes, "volumes": vols[np.isfinite(vols)]}
+            return {"closes": closes, "volumes": vols[np.isfinite(vols)],
+                    "timestamps": timestamps,
+                    "retrieved_at": datetime.now(timezone.utc).isoformat(),
+                    "feed_timestamp": timestamps[-1] if timestamps.size else None}
         except Exception as exc:  # network / parse / rate-limit — degrade, don't crash
             log.warning("CoinGecko history(%s) failed: %s — using flat fallback", symbol, exc)
             return None
@@ -327,3 +332,21 @@ class RobinhoodCryptoBroker:
 
     def submit_option_order(self, contract: str, qty: int, side: str, premium: float = 0.0) -> Dict:
         return {"status": "rejected", "reason": "Robinhood Crypto has no options"}
+
+    def get_order_status(self, order_id: str, symbol: str = "") -> Dict:
+        """Normalize Robinhood's order state for the workforce reconciliation gate."""
+        if not self.online:
+            return {"status": "unknown", "order_id": order_id, "simulated": True}
+        result = self._request("GET", f"/api/v1/crypto/trading/orders/{order_id}/")
+        raw = str(result.get("state") or result.get("status") or "").lower()
+        if raw in {"filled", "completed"}:
+            status = "filled"
+        elif raw in {"cancelled", "canceled", "rejected", "expired", "failed"}:
+            status = raw
+        else:
+            status = "submitted"
+        normalized = {"status": status, "order_id": order_id, "simulated": False}
+        average = result.get("average_price") or result.get("avg_price")
+        if average not in (None, ""):
+            normalized["fill_price"] = float(average)
+        return normalized

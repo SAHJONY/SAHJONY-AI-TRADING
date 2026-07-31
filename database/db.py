@@ -14,6 +14,7 @@ connection, and typed helpers. Uses WAL for safe concurrent reads.
 from __future__ import annotations
 
 import json
+import hashlib
 import os
 import sqlite3
 from datetime import datetime, timezone
@@ -112,6 +113,39 @@ CREATE TABLE IF NOT EXISTS events (
     kind          TEXT,
     detail        TEXT
 );
+CREATE TABLE IF NOT EXISTS execution_intents (
+    intent_id     TEXT PRIMARY KEY,
+    created_at    TEXT NOT NULL,
+    updated_at    TEXT NOT NULL,
+    cycle         INTEGER,
+    payload       TEXT NOT NULL,
+    status        TEXT NOT NULL,
+    broker_ref    TEXT,
+    detail        TEXT NOT NULL DEFAULT '{}'
+);
+CREATE TABLE IF NOT EXISTS audit_ledger (
+    sequence      INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts            TEXT NOT NULL,
+    kind          TEXT NOT NULL,
+    payload       TEXT NOT NULL,
+    prev_hash     TEXT NOT NULL,
+    entry_hash    TEXT NOT NULL UNIQUE
+);
+CREATE TABLE IF NOT EXISTS ai_shadow_observations (
+    id                INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts                TEXT NOT NULL,
+    provider          TEXT NOT NULL,
+    symbol            TEXT NOT NULL,
+    base_conviction   REAL,
+    adjustment        REAL,
+    risk_multiplier   REAL,
+    forward_return    REAL,
+    turnover_cost_bps REAL,
+    latency_ms        REAL,
+    schema_valid      INTEGER,
+    fallback_used     INTEGER,
+    direction         TEXT
+);
 CREATE TABLE IF NOT EXISTS capital_ledger (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
     ts            TEXT NOT NULL,
@@ -120,6 +154,41 @@ CREATE TABLE IF NOT EXISTS capital_ledger (
     method        TEXT,                                -- ach | wire | alpaca | paper_reset | manual
     equity_after  REAL,                                -- account equity right after the flow
     note          TEXT
+);
+CREATE TABLE IF NOT EXISTS promotion_candidates (
+    key           TEXT PRIMARY KEY,
+    name          TEXT NOT NULL,
+    kind          TEXT NOT NULL DEFAULT 'strategy',
+    stage         TEXT NOT NULL DEFAULT 'research',
+    evidence      TEXT NOT NULL DEFAULT '{}',
+    approvals     TEXT NOT NULL DEFAULT '{}',
+    created_at    TEXT NOT NULL,
+    updated_at    TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS promotion_events (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts            TEXT NOT NULL,
+    candidate_key TEXT NOT NULL,
+    from_stage    TEXT NOT NULL,
+    to_stage      TEXT NOT NULL,
+    action        TEXT NOT NULL,
+    actor         TEXT NOT NULL,
+    allowed       INTEGER NOT NULL,
+    reason        TEXT NOT NULL,
+    detail        TEXT NOT NULL DEFAULT '{}'
+);
+CREATE TABLE IF NOT EXISTS promotion_artifacts (
+    artifact_id   TEXT PRIMARY KEY,
+    candidate_key TEXT NOT NULL,
+    stage         TEXT NOT NULL,
+    created_at    TEXT NOT NULL,
+    source        TEXT NOT NULL,
+    payload       TEXT NOT NULL,
+    payload_hash  TEXT NOT NULL,
+    signature     TEXT,
+    signer        TEXT,
+    verified      INTEGER NOT NULL,
+    ingested_at   TEXT NOT NULL
 );
 """
 
@@ -200,6 +269,194 @@ class Database:
         self.conn.execute("INSERT INTO events (ts,kind,detail) VALUES (?,?,?)",
                           (_now(), kind, json.dumps(detail)))
         self.conn.commit()
+
+    def reserve_execution_intent(self, intent_id: str, cycle: int,
+                                 payload: Dict[str, Any]) -> bool:
+        """Atomically reserve an intent. False means it was already seen."""
+        now = _now()
+        try:
+            self.conn.execute(
+                """INSERT INTO execution_intents
+                   (intent_id,created_at,updated_at,cycle,payload,status,detail)
+                   VALUES (?,?,?,?,?,'reserved','{}')""",
+                (intent_id, now, now, cycle,
+                 json.dumps(payload, sort_keys=True, separators=(",", ":"))),
+            )
+            self.conn.commit()
+            return True
+        except sqlite3.IntegrityError:
+            self.conn.rollback()
+            return False
+
+    def update_execution_intent(self, intent_id: str, status: str, *,
+                                broker_ref: str = "", detail: Dict[str, Any] | None = None) -> None:
+        allowed = {"reserved", "submitted", "filled", "failed", "reconciled"}
+        if status not in allowed:
+            raise ValueError("invalid execution intent status")
+        cursor = self.conn.execute(
+            """UPDATE execution_intents SET updated_at=?,status=?,broker_ref=?,detail=?
+               WHERE intent_id=?""",
+            (_now(), status, broker_ref,
+             json.dumps(detail or {}, sort_keys=True, separators=(",", ":")), intent_id),
+        )
+        if cursor.rowcount != 1:
+            self.conn.rollback()
+            raise KeyError("execution intent is not reserved")
+        self.conn.commit()
+
+    def append_audit(self, kind: str, payload: Dict[str, Any]) -> str:
+        """Append a canonical hash-chained audit entry and return its digest."""
+        ts = _now()
+        canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+        row = self.conn.execute(
+            "SELECT entry_hash FROM audit_ledger ORDER BY sequence DESC LIMIT 1"
+        ).fetchone()
+        previous = row["entry_hash"] if row else "0" * 64
+        digest = hashlib.sha256(
+            f"{previous}\n{ts}\n{kind}\n{canonical}".encode("utf-8")
+        ).hexdigest()
+        self.conn.execute(
+            """INSERT INTO audit_ledger (ts,kind,payload,prev_hash,entry_hash)
+               VALUES (?,?,?,?,?)""", (ts, kind, canonical, previous, digest),
+        )
+        self.conn.commit()
+        return digest
+
+    def verify_audit_chain(self) -> Dict[str, Any]:
+        previous = "0" * 64
+        count = 0
+        for row in self.conn.execute("SELECT * FROM audit_ledger ORDER BY sequence"):
+            expected = hashlib.sha256(
+                f"{previous}\n{row['ts']}\n{row['kind']}\n{row['payload']}".encode("utf-8")
+            ).hexdigest()
+            if row["prev_hash"] != previous or row["entry_hash"] != expected:
+                return {"valid": False, "entries": count,
+                        "failed_sequence": row["sequence"]}
+            previous, count = row["entry_hash"], count + 1
+        return {"valid": True, "entries": count, "head": previous}
+
+    def log_ai_shadow_observations(self, rows: List[Dict[str, Any]]) -> None:
+        self.conn.executemany(
+            """INSERT INTO ai_shadow_observations
+               (ts,provider,symbol,base_conviction,adjustment,risk_multiplier,
+                forward_return,turnover_cost_bps,latency_ms,schema_valid,
+                fallback_used,direction) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
+            [(row.get("ts"), row.get("provider"), row.get("symbol"),
+              row.get("base_conviction"), row.get("adjustment"), row.get("risk_multiplier"),
+              row.get("forward_return"), row.get("turnover_cost_bps"), row.get("latency_ms"),
+              1 if row.get("schema_valid", True) else 0,
+              1 if row.get("fallback_used", False) else 0, row.get("direction"))
+             for row in rows],
+        )
+        self.conn.commit()
+
+    # ── governed research / strategy promotion pipeline ─────────────────────
+    @staticmethod
+    def _promotion_row(row) -> Optional[Dict[str, Any]]:
+        if row is None:
+            return None
+        item = dict(row)
+        item["evidence"] = json.loads(item.get("evidence") or "{}")
+        item["approvals"] = json.loads(item.get("approvals") or "{}")
+        return item
+
+    def upsert_promotion_candidate(self, key: str, name: str,
+                                   kind: str = "strategy") -> Dict[str, Any]:
+        now = _now()
+        self.conn.execute(
+            """INSERT INTO promotion_candidates
+               (key,name,kind,stage,evidence,approvals,created_at,updated_at)
+               VALUES (?,?,?,'research','{}','{}',?,?)
+               ON CONFLICT(key) DO UPDATE SET name=excluded.name, kind=excluded.kind,
+                 updated_at=excluded.updated_at""",
+            (key, name, kind, now, now),
+        )
+        self.conn.commit()
+        return self.promotion_candidate(key)
+
+    def update_promotion_candidate(self, key: str, *, stage: str = None,
+                                   evidence: Dict[str, Any] = None,
+                                   approvals: Dict[str, Any] = None) -> None:
+        current = self.promotion_candidate(key)
+        if current is None:
+            raise KeyError(key)
+        self.conn.execute(
+            """UPDATE promotion_candidates SET stage=?, evidence=?, approvals=?, updated_at=?
+               WHERE key=?""",
+            (stage or current["stage"], json.dumps(evidence if evidence is not None else current["evidence"]),
+             json.dumps(approvals if approvals is not None else current["approvals"]), _now(), key),
+        )
+        self.conn.commit()
+
+    def promotion_candidate(self, key: str) -> Optional[Dict[str, Any]]:
+        row = self.conn.execute("SELECT * FROM promotion_candidates WHERE key=?", (key,)).fetchone()
+        return self._promotion_row(row)
+
+    def promotion_candidates(self) -> List[Dict[str, Any]]:
+        rows = self.conn.execute("SELECT * FROM promotion_candidates ORDER BY name").fetchall()
+        return [self._promotion_row(row) for row in rows]
+
+    def log_promotion_event(self, candidate_key: str, from_stage: str, to_stage: str,
+                            action: str, actor: str, allowed: bool, reason: str,
+                            detail: Dict[str, Any]) -> None:
+        self.conn.execute(
+            """INSERT INTO promotion_events
+               (ts,candidate_key,from_stage,to_stage,action,actor,allowed,reason,detail)
+               VALUES (?,?,?,?,?,?,?,?,?)""",
+            (_now(), candidate_key, from_stage, to_stage, action, actor,
+             1 if allowed else 0, reason, json.dumps(detail)),
+        )
+        self.conn.commit()
+
+    def promotion_events(self, limit: int = 50) -> List[Dict[str, Any]]:
+        rows = self.conn.execute(
+            "SELECT * FROM promotion_events ORDER BY id DESC LIMIT ?", (max(1, int(limit)),)
+        ).fetchall()
+        result = []
+        for row in rows:
+            item = dict(row)
+            item["allowed"] = bool(item["allowed"])
+            item["detail"] = json.loads(item.get("detail") or "{}")
+            result.append(item)
+        return result
+
+    def promotion_artifact(self, artifact_id: str) -> Optional[Dict[str, Any]]:
+        row = self.conn.execute(
+            "SELECT * FROM promotion_artifacts WHERE artifact_id=?", (artifact_id,)
+        ).fetchone()
+        if row is None:
+            return None
+        item = dict(row)
+        item["payload"] = json.loads(item["payload"])
+        item["verified"] = bool(item["verified"])
+        return item
+
+    def record_promotion_artifact(self, artifact: Dict[str, Any]) -> Dict[str, Any]:
+        """Append an artifact once; an artifact id can never be mutated."""
+        existing = self.promotion_artifact(artifact["artifact_id"])
+        if existing:
+            if existing["payload_hash"] != artifact["payload_hash"]:
+                raise ValueError("artifact id already exists with different content")
+            return existing
+        self.conn.execute(
+            """INSERT INTO promotion_artifacts
+               (artifact_id,candidate_key,stage,created_at,source,payload,payload_hash,
+                signature,signer,verified,ingested_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+            (artifact["artifact_id"], artifact["candidate_key"], artifact["stage"],
+             artifact["created_at"], artifact["source"], json.dumps(artifact["payload"],
+             sort_keys=True, separators=(",", ":")), artifact["payload_hash"],
+             artifact.get("signature"), artifact.get("signer"),
+             1 if artifact.get("verified") else 0, _now()),
+        )
+        self.conn.commit()
+        return self.promotion_artifact(artifact["artifact_id"])
+
+    def promotion_artifacts(self, limit: int = 100) -> List[Dict[str, Any]]:
+        rows = self.conn.execute(
+            "SELECT artifact_id FROM promotion_artifacts ORDER BY ingested_at DESC LIMIT ?",
+            (max(1, int(limit)),),
+        ).fetchall()
+        return [self.promotion_artifact(row["artifact_id"]) for row in rows]
 
     # ── CRM ledger ───────────────────────────────────────────────────────────
     def upsert_investor(self, name, email=None, phone=None, kind="lead", notes=None) -> int:
@@ -303,7 +560,7 @@ class Database:
 
     def equity_history(self, limit: int = 500) -> List[Dict[str, Any]]:
         rows = self.conn.execute(
-            "SELECT ts,cycle,equity,cash,realized_pnl,premium FROM equity_curve"
+            "SELECT ts,cycle,equity,cash,deployed,realized_pnl,premium FROM equity_curve"
             " ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
         return [dict(r) for r in reversed(rows)]
 

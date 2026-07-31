@@ -23,6 +23,24 @@ wrapper/cron at it. Each home has its **own** `HALT` file, so you can stop one
 account (`touch ~/desks/btc/HALT`) without touching the others. Separate
 processes run genuinely in parallel.
 
+**The wrapper ships as `scripts/desk.sh`.** Each desk is a gitignored env file
+in `desks/<name>.env` (copy the committed `*.env.example`) with its own
+`SAHJONY_HOME` under `desks/homes/<name>`:
+
+```bash
+cp desks/robinhood-crypto.env.example desks/robinhood-crypto.env   # add RH keys
+cp desks/alpaca-equities.env.example  desks/alpaca-equities.env    # add Alpaca keys
+
+scripts/desk.sh robinhood-crypto --preflight   # read-only check (no orders)
+scripts/desk.sh robinhood-crypto --loop &      # crypto desk, 24/7
+scripts/desk.sh alpaca-equities  --loop &      # equities desk (paper), in parallel
+scripts/desk.sh robinhood-crypto off           # per-desk kill switch (on|off|status)
+```
+
+The launcher never arms live trading — each desk arms only via the deliberate
+opt-ins inside its own env file (GO_LIVE.md §D/§E), and the hard risk ceilings
+apply per desk.
+
 ## 2. 24/7/365 trading — crypto
 Crypto markets never close, so a crypto desk trades around the clock.
 

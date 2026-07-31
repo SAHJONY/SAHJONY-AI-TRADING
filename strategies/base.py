@@ -6,6 +6,7 @@ Execution Trader do that. This keeps domain logic testable and I/O isolated.
 """
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 from typing import Dict, Optional
 
@@ -74,3 +75,36 @@ class OrderIntent:
     @property
     def is_order(self) -> bool:
         return self.kind in ("equity", "option")
+
+def validate_order_intent(intent: OrderIntent) -> str | None:
+    """Return a blocker for malformed broker-bound orders, otherwise ``None``.
+
+    This gate is intentionally independent of ``risk_check``: exits must remain
+    possible during a risk halt, but malformed exits must never reach a broker.
+    """
+    if not intent.is_order:
+        return "intent is not a broker order"
+    if not str(intent.symbol or "").strip():
+        return "missing symbol"
+
+    allowed_sides = {
+        "equity": {"buy", "sell"},
+        "option": {"buy_to_open", "sell_to_open", "buy_to_close", "sell_to_close"},
+    }
+    if intent.side not in allowed_sides[intent.kind]:
+        return f"invalid {intent.kind} side"
+    if intent.kind == "option" and not str(intent.contract or "").strip():
+        return "missing option contract"
+
+    for name in ("qty", "est_notional", "strike", "premium"):
+        try:
+            value = float(getattr(intent, name))
+        except (TypeError, ValueError):
+            return f"invalid {name.replace('_', ' ')}"
+        if not math.isfinite(value):
+            return f"invalid {name.replace('_', ' ')}"
+        if name == "qty" and value <= 0:
+            return "quantity must be positive"
+        if name != "qty" and value < 0:
+            return f"negative {name.replace('_', ' ')}"
+    return None

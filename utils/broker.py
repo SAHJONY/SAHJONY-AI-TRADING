@@ -75,6 +75,13 @@ def get_broker(cfg: Config):
         # Verify auth read-only first: python -m scripts.robinhood_check
         from utils.brokers.robinhood_crypto import RobinhoodCryptoBroker
         return _verify(RobinhoodCryptoBroker(cfg))
-    raise ValueError(f"Unknown BROKER '{name}'. Registered: alpaca, ibkr, ccxt, robinhood_crypto. "
-                     f"Implement an adapter (see utils/brokers/template_adapter.py) "
-                     f"and register it in utils/broker.py.")
+    if name in ("robinhood_mcp", "robinhood_agentic", "rh_mcp"):
+        # Dedicated Robinhood Agentic equity account through an authenticated local
+        # MCP gateway. Identity and real-money order submission are fail-closed.
+        from utils.brokers.robinhood_mcp import RobinhoodMCPBroker
+        return _verify(RobinhoodMCPBroker(cfg))
+    raise ValueError(
+        f"Unknown BROKER '{name}'. Registered: alpaca, ibkr, ccxt, "
+        "robinhood_crypto, robinhood_mcp. Implement an adapter "
+        "(see utils/brokers/template_adapter.py) and register it in utils/broker.py."
+    )

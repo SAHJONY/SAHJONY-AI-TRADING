@@ -1,0 +1,47 @@
+name: Promotion Evidence Producers
+
+on:
+  workflow_dispatch:
+    inputs:
+      stage:
+        description: Evidence stage produced by the completed research job
+        required: true
+        type: choice
+        options: [backtest, walk_forward]
+      candidate:
+        description: Strategy or model identifier
+        required: true
+        type: string
+      metrics_artifact:
+        description: Repository-relative canonical metrics JSON
+        required: true
+        type: string
+
+jobs:
+  produce:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Validate result artifact exists
+        run: test -f "${{ inputs.metrics_artifact }}"
+      - name: Produce signed immutable evidence
+        env:
+          PROMOTION_ARTIFACT_SIGNING_KEY: ${{ secrets.PROMOTION_ARTIFACT_SIGNING_KEY }}
+          PROMOTION_ARTIFACT_KEY_ID: ${{ vars.PROMOTION_ARTIFACT_KEY_ID || 'primary' }}
+        run: |
+          test -n "$PROMOTION_ARTIFACT_SIGNING_KEY"
+          python scripts/produce_promotion_evidence.py \
+            "${{ inputs.stage }}" "${{ inputs.candidate }}" "${{ inputs.metrics_artifact }}" \
+            --queue promotion-evidence
+      - name: Publish evidence queue artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: promotion-${{ inputs.stage }}-${{ inputs.candidate }}-${{ github.run_id }}
+          path: promotion-evidence/
+          if-no-files-found: error
+          retention-days: 90

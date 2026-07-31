@@ -6,12 +6,15 @@
   "cleanUrls": true,
   "git": {
     "deploymentEnabled": {
-      "master": false
+      "master": true
     }
   },
   "headers": [
     { "source": "/status.json", "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }] },
     { "source": "/robinhood.json", "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }] },
+    { "source": "/api/promotion-status", "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }] },
+    { "source": "/api/runtime-status", "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }] },
+    { "source": "/api/broker-evidence", "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }] },
     { "source": "/", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] }
   ]
 }
