@@ -7,6 +7,9 @@ const { JSDOM, VirtualConsole } = require('jsdom');
 const ROOT = path.join(__dirname, '..', 'public');
 const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 const statusJson = JSON.parse(fs.readFileSync(path.join(ROOT, 'status.json'), 'utf8'));
+// The first mount verifies archival labeling. Pin its fixture old instead of
+// relying on the committed snapshot eventually becoming stale in wall-clock time.
+statusJson.ts = '2000-01-01T00:00:00Z';
 const appScript = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m => m[1]).filter(s => s.trim()).pop();
 
 // Derive the expected signed-out nav-tab count from the dashboard's own TABS /

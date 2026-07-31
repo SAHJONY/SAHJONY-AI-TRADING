@@ -1060,8 +1060,9 @@ function setStatus(){
         +(ev.active?'':' · WINDOW CLOSED — time to judge the result'); }
     else eb.style.display='none';
   }
-  const lb=document.getElementById('liveBadge');
-  if(lb) lb.style.display = (String(DATA.mode||'').toUpperCase()==='LIVE' && ACTIVE_DESK==='live') ? '' : 'none';
+  const liveBadge=document.getElementById('liveBadge');
+  if(liveBadge) liveBadge.style.display =
+    (String(DATA.mode||'').toUpperCase()==='LIVE' && ACTIVE_DESK==='live') ? '' : 'none';
   dm.className='dot '+(h.market_open?'g':'r');
   document.getElementById('cycTxt').textContent = (DATA&&DATA.cycle)||'0';
   const acc=document.getElementById('account');
