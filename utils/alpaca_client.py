@@ -231,3 +231,21 @@ class AlpacaClient:
         except Exception as exc:
             log.error("submit_option_order(%s) failed: %s", contract, exc)
             return {"status": "error", "reason": str(exc)}
+
+    def get_order_status(self, order_id: str, symbol: str = "") -> Dict:
+        """Return a normalized status for crash-safe pending-order reconciliation."""
+        if not self.online:
+            return {"status": "unknown", "id": order_id, "simulated": True}
+        order = self._trading.get_order_by_id(order_id)
+        raw = str(getattr(order, "status", "")).lower().split(".")[-1]
+        if raw in {"filled"}:
+            status = "filled"
+        elif raw in {"canceled", "cancelled", "expired", "rejected"}:
+            status = raw
+        else:
+            status = "submitted"
+        result = {"status": status, "id": order_id, "simulated": False}
+        average = getattr(order, "filled_avg_price", None)
+        if average not in (None, ""):
+            result["fill_price"] = float(average)
+        return result

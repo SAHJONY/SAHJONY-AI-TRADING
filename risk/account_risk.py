@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 
 
@@ -18,6 +19,30 @@ class AccountRiskEngine:
     def approve(self, account, equity: float, proposed_notional: float, daily_pnl: float = 0.0) -> AccountRiskDecision:
         if not account.enabled:
             return self._block(account, "account disabled")
+
+        policy = {
+            "max_risk": account.max_risk,
+            "max_position": account.max_position,
+            "max_daily_loss": account.max_daily_loss,
+        }
+        for name, value in policy.items():
+            if not math.isfinite(value) or value <= 0 or value > 1:
+                return self._block(account, f"invalid account {name}")
+
+        values = {
+            "equity": equity,
+            "proposed notional": proposed_notional,
+            "daily pnl": daily_pnl,
+        }
+        for name, value in values.items():
+            if not math.isfinite(value):
+                return self._block(account, f"invalid {name}")
+
+        if equity <= 0:
+            return self._block(account, "non-positive equity")
+
+        if proposed_notional < 0:
+            return self._block(account, "negative proposed notional")
 
         if daily_pnl <= -(equity * account.max_daily_loss):
             return self._block(account, "daily loss limit hit")

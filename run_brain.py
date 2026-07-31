@@ -119,9 +119,14 @@ def _agent_output(verdict: Any) -> dict[str, Any]:
             "rationale": verdict.rationale, "metrics": verdict.metrics}
 
 
+_AUTO_HISTORICAL_PROVIDER = object()
+
+
 def run_analysis(cfg: Config, broker: Any, *, state: dict[str, Any] | None = None,
                  now: datetime | None = None, status_path: Path | str = STATUS_PATH,
-                 historical_provider: HistoricalDataProvider | None = None) -> dict[str, Any]:
+                 historical_provider: HistoricalDataProvider | None | object = (
+                     _AUTO_HISTORICAL_PROVIDER
+                 )) -> dict[str, Any]:
     """Run one analysis cycle and persist a secret-free status document."""
     client = ReadOnlyBroker(broker)
     now = now or datetime.now(timezone.utc)
@@ -179,7 +184,7 @@ def run_analysis(cfg: Config, broker: Any, *, state: dict[str, Any] | None = Non
     quotes: dict[str, dict[str, Any]] = {}
     quote_freshness: dict[str, dict[str, Any]] = {}
     provider = historical_provider
-    if provider is None:
+    if provider is _AUTO_HISTORICAL_PROVIDER:
         try:
             provider = configured_historical_provider()
         except HistoricalDataError as exc:

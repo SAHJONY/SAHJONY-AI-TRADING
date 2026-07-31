@@ -271,3 +271,21 @@ class RobinhoodCryptoBroker:
 
     def submit_option_order(self, contract: str, qty: int, side: str, premium: float = 0.0) -> Dict:
         return {"status": "rejected", "reason": "Robinhood Crypto has no options"}
+
+    def get_order_status(self, order_id: str, symbol: str = "") -> Dict:
+        """Normalize Robinhood's order state for the workforce reconciliation gate."""
+        if not self.online:
+            return {"status": "unknown", "order_id": order_id, "simulated": True}
+        result = self._request("GET", f"/api/v1/crypto/trading/orders/{order_id}/")
+        raw = str(result.get("state") or result.get("status") or "").lower()
+        if raw in {"filled", "completed"}:
+            status = "filled"
+        elif raw in {"cancelled", "canceled", "rejected", "expired", "failed"}:
+            status = raw
+        else:
+            status = "submitted"
+        normalized = {"status": status, "order_id": order_id, "simulated": False}
+        average = result.get("average_price") or result.get("avg_price")
+        if average not in (None, ""):
+            normalized["fill_price"] = float(average)
+        return normalized

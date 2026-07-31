@@ -144,6 +144,7 @@ class ProductionExecutionAdapter:
             self.config.enabled
             and self.config.acknowledgement == LIVE_ACK
             and self.transport is not None
+            and getattr(self.transport, "placement_available", True) is not False
             and self.approval_verifier is not None
             and not self.halted
         )

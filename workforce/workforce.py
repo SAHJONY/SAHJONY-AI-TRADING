@@ -21,6 +21,7 @@ into one trading cycle:
 from __future__ import annotations
 
 import os
+from dataclasses import asdict
 from datetime import datetime, timezone
 from typing import Any, Dict, List
 
@@ -40,7 +41,7 @@ from intelligence.institutional_research import (
     multiplier_enabled,
 )
 from risk.risk_engine import RiskEngine
-from strategies.base import OrderIntent
+from strategies.base import OrderIntent, validate_order_intent
 from strategies.copy_trading import CopyTrader
 from strategies.credit_spreads import CreditSpreads
 from strategies.day_trading import DayTrading
@@ -128,6 +129,113 @@ class ExecutionTrader:
             if len(events) > 400:
                 del events[:len(events) - 400]
 
+    @staticmethod
+    def _adds_exposure(intent: OrderIntent) -> bool:
+        return bool(
+            intent.side == "buy"
+            or (intent.risk_check and intent.side == "sell" and intent.kind == "equity")
+            or intent.side == "sell_to_open"
+        )
+
+    def reconcile_pending_orders(
+        self, state: Dict[str, Any], cycle: int, deployed: float
+    ) -> float:
+        """Resolve persisted submissions without ever assuming an acknowledgement filled.
+
+        Status lookup is an optional broker capability. When it is unavailable,
+        errors, or returns an unknown state, the lock remains in place.
+        """
+        if state.get("_pending_reconciled_cycle") == cycle:
+            return deployed
+        state["_pending_reconciled_cycle"] = cycle
+        pending_orders = state.get("pending_orders", {})
+        getter = getattr(self.client, "get_order_status", None)
+        if not pending_orders or not callable(getter):
+            return deployed
+
+        terminal_failure = {"cancelled", "canceled", "rejected", "expired", "failed"}
+        for symbol, pending in list(pending_orders.items()):
+            intent_id = str(pending.get("intent_id") or "")
+            broker_ref = str(pending.get("broker_ref") or "")
+            if not intent_id or not broker_ref:
+                continue
+            try:
+                try:
+                    result = getter(broker_ref, symbol)
+                except TypeError:
+                    result = getter(broker_ref)
+                status = str((result or {}).get("status", "")).lower()
+            except Exception as exc:
+                self.db.append_audit("pending_reconciliation_error", {
+                    "cycle": cycle, "symbol": symbol, "intent_id": intent_id,
+                    "error": type(exc).__name__,
+                })
+                continue
+
+            if status in terminal_failure:
+                self.db.update_execution_intent(
+                    intent_id, "failed", broker_ref=broker_ref,
+                    detail={"broker_status": status},
+                )
+                pending_orders.pop(symbol, None)
+                self.db.append_audit("pending_order_released", {
+                    "cycle": cycle, "symbol": symbol, "intent_id": intent_id,
+                    "broker_ref": broker_ref, "status": status,
+                })
+                record_event(state, "pending_order_released",
+                             {"symbol": symbol, "status": status})
+                continue
+            if status != "filled":
+                continue
+
+            raw_intent = pending.get("intent")
+            try:
+                recovered = OrderIntent(**raw_intent)
+                blocker = validate_order_intent(recovered)
+                if blocker:
+                    raise ValueError(blocker)
+            except Exception as exc:
+                self.db.append_audit("pending_reconciliation_error", {
+                    "cycle": cycle, "symbol": symbol, "intent_id": intent_id,
+                    "error": f"invalid persisted intent: {type(exc).__name__}",
+                })
+                continue
+
+            self._apply(recovered, state)
+            transaction_cost = max(
+                0.0, float((result or {}).get("transaction_cost", 0.0) or 0.0)
+            )
+            state["transaction_costs"] = state.get("transaction_costs", 0.0) + transaction_cost
+            state["realized_pnl"] = state.get("realized_pnl", 0.0) - transaction_cost
+            if self._adds_exposure(recovered):
+                deployed += recovered.est_notional
+            fill_price = (result or {}).get("fill_price")
+            if fill_price is None:
+                fill_price = (self.client.get_price(symbol)
+                              if recovered.kind == "equity" else recovered.premium)
+            self.db.log_trade({
+                "cycle": cycle, "symbol": recovered.symbol,
+                "strategy": recovered.strategy, "kind": recovered.kind,
+                "side": recovered.side, "qty": recovered.qty,
+                "price": fill_price, "premium": recovered.premium,
+                "notional": recovered.est_notional, "purpose": recovered.purpose,
+                "reason": recovered.reason,
+                "mode": getattr(self.client, "mode", self.cfg.mode),
+                "simulated": (result or {}).get("simulated", False),
+            })
+            self.db.update_execution_intent(
+                intent_id, "filled", broker_ref=broker_ref,
+                detail={"transaction_cost": transaction_cost, "reconciled_cycle": cycle},
+            )
+            pending_orders.pop(symbol, None)
+            self.db.append_audit("pending_order_filled", {
+                "cycle": cycle, "symbol": symbol, "intent_id": intent_id,
+                "broker_ref": broker_ref, "state_applied": True,
+            })
+            record_event(state, "pending_order_filled",
+                         {"symbol": symbol, "intent_id": intent_id})
+        return deployed
+
     def execute(self, intents: List[OrderIntent], state: Dict[str, Any], cycle: int,
                 equity: float, deployed: float, conviction: float,
                 allow_new_risk: bool = True) -> tuple[List[Dict], float]:
@@ -138,12 +246,37 @@ class ExecutionTrader:
         intents are blocked but exits and state updates still flow, so the desk can
         always reduce exposure."""
         done = []
+        deployed = self.reconcile_pending_orders(state, cycle, deployed)
         for intent in intents:
             intent_id = ""
             try:
                 if intent.kind == "state":
                     self._apply(intent, state)
                     record_event(state, intent.purpose, {"symbol": intent.symbol, "reason": intent.reason})
+                    continue
+                malformed = validate_order_intent(intent)
+                if malformed:
+                    log.error("INVALID INTENT BLOCK %s %s: %s",
+                              intent.symbol, intent.purpose, malformed)
+                    record_event(state, "invalid_intent_block",
+                                 {"symbol": intent.symbol, "purpose": intent.purpose,
+                                  "reason": malformed})
+                    self.db.append_audit("invalid_intent_block", {
+                        "cycle": cycle, "symbol": intent.symbol,
+                        "purpose": intent.purpose, "reason": malformed,
+                    })
+                    continue
+                pending = state.get("pending_orders", {}).get(intent.symbol)
+                if pending:
+                    reason = "unconfirmed broker order already pending"
+                    log.warning("PENDING ORDER BLOCK %s %s", intent.symbol, intent.purpose)
+                    record_event(state, "pending_order_block",
+                                 {"symbol": intent.symbol, "purpose": intent.purpose,
+                                  "reason": reason})
+                    self.db.append_audit("pending_order_block", {
+                        "cycle": cycle, "symbol": intent.symbol,
+                        "purpose": intent.purpose, "pending": pending,
+                    })
                     continue
                 if intent.risk_check and not allow_new_risk:
                     log.info("HALT BLOCK %s %s — new risk suspended", intent.symbol, intent.purpose)
@@ -178,11 +311,10 @@ class ExecutionTrader:
                 })
                 if intent.kind == "equity":
                     res = self.client.submit_equity_order(intent.symbol, intent.qty, intent.side)
-                    price = res.get("fill_price", self.client.get_price(intent.symbol))
                 else:
                     res = self.client.submit_option_order(intent.contract, intent.qty, intent.side, intent.premium)
-                    price = intent.premium
-                if res.get("status") not in ("filled", "submitted"):
+                status = str(res.get("status", "")).lower()
+                if status not in ("filled", "submitted"):
                     self.db.update_execution_intent(intent_id, "failed",
                                                     detail={"status": str(res.get("status", "rejected"))})
                     self.db.append_audit("execution_failed", {
@@ -191,6 +323,40 @@ class ExecutionTrader:
                     })
                     log.warning("order not filled %s: %s", intent.symbol, res)
                     continue
+                broker_ref = str(res.get("order_id") or res.get("id") or "")
+                if status == "submitted":
+                    pending = {
+                        "intent_id": intent_id,
+                        "broker_ref": broker_ref,
+                        "cycle": cycle,
+                        "side": intent.side,
+                        "qty": intent.qty,
+                        "purpose": intent.purpose,
+                        "intent": asdict(intent),
+                    }
+                    state.setdefault("pending_orders", {})[intent.symbol] = pending
+                    self.db.update_execution_intent(
+                        intent_id, "submitted", broker_ref=broker_ref,
+                        detail={"confirmation": "pending"},
+                    )
+                    self.db.append_audit("execution_result", {
+                        "cycle": cycle, "intent_id": intent_id, "status": "submitted",
+                        "broker_ref": broker_ref, "state_applied": False,
+                    })
+                    record_event(state, "order_submitted", {
+                        "symbol": intent.symbol, "purpose": intent.purpose,
+                        "intent_id": intent_id, "broker_ref": broker_ref,
+                    })
+                    done.append({
+                        "symbol": intent.symbol, "purpose": intent.purpose,
+                        "reason": intent.reason, "status": "submitted",
+                    })
+                    log.warning("SUBMITTED %s %s — awaiting broker fill confirmation",
+                                intent.symbol, intent.purpose)
+                    continue
+                price = (res.get("fill_price") if res.get("fill_price") is not None
+                         else self.client.get_price(intent.symbol)
+                         if intent.kind == "equity" else intent.premium)
                 self._apply(intent, state)
                 transaction_cost = max(0.0, float(res.get("transaction_cost", 0.0) or 0.0))
                 state["transaction_costs"] = state.get("transaction_costs", 0.0) + transaction_cost
@@ -200,9 +366,7 @@ class ExecutionTrader:
                 # est_notional; covered calls are sell_to_open with est_notional 0,
                 # so they correctly add nothing). Keeps stacked CSPs within the cap
                 # within a single cycle, before _gross_exposure re-seeds next cycle.
-                if (intent.side == "buy"
-                        or (intent.risk_check and intent.side == "sell" and intent.kind == "equity")
-                        or intent.side == "sell_to_open"):
+                if self._adds_exposure(intent):
                     deployed += intent.est_notional
                 self.db.log_trade({
                     "cycle": cycle, "symbol": intent.symbol, "strategy": intent.strategy,
@@ -212,14 +376,12 @@ class ExecutionTrader:
                     "mode": getattr(self.client, "mode", self.cfg.mode),
                     "simulated": res.get("simulated", True),
                 })
-                execution_status = "filled" if res.get("status") == "filled" else "submitted"
-                broker_ref = str(res.get("order_id") or res.get("id") or "")
                 self.db.update_execution_intent(
-                    intent_id, execution_status, broker_ref=broker_ref,
+                    intent_id, "filled", broker_ref=broker_ref,
                     detail={"transaction_cost": transaction_cost},
                 )
                 self.db.append_audit("execution_result", {
-                    "cycle": cycle, "intent_id": intent_id, "status": execution_status,
+                    "cycle": cycle, "intent_id": intent_id, "status": "filled",
                     "broker_ref": broker_ref, "transaction_cost": transaction_cost,
                 })
                 record_event(state, intent.purpose, {"symbol": intent.symbol, "reason": intent.reason})

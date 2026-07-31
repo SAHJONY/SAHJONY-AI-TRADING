@@ -14,6 +14,30 @@ LIVE_TRADING_ACK=
 
 The existing local MCP gateway remains read-only and exposes no order routes.
 The review gate has no broker, MCP, network, or order-placement imports.
+The review-only venue boundary is implemented but is not injected by default.
+
+Its complete allowlist is:
+
+- `check_tradability`
+- `review_order`
+- `get_order_status`
+- `discover_cancel_capability`
+
+It structurally rejects `place_order`, `replace_order`, `modify_order`, and
+`cancel_order`. The production adapter also refuses to derive execution
+authority from a transport whose `placement_available` marker is false.
+
+Until broker evidence is exactly `RECONCILED`, review eligibility returns:
+
+```json
+{
+  "eligible": false,
+  "stage": "review-only",
+  "reason": "broker reconciliation is not RECONCILED",
+  "execution_authority": false,
+  "placement_available": false
+}
+```
 
 ## Default review policy
 

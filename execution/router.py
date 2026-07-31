@@ -5,7 +5,7 @@ from typing import Any
 
 from accounts.orchestrator import AccountOrchestrator, AccountProfile
 from risk.account_risk import AccountRiskDecision, AccountRiskEngine
-from strategies.base import OrderIntent, is_crypto
+from strategies.base import OrderIntent, is_crypto, validate_order_intent
 
 
 @dataclass
@@ -65,6 +65,10 @@ class ExecutionRouter:
         buying_power: float,
         daily_pnl: float = 0.0,
     ) -> RouteDecision:
+        malformed = validate_order_intent(intent)
+        if malformed:
+            return RouteDecision(False, malformed)
+
         account = self.select_account(intent.symbol)
         if account is None:
             return RouteDecision(False, "no configured account for symbol")
