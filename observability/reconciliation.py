@@ -6,6 +6,27 @@ import math
 from typing import Any, Mapping
 
 
+_CRYPTO_BASES = {
+    "BTC", "ETH", "SOL", "LTC", "DOGE", "ADA", "XRP", "AVAX", "MATIC",
+    "DOT", "LINK", "BCH", "UNI", "AAVE", "XLM", "ETC", "SHIB", "COMP",
+    "USDC", "USDT",
+}
+
+
+def _canonical_symbol(value: Any) -> str:
+    symbol = str(value or "").strip().upper().replace("-", "/")
+    if symbol.endswith("/USD") and symbol.count("/") == 1:
+        return symbol[:-4]
+    return symbol
+
+
+def _quantity_tolerance(symbol: str, configured: float) -> float:
+    # Crypto ledgers commonly retain eight decimal places; equity adapters may
+    # report fractional shares to six. The configured value remains a ceiling.
+    venue_tolerance = 1e-8 if symbol in _CRYPTO_BASES else 1e-6
+    return min(configured, venue_tolerance)
+
+
 def _finite(value: Any) -> float:
     number = float(value or 0.0)
     if not math.isfinite(number):
@@ -26,7 +47,7 @@ def _position_map(rows: Any, *, quantity_keys: tuple[str, ...]) -> dict[str, flo
     for row in iterable:
         if not isinstance(row, Mapping):
             raise ValueError("portfolio snapshot contains an invalid position")
-        symbol = str(row.get("symbol", "")).strip().upper()
+        symbol = _canonical_symbol(row.get("symbol", ""))
         if not symbol:
             raise ValueError("portfolio snapshot contains a position without a symbol")
         quantity = 0.0
@@ -72,7 +93,8 @@ def reconcile_positions(internal_positions: Any, broker_positions: Any, *,
     for symbol in sorted(set(internal) | set(broker)):
         expected, actual = internal.get(symbol, 0.0), broker.get(symbol, 0.0)
         delta = actual - expected
-        if abs(delta) > quantity_tolerance:
+        tolerance = _quantity_tolerance(symbol, quantity_tolerance)
+        if abs(delta) > tolerance:
             differences.append({"symbol": symbol, "internal_qty": expected,
                                 "broker_qty": actual, "delta_qty": delta})
     unexplained_value = None

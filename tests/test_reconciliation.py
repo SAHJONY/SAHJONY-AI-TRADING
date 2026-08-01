@@ -13,6 +13,26 @@ def test_matching_positions_reconcile():
     assert result["execution_blocked"] is False
 
 
+def test_crypto_symbol_formats_are_canonicalized():
+    result = reconcile_positions(
+        {"ETH/USD": {"shares": 0.000531}},
+        {"ETH-USD": {"qty": 0.000531, "market_value": 1.0}},
+    )
+    assert result["reconciled"] is True
+    assert result["internal_position_count"] == 1
+    assert result["broker_position_count"] == 1
+
+
+def test_crypto_quantity_drift_above_eight_decimals_fails_closed():
+    result = reconcile_positions(
+        {"ETH/USD": {"shares": 0.000531}},
+        {"ETH-USD": {"qty": 0.00053102, "market_value": 1.0}},
+    )
+    assert result["status"] == "mismatch"
+    assert result["execution_blocked"] is True
+    assert result["differences"][0]["delta_qty"] == pytest.approx(2e-8)
+
+
 def test_missing_or_quantity_mismatch_fails_closed():
     result = reconcile_positions(
         {"VTI": {"shares": 1.0}, "MSFT": {"shares": 2.0}},

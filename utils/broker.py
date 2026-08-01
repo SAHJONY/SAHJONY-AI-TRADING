@@ -19,6 +19,10 @@ import numpy as np
 
 from config import Config
 
+
+class BrokerSnapshotError(RuntimeError):
+    """The broker did not provide a complete, trustworthy account snapshot."""
+
 # The methods/attributes the Firm relies on. get_broker() checks an adapter
 # provides all of them, so a half-built broker fails fast with a clear error
 # instead of blowing up mid-cycle.

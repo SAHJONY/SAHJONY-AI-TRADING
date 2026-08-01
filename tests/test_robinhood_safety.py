@@ -26,6 +26,7 @@ os.environ["ROBINHOOD_API_KEY"] = "test-api-key-123"
 os.environ["ROBINHOOD_PRIVATE_KEY"] = base64.b64encode(_SEED).decode()
 
 from config import load_config
+from utils.broker import BrokerSnapshotError
 from utils.brokers.robinhood_crypto import RobinhoodCryptoBroker, _rh_symbol
 
 
@@ -127,6 +128,39 @@ def test_history_falls_back_when_feed_unavailable():
            "feed down → flat 2-point live-price series (safe degrade, no crash)")
 
 
+def test_holdings_snapshot_fails_closed():
+    rh = RobinhoodCryptoBroker(load_config())
+    rh._request = lambda *a, **k: (_ for _ in ()).throw(RuntimeError("timeout"))
+    try:
+        rh.get_broker_positions()
+        request_failed_closed = False
+    except BrokerSnapshotError:
+        request_failed_closed = True
+    _check(request_failed_closed, "holdings transport error is not treated as an empty account")
+
+    rh._request = lambda *a, **k: {}
+    try:
+        rh.get_broker_positions()
+        incomplete_failed_closed = False
+    except BrokerSnapshotError:
+        incomplete_failed_closed = True
+    _check(incomplete_failed_closed, "incomplete holdings payload fails closed")
+
+    rh._request = lambda *a, **k: {"results": []}
+    _check(rh.get_broker_positions() == {}, "complete empty holdings payload remains valid")
+
+    rh._request = lambda *a, **k: {
+        "results": [{"asset_code": "ETH", "total_quantity": "0.001"}]
+    }
+    rh.get_price = lambda symbol: 0.0
+    try:
+        rh.get_broker_positions()
+        missing_price_failed_closed = False
+    except BrokerSnapshotError:
+        missing_price_failed_closed = True
+    _check(missing_price_failed_closed, "held asset without a valid price fails closed")
+
+
 def test_arming_gates_flip_to_live():
     """Both gates set → armed + mode LIVE, and an armed order routes a real POST.
     Guards the bool-vs-string bug that left the venue permanently in dry-run.
@@ -157,6 +191,7 @@ def main() -> int:
     test_coingecko_id_mapping()
     test_history_parses_coingecko_without_network()
     test_history_falls_back_when_feed_unavailable()
+    test_holdings_snapshot_fails_closed()
     print("\nROBINHOOD SAFETY TESTS PASSED ✓")
     return 0
 

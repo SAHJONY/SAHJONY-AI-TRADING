@@ -617,7 +617,7 @@ class Firm:
             block new entries or emit sells for shares that do not exist.
         Fault-isolated: any broker hiccup leaves state untouched.
         """
-        out = {"adopted": [], "dropped": [], "ok": True}
+        out = {"adopted": [], "dropped": [], "mismatched": [], "ok": True}
         try:
             broker = self.client.get_broker_positions() or {}
         except Exception as exc:
@@ -636,6 +636,28 @@ class Firm:
                 if abs(float((v or {}).get("qty", 0) or 0)) > 0}
         known = {_norm(k) for k, v in positions.items()
                  if abs(float((v or {}).get("shares", 0) or 0)) > 0}
+
+        # A shared symbol with different quantities is neither an orphan nor a
+        # ghost. Never rewrite it automatically: expose the drift and block new
+        # risk until a confirmed fill or an operator-reviewed repair resolves it.
+        local_by_base = {_norm(k): (k, v) for k, v in positions.items()
+                         if abs(float((v or {}).get("shares", 0) or 0)) > 0}
+        for base in sorted(set(held) & set(local_by_base)):
+            raw_sym, info = held[base]
+            local_sym, local = local_by_base[base]
+            broker_qty = float(info.get("qty", 0) or 0)
+            local_qty = float(local.get("shares", 0) or 0)
+            tolerance = 1e-8 if "/" in str(raw_sym) or "-" in str(raw_sym) else 1e-6
+            if abs(broker_qty - local_qty) > tolerance:
+                out["ok"] = False
+                out["mismatched"].append({"symbol": local_sym,
+                                           "local_qty": local_qty,
+                                           "broker_qty": broker_qty,
+                                           "delta_qty": broker_qty - local_qty,
+                                           "quantity_tolerance": tolerance})
+        if out["mismatched"]:
+            log.error("broker quantity mismatch — state preserved: %s", out["mismatched"])
+            return out
 
         for base, (raw_sym, info) in held.items():
             if base in known:
@@ -775,6 +797,12 @@ class Firm:
         if mode == "LIVE" and not reconciliation["reconciled"]:
             allow_new_risk = False
             reason = "broker position reconciliation failed"
+            halt = {**halt, "halted": True,
+                    "reason": f"{halt.get('reason')}; {reason}".strip("; ")}
+            log.error("NEW RISK HALTED: %s", reason)
+        if mode == "LIVE" and not recon["ok"]:
+            allow_new_risk = False
+            reason = "broker state synchronization degraded"
             halt = {**halt, "halted": True,
                     "reason": f"{halt.get('reason')}; {reason}".strip("; ")}
             log.error("NEW RISK HALTED: %s", reason)
