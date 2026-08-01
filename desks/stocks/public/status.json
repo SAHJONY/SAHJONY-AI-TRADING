@@ -10,21 +10,9 @@
     "return_pct": 0.81,
     "alpha_pct": -550.405
   },
-  "ts": "2026-08-01T12:16:03.030126+00:00",
-  "cycle": 109,
+  "ts": "2026-08-01T13:57:02.984319+00:00",
+  "cycle": 110,
   "strategy_ranking": [
-    {
-      "name": "AI Consensus",
-      "key": "ai_consensus",
-      "stage": "shadow",
-      "score": 31.37,
-      "observations": 80,
-      "win_rate": 0.1625,
-      "evidence": "ai-shadow",
-      "live_eligible": false,
-      "rank": 1,
-      "promotion_stage": "research"
-    },
     {
       "name": "Momentum",
       "key": "daytrade",
@@ -33,6 +21,18 @@
       "observations": 23.17,
       "win_rate": 0.2784,
       "evidence": "realized-hermes",
+      "live_eligible": false,
+      "rank": 1,
+      "promotion_stage": "research"
+    },
+    {
+      "name": "AI Consensus",
+      "key": "ai_consensus",
+      "stage": "shadow",
+      "score": 30.58,
+      "observations": 85,
+      "win_rate": 0.1529,
+      "evidence": "ai-shadow",
       "live_eligible": false,
       "rank": 2,
       "promotion_stage": "research"
@@ -129,7 +129,7 @@
         "evidence": {},
         "approvals": {},
         "created_at": "2026-07-31T07:36:15.566436+00:00",
-        "updated_at": "2026-08-01T12:16:03.025722+00:00"
+        "updated_at": "2026-08-01T13:57:02.977712+00:00"
       },
       {
         "key": "spread",
@@ -139,7 +139,7 @@
         "evidence": {},
         "approvals": {},
         "created_at": "2026-07-31T07:36:15.564605+00:00",
-        "updated_at": "2026-08-01T12:16:03.027551+00:00"
+        "updated_at": "2026-08-01T13:57:02.980901+00:00"
       },
       {
         "key": "institutional_research",
@@ -149,7 +149,7 @@
         "evidence": {},
         "approvals": {},
         "created_at": "2026-07-31T07:34:50.496481+00:00",
-        "updated_at": "2026-08-01T12:13:53.570444+00:00"
+        "updated_at": "2026-08-01T13:54:47.409131+00:00"
       },
       {
         "key": "mean_reversion",
@@ -159,7 +159,7 @@
         "evidence": {},
         "approvals": {},
         "created_at": "2026-07-31T07:36:15.564163+00:00",
-        "updated_at": "2026-08-01T12:16:03.027214+00:00"
+        "updated_at": "2026-08-01T13:57:02.979040+00:00"
       },
       {
         "key": "daytrade",
@@ -169,7 +169,7 @@
         "evidence": {},
         "approvals": {},
         "created_at": "2026-07-31T07:36:15.562855+00:00",
-        "updated_at": "2026-08-01T12:16:03.026485+00:00"
+        "updated_at": "2026-08-01T13:57:02.976722+00:00"
       },
       {
         "key": "pairs",
@@ -179,7 +179,7 @@
         "evidence": {},
         "approvals": {},
         "created_at": "2026-07-31T07:36:15.563631+00:00",
-        "updated_at": "2026-08-01T12:16:03.026866+00:00"
+        "updated_at": "2026-08-01T13:57:02.978442+00:00"
       },
       {
         "key": "regime_momentum",
@@ -189,7 +189,7 @@
         "evidence": {},
         "approvals": {},
         "created_at": "2026-07-31T07:36:15.566003+00:00",
-        "updated_at": "2026-08-01T12:16:03.028611+00:00"
+        "updated_at": "2026-08-01T13:57:02.982654+00:00"
       },
       {
         "key": "volatility_breakout",
@@ -199,7 +199,7 @@
         "evidence": {},
         "approvals": {},
         "created_at": "2026-07-31T07:36:15.565470+00:00",
-        "updated_at": "2026-08-01T12:16:03.028269+00:00"
+        "updated_at": "2026-08-01T13:57:02.982060+00:00"
       },
       {
         "key": "wheel",
@@ -209,7 +209,7 @@
         "evidence": {},
         "approvals": {},
         "created_at": "2026-07-31T07:36:15.565043+00:00",
-        "updated_at": "2026-08-01T12:16:03.027919+00:00"
+        "updated_at": "2026-08-01T13:57:02.981501+00:00"
       }
     ],
     "audit": [],
@@ -261,12 +261,12 @@
       "score": 25.0,
       "nodes": 5
     },
-    "model_accuracy": 0.1489,
+    "model_accuracy": 0.1428,
     "learning_progress": 1.0,
-    "observation_count": 395,
+    "observation_count": 415,
     "training_coverage": 0.7833,
     "promotion_ready": false,
-    "overall_intelligence": 49.39,
+    "overall_intelligence": 49.24,
     "interpretation": "operational learning index; not a measure of general intelligence",
     "evidence_state": "learning"
   },
@@ -310,9 +310,9 @@
       "scale": 1.0
     },
     "cadence": {
-      "degraded": false,
-      "reason": "",
-      "gap_min": 67.0,
+      "degraded": true,
+      "reason": "execution cadence degraded: 101 min since the last cycle (expected ~15 min) \u2014 a new position could not be managed",
+      "gap_min": 100.9,
       "expected_min": 15,
       "tolerance_min": 90.0
     },
@@ -377,9 +377,9 @@
         ]
       },
       "hit_rates": {
-        "SPY": 0.201,
+        "SPY": 0.195,
         "QQQ": 0.248,
-        "VTI": 0.174
+        "VTI": 0.168
       },
       "strategy_weights": {
         "daytrade": 0.867
@@ -1002,33 +1002,33 @@
     "enabled": true,
     "used": true,
     "posture": "risk_off",
-    "global_risk_multiplier": 0.6,
-    "commentary": "Cross-asset stress and elevated institutional advisory risk warrant defensive sizing despite a normal market-regime label. SPY retains modest support from strong factors and liquidity, but its long signal is fragile under stress. VTI is also fragile because its long signal conflicts with very weak liquidity. QQQ, MSFT, and especially NVDA are fragile due to negative composites, weak or negative alpha, and elevated beta/volatility; NVDA merits the strongest reduction.",
+    "global_risk_multiplier": 0.65,
+    "commentary": "Cross-asset stress and elevated advisory risk warrant a defensive overlay despite normal single-asset regimes. Favor only the most liquid broad beta and avoid treating low-conviction longs as robust. SPY is relatively supported by liquidity and institutional factors, but its positive signal remains modest. Fragile signals: NVDA is most concerning given negative composite, high beta/volatility, poor institutional score, and worst expected shortfall; VTI is also fragile because its long signal conflicts with very weak liquidity and institutional support. QQQ and MSFT lack constructive confirmati",
     "brain_model": "openai:gpt-5.6-luna",
     "counsellors": {
-      "openai": "{\"risk_summary\":\"Defensive posture warranted: every symbol is exposed to a cross-asset stress regime, while the advisory-risk score is elevated at 0.7527. The two constructive signals are low-margin longs and should be discounted rather than amplified. Suggested conviction adjust",
-      "grok": "**Risk posture: defensive.** Cross-asset stress + elevated institutional advisory risk (0.75) dominate; normals mask fragility. Prefer lower beta/vol, respect negative composites/alphas and weak liquidity. Advise caution on sizing; do not add risk.\n\n**Adjustments (conviction \u0394):*",
-      "gemini": "",
+      "openai": "{\"risk_summary\":\"Overall posture is defensive and capital-preservation-oriented. Cross-asset stress and uniformly elevated institutional advisory risk weaken the modest long signals in SPY and VTI, while QQQ, MSFT, and NVDA have flat or negative composites. Suggested conviction a",
+      "grok": "**Risk posture:** Elevated. Cross-asset stress + advisory risk 0.75 dominate; normal single-asset regimes offer little cover. Prefer liquid beta; de-emphasize high-vol/negative-factor names. Net: defensive, capital-preservation bias.\n\n**Adjustments (advise only):**\n- SPY: +0.05 (",
+      "gemini": "SPY:* Strong institutional support (0.775",
       "nvidia": ""
     },
     "telemetry": {
       "provider": "openai",
       "requested_model": "gpt-4o",
       "resolved_model": "gpt-5.6-luna",
-      "latency_ms": 5595,
-      "input_tokens": 1319,
-      "output_tokens": 579,
-      "estimated_cost_usd": 0.004793,
+      "latency_ms": 5386,
+      "input_tokens": 1348,
+      "output_tokens": 496,
+      "estimated_cost_usd": 0.004324,
       "fallback_used": true,
       "schema_valid": true,
       "conviction_adjustment": {
-        "SPY": 0.02,
-        "QQQ": -0.07,
-        "VTI": -0.08,
+        "SPY": 0.03,
+        "QQQ": -0.06,
+        "VTI": -0.1,
         "MSFT": -0.1,
         "NVDA": -0.15
       },
-      "risk_multiplier": 0.6,
+      "risk_multiplier": 0.65,
       "clamp_applied": false
     },
     "shadow_evaluation": {
@@ -1055,15 +1055,15 @@
         },
         {
           "provider": "openai",
-          "score": 39.85,
-          "observations": 80,
-          "net_return": 0.038701,
-          "annualized_sharpe": 1.6749,
+          "score": 39.09,
+          "observations": 85,
+          "net_return": 0.03865737,
+          "annualized_sharpe": 1.6225,
           "max_drawdown": 0.005103,
-          "hit_rate": 0.1625,
-          "calibration_error": 0.4478,
+          "hit_rate": 0.1529,
+          "calibration_error": 0.446,
           "average_turnover_cost_bps": 1.0,
-          "average_latency_ms": 5894.5,
+          "average_latency_ms": 5876.88,
           "schema_valid_rate": 1.0,
           "fallback_rate": 1.0,
           "promotion_eligible": false,
@@ -1073,15 +1073,15 @@
         },
         {
           "provider": "consensus",
-          "score": 31.37,
-          "observations": 80,
-          "net_return": 0.0352417,
-          "annualized_sharpe": 1.6466,
+          "score": 30.58,
+          "observations": 85,
+          "net_return": 0.03520029,
+          "annualized_sharpe": 1.5951,
           "max_drawdown": 0.005494,
-          "hit_rate": 0.1625,
-          "calibration_error": 0.4426,
+          "hit_rate": 0.1529,
+          "calibration_error": 0.4413,
           "average_turnover_cost_bps": 1.0,
-          "average_latency_ms": 25018.19,
+          "average_latency_ms": 24736.65,
           "schema_valid_rate": 1.0,
           "fallback_rate": 1.0,
           "promotion_eligible": false,
@@ -1091,15 +1091,15 @@
         },
         {
           "provider": "grok",
-          "score": 30.56,
-          "observations": 80,
-          "net_return": 0.02687066,
-          "annualized_sharpe": 1.5681,
+          "score": 29.79,
+          "observations": 85,
+          "net_return": 0.02683164,
+          "annualized_sharpe": 1.5187,
           "max_drawdown": 0.006009,
-          "hit_rate": 0.1625,
-          "calibration_error": 0.4395,
+          "hit_rate": 0.1529,
+          "calibration_error": 0.4387,
           "average_turnover_cost_bps": 1.0,
-          "average_latency_ms": 14284.19,
+          "average_latency_ms": 14304.94,
           "schema_valid_rate": 1.0,
           "fallback_rate": 0.0,
           "promotion_eligible": false,
@@ -1131,12 +1131,12 @@
         {
           "provider": "neutral",
           "score": 30.11,
-          "observations": 80,
+          "observations": 85,
           "net_return": 0.0,
           "annualized_sharpe": 0.0,
           "max_drawdown": 0.0,
           "hit_rate": 0.0,
-          "calibration_error": 0.4885,
+          "calibration_error": 0.4888,
           "average_turnover_cost_bps": 1.0,
           "average_latency_ms": 0.0,
           "schema_valid_rate": 1.0,
@@ -1171,14 +1171,14 @@
       ],
       "recommended_provider": null,
       "promotion_policy": "manual approval required; shadow evidence cannot arm live trading",
-      "observations": 395,
+      "observations": 415,
       "source": "/home/runner/work/SAHJONY-AI-TRADING/SAHJONY-AI-TRADING/desks/stocks/data/ai_shadow_observations.jsonl",
       "leaders": {
         "today": {
           "provider": "openai",
           "score": 0.0,
-          "sharpe": -30.3359,
-          "observations": 30
+          "sharpe": -30.4875,
+          "observations": 35
         },
         "week": {
           "provider": "gemini",
@@ -1214,10 +1214,10 @@
         }
       },
       "pipeline": "autonomous-learning",
-      "last_cycle": 109,
-      "resolved_this_cycle": 25,
+      "last_cycle": 110,
+      "resolved_this_cycle": 20,
       "pending_symbols": 5,
-      "archive_record": "/home/runner/work/SAHJONY-AI-TRADING/SAHJONY-AI-TRADING/desks/stocks/data/shadow/2026/August/000006.json"
+      "archive_record": "/home/runner/work/SAHJONY-AI-TRADING/SAHJONY-AI-TRADING/desks/stocks/data/shadow/2026/August/000007.json"
     }
   },
   "positions": [
@@ -1327,7 +1327,7 @@
     "mode": "paper",
     "online": true,
     "live_armed": false,
-    "equity": 98949.52,
+    "equity": 98949.49,
     "cash": 39866.24,
     "buying_power": 274103.36,
     "holdings": [
@@ -1383,7 +1383,7 @@
         "symbol": "SOLUSD",
         "qty": 0.16653063,
         "avg_price": 74.54,
-        "market_value": 12.14
+        "market_value": 12.11
       },
       {
         "symbol": "VMI",
@@ -1439,7 +1439,7 @@
   },
   "institutional_intelligence": {
     "version": "institutional-research-v1",
-    "as_of": "2026-08-01T12:13:53.052140+00:00",
+    "as_of": "2026-08-01T13:54:46.564270+00:00",
     "point_in_time": true,
     "execution_authority": false,
     "universe": [
@@ -1568,47 +1568,47 @@
       ],
       "method": "transparent_public_domain_estimators",
       "latest_bar_timestamp": "2026-07-31T04:00:00+00:00",
-      "oldest_age_seconds": 116033.052,
+      "oldest_age_seconds": 122086.564,
       "snapshots": {
         "SPY": {
           "bar_timestamp": "2026-07-31T04:00:00+00:00",
           "exchange_timestamp": "2026-07-31T04:00:00+00:00",
           "feed_timestamp": null,
-          "retrieved_at": "2026-08-01T12:13:52.890712+00:00",
-          "latency_ms": 116032890.712,
-          "age_seconds": 116033.052
+          "retrieved_at": "2026-08-01T13:54:46.223679+00:00",
+          "latency_ms": 122086223.679,
+          "age_seconds": 122086.564
         },
         "QQQ": {
           "bar_timestamp": "2026-07-31T04:00:00+00:00",
           "exchange_timestamp": "2026-07-31T04:00:00+00:00",
           "feed_timestamp": null,
-          "retrieved_at": "2026-08-01T12:13:52.942819+00:00",
-          "latency_ms": 116032942.819,
-          "age_seconds": 116033.052
+          "retrieved_at": "2026-08-01T13:54:46.294920+00:00",
+          "latency_ms": 122086294.92,
+          "age_seconds": 122086.564
         },
         "VTI": {
           "bar_timestamp": "2026-07-31T04:00:00+00:00",
           "exchange_timestamp": "2026-07-31T04:00:00+00:00",
           "feed_timestamp": null,
-          "retrieved_at": "2026-08-01T12:13:52.972942+00:00",
-          "latency_ms": 116032972.942,
-          "age_seconds": 116033.052
+          "retrieved_at": "2026-08-01T13:54:46.386019+00:00",
+          "latency_ms": 122086386.019,
+          "age_seconds": 122086.564
         },
         "MSFT": {
           "bar_timestamp": "2026-07-31T04:00:00+00:00",
           "exchange_timestamp": "2026-07-31T04:00:00+00:00",
           "feed_timestamp": null,
-          "retrieved_at": "2026-08-01T12:13:53.002085+00:00",
-          "latency_ms": 116033002.085,
-          "age_seconds": 116033.052
+          "retrieved_at": "2026-08-01T13:54:46.458534+00:00",
+          "latency_ms": 122086458.534,
+          "age_seconds": 122086.564
         },
         "NVDA": {
           "bar_timestamp": "2026-07-31T04:00:00+00:00",
           "exchange_timestamp": "2026-07-31T04:00:00+00:00",
           "feed_timestamp": null,
-          "retrieved_at": "2026-08-01T12:13:53.034696+00:00",
-          "latency_ms": 116033034.696,
-          "age_seconds": 116033.052
+          "retrieved_at": "2026-08-01T13:54:46.530187+00:00",
+          "latency_ms": 122086530.187,
+          "age_seconds": 122086.564
         }
       },
       "future_data_used": false
@@ -2058,9 +2058,30 @@
       "deployed": 49279.42153234,
       "realized_pnl": -43.42332663306,
       "premium": 0.0
+    },
+    {
+      "ts": "2026-08-01T13:57:02.155462+00:00",
+      "cycle": 110,
+      "equity": -8991.892668260614,
+      "cash": -58271.31420060062,
+      "deployed": 49279.42153234,
+      "realized_pnl": -43.42332663306,
+      "premium": 0.0
     }
   ],
   "decisions": [
+    {
+      "ts": "2026-08-01T13:57:00.905748+00:00",
+      "kind": "wheel_wait",
+      "symbol": "VTI",
+      "reason": "no put contract found"
+    },
+    {
+      "ts": "2026-08-01T13:57:00.855233+00:00",
+      "kind": "wheel_wait",
+      "symbol": "SPY",
+      "reason": "no put contract found"
+    },
     {
       "ts": "2026-08-01T12:16:02.222111+00:00",
       "kind": "wheel_wait",
@@ -2197,18 +2218,6 @@
       "ts": "2026-07-31T19:44:32.233195+00:00",
       "kind": "halt_block",
       "symbol": "RCG",
-      "purpose": "copy_buy"
-    },
-    {
-      "ts": "2026-07-31T19:44:32.232530+00:00",
-      "kind": "halt_block",
-      "symbol": "BMRC",
-      "purpose": "copy_buy"
-    },
-    {
-      "ts": "2026-07-31T19:44:32.231957+00:00",
-      "kind": "halt_block",
-      "symbol": "ASPS",
       "purpose": "copy_buy"
     }
   ],
