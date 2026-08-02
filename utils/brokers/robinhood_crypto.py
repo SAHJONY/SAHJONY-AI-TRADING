@@ -30,6 +30,7 @@ from __future__ import annotations
 import base64
 from datetime import datetime, timezone
 import json
+import math
 import os
 import time
 import uuid
@@ -39,6 +40,7 @@ from typing import Dict, List
 import numpy as np
 
 from config import Config
+from utils.broker import BrokerSnapshotError
 from utils.logger import get_logger
 
 log = get_logger("robinhood_crypto")
@@ -168,17 +170,29 @@ class RobinhoodCryptoBroker:
     def get_broker_positions(self) -> Dict[str, Dict[str, float]]:
         try:
             data = self._request("GET", "/api/v1/crypto/trading/holdings/")
-            out: Dict[str, Dict[str, float]] = {}
-            for h in data.get("results", []) or []:
-                sym = h.get("asset_code", "")
-                qty = float(h.get("total_quantity", 0.0) or 0.0)
-                if sym and qty:
-                    px = self.get_price(f"{sym}-USD")
-                    out[f"{sym}-USD"] = {"qty": qty, "market_value": qty * px}
-            return out
         except Exception as exc:
-            log.error("get_broker_positions failed: %s", exc)
-            return {}
+            raise BrokerSnapshotError(f"Robinhood holdings request failed: {exc}") from exc
+        if not isinstance(data, dict) or not isinstance(data.get("results"), list):
+            raise BrokerSnapshotError("Robinhood holdings response is incomplete")
+
+        out: Dict[str, Dict[str, float]] = {}
+        for h in data["results"]:
+            if not isinstance(h, dict):
+                raise BrokerSnapshotError("Robinhood holdings response contains an invalid row")
+            sym = str(h.get("asset_code", "") or "").strip().upper()
+            try:
+                qty = float(h.get("total_quantity", 0.0) or 0.0)
+            except (TypeError, ValueError) as exc:
+                raise BrokerSnapshotError(f"Robinhood returned invalid quantity for {sym or 'unknown'}") from exc
+            if not math.isfinite(qty) or qty < 0:
+                raise BrokerSnapshotError(f"Robinhood returned invalid quantity for {sym or 'unknown'}")
+            if not sym or qty == 0:
+                continue
+            px = float(self.get_price(f"{sym}-USD") or 0.0)
+            if not math.isfinite(px) or px <= 0:
+                raise BrokerSnapshotError(f"Robinhood price unavailable for held asset {sym}")
+            out[f"{sym}-USD"] = {"qty": qty, "market_value": qty * px}
+        return out
 
     def get_price(self, symbol: str) -> float:
         rh = _rh_symbol(symbol)
