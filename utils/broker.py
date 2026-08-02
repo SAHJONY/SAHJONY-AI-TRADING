@@ -84,6 +84,9 @@ def get_broker(cfg: Config):
     if name == "ccxt":
         from utils.brokers.ccxt_broker import CCXTBroker
         return _verify(CCXTBroker(cfg))
+    if name == "dex":
+        from utils.brokers.dex_broker import DEXBroker
+        return _verify(DEXBroker(cfg))
     if name in ("robinhood", "robinhood_crypto", "rh"):
         # REAL-MONEY crypto venue — orders are hard-gated (dry-run unless armed).
         # Verify auth read-only first: python -m scripts.robinhood_check
@@ -96,6 +99,6 @@ def get_broker(cfg: Config):
         return _verify(RobinhoodMCPBroker(cfg))
     raise ValueError(
         f"Unknown BROKER '{name}'. Registered: alpaca, ibkr, ccxt, "
-        "robinhood_crypto, robinhood_mcp. Implement an adapter "
+        "dex, robinhood_crypto, robinhood_mcp. Implement an adapter "
         "(see utils/brokers/template_adapter.py) and register it in utils/broker.py."
     )
