@@ -20,8 +20,10 @@ import sys
 from typing import Dict, List
 
 from backtest import metrics
-from backtest.data import Bars, DataUnavailable, fetch, load_csv
+from backtest.data import (Bars, DataUnavailable, desk_coverage, fetch,
+                           load_csv, load_desk_db)
 from backtest.engine import Backtester, CostModel, RiskConfig
+from backtest import portfolio as pf
 from backtest.strategies import REGISTRY
 
 
@@ -42,6 +44,10 @@ def _months(spec: str) -> List[str]:
 
 
 def _load(args) -> Bars:
+    if args.desk_db:
+        return load_desk_db(args.desk_db, symbol=args.desk_symbol,
+                            interval_m=args.desk_interval,
+                            min_ticks=args.desk_min_ticks)
     if args.csv:
         return load_csv(args.csv)
     if args.synth:
@@ -53,20 +59,38 @@ def _load(args) -> Bars:
 
 
 def run_all(bars: Bars, ids: List[str], costs: CostModel, risk: RiskConfig,
-            entry_mode: str) -> List[Dict]:
-    bt = Backtester(bars, costs, risk, entry_mode=entry_mode)
-    rows = []
+            entry_mode: str, funnel: bool = False):
+    bt = Backtester(bars, costs, risk, entry_mode=entry_mode, funnel=funnel)
+    rows, funnels = [], []
     for sid in ids:
         cls = REGISTRY.get(sid)
         if cls is None:
             print(f"  ! unknown strategy '{sid}' (have: {', '.join(REGISTRY)})")
             continue
         res = bt.run(cls())
-        rows.append(metrics.summarize(res, bars, risk.equity0))
-    return rows
+        row = metrics.summarize(res, bars, risk.equity0)
+        if res.get("funnel") is not None:
+            row["funnel"] = res["funnel"].rows()
+            funnels.append(res["funnel"])
+        rows.append(row)
+    return rows, funnels
 
 
-def _report(bars: Bars, rows: List[Dict], bh: Dict, args, label: str) -> str:
+def run_portfolio(bars: Bars, ids: List[str], costs: CostModel, risk: RiskConfig,
+                  args):
+    """Run the selected strategies as a single book on one equity curve."""
+    strats = [REGISTRY[s]() for s in ids if s in REGISTRY]
+    bt = Backtester(bars, costs, risk, entry_mode=args.entry, funnel=args.funnel)
+    res = bt.run_many(strats, arm=pf.router(strats, enabled=not args.no_routing))
+    row = metrics.summarize(res, bars, risk.equity0)
+    attr = pf.attribution(res["trades"])
+    row["attribution"] = attr
+    row["routing"] = "off" if args.no_routing else "§0 regime table"
+    return [row], res.get("funnels", []), attr
+
+
+def _report(bars: Bars, rows: List[Dict], bh: Dict, args, label: str,
+            funnels=()) -> str:
     lines = [f"# Backtest — {label}", "",
              f"- **Data:** {bars.describe()}",
              f"- **Entry mode:** {args.entry}",
@@ -81,6 +105,13 @@ def _report(bars: Bars, rows: List[Dict], bh: Dict, args, label: str) -> str:
     for r in rows:
         lines += [f"### {r['strategy'].upper()} — {r['name']}", "", "```json",
                   json.dumps(r, indent=2), "```", ""]
+    if funnels:
+        lines += ["## Signal funnels", "",
+                  "Each row is evaluations that reached that gate *and* passed it; "
+                  "the drop to the next row is what the gate costs.", "", "```"]
+        for f in funnels:
+            lines += [f.report(), ""]
+        lines += ["```", ""]
     return "\n".join(lines)
 
 
@@ -89,13 +120,25 @@ def main(argv=None) -> int:
     src = p.add_argument_group("data")
     src.add_argument("--csv", help="path to a 5m OHLCV CSV")
     src.add_argument("--source", default="binance-vision",
-                     choices=["binance-vision", "binance", "bybit"])
+                     choices=["binance-vision", "binance", "bybit", "public-btc-5m", "public-btc-1h", "sp500-65y", "sp500-1d", "nasdaq-1d"])
     src.add_argument("--symbol", default="BTCUSDT")
     src.add_argument("--months", help="e.g. 2026-01:2026-06 (binance-vision)")
     src.add_argument("--cache", help="CSV cache path for fetched bars")
     src.add_argument("--synth", type=int, metavar="DAYS",
                      help="synthetic bars — harness self-test only, NOT evaluation")
     src.add_argument("--seed", type=int, default=7)
+    src.add_argument("--desk-db", metavar="SQLITE",
+                     help="bars recorded from the desk's own live feed "
+                          "(utils/bar_recorder.py) — real prices, real timestamps")
+    src.add_argument("--desk-symbol", default="",
+                     help="e.g. BTC/USD; default = the symbol with the most bars")
+    src.add_argument("--desk-interval", type=int, default=0,
+                     help="bar interval in the recorder DB; default = the busiest")
+    src.add_argument("--desk-min-ticks", type=int, default=2,
+                     help="drop bars observed fewer times than this (default 2: a "
+                          "1-observation bar has no measured range)")
+    src.add_argument("--desk-coverage", action="store_true",
+                     help="report what the recorder has accumulated, then exit")
 
     p.add_argument("--strategies", default="s1,s2,s3,s5,s6,s9")
     p.add_argument("--entry", default="spec", choices=["spec", "next_open"],
@@ -114,15 +157,60 @@ def main(argv=None) -> int:
                         "multiple. Lower it only to measure sensitivity.")
     p.add_argument("--funding-bps", type=float, default=0.0,
                    help="perp funding per 8h, charged pro-rata on hold time")
+    p.add_argument("--portfolio", action="store_true",
+                   help="run the selected strategies as one book: shared equity, "
+                        "one position at a time, portfolio-level circuit breakers")
+    p.add_argument("--no-routing", action="store_true",
+                   help="portfolio mode without the §0 regime-routing table "
+                        "(all strategies armed in every regime)")
+    p.add_argument("--funnel", action="store_true",
+                   help="report, per strategy, how many evaluations each entry "
+                        "condition passed — shows which gate kills the signals")
     p.add_argument("--out", help="write a markdown report here")
     p.add_argument("--json", dest="json_out", help="write raw stats JSON here")
     args = p.parse_args(argv)
+
+    if args.desk_coverage:
+        if not args.desk_db:
+            print("--desk-coverage needs --desk-db", file=sys.stderr)
+            return 2
+        try:
+            cov = desk_coverage(args.desk_db)
+        except DataUnavailable as exc:
+            print(f"DATA UNAVAILABLE: {exc}", file=sys.stderr)
+            return 2
+        print(f"{'symbol':<12}{'iv':>4}{'bars':>8}{'days':>8}{'ticks/bar':>11}"
+              f"{'1-tick %':>10}{'expected':>10}")
+        for c in cov:
+            print(f"{c['symbol']:<12}{c['interval_m']:>4}{c['bars']:>8}"
+                  f"{c['span_days']:>8.2f}{c['ticks_per_bar']:>11.2f}"
+                  f"{c['single_tick_pct']:>10.1f}{c['expected_bars']:>10}")
+        print("\n'1-tick %' is the share of bars with open==high==low==close. Those "
+              "have a price but no range;\nATR, wicks and intrabar stop tests are "
+              "meaningless on them. High values mean the recorder\ninterval is "
+              "finer than the desk's poll cadence.")
+        try:
+            from config import bar_intervals_for, load_config
+            cm = load_config().cycle_minutes
+            iv = bar_intervals_for(cm)
+            print(f"\nCYCLE_MINUTES={cm} -> the correct intervals for this cadence "
+                  f"are {', '.join(f'{v}m' for v in iv)}"
+                  f" (backtest the {iv[-1]}m series).")
+        except Exception:
+            pass
+        return 0
 
     try:
         bars = _load(args)
     except DataUnavailable as exc:
         print(f"DATA UNAVAILABLE: {exc}", file=sys.stderr)
         return 2
+
+    if args.desk_db:
+        print("note: recorded-feed bars carry a TICK COUNT in the volume column, "
+              "not traded volume.\n      Volume gates (s2 vol_mult, s15, s1's "
+              "capitulation filter) measure sampling\n      frequency here, not "
+              "participation. Read their results accordingly.")
 
     if args.synth:
         print("!" * 78)
@@ -145,14 +233,26 @@ def main(argv=None) -> int:
 
     all_rows, chunks = {}, []
     for label, seg in segments:
-        rows = run_all(seg, ids, costs, risk, args.entry)
+        if args.portfolio:
+            rows, funnels, attr = run_portfolio(seg, ids, costs, risk, args)
+        else:
+            rows, funnels = run_all(seg, ids, costs, risk, args.entry, args.funnel)
+            attr = None
         bh = metrics.buy_hold(seg)
         all_rows[label] = rows
         print(f"\n=== {label} — {seg.describe()}")
         print(metrics.format_table(rows))
         print(f"buy&hold: {bh['return_pct']}% ret, {bh['max_dd_pct']}% DD, "
               f"Sharpe {bh['sharpe']}")
-        chunks.append(_report(seg, rows, bh, args, label))
+        if attr:
+            print("\n-- attribution (shared equity, one position at a time) --")
+            print(pf.format_attribution(attr))
+        if funnels:
+            print("\n-- signal funnels --")
+            for f in funnels:
+                print(f.report())
+                print()
+        chunks.append(_report(seg, rows, bh, args, label, funnels))
 
     if args.out:
         os.makedirs(os.path.dirname(args.out) or ".", exist_ok=True)

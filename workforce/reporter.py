@@ -162,6 +162,11 @@ def _evaluation_block() -> Dict[str, Any]:
                 "started_at": m["started_at"], "ends_at": m["ends_at"],
                 "pct": round(100.0 * min(elapsed, total) / total, 1),
                 "criteria": m.get("success_criteria", {}),
+                # A window whose behaviour changed silently is worse than one that
+                # never claimed to be frozen. Amendments ride on every snapshot so
+                # the change is visible next to the result it affects.
+                "amendments": [{"at": a.get("at", ""), "change": a.get("change", "")}
+                               for a in m.get("amendments", [])],
                 "frozen_at_commit": m.get("frozen_at_commit", "")[:7]}
     except Exception:
         return {}
@@ -189,6 +194,60 @@ def _hermes_block(firm, db, cycle_result: Dict[str, Any]) -> Dict[str, Any]:
     except Exception:
         out["scorecard"] = {}
     return out
+
+
+def _feed_block(firm) -> Dict[str, Any]:
+    """Market-data health for the dashboard — rejected ticks, frozen feeds and
+    stale venue prints, so a degrading feed is visible before it costs money.
+    Fault-isolated: telemetry must never be the thing that breaks the report."""
+    out: Dict[str, Any] = {}
+    try:
+        feed = getattr(firm, "feed", None)
+        if feed is None:
+            out = {"available": False}
+        else:
+            h = feed.health()
+            out = {
+                "available": True,
+                "venue_timestamps": bool(getattr(feed, "venue_timestamps", False)),
+                "accepted": h.total_accepted, "rejected": h.total_rejected,
+                "reject_rate": round(h.reject_rate, 4),
+                "symbols": h.symbols,
+            }
+    except Exception as exc:
+        out = {"available": False, "error": str(exc)[:120]}
+    try:
+        out["recorder"] = _recorder_block(firm)
+    except Exception as exc:                  # telemetry never breaks the report
+        out["recorder"] = {"enabled": False, "error": str(exc)[:120]}
+    return out
+
+
+def _recorder_block(firm) -> Dict[str, Any]:
+    """How much real OHLCV history the desk has accumulated from its own feed.
+
+    Reports `single_tick_pct` alongside the bar count deliberately. A bar built
+    from one observation has open == high == low == close, so a raw count would
+    say "10,000 bars" about a series with no measured range in it. The owner's
+    real question is "can I backtest this yet", and only `usable` answers it.
+    """
+    rec = getattr(firm, "bars", None)
+    if rec is None:
+        return {"enabled": False}
+    try:
+        cov = rec.coverage()
+        return {
+            "enabled": True,
+            "intervals": list(getattr(rec, "intervals", [])),
+            "series": [{"symbol": c["symbol"], "interval_m": c["interval_m"],
+                        "bars": c["bars"], "usable": c.get("usable_bars", 0),
+                        "ticks_per_bar": c.get("ticks_per_bar", 0),
+                        "single_tick_pct": c.get("single_tick_pct", 0),
+                        "span_days": c["span_days"]}
+                       for c in cov[:8]],
+        }
+    except Exception as exc:
+        return {"enabled": True, "error": str(exc)[:120]}
 
 
 def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[str, Any]) -> Dict[str, Any]:
@@ -415,6 +474,7 @@ def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[st
         "workforce": [{"role": n, "mandate": m} for n, m in WORKFORCE],
         "executed_this_cycle": cycle_result.get("executed", []),
         "env_catalog": _env_catalog(),
+        "feed": _feed_block(firm),
     }
 
 

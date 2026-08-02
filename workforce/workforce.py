@@ -51,6 +51,9 @@ from strategies.trailing_ladder import TrailingLadder
 from strategies.wheel_strategy import WheelStrategy
 from utils.logger import get_logger
 from utils.notify import Notifier
+from utils.quote_cache import CachedBroker
+from utils.bar_recorder import BarRecorder
+from utils.realtime import RealtimeGuard
 from utils.state_store import record_event
 
 log = get_logger("workforce")
@@ -477,8 +480,41 @@ class ExecutionTrader:
 class Firm:
     def __init__(self, cfg: Config, client, db: Database):
         self.cfg = cfg
+        # Real-time quote guard + per-cycle price cache.
+        #
+        # OFF BY DEFAULT, deliberately. Both change desk behaviour — the guard
+        # can reject a tick (so the desk stands down where it previously traded)
+        # and the cache pins one price per symbol per cycle — and
+        # public/evaluation.json freezes behaviour for the 90-day out-of-sample
+        # window ending 2026-10-24. Merging this must not silently invalidate
+        # that measurement, so the code ships wired but dormant: flip QUOTE_GUARD
+        # to true once the window closes and no code change or merge is needed.
+        #
+        # Wrapped here rather than in utils.broker.get_broker() so the factory
+        # keeps returning the bare adapter its contract promises; every role
+        # below shares this instance. Order matters: validate the fresh read,
+        # then cache the validated value.
+        self.feed = None
+        if getattr(cfg, "quote_guard_enabled", False):
+            self.feed = RealtimeGuard(client, max_jump_pct=cfg.quote_max_jump_pct,
+                                      stale_after_s=cfg.quote_stale_after_s,
+                                      max_venue_age_s=cfg.quote_max_venue_age_s)
+            client = CachedBroker(self.feed)
+            log.info("real-time quote guard ENABLED (jump>%.0f%% rejected, "
+                     "venue prints >%.0fs flagged)",
+                     cfg.quote_max_jump_pct * 100, cfg.quote_max_venue_age_s)
         self.client = client
         self.db = db
+        # Passive history accumulation. Robinhood's API has no candles, so the
+        # only way to get real bars out of it is to record the quotes the desk
+        # already fetches. Pure logging: it observes, writes rows, and influences
+        # no decision — which is why it is allowed to run during the evaluation
+        # window while the quote guard is not.
+        self.bars = None
+        if getattr(cfg, "bar_recorder_enabled", True):
+            self.bars = BarRecorder(db, getattr(cfg, "bar_intervals",
+                                                getattr(cfg, "bar_interval_minutes", 5)),
+                                    source=getattr(client, "mode", "live"))
         self.council = Council()
         self.brain = AIBrain(cfg)
         self.alt = AltData(cfg)   # QuiverQuant insider/congress alt-data overlay
@@ -700,6 +736,15 @@ class Firm:
     def run_cycle(self, state: Dict[str, Any], trade: bool = True) -> Dict[str, Any]:
         state["cycle"] = state.get("cycle", 0) + 1
         cycle = state["cycle"]
+        if hasattr(self.client, "begin_cycle"):
+            self.client.begin_cycle()  # fresh quotes; pinned for this cycle
+        # Record this cycle's prices as bars (passive; see utils/bar_recorder.py).
+        if self.bars is not None:
+            try:
+                self.bars.record_many({sym: self.client.get_price(sym)
+                                       for sym in self.cfg.tickers})
+            except Exception as exc:      # history keeping never disturbs trading
+                log.warning("bar recording skipped: %s", exc)
         mode = getattr(self.client, "mode", self.cfg.mode)   # broker-accurate
         state["mode"] = mode
         acct = self.client.get_account()
@@ -843,7 +888,7 @@ class Firm:
         # quarantined: no NEW risk, exits still flow) and grading the council's realized
         # accuracy into a small self-improvement tilt. Fault-isolated like everything else.
         try:
-            hermes = self.hermes.review(research, state)
+            hermes = self.hermes.review(research, state, feed=self.feed)
             if hermes.quarantined:
                 log.warning("HERMES quarantined %s — new risk blocked (bad data)",
                             ", ".join(hermes.quarantined))

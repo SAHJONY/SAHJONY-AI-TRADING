@@ -113,10 +113,43 @@ class Trade:
 
 
 class Strategy:
-    """Interface implemented in strategies.py."""
+    """Interface implemented in strategies.py.
+
+    Every tunable number lives in `PARAMS` and is read through `self.p`, so the
+    optimizer can search a strategy without editing it. Defaults are the values
+    written in the playbook — constructing a strategy with no arguments always
+    reproduces the specification exactly.
+    """
     id = "base"
     name = "base"
     warmup = 300
+    funnel = None            # set by Backtester(..., funnel=True)
+    PARAMS: Dict[str, float] = {}
+
+    def __init__(self, **overrides):
+        unknown = set(overrides) - set(self.PARAMS)
+        if unknown:
+            raise ValueError(f"{self.id}: unknown parameter(s) {sorted(unknown)}")
+        self.p = dict(self.PARAMS)
+        self.p.update(overrides)
+        self.overrides = dict(overrides)
+
+    def describe_params(self) -> str:
+        if not self.overrides:
+            return f"{self.id}(spec defaults)"
+        return f"{self.id}(" + ", ".join(f"{k}={v}" for k, v in
+                                         sorted(self.overrides.items())) + ")"
+
+    def _g(self, name: str, cond) -> bool:
+        """Route a signal condition through the funnel recorder when attached."""
+        if self.funnel is None:
+            return bool(cond)
+        return self.funnel.gate(name, cond)
+
+    def _emit(self, setup):
+        if self.funnel is not None and setup is not None:
+            self.funnel.emitted()
+        return setup
 
     def prepare(self, bars: Bars) -> Dict[str, np.ndarray]:
         return {}
@@ -133,10 +166,12 @@ class Strategy:
 # ── engine ────────────────────────────────────────────────────────────────────
 class Backtester:
     def __init__(self, bars: Bars, costs: Optional[CostModel] = None,
-                 risk: Optional[RiskConfig] = None, entry_mode: str = "spec"):
+                 risk: Optional[RiskConfig] = None, entry_mode: str = "spec",
+                 funnel: bool = False):
         self.bars = bars
         self.costs = costs or CostModel()
         self.risk = risk or RiskConfig()
+        self.funnel = funnel
         # "spec" honours each strategy's stated entry; "next_open" forces every
         # market entry to the next bar's open (a friction-sensitivity run).
         self.entry_mode = entry_mode
@@ -156,18 +191,42 @@ class Backtester:
 
     # -- main loop -------------------------------------------------------------
     def run(self, strat: Strategy) -> Dict:
+        """Backtest one strategy on its own equity — the N=1 case of run_many."""
+        return self.run_many([strat])
+
+    def run_many(self, strats: List[Strategy], arm=None) -> Dict:
+        """Backtest one or more strategies sharing a single equity curve.
+
+        With several strategies this is the book as §0 actually specifies it:
+        one directional position at a time, one portfolio-level daily loss stop,
+        one consecutive-loss size reduction. `arm(t, atr_pct)` returns the
+        strategy indices eligible at bar t, highest priority first — that is the
+        regime-routing table. Default: every strategy, in the order given.
+        """
         b = self.bars
         n = len(b)
-        ind = strat.prepare(b)
-        atr = ind.get("atr")
-        if atr is None:
-            raise ValueError(f"{strat.id}: prepare() must expose 'atr'")
+        inds, atrs = [], []
+        for st in strats:
+            ind = st.prepare(b)
+            if self.funnel:
+                from backtest.funnel import Funnel
+                st.funnel = Funnel(st.id)
+            if ind.get("atr") is None:
+                raise ValueError(f"{st.id}: prepare() must expose 'atr'")
+            inds.append(ind)
+            atrs.append(ind["atr"])
+        if arm is None:
+            order = list(range(len(strats)))
+            def arm(t, atr_pct):        # noqa: E306 - trivial default
+                return order
 
         equity = self.risk.equity0
         eq_curve = np.full(n, np.nan)
         trades: List[Trade] = []
         pos: Optional[Position] = None
-        pending: Optional[Tuple[Setup, int]] = None      # (setup, expiry bar)
+        active = 0                                       # strategy owning pos/pending
+        atr = atrs[0]
+        pending: Optional[Tuple[int, Setup, int]] = None  # (strategy, setup, expiry)
         day = b.day_id
         day_start_equity = equity
         cur_day = day[0]
@@ -200,7 +259,8 @@ class Backtester:
                     equity -= carry
                 r = pos.pnl / pos.risk_unit if pos.risk_unit else 0.0
                 trades.append(Trade(
-                    strategy=strat.id, side=pos.side, entry_ts=int(b.ts[pos.entry_bar]),
+                    strategy=strats[active].id, side=pos.side,
+                    entry_ts=int(b.ts[pos.entry_bar]),
                     exit_ts=int(b.ts[t]), entry_px=pos.entry_px, exit_px=fill,
                     qty=pos.qty, pnl=pos.pnl, fees=pos.fees, r=r,
                     bars_held=t - pos.entry_bar, mae_r=pos.mae, mfe_r=pos.mfe,
@@ -252,10 +312,6 @@ class Backtester:
             # ---- manage an open position -------------------------------------
             if pos is not None:
                 hi, lo, cl = b.high[t], b.low[t], b.close[t]
-                a_pct = float(atr[t] / cl) if cl else 0.0
-                # excursions in R
-                adv = pos.side * (max(hi, lo) - pos.entry_px)
-                against = pos.side * (min(lo, hi) - pos.entry_px)
                 unit = pos.risk_unit / pos.qty if pos.qty else 1.0
                 if pos.side > 0:
                     pos.mfe = max(pos.mfe, (hi - pos.entry_px) / unit)
@@ -265,7 +321,6 @@ class Backtester:
                     pos.mfe = max(pos.mfe, (pos.entry_px - lo) / unit)
                     pos.mae = min(pos.mae, (pos.entry_px - hi) / unit)
                     pos.peak = min(pos.peak, lo)
-                del adv, against
 
                 stopped = (lo <= pos.stop) if pos.side > 0 else (hi >= pos.stop)
                 if stopped:
@@ -288,7 +343,7 @@ class Backtester:
                                         else min(pos.stop, pos.entry_px))
 
                 if pos is not None:
-                    reason = strat.manage(t, b, ind, pos)
+                    reason = strats[active].manage(t, b, inds[active], pos)
                     if reason:
                         close_position(t, cl, pos.qty_open, reason, maker=False,
                                        is_stop=False)
@@ -315,7 +370,7 @@ class Backtester:
 
             # ---- pending order -----------------------------------------------
             if pos is None and pending is not None:
-                s, expiry = pending
+                idx, s, expiry = pending
                 if t > expiry:
                     pending = None
                 else:
@@ -331,6 +386,7 @@ class Backtester:
                     if filled:
                         pending = None
                         if not day_halted:
+                            active, atr = idx, atrs[idx]
                             open_position(t, s, filled[0], maker=filled[1])
                             # a fill and a stop-out can share a bar; resolve
                             # pessimistically on the same bar
@@ -342,12 +398,19 @@ class Backtester:
                                                    is_stop=True)
 
             # ---- new signal ---------------------------------------------------
-            if pos is None and pending is None and t >= strat.warmup and t < n - 1:
+            if pos is None and pending is None and t < n - 1:
                 if day_halted:
                     skipped_halt += 1
                 else:
-                    s = strat.signal(t, b, ind)
-                    if s is not None:
+                    a_pct = (float(atrs[0][t] / b.close[t])
+                             if b.close[t] and np.isfinite(atrs[0][t]) else 0.0)
+                    for idx in arm(t, a_pct):
+                        if t < strats[idx].warmup:
+                            continue
+                        s = strats[idx].signal(t, b, inds[idx])
+                        if s is None:
+                            continue
+                        active, atr = idx, atrs[idx]
                         kind = s.entry_kind
                         if self.entry_mode == "next_open" and kind == "close":
                             kind = "next_open"
@@ -361,14 +424,23 @@ class Backtester:
                                                    is_stop=True)
                         else:
                             s.entry_kind = kind
-                            pending = (s, t + max(1, s.valid_bars))
+                            pending = (idx, s, t + max(1, s.valid_bars))
+                        break
 
         if pos is not None:
             close_position(n - 1, b.close[n - 1], pos.qty_open, "eod_flat",
                            maker=False, is_stop=False)
             eq_curve[n - 1] = equity
 
-        return {"strategy": strat.id, "name": strat.name, "trades": trades,
-                "equity": eq_curve, "equity_final": equity,
-                "skipped_leverage": skipped_leverage, "skipped_halt": skipped_halt,
-                "skipped_edge": skipped_edge}
+        out = {"trades": trades, "equity": eq_curve, "equity_final": equity,
+               "skipped_leverage": skipped_leverage, "skipped_halt": skipped_halt,
+               "skipped_edge": skipped_edge}
+        if len(strats) == 1:
+            out.update({"strategy": strats[0].id, "name": strats[0].name,
+                        "funnel": strats[0].funnel})
+        else:
+            out.update({"strategy": "portfolio",
+                        "name": f"Portfolio ({', '.join(s.id for s in strats)})",
+                        "funnel": None,
+                        "funnels": [s.funnel for s in strats if s.funnel]})
+        return out

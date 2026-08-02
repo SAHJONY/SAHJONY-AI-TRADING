@@ -84,6 +84,17 @@ oscillates around AVWAP and σ-band excursions are inventory imbalances that dec
 - ATR(14) — stop sizing.
 - Volume: 20-bar SMA of volume.
 
+**Upgrade — confluence score instead of a hard AND.** Implementation showed these
+six conditions co-occur ~4 times in 51k bars, so the strategy never trades. The
+band pierce is structural (it sets the entry price) and stays mandatory; the five
+context conditions are now **scored**, and `min_score` sets how many must agree.
+**Default is now `min_score = 0.8`** (four of five). `1.0` — the original,
+all-five reading — was measured on real 5m BTC at ~34 trades a year, so this
+document's own 300-trade out-of-sample floor would take about nine years to
+reach. A strategy that cannot be measured is not a strategy. `0.8` gives ~305 a
+year. The value was chosen on frequency alone, with P&L deliberately not
+consulted, and the promotion gate still decides whether it works.
+
 **3. Long entry (all must hold on close of bar *t*)**
 1. `ADX(14) < 20` and ADX not rising for 3 bars (no trend regime).
 2. Regime = LOW or NORMAL (`ATRpct < 0.30%`).
@@ -318,6 +329,9 @@ retracement rather than the breakout dramatically improves R:R and cuts slippage
 - EMA(200) on 5m for the higher-order bias.
 - ADX(14) — **trend confirmer** (opposite polarity to S1's use).
 - Fibonacci retracement of the last impulse leg (38.2% / 50% / 61.8%).
+  *(The Fib window and the EMA21–55 zone below are two definitions of the same
+  "pullback area" and agree only 43% of the time; requiring both costs ~93% of
+  surviving setups. `zone_mode` selects `both` (as specified), `fib`, or `ema`.)*
 - ATR(14); volume 20-SMA.
 
 **3. Long entry**
@@ -583,13 +597,29 @@ Requires L2 book data and low-latency execution; on a retail REST connection wit
 **Regime routing** — at most one directional strategy live at a time:
 
 ```
-ATRpct < 0.12%              → S10, S9, S1        (fade / scalp)
-0.12% ≤ ATRpct < 0.30%      → S1, S5, S6, S9     (mixed)
-0.30% ≤ ATRpct < 0.60%      → S2, S3, S6, S4     (trend / breakout)
-ATRpct ≥ 0.60%              → S7, S8 only        (cascade / RV), size ×0.5
+ATRpct < 0.12%              → S3, S10, S9, S1, S5     (fade / compression)
+0.12% ≤ ATRpct < 0.30%      → S3, S2, S6, S5, S1, S9  (mixed)
+0.30% ≤ ATRpct < 0.60%      → S2, S6, S5, S4          (trend / breakout)
+ATRpct ≥ 0.60%              → S7, S8 only             (cascade / RV), size ×0.5
 Squeeze ON + bandwidth pct < 20  → S3 has priority, S9 disabled
 ADX < 20 → S1/S9 armed, S6 disabled ; ADX > 22 rising → S6 armed, S1 disabled
 ```
+
+*(Corrected after implementation. The original table routed **S3 to HIGH only**,
+which made it unreachable: every S3 signal fires in LOW/NORMAL, because ATR(14)
+is a **trailing** classifier and a squeeze breaks out while the average still
+reflects the compressed bars it is escaping. That also contradicted S3's own
+"optimal regime — transition from LOW to HIGH". Each row now follows the
+strategies' own regime sections. Priority inside a bucket is by scarcity and
+time-criticality — a rare setup that must be taken on its signal bar outranks a
+frequent one — never by observed P&L.)*
+
+**Lagging-classifier caveat, generally.** Any regime gate built on a trailing
+average reads the regime the market is *leaving*, not the one it is entering.
+That is harmless for the fade strategies, which want the regime to persist, and
+actively wrong for the expansion strategies (S2, S3), which are defined by a
+regime change. Where a strategy trades a transition, gate it on the compression
+it is leaving, not the expansion it is entering.
 
 ## Validation requirements before any of these leave paper
 

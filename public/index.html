@@ -1054,9 +1054,13 @@ function setStatus(){
   const eb=document.getElementById('evalBadge');
   const ev=(DATA.health||{}).evaluation||{};
   if(eb){
-    if(ev.days){ eb.style.display=''; eb.textContent=`EVAL ${ev.day}/${ev.days}`;
+    const am=Array.isArray(ev.amendments)?ev.amendments:[];
+    if(ev.days){ eb.style.display='';
+      // An amended window is still a valid window, but the reader has to know.
+      eb.textContent=`EVAL ${ev.day}/${ev.days}`+(am.length?` ·${am.length}Δ`:'');
       eb.title=`Out-of-sample window ${ev.pct}% elapsed · frozen at ${ev.frozen_at_commit}`
         +`\nDecision date: ${String(ev.ends_at||'').slice(0,10)}`
+        +(am.length?`\nAmended ${am.length}×: `+am.map(a=>`${String(a.at||'').slice(0,10)} ${a.change||''}`).join('; '):'')
         +(ev.active?'':' · WINDOW CLOSED — time to judge the result'); }
     else eb.style.display='none';
   }
@@ -1693,6 +1697,32 @@ function Brain(v){
     ${Object.keys(hm.hit_rates||{}).length?`<div class="row"><span class="mut">Council hit-rate</span><span class="tag">${Object.entries(hm.hit_rates).map(([k,v])=>`${esc(k)} ${Math.round(v*100)}%`).join(' · ')}</span></div>`:''}
     ${Object.keys(hm.strategy_weights||{}).length?`<div class="row"><span class="mut">Desk calibration (learned)</span><span class="tag">${Object.entries(hm.strategy_weights).map(([k,v])=>`${esc(k)} ×${v}`).join(' · ')}</span></div>`:''}`;
   g.appendChild(panel('Hermes Guardian', hs, 'background agent', 'span7'));
+  // Market-data feed health — the real-time guard's verdict (utils/realtime.py).
+  // A degrading feed should be visible here BEFORE it shows up in the P&L.
+  const fd=(DATA.feed)||{};
+  if(fd.available){
+    const syms=fd.symbols||{};
+    const bad=Object.entries(syms).filter(([_,d])=>(d.rejected||0)>0||(d.frozen_flags||0)>0||(d.venue_stale_flags||0)>0);
+    const rr=fd.reject_rate||0;
+    const fs=$(`<div></div>`);
+    fs.innerHTML=`<div class="row"><span class="mut">Quote guard</span><span class="tag ${rr>0.05?'off':(rr>0?'amber':'on')}">${rr>0?`${(rr*100).toFixed(1)}% rejected`:'all quotes accepted'}</span></div>
+      <div class="row"><span class="mut">Ticks validated</span><span class="tag">${(fd.accepted||0).toLocaleString()} accepted · ${(fd.rejected||0).toLocaleString()} rejected</span></div>
+      <div class="row"><span class="mut">Venue timestamps</span><span class="tag ${fd.venue_timestamps?'on':'amber'}" title="${fd.venue_timestamps?'staleness measured from the exchange print':'venue does not report a print time — age measured from our fetch'}">${fd.venue_timestamps?'exchange print time':'fetch time only'}</span></div>
+      ${bad.length?bad.map(([k,d])=>`<div class="row"><span class="mut">${esc(k)}</span><span class="tag ${(d.rejected||0)?'off':'amber'}">${[(d.rejected||0)?`${d.rejected} rejected`:'',(d.frozen_flags||0)?`${d.frozen_flags}× frozen`:'',(d.venue_stale_flags||0)?`${d.venue_stale_flags}× stale print`:''].filter(Boolean).join(' · ')}</span></div>`).join(''):`<div class="row"><span class="mut">Per-symbol</span><span class="tag on">${Object.keys(syms).length} feed${Object.keys(syms).length===1?'':'s'} healthy</span></div>`}`;
+    g.appendChild(panel('Market Data Feed', fs, 'real-time guard', 'span5'));
+  }
+  // Recorded history — the desk turning its own live feed into backtestable bars.
+  // 'usable' (not 'bars') is the honest count: a single-tick bar has no range.
+  const rc0=(DATA.feed||{}).recorder||{};
+  if(rc0.enabled&&(rc0.series||[]).length){
+    const rs=$(`<div></div>`);
+    rs.innerHTML=`<div class="row"><span class="mut">Recording at</span><span class="tag on">${(rc0.intervals||[]).map(i=>i+'m').join(' · ')||'—'}</span></div>`
+      +rc0.series.map(s=>{
+        const pct=s.single_tick_pct||0, ok=pct<50;
+        return `<div class="row" title="${s.bars} bars stored; ${pct}% have open==high==low==close, so their range was never observed"><span class="mut">${esc(s.symbol)} ${s.interval_m}m</span><span class="tag ${ok?'on':'amber'}">${(s.usable||0).toLocaleString()} usable / ${(s.bars||0).toLocaleString()} · ${s.ticks_per_bar} ticks/bar · ${s.span_days}d</span></div>`;
+      }).join('');
+    g.appendChild(panel('Recorded History', rs, 'live feed → backtest bars', 'span5'));
+  }
   // autonomous model updater — show the live model each provider is pinned to
   const ai=((DATA.health||{}).ai_brain)||{}; const mdl=ai.models||{};
   const ms=$(`<div></div>`);

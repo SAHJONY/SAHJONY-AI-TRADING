@@ -7,6 +7,7 @@ P&L number is not evidence of anything.
 """
 from __future__ import annotations
 
+import json
 import sys
 
 import numpy as np
@@ -126,6 +127,115 @@ def main() -> int:
         ok = all(np.isfinite(t.pnl) and np.isfinite(t.r) for t in r["trades"])
         _check(ok and np.isfinite(r["equity_final"]),
                f"{sid}: {len(r['trades'])} trades, finite equity")
+
+    print("\n── funnel instrumentation is observation-only ──")
+    for sid, cls in REGISTRY.items():
+        plain = Backtester(b2).run(cls())
+        instr = Backtester(b2, funnel=True).run(cls())
+        same = (len(plain["trades"]) == len(instr["trades"])
+                and all(abs(x.pnl - y.pnl) < 1e-9 and x.entry_ts == y.entry_ts
+                        for x, y in zip(plain["trades"], instr["trades"])))
+        _check(same, f"{sid}: --funnel does not change any trade")
+    f = Backtester(b2, funnel=True).run(REGISTRY["s9"]())["funnel"]
+    rows = f.rows()
+    _check(bool(rows) and all(r["reached"] >= r["passed"] for r in rows),
+           "funnel rows are internally consistent (passed <= reached)")
+    _check(all(rows[i]["reached"] >= rows[i + 1]["reached"]
+               for i in range(len(rows) - 1) if rows[i + 1]["reached"] <= rows[i]["passed"]),
+           "gate ordering is monotone where the funnel is sequential")
+
+    print("\n── portfolio mode ──")
+    from backtest import portfolio as pf
+    strats = [cls() for cls in REGISTRY.values()]
+    bt = Backtester(b2)
+    port = bt.run_many(strats, arm=pf.router(strats))
+    solo = {sid: Backtester(b2).run(cls()) for sid, cls in REGISTRY.items()}
+    solo_n = sum(len(r["trades"]) for r in solo.values())
+    _check(len(port["trades"]) <= solo_n,
+           "one position at a time cannot produce more trades than running solo")
+    _check(np.isfinite(port["equity_final"]) and port["strategy"] == "portfolio",
+           "portfolio run returns a single shared equity curve")
+    seen = {t.strategy for t in port["trades"]}
+    _check(seen.issubset(set(REGISTRY)), "every portfolio trade is attributed to a strategy")
+
+    one = Backtester(b2).run_many([REGISTRY["s9"]()])
+    ref = Backtester(b2).run(REGISTRY["s9"]())
+    _check(len(one["trades"]) == len(ref["trades"])
+           and abs(one["equity_final"] - ref["equity_final"]) < 1e-9,
+           "run() is exactly the N=1 case of run_many()")
+
+    # The bug this catches: §0 originally routed S3 to HIGH only, but every S3
+    # signal fires in LOW/NORMAL — ATR(14) is a trailing classifier and a squeeze
+    # breaks out while the average still reflects the compressed bars. A strategy
+    # routed only to regimes it never signals in is dead code.
+    b3 = synth.make(days=180, seed=7)
+    ts_at = {int(t): i for i, t in enumerate(b3.ts)}
+    for sid, cls in REGISTRY.items():
+        st = cls()
+        r = Backtester(b3).run(st)
+        if not r["trades"]:
+            continue
+        ind = st.prepare(b3)
+        ap = ind["atr"] / b3.close
+        fires_in = {pf.regime_of(float(ap[ts_at[t.entry_ts]])) for t in r["trades"]}
+        armed_in = {pf.REGIME_NAMES[i] for i, (_, _, ids) in enumerate(pf.ROUTING)
+                    if sid in ids}
+        _check(bool(fires_in & armed_in),
+               f"{sid}: routed to a regime it actually signals in "
+               f"(fires {sorted(fires_in)}, armed {sorted(armed_in)})")
+
+    print("\n── self-improvement: parameterisation ──")
+    from backtest import optimize as opt
+    for sid, cls in REGISTRY.items():
+        base = Backtester(b2).run(cls())
+        same = Backtester(b2).run(cls(**{}))
+        _check(len(base["trades"]) == len(same["trades"]),
+               f"{sid}: constructing with no overrides reproduces the spec")
+    try:
+        REGISTRY["s6"](not_a_real_param=1)
+        _check(False, "unknown parameters are rejected")
+    except ValueError:
+        _check(True, "unknown parameters are rejected")
+
+    print("\n── self-improvement: the guards discriminate ──")
+    rng = np.random.default_rng(0)
+    # (a) one parameter set genuinely best in every block -> PBO must be ~0
+    good = np.tile(np.linspace(0.1, 1.0, 10)[:, None], (1, 8)) + rng.normal(0, .01, (10, 8))
+    p_good = opt.pbo(good, seed=1)["pbo"]
+    _check(p_good is not None and p_good <= 0.1,
+           f"PBO ~0 when one parameter set really is best (got {p_good})")
+    # (b) pure noise -> PBO must land near 0.5, i.e. the search learned nothing
+    noise = rng.normal(0, 1, (30, 8))
+    p_noise = opt.pbo(noise, seed=1)["pbo"]
+    _check(p_noise is not None and 0.25 <= p_noise <= 0.75,
+           f"PBO ~0.5 on pure noise (got {p_noise})")
+    _check(p_noise > p_good, "PBO separates a real winner from a lucky one")
+
+    # deflated Sharpe must charge for the number of trials
+    rets = rng.normal(0.12, 1.0, 500)
+    d1 = opt.deflated_sharpe(rets, n_trials=1)["dsr"]
+    d500 = opt.deflated_sharpe(rets, n_trials=5000)["dsr"]
+    _check(d1 is not None and d500 is not None and d1 > d500,
+           f"the same Sharpe is worth less after more trials ({d1} -> {d500})")
+    _check(opt.deflated_sharpe(rng.normal(0, 1, 10), n_trials=1)["dsr"] is None,
+           "deflated Sharpe refuses to opine on a tiny sample")
+
+    # stability: a plateau scores high, a spike scores low
+    space = {"x": [1, 2, 3]}
+    plateau = {json.dumps({"x": v}, sort_keys=True): 1.0 for v in (1, 2, 3)}
+    spike = {json.dumps({"x": 1}, sort_keys=True): 0.05,
+             json.dumps({"x": 2}, sort_keys=True): 1.0,
+             json.dumps({"x": 3}, sort_keys=True): 0.05}
+    _check(opt.stability(space, plateau, {"x": 2})["stability"] >= 0.9,
+           "a plateau optimum is reported stable")
+    _check(opt.stability(space, spike, {"x": 2})["stability"] <= 0.2,
+           "a spike optimum is reported unstable")
+
+    # the gate defaults to refusing
+    empty = {"strategy": "sX", "oos_trades": [], "folds": [], "param_drift": {}}
+    dec = opt.promote(empty, {"pbo": None}, {"dsr": None}, {"stability": None})
+    _check(not dec["promoted"] and len(dec["failed_checks"]) >= 5,
+           "promotion gate refuses by default and says why")
 
     print("\n── data round-trip ──")
     import tempfile, os

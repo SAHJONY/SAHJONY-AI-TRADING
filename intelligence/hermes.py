@@ -76,7 +76,8 @@ class Hermes:
         return {"enabled": self.enabled, "agent": "hermes", "goal": self.goal}
 
     # ── per-cycle review (called before the strategists) ─────────────────────────
-    def review(self, research: List[Dict[str, Any]], state: Dict[str, Any]) -> HermesReport:
+    def review(self, research: List[Dict[str, Any]], state: Dict[str, Any],
+               feed: Any = None) -> HermesReport:
         """research: [{symbol, snap, verdict}]. Mutates state['hermes'] memory only.
         Any internal failure returns a neutral report — the loop never depends on it."""
         if not self.enabled or not research:
@@ -90,6 +91,11 @@ class Hermes:
             sym = r["symbol"]
             try:
                 hard, soft = self._data_issues(r["snap"])
+                # The real-time guard (utils/realtime.py) already judged this
+                # cycle's quote. A rejected quote means we are pricing off a
+                # stale value, so it quarantines the symbol: no NEW risk, while
+                # exits still flow. A merely "suspect" feed is a soft warning.
+                hard, soft = self._feed_issues(feed, sym, hard, soft)
             except Exception as exc:
                 hard, soft = ["validator error: " + str(exc)[:80]], []
             if hard:
@@ -197,6 +203,28 @@ class Hermes:
             return p if math.isfinite(p) else 0.0
         except (TypeError, ValueError):
             return 0.0
+
+    @staticmethod
+    def _feed_issues(feed, symbol: str, hard, soft):
+        """Fold the real-time guard's verdict on this cycle's quote into the
+        data-integrity review. Never raises: a guard problem must not take down
+        the review that exists to catch problems."""
+        if feed is None:
+            return hard, soft
+        try:
+            q = feed.last_quote(symbol)
+        except Exception:
+            return hard, soft
+        if q is None:
+            return hard, soft
+        if getattr(q, "stale", False):
+            hard = list(hard) + ["quote rejected by feed guard (serving last good)"]
+        elif getattr(q, "suspect", False):
+            v_age = getattr(q, "venue_age_s", None)
+            soft = list(soft) + [
+                "feed suspect: venue print %.0fs old" % v_age if v_age is not None
+                else "feed suspect: price unchanged (possible frozen feed)"]
+        return hard, soft
 
     @staticmethod
     def _data_issues(snap):
