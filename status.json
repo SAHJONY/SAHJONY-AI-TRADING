@@ -1,38 +1,302 @@
 {
   "firm": "SAHJONY CAPITAL LLC",
-  "tagline": "Autonomous multi-agent quant trading \u2014 PAPER",
+  "tagline": "Autonomous multi-agent quant trading \u2014 LIVE \u2014 REAL MONEY",
   "mode": "LIVE",
+  "broker": "robinhood_crypto",
   "benchmark": {
     "symbol": "BTC-USD",
     "start_price": 64337.05,
-    "last_price": 65355.88,
-    "return_pct": 1.584,
-    "alpha_pct": -1.584
+    "last_price": 63363.11,
+    "return_pct": -1.514,
+    "alpha_pct": 1.49
   },
-  "ts": "2026-07-27T06:55:44.366005+00:00",
-  "cycle": 348,
+  "ts": "2026-08-02T20:42:58.698305+00:00",
+  "cycle": 712,
+  "strategy_ranking": [
+    {
+      "name": "Momentum",
+      "key": "daytrade",
+      "stage": "integrated",
+      "score": 31.1,
+      "observations": 23.17,
+      "win_rate": 0.2784,
+      "evidence": "realized-hermes",
+      "live_eligible": false,
+      "rank": 1,
+      "promotion_stage": "research"
+    },
+    {
+      "name": "AI Consensus",
+      "key": "ai_consensus",
+      "stage": "shadow",
+      "score": 12.28,
+      "observations": 795,
+      "win_rate": 0.3535,
+      "evidence": "ai-shadow",
+      "live_eligible": false,
+      "rank": 2,
+      "promotion_stage": "research"
+    },
+    {
+      "name": "Pairs",
+      "key": "pairs",
+      "stage": "integrated",
+      "score": 0.0,
+      "observations": 0.0,
+      "win_rate": 0.0,
+      "evidence": "none",
+      "live_eligible": false,
+      "rank": 3,
+      "promotion_stage": "research"
+    },
+    {
+      "name": "Mean Reversion",
+      "key": "mean_reversion",
+      "stage": "incubator",
+      "score": 0.0,
+      "observations": 0.0,
+      "win_rate": 0.0,
+      "evidence": "none",
+      "live_eligible": false,
+      "rank": 4,
+      "promotion_stage": "research"
+    },
+    {
+      "name": "Credit Spread",
+      "key": "spread",
+      "stage": "integrated",
+      "score": 0.0,
+      "observations": 0.0,
+      "win_rate": 0.0,
+      "evidence": "none",
+      "live_eligible": false,
+      "rank": 5,
+      "promotion_stage": "research"
+    },
+    {
+      "name": "Wheel",
+      "key": "wheel",
+      "stage": "integrated",
+      "score": 0.0,
+      "observations": 0.0,
+      "win_rate": 0.0,
+      "evidence": "none",
+      "live_eligible": false,
+      "rank": 6,
+      "promotion_stage": "research"
+    },
+    {
+      "name": "Volatility Breakout",
+      "key": "volatility_breakout",
+      "stage": "incubator",
+      "score": 0.0,
+      "observations": 0.0,
+      "win_rate": 0.0,
+      "evidence": "none",
+      "live_eligible": false,
+      "rank": 7,
+      "promotion_stage": "research"
+    },
+    {
+      "name": "Regime Momentum",
+      "key": "regime_momentum",
+      "stage": "incubator",
+      "score": 0.0,
+      "observations": 0.0,
+      "win_rate": 0.0,
+      "evidence": "none",
+      "live_eligible": false,
+      "rank": 8,
+      "promotion_stage": "research"
+    }
+  ],
+  "promotion_pipeline": {
+    "stages": [
+      "research",
+      "backtest",
+      "walk_forward",
+      "paper",
+      "shadow",
+      "canary",
+      "production"
+    ],
+    "candidates": [
+      {
+        "key": "ai_consensus",
+        "name": "AI Consensus",
+        "kind": "strategy",
+        "stage": "research",
+        "evidence": {},
+        "approvals": {},
+        "created_at": "2026-07-31T07:38:01.624897+00:00",
+        "updated_at": "2026-08-02T20:42:58.690025+00:00"
+      },
+      {
+        "key": "spread",
+        "name": "Credit Spread",
+        "kind": "strategy",
+        "stage": "research",
+        "evidence": {},
+        "approvals": {},
+        "created_at": "2026-07-31T07:38:01.623113+00:00",
+        "updated_at": "2026-08-02T20:42:58.691856+00:00"
+      },
+      {
+        "key": "institutional_research",
+        "name": "Institutional Research Multiplier",
+        "kind": "risk_overlay",
+        "stage": "research",
+        "evidence": {},
+        "approvals": {},
+        "created_at": "2026-07-31T07:36:25.948812+00:00",
+        "updated_at": "2026-08-02T20:42:05.915199+00:00"
+      },
+      {
+        "key": "mean_reversion",
+        "name": "Mean Reversion",
+        "kind": "strategy",
+        "stage": "research",
+        "evidence": {},
+        "approvals": {},
+        "created_at": "2026-07-31T07:38:01.622615+00:00",
+        "updated_at": "2026-08-02T20:42:58.691283+00:00"
+      },
+      {
+        "key": "daytrade",
+        "name": "Momentum",
+        "kind": "strategy",
+        "stage": "research",
+        "evidence": {},
+        "approvals": {},
+        "created_at": "2026-07-31T07:38:01.621297+00:00",
+        "updated_at": "2026-08-02T20:42:58.689106+00:00"
+      },
+      {
+        "key": "pairs",
+        "name": "Pairs",
+        "kind": "strategy",
+        "stage": "research",
+        "evidence": {},
+        "approvals": {},
+        "created_at": "2026-07-31T07:38:01.622116+00:00",
+        "updated_at": "2026-08-02T20:42:58.690669+00:00"
+      },
+      {
+        "key": "regime_momentum",
+        "name": "Regime Momentum",
+        "kind": "strategy",
+        "stage": "research",
+        "evidence": {},
+        "approvals": {},
+        "created_at": "2026-07-31T07:38:01.624374+00:00",
+        "updated_at": "2026-08-02T20:42:58.693434+00:00"
+      },
+      {
+        "key": "volatility_breakout",
+        "name": "Volatility Breakout",
+        "kind": "strategy",
+        "stage": "research",
+        "evidence": {},
+        "approvals": {},
+        "created_at": "2026-07-31T07:38:01.623965+00:00",
+        "updated_at": "2026-08-02T20:42:58.692925+00:00"
+      },
+      {
+        "key": "wheel",
+        "name": "Wheel",
+        "kind": "strategy",
+        "stage": "research",
+        "evidence": {},
+        "approvals": {},
+        "created_at": "2026-07-31T07:38:01.623545+00:00",
+        "updated_at": "2026-08-02T20:42:58.692360+00:00"
+      }
+    ],
+    "audit": [],
+    "artifacts": [],
+    "canary_enabled": false,
+    "production_enabled": false,
+    "execution_authority": false,
+    "policy": "sequential evidence gates and explicit human approval; no execution authority",
+    "producer_health": {
+      "pending": 0,
+      "producer_count": 0,
+      "freshness_timestamp": null,
+      "last_delivered_at": null,
+      "last_error": null,
+      "execution_authority": false
+    }
+  },
+  "global_performance": {
+    "daily": {
+      "pnl": 0.02,
+      "return_pct": 0.000363,
+      "observations": 53
+    },
+    "weekly": {
+      "pnl": -0.01,
+      "return_pct": -0.000236,
+      "observations": 385
+    },
+    "monthly": {
+      "pnl": -0.01,
+      "return_pct": -0.000236,
+      "observations": 398
+    },
+    "ytd": {
+      "pnl": -0.01,
+      "return_pct": -0.000236,
+      "observations": 398
+    },
+    "sharpe": 0.945,
+    "sortino": 1.624,
+    "max_drawdown": 0.28631,
+    "profit_factor": 1.367,
+    "kelly_fraction": -0.0161,
+    "exposure": 0.019969,
+    "return_observations": 397
+  },
+  "self_improvement": {
+    "knowledge_base": {
+      "score": 35.0,
+      "nodes": 7
+    },
+    "model_accuracy": 0.3508,
+    "learning_progress": 1.0,
+    "observation_count": 3785,
+    "training_coverage": 0.6667,
+    "promotion_ready": true,
+    "overall_intelligence": 64.1,
+    "interpretation": "operational learning index; not a measure of general intelligence",
+    "evidence_state": "mature"
+  },
   "account": {
-    "equity": 50.0,
+    "equity": 49.99,
     "equity_start": 50.0,
-    "cash": 50.0,
-    "deployed": 0.0
+    "cash": 48.99,
+    "deployed": 1.0
   },
   "pnl": {
     "realized": 0.0,
     "premium_collected": 0.0,
-    "total_return_pct": 0.0
+    "transaction_costs": 0.0,
+    "total_return_pct": -0.024,
+    "source": "LIVE",
+    "broker_verified": false
   },
   "capital": {
     "deposits": 0.0,
     "withdrawals": 0.0,
     "net_capital": 0.0,
     "flows": 0,
-    "trading_pnl": 0.0,
-    "trading_return_pct": 0.0
+    "trading_pnl": -0.01,
+    "trading_return_pct": -0.024
   },
   "capital_flows": [],
   "health": {
     "mode": "LIVE",
+    "broker": "robinhood_crypto",
+    "live_armed": true,
     "broker_online": true,
     "market_open": true,
     "risk_caps": {
@@ -48,17 +312,17 @@
     "cadence": {
       "degraded": false,
       "reason": "",
-      "gap_min": 16.9,
+      "gap_min": 16.0,
       "expected_min": 15,
       "tolerance_min": 90.0
     },
     "evaluation": {
       "active": true,
-      "day": 0,
+      "day": 6,
       "days": 90,
       "started_at": "2026-07-26T21:38:16.798191+00:00",
       "ends_at": "2026-10-24T21:38:16.798191+00:00",
-      "pct": 0.0,
+      "pct": 6.7,
       "criteria": {
         "primary": "net-of-fees return beats buy-and-hold BTC over the window",
         "risk": "max drawdown stays inside 15%",
@@ -68,16 +332,17 @@
       "frozen_at_commit": "8a82b4c"
     },
     "circuit_breaker": {
-      "halted": false,
-      "reason": "",
-      "day_return": 0.0,
-      "day_start": 50.0,
+      "halted": true,
+      "reason": "broker position reconciliation failed",
+      "day_return": 0.0004,
+      "day_start": 49.97,
       "limit_pct": 0.1
     },
     "ai_brain": {
       "enabled": true,
       "brain_claude": true,
       "counsellor_openai": true,
+      "openai_fallback": true,
       "counsellor_grok": true,
       "counsellor_gemini": true,
       "counsellor_nvidia": true,
@@ -110,20 +375,20 @@
         ]
       },
       "hit_rates": {
-        "BTC/USD": 0.649,
-        "ETH/USD": 0.686,
-        "SOL/USD": 0.535,
-        "XRP/USD": 0.556
+        "BTC/USD": 0.522,
+        "ETH/USD": 0.516,
+        "SOL/USD": 0.558,
+        "XRP/USD": 0.504
       },
       "strategy_weights": {
         "daytrade": 0.867
       },
       "scorecard": {
-        "cycles": 34,
-        "sharpe": null,
-        "sortino": null,
-        "max_drawdown_pct": 0.0,
-        "volatility_pct": 0.0
+        "cycles": 150,
+        "sharpe": 1.93,
+        "sortino": 2.78,
+        "max_drawdown_pct": -0.05,
+        "volatility_pct": 0.005
       }
     },
     "advisory_board": {
@@ -157,85 +422,85 @@
     {
       "symbol": "BTC/USD",
       "scores": {
-        "buffett": 0.069,
+        "buffett": 0.109,
         "munger": 0.3,
-        "macro": -0.974,
-        "growth": -0.231,
-        "quant": -0.143
+        "macro": -0.961,
+        "growth": -0.198,
+        "quant": 0.328
       },
-      "gate": 0.622,
-      "composite": -0.159,
-      "tilt": -0.0099,
+      "gate": 0.562,
+      "composite": -0.024,
+      "tilt": -0.0013,
       "rationale": {
-        "buffett": "+9.2% vs 200d mean, vol 38%",
-        "munger": "+3.3% vs 50d trend, 5d move -1.1%",
-        "macro": "benchmark 50/200 spread -12.1% (risk-off)",
-        "growth": "6m -7.8%, -32.6% off the high",
-        "quant": "z +0.90, 20/50 trend +1.7%",
-        "risk_gate": "drawdown -32.6%, vol 38% \u2192 gate 0.62"
+        "buffett": "+10.9% vs 200d mean, vol 38%",
+        "munger": "+0.0% vs 50d trend, 5d move -0.9%",
+        "macro": "benchmark 50/200 spread -10.9% (risk-off)",
+        "growth": "6m -3.9%, -34.6% off the high",
+        "quant": "z -1.15, 20/50 trend +1.7%",
+        "risk_gate": "drawdown -34.6%, vol 38% \u2192 gate 0.56"
       }
     },
     {
       "symbol": "ETH/USD",
       "scores": {
-        "buffett": -0.166,
-        "munger": 0.175,
-        "macro": -0.974,
-        "growth": -0.297,
-        "quant": -0.149
+        "buffett": -0.113,
+        "munger": 0.3,
+        "macro": -0.961,
+        "growth": -0.348,
+        "quant": 0.308
       },
-      "gate": 0.321,
-      "composite": -0.248,
-      "tilt": -0.008,
+      "gate": 0.252,
+      "composite": -0.108,
+      "tilt": -0.0027,
       "rationale": {
-        "buffett": "+8.2% vs 200d mean, vol 53%",
-        "munger": "+12.5% vs 50d trend, 5d move +2.0%",
-        "macro": "benchmark 50/200 spread -12.1% (risk-off)",
-        "growth": "6m -4.3%, -41.3% off the high",
-        "quant": "z +1.85, 20/50 trend +5.8%",
-        "risk_gate": "drawdown -41.3%, vol 53% \u2192 gate 0.32"
+        "buffett": "+10.5% vs 200d mean, vol 52%",
+        "munger": "+5.6% vs 50d trend, 5d move -2.3%",
+        "macro": "benchmark 50/200 spread -10.9% (risk-off)",
+        "growth": "6m -5.2%, -43.9% off the high",
+        "quant": "z -0.33, 20/50 trend +6.1%",
+        "risk_gate": "drawdown -43.9%, vol 52% \u2192 gate 0.25"
       }
     },
     {
       "symbol": "SOL/USD",
       "scores": {
-        "buffett": -0.079,
+        "buffett": -0.051,
         "munger": 0.3,
-        "macro": -0.974,
-        "growth": -0.498,
-        "quant": 0.155
+        "macro": -0.961,
+        "growth": -0.501,
+        "quant": 0.246
       },
-      "gate": 0.126,
-      "composite": -0.17,
-      "tilt": -0.0021,
+      "gate": 0.07,
+      "composite": -0.14,
+      "tilt": -0.001,
       "rationale": {
-        "buffett": "+13.1% vs 200d mean, vol 53%",
-        "munger": "+3.6% vs 50d trend, 5d move -1.9%",
-        "macro": "benchmark 50/200 spread -12.1% (risk-off)",
-        "growth": "6m -11.4%, -47.7% off the high",
-        "quant": "z -0.04, 20/50 trend +3.7%",
-        "risk_gate": "drawdown -47.7%, vol 53% \u2192 gate 0.13"
+        "buffett": "+14.4% vs 200d mean, vol 52%",
+        "munger": "-1.9% vs 50d trend, 5d move -0.5%",
+        "macro": "benchmark 50/200 spread -10.9% (risk-off)",
+        "growth": "6m -9.7%, -49.8% off the high",
+        "quant": "z -0.99, 20/50 trend +0.4%",
+        "risk_gate": "drawdown -49.8%, vol 52% \u2192 gate 0.07"
       }
     },
     {
       "symbol": "LTC/USD",
       "scores": {
-        "buffett": 0.067,
+        "buffett": 0.125,
         "munger": 0.3,
-        "macro": -0.974,
-        "growth": -0.519,
-        "quant": -0.186
+        "macro": -0.961,
+        "growth": -0.575,
+        "quant": 0.38
       },
-      "gate": 0.132,
-      "composite": -0.228,
-      "tilt": -0.003,
+      "gate": 0.147,
+      "composite": -0.083,
+      "tilt": -0.0012,
       "rationale": {
-        "buffett": "+12.5% vs 200d mean, vol 42%",
-        "munger": "+6.9% vs 50d trend, 5d move +1.2%",
-        "macro": "benchmark 50/200 spread -12.1% (risk-off)",
-        "growth": "6m -11.6%, -48.9% off the high",
-        "quant": "z +1.36, 20/50 trend +2.8%",
-        "risk_gate": "drawdown -48.9%, vol 42% \u2192 gate 0.13"
+        "buffett": "+15.4% vs 200d mean, vol 42%",
+        "munger": "+0.3% vs 50d trend, 5d move -3.2%",
+        "macro": "benchmark 50/200 spread -10.9% (risk-off)",
+        "growth": "6m -16.0%, -48.4% off the high",
+        "quant": "z -1.17, 20/50 trend +3.0%",
+        "risk_gate": "drawdown -48.4%, vol 42% \u2192 gate 0.15"
       }
     },
     {
@@ -243,17 +508,17 @@
       "scores": {
         "buffett": 0.45,
         "munger": 0.3,
-        "macro": -0.974,
+        "macro": -0.961,
         "growth": 0.35,
         "quant": 0.0
       },
       "gate": 1.0,
-      "composite": 0.077,
-      "tilt": 0.0077,
+      "composite": 0.079,
+      "tilt": 0.0079,
       "rationale": {
         "buffett": "+0.0% vs 200d mean, vol 0%",
         "munger": "+0.0% vs 50d trend, 5d move +0.0%",
-        "macro": "benchmark 50/200 spread -12.1% (risk-off)",
+        "macro": "benchmark 50/200 spread -10.9% (risk-off)",
         "growth": "6m +0.0%, +0.0% off the high",
         "quant": "insufficient history",
         "risk_gate": "drawdown +0.0%, vol 0% \u2192 gate 1.00"
@@ -263,349 +528,349 @@
   "council": [
     {
       "symbol": "BTC/USD",
-      "price": 65382.32,
-      "conviction": 0.488,
+      "price": 63360.61,
+      "conviction": 0.498,
       "direction": "flat",
-      "composite": -0.024,
-      "risk_multiplier": 0.367,
+      "composite": -0.005,
+      "risk_multiplier": 0.369,
       "agents": [
         {
           "name": "Citadel Systematic",
           "persona": "Trend/Systematic",
-          "score": 0.593,
-          "confidence": 0.893,
-          "rationale": "MACD=82.15, 20-50 slope=+0.017, Q-mom=-15.4%"
+          "score": 0.139,
+          "confidence": 0.439,
+          "rationale": "MACD=-222.80, 20-50 slope=+0.017, Q-mom=-13.9%"
+        },
+        {
+          "name": "Two Sigma Backtest",
+          "persona": "Statistical expectancy",
+          "score": -0.404,
+          "confidence": 0.602,
+          "rationale": "ann.Sharpe=-0.86, win-rate=48%"
+        },
+        {
+          "name": "Bridgewater Risk",
+          "persona": "Risk parity / vol-target",
+          "score": -0.213,
+          "confidence": 0.6,
+          "rationale": "ann.vol=38% vs target 15%, risk_scale=0.40"
+        },
+        {
+          "name": "Renaissance Patterns",
+          "persona": "Mean-reversion",
+          "score": 0.598,
+          "confidence": 0.53,
+          "rationale": "z(20)=-1.15 (mean-revert), autocorr=-0.07"
+        },
+        {
+          "name": "Goldman Technical",
+          "persona": "Technical analysis",
+          "score": -0.05,
+          "confidence": 0.5,
+          "rationale": "RSI=44, MACD-hist=-222.80"
+        },
+        {
+          "name": "JPMorgan Fundamental",
+          "persona": "Valuation proxy",
+          "score": -0.045,
+          "confidence": 0.45,
+          "rationale": "px/200d=0.89, drawdown-from-1y-high=-35% (proxy)"
+        },
+        {
+          "name": "D.E. Shaw Options",
+          "persona": "Vol surface / premium",
+          "score": -0.166,
+          "confidence": 0.566,
+          "rationale": "vol=38%, IV-rank=22% \u2192 premium-sell favorability 22%"
+        },
+        {
+          "name": "AQR Factor",
+          "persona": "Multi-factor",
+          "score": -0.062,
+          "confidence": 0.55,
+          "rationale": "mom(12-1)=+0.6%, value=+13.9%, quality=-0.38"
+        },
+        {
+          "name": "Citadel Securities MM",
+          "persona": "Order-flow microstructure",
+          "score": 0.137,
+          "confidence": 0.543,
+          "rationale": "VPIN order-flow toxicity=0.14 (1=max adverse selection)"
+        },
+        {
+          "name": "Millennium Pod",
+          "persona": "Residual alpha / beta-neutral",
+          "score": 0.0,
+          "confidence": 0.5,
+          "rationale": "ann.alpha=+0.0%, beta=+1.00, beta-neutrality=0.50"
+        },
+        {
+          "name": "Renaissance Medallion",
+          "persona": "Regime / cointegration",
+          "score": -0.077,
+          "confidence": 0.8,
+          "rationale": "state=calm (p_stay=0.94), coint-z=-0.61"
+        },
+        {
+          "name": "Sovereign Wealth",
+          "persona": "Secular macro / SAA",
+          "score": 0.346,
+          "confidence": 0.4,
+          "rationale": "secular trend=-11%, structural drawdown=-35% (accumulate dips)"
+        }
+      ]
+    },
+    {
+      "symbol": "ETH/USD",
+      "price": 1879.84,
+      "conviction": 0.521,
+      "direction": "long",
+      "composite": 0.041,
+      "risk_multiplier": 0.27,
+      "agents": [
+        {
+          "name": "Citadel Systematic",
+          "persona": "Trend/Systematic",
+          "score": 0.984,
+          "confidence": 1.0,
+          "rationale": "MACD=-9.08, 20-50 slope=+0.058, Q-mom=-6.3%"
         },
         {
           "name": "Two Sigma Backtest",
           "persona": "Statistical expectancy",
           "score": -0.414,
           "confidence": 0.607,
-          "rationale": "ann.Sharpe=-0.88, win-rate=47%"
+          "rationale": "ann.Sharpe=-0.88, win-rate=50%"
         },
         {
           "name": "Bridgewater Risk",
           "persona": "Risk parity / vol-target",
-          "score": -0.218,
+          "score": -0.315,
           "confidence": 0.6,
-          "rationale": "ann.vol=38% vs target 15%, risk_scale=0.39"
+          "rationale": "ann.vol=52% vs target 15%, risk_scale=0.29"
         },
         {
           "name": "Renaissance Patterns",
           "persona": "Mean-reversion",
-          "score": -0.495,
-          "confidence": 0.481,
-          "rationale": "z(20)=+0.90 (mean-revert), autocorr=-0.06"
+          "score": 0.194,
+          "confidence": 0.366,
+          "rationale": "z(20)=-0.33 (mean-revert), autocorr=+0.01"
         },
         {
           "name": "Goldman Technical",
           "persona": "Technical analysis",
-          "score": -0.239,
+          "score": -0.274,
           "confidence": 0.5,
-          "rationale": "RSI=65, MACD-hist=+82.15"
+          "rationale": "RSI=51, MACD-hist=-9.08"
         },
         {
           "name": "JPMorgan Fundamental",
           "persona": "Valuation proxy",
-          "score": -0.021,
+          "score": 0.01,
           "confidence": 0.45,
-          "rationale": "px/200d=0.91, drawdown-from-1y-high=-33% (proxy)"
+          "rationale": "px/200d=0.90, drawdown-from-1y-high=-44% (proxy)"
         },
         {
           "name": "D.E. Shaw Options",
           "persona": "Vol surface / premium",
-          "score": -0.169,
-          "confidence": 0.565,
-          "rationale": "vol=38%, IV-rank=22% \u2192 premium-sell favorability 22%"
+          "score": -0.196,
+          "confidence": 0.551,
+          "rationale": "vol=52%, IV-rank=17% \u2192 premium-sell favorability 17%"
         },
         {
           "name": "AQR Factor",
           "persona": "Multi-factor",
-          "score": -0.081,
+          "score": -0.208,
           "confidence": 0.55,
-          "rationale": "mom(12-1)=-2.0%, value=+15.4%, quality=-0.38"
-        },
-        {
-          "name": "Citadel Securities MM",
-          "persona": "Order-flow microstructure",
-          "score": 0.143,
-          "confidence": 0.55,
-          "rationale": "VPIN order-flow toxicity=0.13 (1=max adverse selection)"
-        },
-        {
-          "name": "Millennium Pod",
-          "persona": "Residual alpha / beta-neutral",
-          "score": -0.0,
-          "confidence": 0.5,
-          "rationale": "ann.alpha=-0.0%, beta=+1.00, beta-neutrality=0.50"
-        },
-        {
-          "name": "Renaissance Medallion",
-          "persona": "Regime / cointegration",
-          "score": -0.08,
-          "confidence": 0.8,
-          "rationale": "state=calm (p_stay=0.93), coint-z=-0.23"
-        },
-        {
-          "name": "Sovereign Wealth",
-          "persona": "Secular macro / SAA",
-          "score": 0.332,
-          "confidence": 0.4,
-          "rationale": "secular trend=-9%, structural drawdown=-33% (accumulate dips)"
-        }
-      ]
-    },
-    {
-      "symbol": "ETH/USD",
-      "price": 1968.63,
-      "conviction": 0.432,
-      "direction": "flat",
-      "composite": -0.135,
-      "risk_multiplier": 0.266,
-      "agents": [
-        {
-          "name": "Citadel Systematic",
-          "persona": "Trend/Systematic",
-          "score": 0.99,
-          "confidence": 1.0,
-          "rationale": "MACD=4.77, 20-50 slope=+0.051, Q-mom=-6.2%"
-        },
-        {
-          "name": "Two Sigma Backtest",
-          "persona": "Statistical expectancy",
-          "score": -0.391,
-          "confidence": 0.595,
-          "rationale": "ann.Sharpe=-0.83, win-rate=50%"
-        },
-        {
-          "name": "Bridgewater Risk",
-          "persona": "Risk parity / vol-target",
-          "score": -0.319,
-          "confidence": 0.6,
-          "rationale": "ann.vol=53% vs target 15%, risk_scale=0.28"
-        },
-        {
-          "name": "Renaissance Patterns",
-          "persona": "Mean-reversion",
-          "score": -0.804,
-          "confidence": 0.67,
-          "rationale": "z(20)=+1.85 (mean-revert), autocorr=+0.03"
-        },
-        {
-          "name": "Goldman Technical",
-          "persona": "Technical analysis",
-          "score": -0.262,
-          "confidence": 0.5,
-          "rationale": "RSI=66, MACD-hist=+4.77"
-        },
-        {
-          "name": "JPMorgan Fundamental",
-          "persona": "Valuation proxy",
-          "score": 0.042,
-          "confidence": 0.45,
-          "rationale": "px/200d=0.92, drawdown-from-1y-high=-41% (proxy)"
-        },
-        {
-          "name": "D.E. Shaw Options",
-          "persona": "Vol surface / premium",
-          "score": -0.191,
-          "confidence": 0.553,
-          "rationale": "vol=53%, IV-rank=18% \u2192 premium-sell favorability 18%"
-        },
-        {
-          "name": "AQR Factor",
-          "persona": "Multi-factor",
-          "score": -0.269,
-          "confidence": 0.55,
-          "rationale": "mom(12-1)=-10.3%, value=+6.2%, quality=-0.53"
+          "rationale": "mom(12-1)=-4.1%, value=+6.3%, quality=-0.52"
         },
         {
           "name": "Citadel Securities MM",
           "persona": "Order-flow microstructure",
           "score": 0.142,
-          "confidence": 0.548,
+          "confidence": 0.549,
           "rationale": "VPIN order-flow toxicity=0.13 (1=max adverse selection)"
         },
         {
           "name": "Millennium Pod",
           "persona": "Residual alpha / beta-neutral",
-          "score": -0.947,
-          "confidence": 0.9,
-          "rationale": "ann.alpha=-45.2%, beta=-0.06, beta-neutrality=0.97"
+          "score": -0.223,
+          "confidence": 0.67,
+          "rationale": "ann.alpha=-5.7%, beta=+1.24, beta-neutrality=0.38"
         },
         {
           "name": "Renaissance Medallion",
           "persona": "Regime / cointegration",
-          "score": -0.041,
-          "confidence": 0.5,
-          "rationale": "state=stressed (p_stay=0.35), coint-z=+0.89"
+          "score": -0.108,
+          "confidence": 0.8,
+          "rationale": "state=calm (p_stay=0.79), coint-z=+1.06"
         },
         {
           "name": "Sovereign Wealth",
           "persona": "Secular macro / SAA",
-          "score": 0.425,
+          "score": 0.442,
           "confidence": 0.4,
-          "rationale": "secular trend=-8%, structural drawdown=-41% (accumulate dips)"
+          "rationale": "secular trend=-10%, structural drawdown=-44% (accumulate dips)"
         }
       ]
     },
     {
       "symbol": "SOL/USD",
-      "price": 76.67,
-      "conviction": 0.453,
+      "price": 73.55,
+      "conviction": 0.405,
       "direction": "flat",
-      "composite": -0.095,
-      "risk_multiplier": 0.264,
+      "composite": -0.19,
+      "risk_multiplier": 0.265,
       "agents": [
         {
           "name": "Citadel Systematic",
           "persona": "Trend/Systematic",
-          "score": 0.833,
-          "confidence": 1.0,
-          "rationale": "MACD=-0.30, 20-50 slope=+0.036, Q-mom=-10.1%"
+          "score": -0.379,
+          "confidence": 0.679,
+          "rationale": "MACD=-0.39, 20-50 slope=+0.004, Q-mom=-10.7%"
         },
         {
           "name": "Two Sigma Backtest",
           "persona": "Statistical expectancy",
-          "score": -0.504,
-          "confidence": 0.652,
-          "rationale": "ann.Sharpe=-1.11, win-rate=46%"
+          "score": -0.546,
+          "confidence": 0.673,
+          "rationale": "ann.Sharpe=-1.23, win-rate=45%"
         },
         {
           "name": "Bridgewater Risk",
           "persona": "Risk parity / vol-target",
-          "score": -0.32,
+          "score": -0.317,
           "confidence": 0.6,
-          "rationale": "ann.vol=53% vs target 15%, risk_scale=0.28"
+          "rationale": "ann.vol=52% vs target 15%, risk_scale=0.29"
         },
         {
           "name": "Renaissance Patterns",
           "persona": "Mean-reversion",
-          "score": 0.024,
-          "confidence": 0.308,
-          "rationale": "z(20)=-0.04 (mean-revert), autocorr=+0.03"
+          "score": 0.531,
+          "confidence": 0.497,
+          "rationale": "z(20)=-0.99 (mean-revert), autocorr=+0.02"
         },
         {
           "name": "Goldman Technical",
           "persona": "Technical analysis",
-          "score": -0.224,
+          "score": 0.026,
           "confidence": 0.5,
-          "rationale": "RSI=49, MACD-hist=-0.30"
+          "rationale": "RSI=42, MACD-hist=-0.39"
         },
         {
           "name": "JPMorgan Fundamental",
           "persona": "Valuation proxy",
-          "score": -0.024,
+          "score": -0.039,
           "confidence": 0.45,
-          "rationale": "px/200d=0.87, drawdown-from-1y-high=-48% (proxy)"
+          "rationale": "px/200d=0.86, drawdown-from-1y-high=-50% (proxy)"
         },
         {
           "name": "D.E. Shaw Options",
           "persona": "Vol surface / premium",
-          "score": -0.173,
-          "confidence": 0.563,
-          "rationale": "vol=53%, IV-rank=21% \u2192 premium-sell favorability 21%"
+          "score": -0.186,
+          "confidence": 0.556,
+          "rationale": "vol=52%, IV-rank=19% \u2192 premium-sell favorability 19%"
         },
         {
           "name": "AQR Factor",
           "persona": "Multi-factor",
-          "score": -0.091,
+          "score": -0.102,
           "confidence": 0.55,
-          "rationale": "mom(12-1)=+6.0%, value=+10.1%, quality=-0.53"
+          "rationale": "mom(12-1)=+4.3%, value=+10.7%, quality=-0.52"
         },
         {
           "name": "Citadel Securities MM",
           "persona": "Order-flow microstructure",
-          "score": 0.139,
-          "confidence": 0.545,
+          "score": 0.137,
+          "confidence": 0.542,
           "rationale": "VPIN order-flow toxicity=0.14 (1=max adverse selection)"
         },
         {
           "name": "Millennium Pod",
           "persona": "Residual alpha / beta-neutral",
-          "score": -0.981,
+          "score": -0.754,
           "confidence": 0.9,
-          "rationale": "ann.alpha=-57.9%, beta=+0.02, beta-neutrality=0.99"
+          "rationale": "ann.alpha=-24.5%, beta=+1.23, beta-neutrality=0.39"
         },
         {
           "name": "Renaissance Medallion",
           "persona": "Regime / cointegration",
-          "score": -0.055,
-          "confidence": 0.5,
-          "rationale": "state=stressed (p_stay=0.32), coint-z=+0.11"
+          "score": -0.152,
+          "confidence": 0.8,
+          "rationale": "state=calm (p_stay=0.77), coint-z=+0.28"
         },
         {
           "name": "Sovereign Wealth",
           "persona": "Secular macro / SAA",
-          "score": 0.467,
+          "score": 0.482,
           "confidence": 0.4,
-          "rationale": "secular trend=-13%, structural drawdown=-48% (accumulate dips)"
+          "rationale": "secular trend=-14%, structural drawdown=-50% (accumulate dips)"
         }
       ]
     },
     {
       "symbol": "LTC/USD",
-      "price": 47.4,
-      "conviction": 0.409,
+      "price": 44.79,
+      "conviction": 0.461,
       "direction": "flat",
-      "composite": -0.181,
-      "risk_multiplier": 0.332,
+      "composite": -0.077,
+      "risk_multiplier": 0.337,
       "agents": [
         {
           "name": "Citadel Systematic",
           "persona": "Trend/Systematic",
-          "score": 0.861,
-          "confidence": 1.0,
-          "rationale": "MACD=0.16, 20-50 slope=+0.026, Q-mom=-10.1%"
+          "score": 0.65,
+          "confidence": 0.95,
+          "rationale": "MACD=-0.30, 20-50 slope=+0.030, Q-mom=-13.9%"
         },
         {
           "name": "Two Sigma Backtest",
           "persona": "Statistical expectancy",
-          "score": -0.666,
-          "confidence": 0.733,
-          "rationale": "ann.Sharpe=-1.61, win-rate=44%"
+          "score": -0.652,
+          "confidence": 0.726,
+          "rationale": "ann.Sharpe=-1.56, win-rate=44%"
         },
         {
           "name": "Bridgewater Risk",
           "persona": "Risk parity / vol-target",
-          "score": -0.25,
+          "score": -0.245,
           "confidence": 0.6,
-          "rationale": "ann.vol=42% vs target 15%, risk_scale=0.35"
+          "rationale": "ann.vol=42% vs target 15%, risk_scale=0.36"
         },
         {
           "name": "Renaissance Patterns",
           "persona": "Mean-reversion",
-          "score": -0.673,
-          "confidence": 0.572,
-          "rationale": "z(20)=+1.36 (mean-revert), autocorr=-0.04"
+          "score": 0.605,
+          "confidence": 0.534,
+          "rationale": "z(20)=-1.17 (mean-revert), autocorr=-0.08"
         },
         {
           "name": "Goldman Technical",
           "persona": "Technical analysis",
-          "score": -0.446,
+          "score": 0.204,
           "confidence": 0.5,
-          "rationale": "RSI=72, MACD-hist=+0.16"
+          "rationale": "RSI=36, MACD-hist=-0.30"
         },
         {
           "name": "JPMorgan Fundamental",
           "persona": "Valuation proxy",
-          "score": -0.004,
+          "score": -0.066,
           "confidence": 0.45,
-          "rationale": "px/200d=0.88, drawdown-from-1y-high=-49% (proxy)"
+          "rationale": "px/200d=0.85, drawdown-from-1y-high=-48% (proxy)"
         },
         {
           "name": "D.E. Shaw Options",
           "persona": "Vol surface / premium",
-          "score": -0.284,
-          "confidence": 0.504,
-          "rationale": "vol=42%, IV-rank=1% \u2192 premium-sell favorability 1%"
+          "score": -0.27,
+          "confidence": 0.512,
+          "rationale": "vol=42%, IV-rank=4% \u2192 premium-sell favorability 4%"
         },
         {
           "name": "AQR Factor",
           "persona": "Multi-factor",
-          "score": -0.143,
+          "score": -0.102,
           "confidence": 0.55,
-          "rationale": "mom(12-1)=-3.6%, value=+10.1%, quality=-0.42"
+          "rationale": "mom(12-1)=-1.8%, value=+13.9%, quality=-0.42"
         },
         {
           "name": "Citadel Securities MM",
@@ -617,29 +882,29 @@
         {
           "name": "Millennium Pod",
           "persona": "Residual alpha / beta-neutral",
-          "score": -0.992,
+          "score": -0.897,
           "confidence": 0.9,
-          "rationale": "ann.alpha=-69.1%, beta=-0.04, beta-neutrality=0.98"
+          "rationale": "ann.alpha=-36.4%, beta=+0.88, beta-neutrality=0.56"
         },
         {
           "name": "Renaissance Medallion",
           "persona": "Regime / cointegration",
-          "score": -0.161,
+          "score": -0.153,
           "confidence": 0.8,
-          "rationale": "state=calm (p_stay=0.86), coint-z=-0.07"
+          "rationale": "state=calm (p_stay=0.91), coint-z=-0.12"
         },
         {
           "name": "Sovereign Wealth",
           "persona": "Secular macro / SAA",
-          "score": 0.481,
+          "score": 0.465,
           "confidence": 0.4,
-          "rationale": "secular trend=-12%, structural drawdown=-49% (accumulate dips)"
+          "rationale": "secular trend=-15%, structural drawdown=-48% (accumulate dips)"
         }
       ]
     },
     {
       "symbol": "XRP/USD",
-      "price": 1.11,
+      "price": 1.08,
       "conviction": 0.513,
       "direction": "long",
       "composite": 0.026,
@@ -734,19 +999,524 @@
   ],
   "brain": {
     "enabled": true,
-    "used": false,
-    "posture": "neutral",
-    "global_risk_multiplier": 1.0,
-    "commentary": "brain error: HTTPSConnectionPool(host='integrate.api.nvidia.com', port=443): Read timed out. (read timeout=45)",
-    "brain_model": "",
+    "used": true,
+    "posture": "risk_off",
+    "global_risk_multiplier": 0.65,
+    "commentary": "Cross-asset stress, elevated crypto volatility, and 95% expected shortfall support a capital-preservation stance. Keep exposure broadly reduced, with the strongest caution on SOL and LTC due to weak composites, negative alpha, and poor liquidity. ETH remains constructive but is fragile to downside because of high beta, volatility, and negative alpha. BTC has superior liquidity and institutional support, but its flat signal does not justify an increase. XRP's long signal is non-informative because volatility, expected shortfall, and liquidity fields are zero; treat it as fragile and avoid relyi",
+    "brain_model": "openai:gpt-5.6-luna",
     "counsellors": {
-      "openai": "**Overall posture:** Defensive/neutral. Signals are mostly flat-to-negative, while ETH/SOL carry elevated volatility (~53%) and LTC remains weakest on composite/alpha. Avoid broad risk expansion; preserve liquidity and size positions modestly.\n\n**Suggested conviction adjustments:",
-      "grok": "**Risk posture:** Neutral-to-defensive. Four flats with negative composites and thin edge; only XRP mildly constructive. Elevated vol in ETH/SOL; overall conviction modest (~0.4\u20130.5). Limited alpha, beta-driven.\n\n**Adjustments (advise only):**\n- BTC: -0.02 (near-zero composite)\n-",
+      "openai": "{\"risk_summary\":\"Overall posture should remain defensive and near-flat: all signals are modest, the cross-asset regime is stressed, and crypto downside tails are material. Suggested conviction adjustments: BTC/USD -0.03, ETH/USD -0.05, SOL/USD -0.06, LTC/USD -0.05, XRP/USD -0.10.",
+      "grok": "**Portfolio risk posture (advisory):** Elevated. Cross-asset stress + 0.61 advisory risk dominate; crypto beta/vol cluster (esp. ETH/SOL) amplifies drawdown potential (ES 5\u20138%). Prefer liquidity and cut weak-alpha names. No decision\u2014only calibration.\n\n**Conviction adjustments ([-",
       "gemini": "",
-      "nvidia": ""
+      "nvidia": "**Risk posture:** The basket sits in a \u201cstress\u201d cross\u2011asset regime with elevated vol (0.38\u20110.52) and 95\u202f% ES ranging \u20135\u202f% to \u20138\u202f%. Crypto\u2011only exposure, mixed institutional scores and modest advisory risk (0.61) point to a medium\u2011high tail\u2011risk profile; keep position size modest "
+    },
+    "telemetry": {
+      "provider": "openai",
+      "requested_model": "gpt-4o",
+      "resolved_model": "gpt-5.6-luna",
+      "latency_ms": 3896,
+      "input_tokens": 1545,
+      "output_tokens": 391,
+      "estimated_cost_usd": 0.003891,
+      "fallback_used": true,
+      "schema_valid": true,
+      "conviction_adjustment": {
+        "BTC/USD": -0.03,
+        "ETH/USD": -0.05,
+        "SOL/USD": -0.12,
+        "LTC/USD": -0.1,
+        "XRP/USD": -0.05
+      },
+      "risk_multiplier": 0.65,
+      "clamp_applied": false
+    },
+    "shadow_evaluation": {
+      "mode": "shadow-only",
+      "orders_enabled": false,
+      "providers": [
+        {
+          "provider": "gemini",
+          "score": 37.89,
+          "observations": 180,
+          "net_return": 0.00275507,
+          "annualized_sharpe": 1.5527,
+          "max_drawdown": 0.001421,
+          "hit_rate": 0.4056,
+          "calibration_error": 0.4662,
+          "average_turnover_cost_bps": 1.0,
+          "average_latency_ms": 10186.53,
+          "schema_valid_rate": 1.0,
+          "fallback_rate": 0.0,
+          "promotion_eligible": true,
+          "blockers": []
+        },
+        {
+          "provider": "claude",
+          "score": 0.0,
+          "observations": 0,
+          "net_return": 0.0,
+          "annualized_sharpe": 0.0,
+          "max_drawdown": 0.0,
+          "hit_rate": 0.0,
+          "calibration_error": 1.0,
+          "average_turnover_cost_bps": 0.0,
+          "average_latency_ms": 0.0,
+          "schema_valid_rate": 0.0,
+          "fallback_rate": 0.0,
+          "promotion_eligible": false,
+          "blockers": [
+            "requires at least 100 observations",
+            "schema-valid rate below threshold",
+            "incremental Sharpe below threshold",
+            "net shadow contribution is non-positive"
+          ]
+        },
+        {
+          "provider": "neutral",
+          "score": 29.99,
+          "observations": 795,
+          "net_return": 0.0,
+          "annualized_sharpe": 0.0,
+          "max_drawdown": 0.0,
+          "hit_rate": 0.0,
+          "calibration_error": 0.5006,
+          "average_turnover_cost_bps": 1.0,
+          "average_latency_ms": 0.0,
+          "schema_valid_rate": 1.0,
+          "fallback_rate": 0.0,
+          "promotion_eligible": false,
+          "blockers": [
+            "incremental Sharpe below threshold",
+            "net shadow contribution is non-positive"
+          ]
+        },
+        {
+          "provider": "grok",
+          "score": 16.36,
+          "observations": 795,
+          "net_return": -0.00261788,
+          "annualized_sharpe": -0.3607,
+          "max_drawdown": 0.00818,
+          "hit_rate": 0.3509,
+          "calibration_error": 0.4743,
+          "average_turnover_cost_bps": 1.0,
+          "average_latency_ms": 13248.74,
+          "schema_valid_rate": 1.0,
+          "fallback_rate": 0.0,
+          "promotion_eligible": false,
+          "blockers": [
+            "incremental Sharpe below threshold",
+            "net shadow contribution is non-positive"
+          ]
+        },
+        {
+          "provider": "consensus",
+          "score": 12.28,
+          "observations": 795,
+          "net_return": -0.00441396,
+          "annualized_sharpe": -0.7657,
+          "max_drawdown": 0.008576,
+          "hit_rate": 0.3535,
+          "calibration_error": 0.481,
+          "average_turnover_cost_bps": 1.0,
+          "average_latency_ms": 21125.48,
+          "schema_valid_rate": 1.0,
+          "fallback_rate": 1.0,
+          "promotion_eligible": false,
+          "blockers": [
+            "incremental Sharpe below threshold",
+            "net shadow contribution is non-positive"
+          ]
+        },
+        {
+          "provider": "openai",
+          "score": 18.13,
+          "observations": 795,
+          "net_return": -0.00605282,
+          "annualized_sharpe": -1.0044,
+          "max_drawdown": 0.009421,
+          "hit_rate": 0.3358,
+          "calibration_error": 0.4817,
+          "average_turnover_cost_bps": 1.0,
+          "average_latency_ms": 5570.36,
+          "schema_valid_rate": 1.0,
+          "fallback_rate": 1.0,
+          "promotion_eligible": false,
+          "blockers": [
+            "incremental Sharpe below threshold",
+            "net shadow contribution is non-positive"
+          ]
+        },
+        {
+          "provider": "nvidia",
+          "score": 21.65,
+          "observations": 425,
+          "net_return": -0.00587138,
+          "annualized_sharpe": -1.828,
+          "max_drawdown": 0.007399,
+          "hit_rate": 0.3553,
+          "calibration_error": 0.4993,
+          "average_turnover_cost_bps": 1.0,
+          "average_latency_ms": 0.0,
+          "schema_valid_rate": 1.0,
+          "fallback_rate": 0.0,
+          "promotion_eligible": false,
+          "blockers": [
+            "incremental Sharpe below threshold",
+            "net shadow contribution is non-positive"
+          ]
+        }
+      ],
+      "recommended_provider": "gemini",
+      "promotion_policy": "manual approval required; shadow evidence cannot arm live trading",
+      "observations": 3785,
+      "source": "/home/runner/work/SAHJONY-AI-TRADING/SAHJONY-AI-TRADING/data/ai_shadow_observations.jsonl",
+      "leaders": {
+        "today": {
+          "provider": "gemini",
+          "score": 27.22,
+          "sharpe": 0.3453,
+          "observations": 45
+        },
+        "week": {
+          "provider": "gemini",
+          "score": 37.89,
+          "sharpe": 1.5527,
+          "observations": 180
+        },
+        "month": {
+          "provider": "gemini",
+          "score": 37.89,
+          "sharpe": 1.5527,
+          "observations": 180
+        },
+        "market_regime": {
+          "provider": "gemini",
+          "score": 37.89,
+          "sharpe": 1.5527,
+          "observations": 180,
+          "regime": "normal"
+        },
+        "crypto": {
+          "provider": "gemini",
+          "score": 37.89,
+          "sharpe": 1.5527,
+          "observations": 180
+        },
+        "equity": null,
+        "options": null
+      },
+      "pipeline": "autonomous-learning",
+      "last_cycle": 712,
+      "resolved_this_cycle": 25,
+      "pending_symbols": 5,
+      "archive_record": "/home/runner/work/SAHJONY-AI-TRADING/SAHJONY-AI-TRADING/data/shadow/2026/August/000119.json"
     }
   },
-  "positions": [],
+  "positions": [
+    {
+      "symbol": "ETH/USD",
+      "strategy": "ladder",
+      "state": "long",
+      "shares": 0.000531,
+      "cost_basis": 1883.82,
+      "price": 1879.86,
+      "market_value": 1.0,
+      "unrealized": -0.0
+    }
+  ],
+  "broker_account": {
+    "venue": "robinhood_crypto",
+    "mode": "LIVE",
+    "online": true,
+    "live_armed": true,
+    "equity": 49.99,
+    "cash": 48.99,
+    "buying_power": 48.99,
+    "holdings": [
+      {
+        "symbol": "ETH-USD",
+        "qty": 0.000531,
+        "avg_price": 0.0,
+        "market_value": 1.0
+      }
+    ]
+  },
+  "reconciliation": {
+    "adopted": [],
+    "dropped": [],
+    "ok": true,
+    "orders_resolved": []
+  },
+  "audit_chain": {
+    "valid": true,
+    "entries": 160,
+    "head": "e4ef0f2c8ff09d820c1a0ca12cb0d16bdccad6c650d884930f28c4ce81accd08"
+  },
+  "institutional_health": {
+    "score": 90,
+    "controls": {
+      "audit_integrity": true,
+      "data_quality": true,
+      "cost_model": true,
+      "evidence_delivery": true,
+      "broker_connection": true,
+      "position_reconciliation": false,
+      "shadow_coverage": true,
+      "pnl_broker_verified": false
+    },
+    "incidents": [
+      {
+        "severity": "critical",
+        "code": "positions_unreconciled"
+      },
+      {
+        "severity": "warning",
+        "code": "pnl_not_broker_verified"
+      }
+    ],
+    "stages": {
+      "research_ready": true,
+      "paper_ready": true,
+      "canary_ready": false,
+      "production_ready": false
+    },
+    "execution_authority": false
+  },
+  "institutional_intelligence": {
+    "version": "institutional-research-v1",
+    "as_of": "2026-08-02T20:42:05.902183+00:00",
+    "point_in_time": true,
+    "execution_authority": false,
+    "universe": [
+      "BTC/USD",
+      "ETH/USD",
+      "LTC/USD",
+      "SOL/USD"
+    ],
+    "coverage": 0.8,
+    "configured_symbols": 5,
+    "successful_symbols": 4,
+    "rejected_symbols": {
+      "XRP/USD": "invalid_or_short_history"
+    },
+    "market": {
+      "regime": "stress",
+      "regime_probabilities": {
+        "risk_on": 0.109215,
+        "transition": 0.212064,
+        "stress": 0.678721
+      },
+      "breadth_20d": 0.0,
+      "breadth_50d": 0.75,
+      "breadth_200d": 0.0,
+      "median_correlation_60d": 0.788039,
+      "correlation_pairs": 6,
+      "minimum_pair_overlap": 60,
+      "cross_sectional_dispersion": 0.03033606,
+      "average_volatility": 0.459998,
+      "volatility_change": -0.186225,
+      "expected_shortfall_95": -0.06870286,
+      "stress_score": 0.772615,
+      "advisory_risk_multiplier": 0.613692
+    },
+    "factors": {
+      "BTC/USD": {
+        "momentum_1m": -0.00598831,
+        "momentum_3m": -0.13904799,
+        "momentum_6m": -0.03915431,
+        "volatility": 0.37756171,
+        "volatility_change": -0.13780139,
+        "expected_shortfall_95": -0.0548263,
+        "max_drawdown": -0.39559504,
+        "amihud_illiquidity": 1e-08,
+        "above_sma20": 0.0,
+        "above_sma50": 1.0,
+        "above_sma200": 0.0,
+        "momentum_rank": 0.333333,
+        "low_vol_rank": 1.0,
+        "liquidity_rank": 1.0,
+        "composite_factor_score": 0.7
+      },
+      "ETH/USD": {
+        "momentum_1m": 0.04089828,
+        "momentum_3m": -0.06270385,
+        "momentum_6m": -0.05167917,
+        "volatility": 0.52035411,
+        "volatility_change": -0.1351577,
+        "expected_shortfall_95": -0.07722808,
+        "max_drawdown": -0.53278817,
+        "amihud_illiquidity": 9e-07,
+        "above_sma20": 0.0,
+        "above_sma50": 1.0,
+        "above_sma200": 0.0,
+        "momentum_rank": 1.0,
+        "low_vol_rank": -0.333333,
+        "liquidity_rank": 0.333333,
+        "composite_factor_score": 0.4
+      },
+      "LTC/USD": {
+        "momentum_1m": 0.01823633,
+        "momentum_3m": -0.1391265,
+        "momentum_6m": -0.15988501,
+        "volatility": 0.4177599,
+        "volatility_change": -0.1155832,
+        "expected_shortfall_95": -0.06541499,
+        "max_drawdown": -0.52947566,
+        "amihud_illiquidity": 0.00148906,
+        "above_sma20": 0.0,
+        "above_sma50": 1.0,
+        "above_sma200": 0.0,
+        "momentum_rank": -1.0,
+        "low_vol_rank": 0.333333,
+        "liquidity_rank": -1.0,
+        "composite_factor_score": -0.533333
+      },
+      "SOL/USD": {
+        "momentum_1m": -0.04344941,
+        "momentum_3m": -0.10697082,
+        "momentum_6m": -0.09653633,
+        "volatility": 0.52431797,
+        "volatility_change": -0.35635584,
+        "expected_shortfall_95": -0.07734209,
+        "max_drawdown": -0.5756,
+        "amihud_illiquidity": 0.0001163,
+        "above_sma20": 0.0,
+        "above_sma50": 0.0,
+        "above_sma200": 0.0,
+        "momentum_rank": -0.333333,
+        "low_vol_rank": -1.0,
+        "liquidity_rank": -0.333333,
+        "composite_factor_score": -0.566667
+      }
+    },
+    "provenance": {
+      "inputs": [
+        "adjusted_close",
+        "volume",
+        "bar_timestamp"
+      ],
+      "method": "transparent_public_domain_estimators",
+      "latest_bar_timestamp": "2026-08-02T20:40:30+00:00",
+      "oldest_age_seconds": 135.902,
+      "snapshots": {
+        "BTC/USD": {
+          "bar_timestamp": "2026-08-02T20:39:50+00:00",
+          "exchange_timestamp": null,
+          "feed_timestamp": 1785703190000,
+          "retrieved_at": "2026-08-02T20:42:04.242651+00:00",
+          "latency_ms": 134242.651,
+          "age_seconds": 135.902
+        },
+        "ETH/USD": {
+          "bar_timestamp": "2026-08-02T20:40:20+00:00",
+          "exchange_timestamp": null,
+          "feed_timestamp": 1785703220000,
+          "retrieved_at": "2026-08-02T20:42:04.577490+00:00",
+          "latency_ms": 104577.49,
+          "age_seconds": 105.902
+        },
+        "SOL/USD": {
+          "bar_timestamp": "2026-08-02T20:40:30+00:00",
+          "exchange_timestamp": null,
+          "feed_timestamp": 1785703230000,
+          "retrieved_at": "2026-08-02T20:42:05.018519+00:00",
+          "latency_ms": 95018.519,
+          "age_seconds": 95.902
+        },
+        "LTC/USD": {
+          "bar_timestamp": "2026-08-02T20:40:10+00:00",
+          "exchange_timestamp": null,
+          "feed_timestamp": 1785703210000,
+          "retrieved_at": "2026-08-02T20:42:05.262274+00:00",
+          "latency_ms": 115262.274,
+          "age_seconds": 115.902
+        }
+      },
+      "future_data_used": false
+    },
+    "promotion": {
+      "key": "institutional_research",
+      "stage": "research",
+      "feature_flag_enabled": false,
+      "multiplier_active": false,
+      "proposed_multiplier": 0.613692,
+      "applied_multiplier": 1.0
+    }
+  },
+  "accounts": {
+    "count": 3,
+    "enabled": 3,
+    "accounts": [
+      {
+        "id": "sahjony_brokerage",
+        "display_name": "SAHJONY",
+        "institution": "robinhood",
+        "account_type": "RHS",
+        "account_number_masked": "***1100",
+        "broker": "robinhood_brokerage",
+        "asset_class": "equity",
+        "strategy": "balanced",
+        "execution_mode": "monitor_only",
+        "live_requested": true,
+        "adapter_ready": false,
+        "symbols": [
+          "VTI",
+          "SPY",
+          "QQQ"
+        ],
+        "paper": true,
+        "max_risk": 0.01,
+        "max_position": 0.1,
+        "max_daily_loss": 0.03
+      },
+      {
+        "id": "agentic_brokerage",
+        "display_name": "Agentic",
+        "institution": "robinhood",
+        "account_type": "RHS",
+        "account_number_masked": "***1131",
+        "broker": "robinhood_mcp",
+        "asset_class": "equity",
+        "strategy": "growth",
+        "execution_mode": "monitor_only",
+        "live_requested": true,
+        "adapter_ready": false,
+        "symbols": [
+          "VTI",
+          "QQQ",
+          "NVDA",
+          "MSFT"
+        ],
+        "paper": true,
+        "max_risk": 0.015,
+        "max_position": 0.12,
+        "max_daily_loss": 0.04
+      },
+      {
+        "id": "robinhood_crypto",
+        "display_name": "SAHJONY CRYPTO",
+        "institution": "robinhood",
+        "account_type": "RHS",
+        "account_number_masked": "***5744",
+        "broker": "robinhood",
+        "asset_class": "crypto",
+        "strategy": "crypto",
+        "execution_mode": "api",
+        "live_requested": true,
+        "adapter_ready": true,
+        "symbols": [
+          "BTC/USD",
+          "ETH/USD",
+          "XRP/USD"
+        ],
+        "paper": false,
+        "max_risk": 0.005,
+        "max_position": 0.05,
+        "max_daily_loss": 0.02
+      }
+    ]
+  },
   "crm": {
     "investors": 0,
     "contacts": 0,
@@ -754,341 +1524,1532 @@
     "units": 0.0,
     "committed": 0.0
   },
-  "recent_trades": [],
+  "recent_trades": [
+    {
+      "id": 1,
+      "ts": "2026-07-28T00:39:46.389833+00:00",
+      "cycle": 384,
+      "symbol": "ETH/USD",
+      "strategy": "ladder",
+      "kind": "equity",
+      "side": "buy",
+      "qty": 0.000531,
+      "price": 1885.6125062,
+      "premium": 0.0,
+      "notional": 1.00030779017559,
+      "purpose": "ladder_entry",
+      "reason": "open 0.000531 sh @ 1883.82, floor 40%",
+      "mode": "LIVE",
+      "simulated": 0,
+      "order_id": null,
+      "client_order_id": null,
+      "order_status": null,
+      "submitted_at": null,
+      "filled_at": null
+    }
+  ],
   "equity_curve": [
     {
-      "ts": "2026-07-26T01:52:10.110799+00:00",
-      "cycle": 315,
-      "equity": 50.0,
-      "cash": 50.0,
+      "ts": "2026-07-31T12:59:03.578598+00:00",
+      "cycle": 563,
+      "equity": 49.97863699708524,
+      "cash": 48.98,
+      "deployed": 0.9986370337030049,
       "realized_pnl": 0.0,
       "premium": 0.0
     },
     {
-      "ts": "2026-07-26T03:55:32.622472+00:00",
-      "cycle": 316,
-      "equity": 50.0,
-      "cash": 50.0,
+      "ts": "2026-07-31T13:16:20.609801+00:00",
+      "cycle": 564,
+      "equity": 49.98138214901739,
+      "cash": 48.98,
+      "deployed": 1.0013821282924649,
       "realized_pnl": 0.0,
       "premium": 0.0
     },
     {
-      "ts": "2026-07-26T06:30:50.101060+00:00",
-      "cycle": 317,
-      "equity": 50.0,
-      "cash": 50.0,
+      "ts": "2026-07-31T14:50:16.103099+00:00",
+      "cycle": 565,
+      "equity": 49.96878373145544,
+      "cash": 48.98,
+      "deployed": 0.9887668930312651,
       "realized_pnl": 0.0,
       "premium": 0.0
     },
     {
-      "ts": "2026-07-26T08:59:03.346053+00:00",
-      "cycle": 318,
-      "equity": 50.0,
-      "cash": 50.0,
+      "ts": "2026-07-31T15:06:30.130920+00:00",
+      "cycle": 566,
+      "equity": 49.96645938236504,
+      "cash": 48.98,
+      "deployed": 0.9864567273650401,
       "realized_pnl": 0.0,
       "premium": 0.0
     },
     {
-      "ts": "2026-07-26T10:43:32.007012+00:00",
-      "cycle": 319,
-      "equity": 50.0,
-      "cash": 50.0,
+      "ts": "2026-07-31T15:22:35.064658+00:00",
+      "cycle": 567,
+      "equity": 49.96504917275631,
+      "cash": 48.98,
+      "deployed": 0.985049171917335,
       "realized_pnl": 0.0,
       "premium": 0.0
     },
     {
-      "ts": "2026-07-26T11:49:25.484543+00:00",
-      "cycle": 320,
-      "equity": 50.0,
-      "cash": 50.0,
+      "ts": "2026-07-31T15:38:35.461209+00:00",
+      "cycle": 568,
+      "equity": 49.969535726189584,
+      "cash": 48.98,
+      "deployed": 0.989528005975275,
       "realized_pnl": 0.0,
       "premium": 0.0
     },
     {
-      "ts": "2026-07-26T13:06:09.386821+00:00",
-      "cycle": 321,
-      "equity": 50.0,
-      "cash": 50.0,
+      "ts": "2026-07-31T16:33:00.462215+00:00",
+      "cycle": 569,
+      "equity": 49.96926077071506,
+      "cash": 48.98,
+      "deployed": 0.9892608045397651,
       "realized_pnl": 0.0,
       "premium": 0.0
     },
     {
-      "ts": "2026-07-26T14:44:41.010581+00:00",
-      "cycle": 322,
-      "equity": 50.0,
-      "cash": 50.0,
+      "ts": "2026-07-31T16:51:06.918220+00:00",
+      "cycle": 570,
+      "equity": 49.96869162428837,
+      "cash": 48.98,
+      "deployed": 0.98869246427196,
       "realized_pnl": 0.0,
       "premium": 0.0
     },
     {
-      "ts": "2026-07-26T15:48:28.289949+00:00",
-      "cycle": 323,
-      "equity": 50.0,
-      "cash": 50.0,
+      "ts": "2026-07-31T17:08:37.383265+00:00",
+      "cycle": 571,
+      "equity": 49.968800711932744,
+      "cash": 48.98,
+      "deployed": 0.988800711932745,
       "realized_pnl": 0.0,
       "premium": 0.0
     },
     {
-      "ts": "2026-07-26T16:40:55.690421+00:00",
-      "cycle": 324,
-      "equity": 50.0,
-      "cash": 50.0,
+      "ts": "2026-07-31T17:25:57.682977+00:00",
+      "cycle": 572,
+      "equity": 49.972215518268946,
+      "cash": 48.98,
+      "deployed": 0.99224737826895,
       "realized_pnl": 0.0,
       "premium": 0.0
     },
     {
-      "ts": "2026-07-26T17:43:21.647277+00:00",
-      "cycle": 325,
-      "equity": 50.0,
-      "cash": 50.0,
+      "ts": "2026-07-31T18:04:12.214201+00:00",
+      "cycle": 573,
+      "equity": 49.97516822621466,
+      "cash": 48.98,
+      "deployed": 0.995168226214665,
       "realized_pnl": 0.0,
       "premium": 0.0
     },
     {
-      "ts": "2026-07-26T18:45:31.627790+00:00",
-      "cycle": 326,
-      "equity": 50.0,
-      "cash": 50.0,
+      "ts": "2026-07-31T18:20:18.700938+00:00",
+      "cycle": 574,
+      "equity": 49.97325600490484,
+      "cash": 48.98,
+      "deployed": 0.993256017221385,
       "realized_pnl": 0.0,
       "premium": 0.0
     },
     {
-      "ts": "2026-07-26T19:53:10.893304+00:00",
-      "cycle": 327,
-      "equity": 50.0,
-      "cash": 50.0,
+      "ts": "2026-07-31T18:36:20.762711+00:00",
+      "cycle": 575,
+      "equity": 49.97190531888542,
+      "cash": 48.98,
+      "deployed": 0.99190531888542,
       "realized_pnl": 0.0,
       "premium": 0.0
     },
     {
-      "ts": "2026-07-26T20:52:41.429571+00:00",
-      "cycle": 328,
-      "equity": 50.0,
-      "cash": 50.0,
+      "ts": "2026-07-31T18:52:22.742549+00:00",
+      "cycle": 576,
+      "equity": 49.9731561625997,
+      "cash": 48.98,
+      "deployed": 0.9931243025997001,
       "realized_pnl": 0.0,
       "premium": 0.0
     },
     {
-      "ts": "2026-07-26T21:57:15.825175+00:00",
-      "cycle": 329,
-      "equity": 50.0,
-      "cash": 50.0,
+      "ts": "2026-07-31T19:47:17.611158+00:00",
+      "cycle": 577,
+      "equity": 49.97198687764457,
+      "cash": 48.98,
+      "deployed": 0.991991422231965,
       "realized_pnl": 0.0,
       "premium": 0.0
     },
     {
-      "ts": "2026-07-26T22:14:12.548328+00:00",
-      "cycle": 330,
-      "equity": 50.0,
-      "cash": 50.0,
+      "ts": "2026-07-31T20:04:39.365225+00:00",
+      "cycle": 578,
+      "equity": 49.971251828989544,
+      "cash": 48.98,
+      "deployed": 0.99125908213095,
       "realized_pnl": 0.0,
       "premium": 0.0
     },
     {
-      "ts": "2026-07-26T22:31:05.784945+00:00",
-      "cycle": 331,
-      "equity": 50.0,
-      "cash": 50.0,
+      "ts": "2026-07-31T20:22:15.442744+00:00",
+      "cycle": 579,
+      "equity": 49.972009292731634,
+      "cash": 48.98,
+      "deployed": 0.9920092927316401,
       "realized_pnl": 0.0,
       "premium": 0.0
     },
     {
-      "ts": "2026-07-26T22:47:58.888555+00:00",
-      "cycle": 332,
-      "equity": 50.0,
-      "cash": 50.0,
+      "ts": "2026-07-31T20:39:22.490286+00:00",
+      "cycle": 580,
+      "equity": 49.97011109747352,
+      "cash": 48.98,
+      "deployed": 0.9901110980178,
       "realized_pnl": 0.0,
       "premium": 0.0
     },
     {
-      "ts": "2026-07-26T22:53:56.401834+00:00",
-      "cycle": 333,
-      "equity": 50.0,
-      "cash": 50.0,
+      "ts": "2026-07-31T20:52:39.204727+00:00",
+      "cycle": 581,
+      "equity": 49.96936761743589,
+      "cash": 48.98,
+      "deployed": 0.98936763250833,
       "realized_pnl": 0.0,
       "premium": 0.0
     },
     {
-      "ts": "2026-07-26T23:09:34.779241+00:00",
-      "cycle": 334,
-      "equity": 50.0,
-      "cash": 50.0,
+      "ts": "2026-07-31T21:08:45.295418+00:00",
+      "cycle": 582,
+      "equity": 49.96803100251291,
+      "cash": 48.98,
+      "deployed": 0.988030970344935,
       "realized_pnl": 0.0,
       "premium": 0.0
     },
     {
-      "ts": "2026-07-26T23:25:06.987249+00:00",
-      "cycle": 335,
-      "equity": 50.0,
-      "cash": 50.0,
+      "ts": "2026-07-31T21:24:45.463041+00:00",
+      "cycle": 583,
+      "equity": 49.968372183821565,
+      "cash": 48.98,
+      "deployed": 0.98837228047419,
       "realized_pnl": 0.0,
       "premium": 0.0
     },
     {
-      "ts": "2026-07-26T23:40:42.416914+00:00",
-      "cycle": 336,
-      "equity": 50.0,
-      "cash": 50.0,
+      "ts": "2026-07-31T21:40:55.961781+00:00",
+      "cycle": 584,
+      "equity": 49.96796777719251,
+      "cash": 48.98,
+      "deployed": 0.987967777192515,
       "realized_pnl": 0.0,
       "premium": 0.0
     },
     {
-      "ts": "2026-07-26T23:55:10.176614+00:00",
-      "cycle": 337,
-      "equity": 50.0,
-      "cash": 50.0,
+      "ts": "2026-07-31T21:54:49.759936+00:00",
+      "cycle": 585,
+      "equity": 49.96786231717553,
+      "cash": 48.98,
+      "deployed": 0.987855569139915,
       "realized_pnl": 0.0,
       "premium": 0.0
     },
     {
-      "ts": "2026-07-27T00:10:44.369596+00:00",
-      "cycle": 338,
-      "equity": 50.0,
-      "cash": 50.0,
+      "ts": "2026-07-31T22:12:11.674487+00:00",
+      "cycle": 586,
+      "equity": 49.96804654960085,
+      "cash": 48.98,
+      "deployed": 0.98804654960085,
       "realized_pnl": 0.0,
       "premium": 0.0
     },
     {
-      "ts": "2026-07-27T00:26:27.687310+00:00",
-      "cycle": 339,
-      "equity": 50.0,
-      "cash": 50.0,
+      "ts": "2026-07-31T22:28:32.344129+00:00",
+      "cycle": 587,
+      "equity": 49.9685127235544,
+      "cash": 48.98,
+      "deployed": 0.9885127235544,
       "realized_pnl": 0.0,
       "premium": 0.0
     },
     {
-      "ts": "2026-07-27T00:42:08.607387+00:00",
-      "cycle": 340,
-      "equity": 50.0,
-      "cash": 50.0,
+      "ts": "2026-07-31T22:45:56.703547+00:00",
+      "cycle": 588,
+      "equity": 49.96847150120135,
+      "cash": 48.98,
+      "deployed": 0.98847150120135,
       "realized_pnl": 0.0,
       "premium": 0.0
     },
     {
-      "ts": "2026-07-27T02:04:52.687825+00:00",
-      "cycle": 341,
-      "equity": 50.0,
-      "cash": 50.0,
+      "ts": "2026-07-31T22:59:32.641876+00:00",
+      "cycle": 589,
+      "equity": 49.96770541900535,
+      "cash": 48.98,
+      "deployed": 0.98770541900535,
       "realized_pnl": 0.0,
       "premium": 0.0
     },
     {
-      "ts": "2026-07-27T02:20:30.097599+00:00",
-      "cycle": 342,
-      "equity": 50.0,
-      "cash": 50.0,
+      "ts": "2026-07-31T23:16:50.686752+00:00",
+      "cycle": 590,
+      "equity": 49.9680653328497,
+      "cash": 48.98,
+      "deployed": 0.9880653328497,
       "realized_pnl": 0.0,
       "premium": 0.0
     },
     {
-      "ts": "2026-07-27T02:36:10.978564+00:00",
-      "cycle": 343,
-      "equity": 50.0,
-      "cash": 50.0,
+      "ts": "2026-07-31T23:34:16.575373+00:00",
+      "cycle": 591,
+      "equity": 49.96889105300975,
+      "cash": 48.98,
+      "deployed": 0.98889105300975,
       "realized_pnl": 0.0,
       "premium": 0.0
     },
     {
-      "ts": "2026-07-27T02:51:59.451322+00:00",
-      "cycle": 344,
-      "equity": 50.0,
-      "cash": 50.0,
+      "ts": "2026-07-31T23:51:35.992693+00:00",
+      "cycle": 592,
+      "equity": 49.9675300931864,
+      "cash": 48.98,
+      "deployed": 0.9875300931864,
       "realized_pnl": 0.0,
       "premium": 0.0
     },
     {
-      "ts": "2026-07-27T06:05:04.317947+00:00",
-      "cycle": 345,
-      "equity": 50.0,
-      "cash": 50.0,
+      "ts": "2026-07-31T23:58:00.199435+00:00",
+      "cycle": 593,
+      "equity": 49.9679879923811,
+      "cash": 48.98,
+      "deployed": 0.9879906913213501,
       "realized_pnl": 0.0,
       "premium": 0.0
     },
     {
-      "ts": "2026-07-27T06:21:58.607534+00:00",
-      "cycle": 346,
-      "equity": 50.0,
-      "cash": 50.0,
+      "ts": "2026-08-01T00:13:58.211290+00:00",
+      "cycle": 594,
+      "equity": 49.969499456614244,
+      "cash": 48.98,
+      "deployed": 0.98949945661425,
       "realized_pnl": 0.0,
       "premium": 0.0
     },
     {
-      "ts": "2026-07-27T06:38:50.932884+00:00",
-      "cycle": 347,
-      "equity": 50.0,
-      "cash": 50.0,
+      "ts": "2026-08-01T00:30:04.313609+00:00",
+      "cycle": 595,
+      "equity": 49.9699675356365,
+      "cash": 48.98,
+      "deployed": 0.9899648806365,
       "realized_pnl": 0.0,
       "premium": 0.0
     },
     {
-      "ts": "2026-07-27T06:55:44.283692+00:00",
-      "cycle": 348,
-      "equity": 50.0,
-      "cash": 50.0,
+      "ts": "2026-08-01T00:46:15.144551+00:00",
+      "cycle": 596,
+      "equity": 49.970535989509095,
+      "cash": 48.98,
+      "deployed": 0.9905359895091,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-01T02:01:28.452670+00:00",
+      "cycle": 597,
+      "equity": 49.970687951885594,
+      "cash": 48.98,
+      "deployed": 0.9906879518856001,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-01T02:17:26.347139+00:00",
+      "cycle": 598,
+      "equity": 49.971054892798094,
+      "cash": 48.98,
+      "deployed": 0.9910548927981,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-01T02:33:31.623694+00:00",
+      "cycle": 599,
+      "equity": 49.971703648340444,
+      "cash": 48.98,
+      "deployed": 0.99170364834045,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-01T02:49:48.765219+00:00",
+      "cycle": 600,
+      "equity": 49.97142661729578,
+      "cash": 48.98,
+      "deployed": 0.99141871405374,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-01T05:29:48.801095+00:00",
+      "cycle": 601,
+      "equity": 49.98146279167875,
+      "cash": 48.99,
+      "deployed": 0.9914787216787501,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-01T05:45:53.489297+00:00",
+      "cycle": 602,
+      "equity": 49.979995349097905,
+      "cash": 48.99,
+      "deployed": 0.9899953490979001,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-01T06:02:09.946725+00:00",
+      "cycle": 603,
+      "equity": 49.980504044336705,
+      "cash": 48.99,
+      "deployed": 0.9905040443367,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-01T06:18:11.701591+00:00",
+      "cycle": 604,
+      "equity": 49.980970284612155,
+      "cash": 48.99,
+      "deployed": 0.9909702846121501,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-01T07:49:34.563740+00:00",
+      "cycle": 605,
+      "equity": 49.98187180851618,
+      "cash": 48.99,
+      "deployed": 0.99187180851618,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-01T08:07:31.786730+00:00",
+      "cycle": 606,
+      "equity": 49.98153391557105,
+      "cash": 48.99,
+      "deployed": 0.991485623911455,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-01T08:25:21.222009+00:00",
+      "cycle": 607,
+      "equity": 49.98188591236736,
+      "cash": 48.99,
+      "deployed": 0.9918567073673551,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-01T08:42:58.804130+00:00",
+      "cycle": 608,
+      "equity": 49.98090009884552,
+      "cash": 48.99,
+      "deployed": 0.9909107188455148,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-01T09:42:11.270368+00:00",
+      "cycle": 609,
+      "equity": 49.98248290567925,
+      "cash": 48.99,
+      "deployed": 0.992482905679245,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-01T09:58:55.813183+00:00",
+      "cycle": 610,
+      "equity": 49.98101480068121,
+      "cash": 48.99,
+      "deployed": 0.991014800681205,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-01T10:16:37.093531+00:00",
+      "cycle": 611,
+      "equity": 49.979287515,
+      "cash": 48.99,
+      "deployed": 0.989287515,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-01T10:33:56.859284+00:00",
+      "cycle": 612,
+      "equity": 49.979574518445034,
+      "cash": 48.99,
+      "deployed": 0.9895745184450301,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-01T11:11:20.036405+00:00",
+      "cycle": 613,
+      "equity": 49.98019818,
+      "cash": 48.99,
+      "deployed": 0.9901981800000001,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-01T11:28:18.440854+00:00",
+      "cycle": 614,
+      "equity": 49.980471007030054,
+      "cash": 48.99,
+      "deployed": 0.99047097284958,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-01T11:44:52.145647+00:00",
+      "cycle": 615,
+      "equity": 49.980280721326864,
+      "cash": 48.99,
+      "deployed": 0.990280843576335,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-01T12:02:26.444302+00:00",
+      "cycle": 616,
+      "equity": 49.980928305,
+      "cash": 48.99,
+      "deployed": 0.990928305,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-01T12:18:26.132005+00:00",
+      "cycle": 617,
+      "equity": 49.980890815529165,
+      "cash": 48.99,
+      "deployed": 0.99089081590617,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-01T12:35:26.589596+00:00",
+      "cycle": 618,
+      "equity": 49.980717211063535,
+      "cash": 48.99,
+      "deployed": 0.990717205023405,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-01T12:52:44.115830+00:00",
+      "cycle": 619,
+      "equity": 49.98181847597535,
+      "cash": 48.99,
+      "deployed": 0.99181847597535,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-01T13:10:01.643956+00:00",
+      "cycle": 620,
+      "equity": 49.98166935267,
+      "cash": 48.99,
+      "deployed": 0.9916693526699999,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-01T13:59:20.497069+00:00",
+      "cycle": 621,
+      "equity": 49.9817543040147,
+      "cash": 48.99,
+      "deployed": 0.9917539182697501,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-01T14:16:40.860592+00:00",
+      "cycle": 622,
+      "equity": 49.98238016857185,
+      "cash": 48.99,
+      "deployed": 0.9923589285718499,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-01T14:34:02.110829+00:00",
+      "cycle": 623,
+      "equity": 49.983571988912104,
+      "cash": 48.99,
+      "deployed": 0.9935719889121001,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-01T14:51:18.438750+00:00",
+      "cycle": 624,
+      "equity": 49.983435096581104,
+      "cash": 48.99,
+      "deployed": 0.9934350965811,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-01T14:59:57.905758+00:00",
+      "cycle": 625,
+      "equity": 49.98488402186445,
+      "cash": 48.99,
+      "deployed": 0.99488402186445,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-01T15:17:18.684293+00:00",
+      "cycle": 626,
+      "equity": 49.98429350074695,
+      "cash": 48.99,
+      "deployed": 0.99428553574695,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-01T15:34:40.147144+00:00",
+      "cycle": 627,
+      "equity": 49.983086908756654,
+      "cash": 48.99,
+      "deployed": 0.99308690875665,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-01T15:51:58.034165+00:00",
+      "cycle": 628,
+      "equity": 49.9824435379791,
+      "cash": 48.99,
+      "deployed": 0.9924435379790999,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-01T16:00:31.818447+00:00",
+      "cycle": 629,
+      "equity": 49.982514746433154,
+      "cash": 48.99,
+      "deployed": 0.99249881643315,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-01T16:17:45.452050+00:00",
+      "cycle": 630,
+      "equity": 49.98160580902838,
+      "cash": 48.99,
+      "deployed": 0.991603131614865,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-01T16:35:03.068336+00:00",
+      "cycle": 631,
+      "equity": 49.9831173846255,
+      "cash": 48.99,
+      "deployed": 0.9931173846255001,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-01T16:52:25.132440+00:00",
+      "cycle": 632,
+      "equity": 49.98162084466508,
+      "cash": 48.99,
+      "deployed": 0.99162089968464,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-01T17:00:24.239649+00:00",
+      "cycle": 633,
+      "equity": 49.9814032807299,
+      "cash": 48.99,
+      "deployed": 0.9914032807299,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-01T17:17:48.887561+00:00",
+      "cycle": 634,
+      "equity": 49.97941808778584,
+      "cash": 48.99,
+      "deployed": 0.989418280108725,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-01T17:35:10.518659+00:00",
+      "cycle": 635,
+      "equity": 49.977127479043425,
+      "cash": 48.99,
+      "deployed": 0.987127795094625,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-01T17:52:29.930363+00:00",
+      "cycle": 636,
+      "equity": 49.976742514381996,
+      "cash": 48.99,
+      "deployed": 0.9867427485928201,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-01T17:56:57.169233+00:00",
+      "cycle": 637,
+      "equity": 49.978046591117085,
+      "cash": 48.99,
+      "deployed": 0.988046207012925,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-01T18:13:17.937657+00:00",
+      "cycle": 638,
+      "equity": 49.97822954325362,
+      "cash": 48.99,
+      "deployed": 0.98822938277214,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-01T18:29:18.441034+00:00",
+      "cycle": 639,
+      "equity": 49.9727399000781,
+      "cash": 48.99,
+      "deployed": 0.9828159119900101,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-01T18:45:15.319932+00:00",
+      "cycle": 640,
+      "equity": 49.95863705951823,
+      "cash": 48.99,
+      "deployed": 0.96861999455352,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-01T19:03:00.569158+00:00",
+      "cycle": 641,
+      "equity": 49.965181259645504,
+      "cash": 48.99,
+      "deployed": 0.975117757228065,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-01T19:20:22.804113+00:00",
+      "cycle": 642,
+      "equity": 49.96552165724595,
+      "cash": 48.99,
+      "deployed": 0.97552165724595,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-01T19:37:45.128012+00:00",
+      "cycle": 643,
+      "equity": 49.964104652438195,
+      "cash": 48.99,
+      "deployed": 0.9741046274944649,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-01T19:55:01.975525+00:00",
+      "cycle": 644,
+      "equity": 49.964921552640455,
+      "cash": 48.99,
+      "deployed": 0.97492155264045,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-01T20:13:42.127585+00:00",
+      "cycle": 645,
+      "equity": 49.965206061357215,
+      "cash": 48.99,
+      "deployed": 0.97520606135721,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-01T20:31:03.437399+00:00",
+      "cycle": 646,
+      "equity": 49.96473015,
+      "cash": 48.99,
+      "deployed": 0.9747301500000001,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-01T20:48:27.580559+00:00",
+      "cycle": 647,
+      "equity": 49.964041592765895,
+      "cash": 48.99,
+      "deployed": 0.974041592765895,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-01T21:05:57.593862+00:00",
+      "cycle": 648,
+      "equity": 49.96615696529826,
+      "cash": 48.99,
+      "deployed": 0.97615696529826,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-01T21:12:23.279531+00:00",
+      "cycle": 649,
+      "equity": 49.965843961146184,
+      "cash": 48.99,
+      "deployed": 0.975843961499295,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-01T21:29:11.653171+00:00",
+      "cycle": 650,
+      "equity": 49.96733968245594,
+      "cash": 48.99,
+      "deployed": 0.977338469006775,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-01T21:45:14.077834+00:00",
+      "cycle": 651,
+      "equity": 49.968734557735154,
+      "cash": 48.99,
+      "deployed": 0.9787347306261001,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-01T22:01:46.831521+00:00",
+      "cycle": 652,
+      "equity": 49.968996864027694,
+      "cash": 48.99,
+      "deployed": 0.979007484343635,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-01T22:16:17.713835+00:00",
+      "cycle": 653,
+      "equity": 49.97016774735123,
+      "cash": 48.99,
+      "deployed": 0.98016774735123,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-01T22:33:35.243781+00:00",
+      "cycle": 654,
+      "equity": 49.970667410954405,
+      "cash": 48.99,
+      "deployed": 0.9806672209041901,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-01T22:51:08.077365+00:00",
+      "cycle": 655,
+      "equity": 49.97023929129374,
+      "cash": 48.99,
+      "deployed": 0.980239291293735,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-01T23:08:27.909634+00:00",
+      "cycle": 656,
+      "equity": 49.9701678264012,
+      "cash": 48.99,
+      "deployed": 0.98015458557105,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-01T23:16:44.128930+00:00",
+      "cycle": 657,
+      "equity": 49.96921615633601,
+      "cash": 48.99,
+      "deployed": 0.9792030060360449,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-01T23:34:16.020370+00:00",
+      "cycle": 658,
+      "equity": 49.968422001486886,
+      "cash": 48.99,
+      "deployed": 0.97842200150547,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-01T23:51:49.816526+00:00",
+      "cycle": 659,
+      "equity": 49.968860943349696,
+      "cash": 48.99,
+      "deployed": 0.978861050919675,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-02T00:09:09.919244+00:00",
+      "cycle": 660,
+      "equity": 49.970065708827434,
+      "cash": 48.99,
+      "deployed": 0.9800656702848,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-02T00:14:11.425270+00:00",
+      "cycle": 661,
+      "equity": 49.97081188020405,
+      "cash": 48.99,
+      "deployed": 0.9808118802040501,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-02T00:30:09.394393+00:00",
+      "cycle": 662,
+      "equity": 49.96910213506974,
+      "cash": 48.99,
+      "deployed": 0.97910213506974,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-02T00:46:11.747455+00:00",
+      "cycle": 663,
+      "equity": 49.96961962526685,
+      "cash": 48.99,
+      "deployed": 0.9796196252668501,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-02T01:02:09.412486+00:00",
+      "cycle": 664,
+      "equity": 49.969854037739104,
+      "cash": 48.99,
+      "deployed": 0.9800430794738999,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-02T03:53:07.341217+00:00",
+      "cycle": 665,
+      "equity": 49.98561842964495,
+      "cash": 48.99,
+      "deployed": 0.99558922464495,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-02T04:09:08.068150+00:00",
+      "cycle": 666,
+      "equity": 49.986836109340054,
+      "cash": 48.99,
+      "deployed": 0.99681221434005,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-02T04:25:06.742410+00:00",
+      "cycle": 667,
+      "equity": 49.9871263502496,
+      "cash": 48.99,
+      "deployed": 0.9971263502496001,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-02T04:41:09.257716+00:00",
+      "cycle": 668,
+      "equity": 49.9868653291284,
+      "cash": 48.99,
+      "deployed": 0.9968653291284001,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-02T06:31:19.394896+00:00",
+      "cycle": 669,
+      "equity": 49.986679793214904,
+      "cash": 48.99,
+      "deployed": 0.9966824482149,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-02T06:47:23.205724+00:00",
+      "cycle": 670,
+      "equity": 49.985717792409304,
+      "cash": 48.99,
+      "deployed": 0.9957151374093001,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-02T07:03:48.830105+00:00",
+      "cycle": 671,
+      "equity": 49.985905624393354,
+      "cash": 48.99,
+      "deployed": 0.99592420939335,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-02T07:20:00.104774+00:00",
+      "cycle": 672,
+      "equity": 49.986311008590754,
+      "cash": 48.99,
+      "deployed": 0.99631100859075,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-02T08:46:51.680386+00:00",
+      "cycle": 673,
+      "equity": 49.982039995873805,
+      "cash": 48.99,
+      "deployed": 0.9920081358738001,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-02T09:03:03.859313+00:00",
+      "cycle": 674,
+      "equity": 49.98001423286505,
+      "cash": 48.99,
+      "deployed": 0.9900028490215501,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-02T09:19:15.099319+00:00",
+      "cycle": 675,
+      "equity": 49.9822958248239,
+      "cash": 48.99,
+      "deployed": 0.9922745848239,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-02T09:35:30.454086+00:00",
+      "cycle": 676,
+      "equity": 49.98286750114965,
+      "cash": 48.99,
+      "deployed": 0.9928129404217501,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-02T10:23:25.337242+00:00",
+      "cycle": 677,
+      "equity": 49.98049902204047,
+      "cash": 48.99,
+      "deployed": 0.9905544664054651,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-02T10:39:28.526846+00:00",
+      "cycle": 678,
+      "equity": 49.981820265100204,
+      "cash": 48.99,
+      "deployed": 0.9918202651002,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-02T10:55:30.763392+00:00",
+      "cycle": 679,
+      "equity": 49.9815705124362,
+      "cash": 48.99,
+      "deployed": 0.9915705124361999,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-02T11:11:30.588357+00:00",
+      "cycle": 680,
+      "equity": 49.981088950633655,
+      "cash": 48.99,
+      "deployed": 0.99108895063365,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-02T11:42:59.449903+00:00",
+      "cycle": 681,
+      "equity": 49.975827647502,
+      "cash": 48.99,
+      "deployed": 0.985854584720475,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-02T11:59:03.663414+00:00",
+      "cycle": 682,
+      "equity": 49.972300008970485,
+      "cash": 48.99,
+      "deployed": 0.98231719276503,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-02T12:15:07.156413+00:00",
+      "cycle": 683,
+      "equity": 49.97535102460479,
+      "cash": 48.99,
+      "deployed": 0.985351078355265,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-02T12:31:08.972585+00:00",
+      "cycle": 684,
+      "equity": 49.97599582991336,
+      "cash": 48.99,
+      "deployed": 0.985995827943345,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-02T12:48:17.853533+00:00",
+      "cycle": 685,
+      "equity": 49.975602764310615,
+      "cash": 48.99,
+      "deployed": 0.985602764310615,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-02T13:05:43.193520+00:00",
+      "cycle": 686,
+      "equity": 49.97495043698349,
+      "cash": 48.99,
+      "deployed": 0.98495043698349,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-02T13:23:05.710782+00:00",
+      "cycle": 687,
+      "equity": 49.97441028,
+      "cash": 48.99,
+      "deployed": 0.984423012145425,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-02T13:40:29.151378+00:00",
+      "cycle": 688,
+      "equity": 49.973186906673334,
+      "cash": 48.99,
+      "deployed": 0.9831869118691651,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-02T14:17:05.485249+00:00",
+      "cycle": 689,
+      "equity": 49.97491575186702,
+      "cash": 48.99,
+      "deployed": 0.984916684422495,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-02T14:33:20.344822+00:00",
+      "cycle": 690,
+      "equity": 49.97483997623684,
+      "cash": 48.99,
+      "deployed": 0.98484002259579,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-02T14:49:24.558145+00:00",
+      "cycle": 691,
+      "equity": 49.97561947438679,
+      "cash": 48.99,
+      "deployed": 0.9856073320867799,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-02T15:05:25.832182+00:00",
+      "cycle": 692,
+      "equity": 49.97460144,
+      "cash": 48.99,
+      "deployed": 0.9846306450000001,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-02T15:23:48.076238+00:00",
+      "cycle": 693,
+      "equity": 49.97583278144895,
+      "cash": 48.99,
+      "deployed": 0.98583368550831,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-02T15:39:52.399390+00:00",
+      "cycle": 694,
+      "equity": 49.976726979236254,
+      "cash": 48.99,
+      "deployed": 0.98672697923625,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-02T15:55:59.336621+00:00",
+      "cycle": 695,
+      "equity": 49.975752246617105,
+      "cash": 48.99,
+      "deployed": 0.9857522466170999,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-02T16:12:03.214269+00:00",
+      "cycle": 696,
+      "equity": 49.975588754053504,
+      "cash": 48.99,
+      "deployed": 0.9855887540535,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-02T16:30:36.194998+00:00",
+      "cycle": 697,
+      "equity": 49.9761167571426,
+      "cash": 48.99,
+      "deployed": 0.9861167571425999,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-02T16:46:33.489468+00:00",
+      "cycle": 698,
+      "equity": 49.979003291010756,
+      "cash": 48.99,
+      "deployed": 0.98900329101075,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-02T17:02:39.583743+00:00",
+      "cycle": 699,
+      "equity": 49.97824981055985,
+      "cash": 48.99,
+      "deployed": 0.98824981055985,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-02T17:19:00.500049+00:00",
+      "cycle": 700,
+      "equity": 49.9795999701618,
+      "cash": 48.99,
+      "deployed": 0.9895999701618,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-02T17:38:36.964322+00:00",
+      "cycle": 701,
+      "equity": 49.98129335908365,
+      "cash": 48.99,
+      "deployed": 0.99126149908365,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-02T17:55:58.385875+00:00",
+      "cycle": 702,
+      "equity": 49.981528061009314,
+      "cash": 48.99,
+      "deployed": 0.9915291103210649,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-02T18:13:35.597378+00:00",
+      "cycle": 703,
+      "equity": 49.9819051975413,
+      "cash": 48.99,
+      "deployed": 0.9919051975413,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-02T18:30:58.739880+00:00",
+      "cycle": 704,
+      "equity": 49.981544981770355,
+      "cash": 48.99,
+      "deployed": 0.9915478042743,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-02T18:45:44.414970+00:00",
+      "cycle": 705,
+      "equity": 49.98715419504,
+      "cash": 48.99,
+      "deployed": 0.99715419504,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-02T19:03:01.896358+00:00",
+      "cycle": 706,
+      "equity": 49.98496668409204,
+      "cash": 48.99,
+      "deployed": 0.99496758268476,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-02T19:20:16.171074+00:00",
+      "cycle": 707,
+      "equity": 49.985543914282204,
+      "cash": 48.99,
+      "deployed": 0.9955439142822,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-02T19:37:36.360573+00:00",
+      "cycle": 708,
+      "equity": 49.98576711059279,
+      "cash": 48.99,
+      "deployed": 0.9957671344028249,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-02T19:54:58.703264+00:00",
+      "cycle": 709,
+      "equity": 49.98856407268877,
+      "cash": 48.99,
+      "deployed": 0.99856412536662,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-02T20:10:53.440106+00:00",
+      "cycle": 710,
+      "equity": 49.98791114718749,
+      "cash": 48.99,
+      "deployed": 0.9979113884048549,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-02T20:26:53.478555+00:00",
+      "cycle": 711,
+      "equity": 49.987366544719784,
+      "cash": 48.99,
+      "deployed": 0.9973240646534101,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-08-02T20:42:57.055250+00:00",
+      "cycle": 712,
+      "equity": 49.9882229994864,
+      "cash": 48.99,
+      "deployed": 0.9982203914719351,
       "realized_pnl": 0.0,
       "premium": 0.0
     }
   ],
   "decisions": [
     {
-      "ts": "2026-07-25T22:48:17.858771+00:00",
-      "kind": "halt_block",
-      "symbol": "SOL/USD",
-      "purpose": "ladder_entry"
-    },
-    {
-      "ts": "2026-07-25T22:14:22.578335+00:00",
-      "kind": "halt_block",
-      "symbol": "SOL/USD",
-      "purpose": "ladder_entry"
-    },
-    {
-      "ts": "2026-07-25T22:08:11.001724+00:00",
-      "kind": "halt_block",
-      "symbol": "SOL/USD",
-      "purpose": "ladder_entry"
-    },
-    {
-      "ts": "2026-07-25T14:44:10.264429+00:00",
-      "kind": "risk_block",
-      "symbol": "SOL/USD",
-      "purpose": "ladder_entry",
-      "reason": "conviction 45% < floor 52%"
-    },
-    {
-      "ts": "2026-07-25T14:44:10.263120+00:00",
-      "kind": "risk_block",
+      "ts": "2026-08-02T20:42:56.222724+00:00",
+      "kind": "ladder_update",
       "symbol": "ETH/USD",
-      "purpose": "ladder_entry",
-      "reason": "conviction 49% < floor 52%"
+      "reason": "px 1879.84 peak 1932.58 gain -0%"
     },
     {
-      "ts": "2026-07-25T13:16:00.086886+00:00",
-      "kind": "risk_block",
-      "symbol": "SOL/USD",
-      "purpose": "ladder_entry",
-      "reason": "conviction 44% < floor 52%"
-    },
-    {
-      "ts": "2026-07-25T13:16:00.085742+00:00",
-      "kind": "risk_block",
+      "ts": "2026-08-02T20:26:52.476507+00:00",
+      "kind": "ladder_update",
       "symbol": "ETH/USD",
-      "purpose": "ladder_entry",
-      "reason": "conviction 47% < floor 52%"
+      "reason": "px 1878.90 peak 1932.58 gain -0%"
     },
     {
-      "ts": "2026-07-25T09:22:48.251735+00:00",
-      "kind": "risk_block",
-      "symbol": "SOL/USD",
-      "purpose": "ladder_entry",
-      "reason": "conviction 47% < floor 52%"
+      "ts": "2026-08-02T20:10:52.448290+00:00",
+      "kind": "ladder_update",
+      "symbol": "ETH/USD",
+      "reason": "px 1879.69 peak 1932.58 gain -0%"
     },
     {
-      "ts": "2026-07-25T08:42:48.775246+00:00",
-      "kind": "risk_block",
-      "symbol": "SOL/USD",
-      "purpose": "ladder_entry",
-      "reason": "conviction 46% < floor 52%"
+      "ts": "2026-08-02T19:54:57.855699+00:00",
+      "kind": "ladder_update",
+      "symbol": "ETH/USD",
+      "reason": "px 1880.98 peak 1932.58 gain -0%"
+    },
+    {
+      "ts": "2026-08-02T19:37:35.841944+00:00",
+      "kind": "ladder_update",
+      "symbol": "ETH/USD",
+      "reason": "px 1875.17 peak 1932.58 gain -0%"
+    },
+    {
+      "ts": "2026-08-02T19:20:15.700296+00:00",
+      "kind": "ladder_update",
+      "symbol": "ETH/USD",
+      "reason": "px 1876.37 peak 1932.58 gain -0%"
+    },
+    {
+      "ts": "2026-08-02T19:03:01.361087+00:00",
+      "kind": "ladder_update",
+      "symbol": "ETH/USD",
+      "reason": "px 1873.20 peak 1932.58 gain -1%"
+    },
+    {
+      "ts": "2026-08-02T18:45:43.791276+00:00",
+      "kind": "ladder_update",
+      "symbol": "ETH/USD",
+      "reason": "px 1878.33 peak 1932.58 gain -0%"
+    },
+    {
+      "ts": "2026-08-02T18:30:58.182399+00:00",
+      "kind": "ladder_update",
+      "symbol": "ETH/USD",
+      "reason": "px 1867.14 peak 1932.58 gain -1%"
+    },
+    {
+      "ts": "2026-08-02T18:13:34.758979+00:00",
+      "kind": "ladder_update",
+      "symbol": "ETH/USD",
+      "reason": "px 1867.81 peak 1932.58 gain -1%"
+    },
+    {
+      "ts": "2026-08-02T17:55:57.580234+00:00",
+      "kind": "ladder_update",
+      "symbol": "ETH/USD",
+      "reason": "px 1867.89 peak 1932.58 gain -1%"
+    },
+    {
+      "ts": "2026-08-02T17:38:36.385312+00:00",
+      "kind": "ladder_update",
+      "symbol": "ETH/USD",
+      "reason": "px 1866.16 peak 1932.58 gain -1%"
+    },
+    {
+      "ts": "2026-08-02T17:18:59.573097+00:00",
+      "kind": "ladder_update",
+      "symbol": "ETH/USD",
+      "reason": "px 1863.00 peak 1932.58 gain -1%"
+    },
+    {
+      "ts": "2026-08-02T17:02:38.769887+00:00",
+      "kind": "ladder_update",
+      "symbol": "ETH/USD",
+      "reason": "px 1860.83 peak 1932.58 gain -1%"
+    },
+    {
+      "ts": "2026-08-02T16:46:32.387907+00:00",
+      "kind": "ladder_update",
+      "symbol": "ETH/USD",
+      "reason": "px 1863.53 peak 1932.58 gain -1%"
+    },
+    {
+      "ts": "2026-08-02T16:30:35.184354+00:00",
+      "kind": "ladder_update",
+      "symbol": "ETH/USD",
+      "reason": "px 1857.22 peak 1932.58 gain -1%"
+    },
+    {
+      "ts": "2026-08-02T16:12:02.129862+00:00",
+      "kind": "ladder_update",
+      "symbol": "ETH/USD",
+      "reason": "px 1856.68 peak 1932.58 gain -1%"
+    },
+    {
+      "ts": "2026-08-02T15:55:58.550735+00:00",
+      "kind": "ladder_update",
+      "symbol": "ETH/USD",
+      "reason": "px 1856.88 peak 1932.58 gain -1%"
+    },
+    {
+      "ts": "2026-08-02T15:39:51.587685+00:00",
+      "kind": "ladder_update",
+      "symbol": "ETH/USD",
+      "reason": "px 1858.26 peak 1932.58 gain -1%"
+    },
+    {
+      "ts": "2026-08-02T15:23:46.988461+00:00",
+      "kind": "ladder_update",
+      "symbol": "ETH/USD",
+      "reason": "px 1856.53 peak 1932.58 gain -1%"
+    },
+    {
+      "ts": "2026-08-02T15:05:24.865716+00:00",
+      "kind": "ladder_update",
+      "symbol": "ETH/USD",
+      "reason": "px 1852.83 peak 1932.58 gain -2%"
+    },
+    {
+      "ts": "2026-08-02T14:49:23.670074+00:00",
+      "kind": "ladder_update",
+      "symbol": "ETH/USD",
+      "reason": "px 1856.20 peak 1932.58 gain -1%"
+    },
+    {
+      "ts": "2026-08-02T14:33:19.767284+00:00",
+      "kind": "ladder_update",
+      "symbol": "ETH/USD",
+      "reason": "px 1854.48 peak 1932.58 gain -2%"
+    },
+    {
+      "ts": "2026-08-02T14:17:04.861206+00:00",
+      "kind": "ladder_update",
+      "symbol": "ETH/USD",
+      "reason": "px 1854.58 peak 1932.58 gain -2%"
+    },
+    {
+      "ts": "2026-08-02T13:40:28.472145+00:00",
+      "kind": "ladder_update",
+      "symbol": "ETH/USD",
+      "reason": "px 1853.05 peak 1932.58 gain -2%"
     }
   ],
   "agents_roster": [
@@ -1487,6 +3448,20 @@
       "secret": false,
       "description": "intraday FX desk on/off",
       "set": true
+    },
+    {
+      "name": "INSTITUTIONAL_MULTIPLIER_ENABLED",
+      "category": "Institutional Multiplier",
+      "secret": false,
+      "description": "requires governed canary promotion before sizing orders",
+      "set": false
+    },
+    {
+      "name": "INSTITUTIONAL_MAX_DATA_AGE_SECONDS",
+      "category": "Institutional Multiplier",
+      "secret": false,
+      "description": "reject older research bars (default 4 days)",
+      "set": false
     },
     {
       "name": "FOREX_PAIRS",
