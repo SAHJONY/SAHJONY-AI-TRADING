@@ -1520,6 +1520,18 @@ function Brain(v){
       ${bad.length?bad.map(([k,d])=>`<div class="row"><span class="mut">${esc(k)}</span><span class="tag ${(d.rejected||0)?'off':'amber'}">${[(d.rejected||0)?`${d.rejected} rejected`:'',(d.frozen_flags||0)?`${d.frozen_flags}× frozen`:'',(d.venue_stale_flags||0)?`${d.venue_stale_flags}× stale print`:''].filter(Boolean).join(' · ')}</span></div>`).join(''):`<div class="row"><span class="mut">Per-symbol</span><span class="tag on">${Object.keys(syms).length} feed${Object.keys(syms).length===1?'':'s'} healthy</span></div>`}`;
     g.appendChild(panel('Market Data Feed', fs, 'real-time guard', 'span5'));
   }
+  // Recorded history — the desk turning its own live feed into backtestable bars.
+  // 'usable' (not 'bars') is the honest count: a single-tick bar has no range.
+  const rc0=(DATA.feed||{}).recorder||{};
+  if(rc0.enabled&&(rc0.series||[]).length){
+    const rs=$(`<div></div>`);
+    rs.innerHTML=`<div class="row"><span class="mut">Recording at</span><span class="tag on">${(rc0.intervals||[]).map(i=>i+'m').join(' · ')||'—'}</span></div>`
+      +rc0.series.map(s=>{
+        const pct=s.single_tick_pct||0, ok=pct<50;
+        return `<div class="row" title="${s.bars} bars stored; ${pct}% have open==high==low==close, so their range was never observed"><span class="mut">${esc(s.symbol)} ${s.interval_m}m</span><span class="tag ${ok?'on':'amber'}">${(s.usable||0).toLocaleString()} usable / ${(s.bars||0).toLocaleString()} · ${s.ticks_per_bar} ticks/bar · ${s.span_days}d</span></div>`;
+      }).join('');
+    g.appendChild(panel('Recorded History', rs, 'live feed → backtest bars', 'span5'));
+  }
   // autonomous model updater — show the live model each provider is pinned to
   const ai=((DATA.health||{}).ai_brain)||{}; const mdl=ai.models||{};
   const ms=$(`<div></div>`);
