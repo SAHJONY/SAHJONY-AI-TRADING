@@ -1,0 +1,17 @@
+# Research-only dependencies — for `backtest/`, never for the trading loop.
+#
+#     pip install -r requirements.txt -r requirements-backtest.txt
+#
+# Deliberately kept out of requirements.txt for two reasons:
+#
+#  1. Nothing in the live desk imports them. `backtest/data.py` loads both
+#     lazily and raises DataUnavailable with a "pip install ..." hint when they
+#     are absent, so a desk without them degrades to "that data source is
+#     unavailable" rather than failing to start.
+#  2. Vercel installs the root requirements.txt into the serverless function
+#     bundle for api/*.py. arch pulls scipy + statsmodels, and with pyarrow the
+#     bundle reached 826 MB against a 500 MB limit — a failed deployment caused
+#     entirely by packages the functions never import.
+
+pyarrow>=14.0   # reading the public 5m BTC feather dataset (backtest.data)
+arch>=6.0       # Kevin Sheppard's bundled index datasets (sp500-1d, nasdaq-1d)

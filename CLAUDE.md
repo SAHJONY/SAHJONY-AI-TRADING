@@ -40,6 +40,11 @@ native SQLite CRM/database and a static owner dashboard deployed on Vercel.
   `python-dotenv` and `alpaca-py`; without `alpaca-py`, `test_historical_data`
   fails 3 tests on `ModuleNotFoundError`, which is a missing dependency and not
   a regression.
+- `requirements.txt` is the **desk's** runtime, and Vercel installs it verbatim
+  into the `api/*.py` serverless bundle (500 MB ceiling). Research-only packages
+  go in `requirements-backtest.txt`; `api/requirements.txt` is intentionally
+  empty because those functions are stdlib-only. Adding a heavy dependency to
+  the root file breaks the deployment, not just the install.
 - `python main.py --cycles 8` — regenerates `public/status.json` for the dashboard.
   **Do not commit what this writes from a feature branch.** It also rewrites
   `public/knowledge.json` and `public/ai_shadow.json`; all three are owned by the

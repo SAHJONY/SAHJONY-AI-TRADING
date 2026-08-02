@@ -360,7 +360,8 @@ def _fetch_bundled_index(which: str) -> List[dict]:
         df = mod.load()
     except Exception as exc:
         raise DataUnavailable(
-            f"bundled dataset '{which}' unavailable ({exc}); pip install arch") from exc
+            f"bundled dataset '{which}' unavailable ({exc}); this source needs "
+            f"arch — pip install -r requirements-backtest.txt") from exc
     rows = []
     for ts, r in df.iterrows():
         try:
@@ -403,7 +404,9 @@ def _fetch_public_btc_5m() -> List[dict]:
     except DataUnavailable:
         raise
     except Exception as exc:
-        raise DataUnavailable(f"cannot read 5m feather ({exc}); pyarrow installed?") from exc
+        raise DataUnavailable(
+            f"cannot read 5m feather ({exc}); this source needs pyarrow — "
+            f"pip install -r requirements-backtest.txt") from exc
     rows = []
     for r in df.dropna().itertuples(index=False):
         try:

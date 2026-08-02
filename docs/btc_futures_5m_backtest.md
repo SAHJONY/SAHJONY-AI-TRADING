@@ -131,6 +131,19 @@ genuine market data offline, no API and no key:
 | `arch.data.frenchdata` | monthly | Fama–French factors (Mkt-RF, SMB, HML, RF) |
 | `statsmodels` macrodata | 1959–2009 | US GDP, CPI, unemployment, T-bill |
 
+These packages are **not** in `requirements.txt`. `arch` drags in scipy and
+statsmodels, and Vercel installs the root requirements verbatim into the
+`api/*.py` serverless bundle — with `pyarrow` alongside them the bundle reached
+826 MB against a 500 MB ceiling and the deployment failed. They live in
+`requirements-backtest.txt` instead:
+
+```bash
+pip install -r requirements.txt -r requirements-backtest.txt
+```
+
+`backtest/data.py` imports both lazily, so without them the affected sources
+raise `DataUnavailable` naming the file to install, and everything else works.
+
 ```bash
 python -m backtest.run    --source sp500-1d --split 0.6
 python -m backtest.improve --source sp500-1d --strategy s12

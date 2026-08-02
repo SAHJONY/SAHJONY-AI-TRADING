@@ -1,0 +1,11 @@
+# Dependencies for the Vercel serverless functions in this directory — none.
+#
+# broker-evidence.py, promotion-status.py and runtime-status.py import only the
+# standard library (http.server, hmac, json, os, urllib). This file exists so
+# Vercel bundles nothing for them instead of falling back to the repository root
+# requirements.txt, which describes the *trading desk* — numpy, pandas, pyarrow,
+# scipy and friends. Bundling those produced an 826 MB function against a 500 MB
+# limit and failed the deployment outright.
+#
+# If a function here ever needs a real package, add it to THIS file, not the
+# root one, and keep in mind that every byte lands in the function bundle.
