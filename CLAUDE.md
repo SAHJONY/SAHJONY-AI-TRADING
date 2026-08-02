@@ -34,14 +34,21 @@ native SQLite CRM/database and a static owner dashboard deployed on Vercel.
 - `python -m py_compile $(git ls-files '*.py')` — syntax gate.
 - `python -m tests.test_dry_run` — 8 offline cycles; asserts state/DB/status update.
 - `python -m tests.test_optimizations` — locks in the hot-path work (expanding-vol
-  equivalence, per-cycle quote cache, DB indices). See `docs/system_review.md`.
+  equivalence, per-cycle quote cache, DB indices, recorded-feed bars).
+  See `docs/system_review.md`.
+- `python -m pytest tests/ -q` — the whole suite (343 tests). Needs `pytest`,
+  `python-dotenv` and `alpaca-py`; without `alpaca-py`, `test_historical_data`
+  fails 3 tests on `ModuleNotFoundError`, which is a missing dependency and not
+  a regression.
 - `python main.py --cycles 8` — regenerates `public/status.json` for the dashboard.
   **Do not commit what this writes from a feature branch.** It also rewrites
-  `public/knowledge.json`, and both files are owned by the *running* desk on
-  `master`. Committing offline-sim output overwrites real accumulated state (the
-  per-pair hit rates the desk weights itself with) and turns every later merge
-  into a conflict whose "ours" side is simulated noise. After verifying, restore
-  them: `git checkout -- public/status.json public/knowledge.json`.
+  `public/knowledge.json` and `public/ai_shadow.json`; all three are owned by the
+  *running* desk on `master`. Committing offline-sim output overwrites real
+  accumulated state (the per-pair hit rates the desk weights itself with, the
+  shadow-eval observation counts) and turns every later merge into a conflict
+  whose "ours" side is simulated noise. Note the test suite writes them too, not
+  just `main.py`. After verifying, restore all three:
+  `git checkout -- public/status.json public/knowledge.json public/ai_shadow.json`.
 - The dashboard is browser-rendered; `status.json` is the contract between the
   Python engine and `public/index.html` — keep the schema in `reporter.py` in sync.
 

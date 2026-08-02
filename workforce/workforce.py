@@ -20,19 +20,29 @@ into one trading cycle:
 """
 from __future__ import annotations
 
+from dataclasses import asdict
 import os
+from dataclasses import asdict
 from datetime import datetime, timezone
 from typing import Any, Dict, List
 
 from config import Config
 from database import Database
+from execution.idempotency import execution_intent_id
 from intelligence.agents import Council, CouncilVerdict, MarketSnapshot
 from intelligence.advisors import AdvisoryBoard
 from intelligence.ai_brain import AIBrain, BrainVerdict
 from intelligence.alt_data import AltData
+from intelligence.autonomous_learning import AutonomousLearningPipeline
 from intelligence.hermes import Hermes, HermesReport
+from intelligence.institutional_research import (
+    PROMOTION_KEY,
+    InstitutionalResearchFabric,
+    applied_multiplier,
+    multiplier_enabled,
+)
 from risk.risk_engine import RiskEngine
-from strategies.base import OrderIntent, fee_cost
+from strategies.base import OrderIntent, fee_cost, validate_order_intent
 from strategies.copy_trading import CopyTrader
 from strategies.credit_spreads import CreditSpreads
 from strategies.day_trading import DayTrading
@@ -58,7 +68,13 @@ class ResearchDesk:
     def research(self, symbol: str, bench_closes) -> (MarketSnapshot, CouncilVerdict):
         hist = self.client.get_history(symbol, 250)
         price = self.client.get_price(symbol)
-        snap = MarketSnapshot(symbol, price, hist["closes"], hist["volumes"], bench_closes)
+        snap = MarketSnapshot(
+            symbol, price, hist["closes"], hist["volumes"], bench_closes,
+            bar_timestamps=hist.get("timestamps", []),
+            retrieved_at=hist.get("retrieved_at"),
+            feed_timestamp=hist.get("feed_timestamp"),
+            exchange_timestamp=hist.get("exchange_timestamp"),
+        )
         return snap, self.council.deliberate(snap)
 
 
@@ -117,6 +133,113 @@ class ExecutionTrader:
             if len(events) > 400:
                 del events[:len(events) - 400]
 
+    @staticmethod
+    def _adds_exposure(intent: OrderIntent) -> bool:
+        return bool(
+            intent.side == "buy"
+            or (intent.risk_check and intent.side == "sell" and intent.kind == "equity")
+            or intent.side == "sell_to_open"
+        )
+
+    def reconcile_pending_orders(
+        self, state: Dict[str, Any], cycle: int, deployed: float
+    ) -> float:
+        """Resolve persisted submissions without ever assuming an acknowledgement filled.
+
+        Status lookup is an optional broker capability. When it is unavailable,
+        errors, or returns an unknown state, the lock remains in place.
+        """
+        if state.get("_pending_reconciled_cycle") == cycle:
+            return deployed
+        state["_pending_reconciled_cycle"] = cycle
+        pending_orders = state.get("pending_orders", {})
+        getter = getattr(self.client, "get_order_status", None)
+        if not pending_orders or not callable(getter):
+            return deployed
+
+        terminal_failure = {"cancelled", "canceled", "rejected", "expired", "failed"}
+        for symbol, pending in list(pending_orders.items()):
+            intent_id = str(pending.get("intent_id") or "")
+            broker_ref = str(pending.get("broker_ref") or "")
+            if not intent_id or not broker_ref:
+                continue
+            try:
+                try:
+                    result = getter(broker_ref, symbol)
+                except TypeError:
+                    result = getter(broker_ref)
+                status = str((result or {}).get("status", "")).lower()
+            except Exception as exc:
+                self.db.append_audit("pending_reconciliation_error", {
+                    "cycle": cycle, "symbol": symbol, "intent_id": intent_id,
+                    "error": type(exc).__name__,
+                })
+                continue
+
+            if status in terminal_failure:
+                self.db.update_execution_intent(
+                    intent_id, "failed", broker_ref=broker_ref,
+                    detail={"broker_status": status},
+                )
+                pending_orders.pop(symbol, None)
+                self.db.append_audit("pending_order_released", {
+                    "cycle": cycle, "symbol": symbol, "intent_id": intent_id,
+                    "broker_ref": broker_ref, "status": status,
+                })
+                record_event(state, "pending_order_released",
+                             {"symbol": symbol, "status": status})
+                continue
+            if status != "filled":
+                continue
+
+            raw_intent = pending.get("intent")
+            try:
+                recovered = OrderIntent(**raw_intent)
+                blocker = validate_order_intent(recovered)
+                if blocker:
+                    raise ValueError(blocker)
+            except Exception as exc:
+                self.db.append_audit("pending_reconciliation_error", {
+                    "cycle": cycle, "symbol": symbol, "intent_id": intent_id,
+                    "error": f"invalid persisted intent: {type(exc).__name__}",
+                })
+                continue
+
+            self._apply(recovered, state)
+            transaction_cost = max(
+                0.0, float((result or {}).get("transaction_cost", 0.0) or 0.0)
+            )
+            state["transaction_costs"] = state.get("transaction_costs", 0.0) + transaction_cost
+            state["realized_pnl"] = state.get("realized_pnl", 0.0) - transaction_cost
+            if self._adds_exposure(recovered):
+                deployed += recovered.est_notional
+            fill_price = (result or {}).get("fill_price")
+            if fill_price is None:
+                fill_price = (self.client.get_price(symbol)
+                              if recovered.kind == "equity" else recovered.premium)
+            self.db.log_trade({
+                "cycle": cycle, "symbol": recovered.symbol,
+                "strategy": recovered.strategy, "kind": recovered.kind,
+                "side": recovered.side, "qty": recovered.qty,
+                "price": fill_price, "premium": recovered.premium,
+                "notional": recovered.est_notional, "purpose": recovered.purpose,
+                "reason": recovered.reason,
+                "mode": getattr(self.client, "mode", self.cfg.mode),
+                "simulated": (result or {}).get("simulated", False),
+            })
+            self.db.update_execution_intent(
+                intent_id, "filled", broker_ref=broker_ref,
+                detail={"transaction_cost": transaction_cost, "reconciled_cycle": cycle},
+            )
+            pending_orders.pop(symbol, None)
+            self.db.append_audit("pending_order_filled", {
+                "cycle": cycle, "symbol": symbol, "intent_id": intent_id,
+                "broker_ref": broker_ref, "state_applied": True,
+            })
+            record_event(state, "pending_order_filled",
+                         {"symbol": symbol, "intent_id": intent_id})
+        return deployed
+
     def execute(self, intents: List[OrderIntent], state: Dict[str, Any], cycle: int,
                 equity: float, deployed: float, conviction: float,
                 allow_new_risk: bool = True) -> tuple[List[Dict], float]:
@@ -127,16 +250,56 @@ class ExecutionTrader:
         intents are blocked but exits and state updates still flow, so the desk can
         always reduce exposure."""
         done = []
+        deployed = self.reconcile_pending_orders(state, cycle, deployed)
         for intent in intents:
+            intent_id = ""
             try:
+                pending = state.setdefault("pending_orders", {})
+                if intent.kind == "equity" and intent.symbol in pending:
+                    log.info("PENDING BLOCK %s %s — prior broker order unresolved",
+                             intent.symbol, intent.purpose)
+                    record_event(state, "pending_order_block",
+                                 {"symbol": intent.symbol, "purpose": intent.purpose})
+                    self.db.append_audit("pending_order_block", {
+                        "cycle": cycle, "symbol": intent.symbol,
+                        "purpose": intent.purpose,
+                        "pending": pending[intent.symbol],
+                    })
+                    continue
                 if intent.kind == "state":
                     self._apply(intent, state)
                     record_event(state, intent.purpose, {"symbol": intent.symbol, "reason": intent.reason})
+                    continue
+                malformed = validate_order_intent(intent)
+                if malformed:
+                    log.error("INVALID INTENT BLOCK %s %s: %s",
+                              intent.symbol, intent.purpose, malformed)
+                    record_event(state, "invalid_intent_block",
+                                 {"symbol": intent.symbol, "purpose": intent.purpose,
+                                  "reason": malformed})
+                    self.db.append_audit("invalid_intent_block", {
+                        "cycle": cycle, "symbol": intent.symbol,
+                        "purpose": intent.purpose, "reason": malformed,
+                    })
+                    continue
+                pending = state.get("pending_orders", {}).get(intent.symbol)
+                if pending:
+                    reason = "unconfirmed broker order already pending"
+                    log.warning("PENDING ORDER BLOCK %s %s", intent.symbol, intent.purpose)
+                    record_event(state, "pending_order_block",
+                                 {"symbol": intent.symbol, "purpose": intent.purpose,
+                                  "reason": reason})
+                    self.db.append_audit("pending_order_block", {
+                        "cycle": cycle, "symbol": intent.symbol,
+                        "purpose": intent.purpose, "pending": pending,
+                    })
                     continue
                 if intent.risk_check and not allow_new_risk:
                     log.info("HALT BLOCK %s %s — new risk suspended", intent.symbol, intent.purpose)
                     record_event(state, "halt_block",
                                  {"symbol": intent.symbol, "purpose": intent.purpose})
+                    self.db.append_audit("risk_block", {"cycle": cycle, "symbol": intent.symbol,
+                                         "purpose": intent.purpose, "reason": "new risk suspended"})
                     continue
                 if intent.risk_check:
                     dec = self.risk.approve(equity, deployed, intent.est_notional, conviction, intent.symbol)
@@ -144,16 +307,72 @@ class ExecutionTrader:
                         log.info("RISK BLOCK %s %s: %s", intent.symbol, intent.purpose, dec.reason)
                         record_event(state, "risk_block",
                                      {"symbol": intent.symbol, "purpose": intent.purpose, "reason": dec.reason})
+                        self.db.append_audit("risk_block", {"cycle": cycle, "symbol": intent.symbol,
+                                             "purpose": intent.purpose, "reason": dec.reason})
                         continue
+                intent_id, payload = execution_intent_id(intent, cycle)
+                if not self.db.reserve_execution_intent(intent_id, cycle, payload):
+                    log.error("DUPLICATE INTENT BLOCKED %s %s id=%s",
+                              intent.symbol, intent.purpose, intent_id[:12])
+                    record_event(state, "duplicate_intent_block",
+                                 {"symbol": intent.symbol, "purpose": intent.purpose,
+                                  "intent_id": intent_id})
+                    self.db.append_audit("duplicate_intent_block", {
+                        "cycle": cycle, "symbol": intent.symbol,
+                        "purpose": intent.purpose, "intent_id": intent_id,
+                    })
+                    continue
+                self.db.append_audit("execution_reserved", {
+                    "cycle": cycle, "intent_id": intent_id, "payload": payload,
+                })
                 if intent.kind == "equity":
                     res = self.client.submit_equity_order(intent.symbol, intent.qty, intent.side)
-                    price = res.get("fill_price", self.client.get_price(intent.symbol))
                 else:
                     res = self.client.submit_option_order(intent.contract, intent.qty, intent.side, intent.premium)
-                    price = intent.premium
-                if res.get("status") not in ("filled", "submitted"):
+                status = str(res.get("status", "")).lower()
+                if status not in ("filled", "submitted"):
+                    self.db.update_execution_intent(intent_id, "failed",
+                                                    detail={"status": str(res.get("status", "rejected"))})
+                    self.db.append_audit("execution_failed", {
+                        "cycle": cycle, "intent_id": intent_id,
+                        "status": str(res.get("status", "rejected")),
+                    })
                     log.warning("order not filled %s: %s", intent.symbol, res)
                     continue
+                broker_ref = str(res.get("order_id") or res.get("id") or "")
+                if status == "submitted":
+                    pending = {
+                        "intent_id": intent_id,
+                        "broker_ref": broker_ref,
+                        "cycle": cycle,
+                        "side": intent.side,
+                        "qty": intent.qty,
+                        "purpose": intent.purpose,
+                        "intent": asdict(intent),
+                    }
+                    state.setdefault("pending_orders", {})[intent.symbol] = pending
+                    self.db.update_execution_intent(
+                        intent_id, "submitted", broker_ref=broker_ref,
+                        detail={"confirmation": "pending"},
+                    )
+                    self.db.append_audit("execution_result", {
+                        "cycle": cycle, "intent_id": intent_id, "status": "submitted",
+                        "broker_ref": broker_ref, "state_applied": False,
+                    })
+                    record_event(state, "order_submitted", {
+                        "symbol": intent.symbol, "purpose": intent.purpose,
+                        "intent_id": intent_id, "broker_ref": broker_ref,
+                    })
+                    done.append({
+                        "symbol": intent.symbol, "purpose": intent.purpose,
+                        "reason": intent.reason, "status": "submitted",
+                    })
+                    log.warning("SUBMITTED %s %s — awaiting broker fill confirmation",
+                                intent.symbol, intent.purpose)
+                    continue
+                price = (res.get("fill_price") if res.get("fill_price") is not None
+                         else self.client.get_price(intent.symbol)
+                         if intent.kind == "equity" else intent.premium)
                 # Transaction costs: charge the estimated round trip when a position
                 # is CLOSED, so realized P&L — and therefore the equity curve and
                 # Hermes' scorecard — are NET of spread rather than gross.
@@ -166,14 +385,15 @@ class ExecutionTrader:
                         log.info("%s %s realized $%.4f gross → $%.4f net (est. cost $%.4f)",
                                  intent.symbol, intent.purpose, gross, intent.realized_delta, cost)
                 self._apply(intent, state)
+                transaction_cost = max(0.0, float(res.get("transaction_cost", 0.0) or 0.0))
+                state["transaction_costs"] = state.get("transaction_costs", 0.0) + transaction_cost
+                state["realized_pnl"] = state.get("realized_pnl", 0.0) - transaction_cost
                 # Consume deployed budget for: equity buys, risk-gated equity shorts,
                 # and cash-secured puts (sell_to_open carries collateral in
                 # est_notional; covered calls are sell_to_open with est_notional 0,
                 # so they correctly add nothing). Keeps stacked CSPs within the cap
                 # within a single cycle, before _gross_exposure re-seeds next cycle.
-                if (intent.side == "buy"
-                        or (intent.risk_check and intent.side == "sell" and intent.kind == "equity")
-                        or intent.side == "sell_to_open"):
+                if self._adds_exposure(intent):
                     deployed += intent.est_notional
                 self.db.log_trade({
                     "cycle": cycle, "symbol": intent.symbol, "strategy": intent.strategy,
@@ -183,12 +403,77 @@ class ExecutionTrader:
                     "mode": getattr(self.client, "mode", self.cfg.mode),
                     "simulated": res.get("simulated", True),
                 })
+                self.db.update_execution_intent(
+                    intent_id, "filled", broker_ref=broker_ref,
+                    detail={"transaction_cost": transaction_cost},
+                )
+                self.db.append_audit("execution_result", {
+                    "cycle": cycle, "intent_id": intent_id, "status": "filled",
+                    "broker_ref": broker_ref, "transaction_cost": transaction_cost,
+                })
                 record_event(state, intent.purpose, {"symbol": intent.symbol, "reason": intent.reason})
                 done.append({"symbol": intent.symbol, "purpose": intent.purpose, "reason": intent.reason})
                 log.info("EXEC %s %s — %s", intent.symbol, intent.purpose, intent.reason)
             except Exception as exc:  # one bad intent never sinks the cycle
+                if intent_id:
+                    try:
+                        self.db.update_execution_intent(
+                            intent_id, "failed", detail={"error": type(exc).__name__}
+                        )
+                        self.db.append_audit("execution_exception", {
+                            "cycle": cycle, "intent_id": intent_id,
+                            "error": type(exc).__name__,
+                        })
+                    except Exception:
+                        pass
                 log.error("execute intent failed (%s %s): %s", intent.symbol, intent.purpose, exc)
         return done, deployed
+
+    def reconcile_pending(self, state: Dict[str, Any], cycle: int) -> List[Dict]:
+        """Apply state and ledger mutations only after the broker confirms a fill."""
+        pending = state.setdefault("pending_orders", {})
+        resolved = []
+        if not pending or not hasattr(self.client, "get_order"):
+            return resolved
+        for symbol, item in list(pending.items()):
+            order = self.client.get_order(item.get("order_id"))
+            status = order.get("status")
+            if status == "filled":
+                intent = OrderIntent(**item["intent"])
+                price = float(order.get("fill_price") or 0)
+                if price <= 0:
+                    log.warning("FILLED order %s has no defensible fill price; keeping pending",
+                                item.get("order_id"))
+                    continue
+                self._apply(intent, state)
+                self.db.log_trade({
+                    "cycle": item.get("cycle", cycle), "symbol": intent.symbol,
+                    "strategy": intent.strategy, "kind": intent.kind, "side": intent.side,
+                    "qty": order.get("filled_qty") or intent.qty, "price": price,
+                    "premium": intent.premium, "notional": intent.est_notional,
+                    "purpose": intent.purpose, "reason": intent.reason,
+                    "mode": item.get("mode"), "simulated": False,
+                    "order_id": order.get("order_id"),
+                    "client_order_id": order.get("client_order_id") or item.get("client_order_id"),
+                    "order_status": "filled", "submitted_at": item.get("submitted_at"),
+                    "filled_at": order.get("filled_at"),
+                })
+                record_event(state, "order_filled", {
+                    "symbol": symbol, "strategy": intent.strategy,
+                    "order_id": order.get("order_id"),
+                    "client_order_id": order.get("client_order_id") or item.get("client_order_id"),
+                    "fill_price": price,
+                })
+                pending.pop(symbol, None)
+                resolved.append({"symbol": symbol, "status": "filled"})
+            elif status in ("cancelled", "rejected"):
+                record_event(state, f"order_{status}", {
+                    "symbol": symbol, "order_id": item.get("order_id"),
+                    "client_order_id": item.get("client_order_id"),
+                })
+                pending.pop(symbol, None)
+                resolved.append({"symbol": symbol, "status": status})
+        return resolved
 
 
 # ── the firm ────────────────────────────────────────────────────────────────
@@ -306,31 +591,33 @@ class Firm:
             state["equity_day_start"] = equity
             state["realized_day_start"] = float(state.get("realized_pnl", 0.0) or 0.0)
             state["breaker_latched"] = False
-        day_start = state.get("equity_day_start") or equity or 1.0
-        day_return = (equity / day_start - 1.0) if day_start else 0.0
+        day_start = float(state.get("equity_day_start") or 0.0)
 
-        # Capital-flow guard. Deposits, withdrawals and sleeve changes move equity
-        # without any trading loss — a $50 sleeve switched to $10 is NOT a -80% day.
-        # If the desk is flat AND has booked no realized P&L today, the move cannot
-        # be a drawdown, so re-anchor the baseline instead of tripping the breaker.
-        # Conservative by construction: it can only un-latch when the desk provably
-        # did not trade that day.
-        realized_today = (float(state.get("realized_pnl", 0.0) or 0.0)
-                          - float(state.get("realized_day_start", 0.0) or 0.0))
-        no_activity = (not (state.get("positions") or {})) and abs(realized_today) < 1e-9
-        if no_activity:
-            if abs(day_return) > 1e-9:
-                log.info("circuit breaker baseline re-anchored $%.2f → $%.2f "
-                         "(capital change, no trading activity today)", day_start, equity)
-                state["equity_day_start"] = equity
-                state["realized_day_start"] = float(state.get("realized_pnl", 0.0) or 0.0)
-                day_start, day_return = equity, 0.0
-            # A latch with no trade behind it is an artifact of a capital change,
-            # not a loss — clear it. A real loss always leaves positions or
-            # realized P&L, so a genuine halt still survives the whole day.
-            if state.get("breaker_latched"):
-                log.info("circuit breaker un-latched — desk is flat with no realized P&L today")
-                state["breaker_latched"] = False
+        # Zero equity means the connected account is unfunded, not down 100%.
+        # Block new risk through buying-power/account routing checks instead.
+        if equity <= 0.0 or day_start <= 0.0:
+            day_return = 0.0
+            state["equity_day_start"] = equity
+            state["breaker_latched"] = False
+        else:
+            day_return = equity / day_start - 1.0
+
+            # Capital-flow guard. A flat desk with no realized P&L did not suffer
+            # a trading drawdown, so re-anchor deposits, withdrawals, and sleeve changes.
+            realized_today = (float(state.get("realized_pnl", 0.0) or 0.0)
+                              - float(state.get("realized_day_start", 0.0) or 0.0))
+            no_activity = (not (state.get("positions") or {})) and abs(realized_today) < 1e-9
+            if no_activity:
+                if abs(day_return) > 1e-9:
+                    log.info("circuit breaker baseline re-anchored $%.2f → $%.2f "
+                             "(capital change, no trading activity today)", day_start, equity)
+                    state["equity_day_start"] = equity
+                    state["realized_day_start"] = float(
+                        state.get("realized_pnl", 0.0) or 0.0
+                    )
+                    day_start, day_return = equity, 0.0
+                if state.get("breaker_latched"):
+                    state["breaker_latched"] = False
 
         if day_return <= -abs(self.cfg.max_daily_drawdown_pct):
             state["breaker_latched"] = True
@@ -470,6 +757,7 @@ class Firm:
                 state["positions"] = {}               # start the sleeve FLAT (drop prior-size positions)
                 state["realized_pnl"] = 0.0
                 state["premium_collected"] = 0.0
+                state["transaction_costs"] = 0.0
                 state.pop("benchmark_start", None)    # re-anchor SPY alpha to the sleeve start
                 state.pop("equity_day_start", None)
                 log.info("Capital sleeve set to $%.0f — baseline + positions reset for a clean test.",
@@ -497,13 +785,44 @@ class Firm:
             pass
         state["equity_last"] = equity
 
+        # A LIVE venue must reconcile broker positions before adding any risk.
+        # Mismatches fail closed while exits remain available downstream.
+        from observability.reconciliation import reconcile_positions, unavailable_reconciliation
+        reconciliation = unavailable_reconciliation("not required outside LIVE mode")
+        if mode == "LIVE":
+            try:
+                reconciliation = reconcile_positions(
+                    state.get("positions", {}), self.client.get_broker_positions() or {}
+                )
+            except Exception as exc:
+                reconciliation = unavailable_reconciliation(
+                    f"broker snapshot failed: {type(exc).__name__}"
+                )
+            try:
+                self.db.append_audit("position_reconciliation", {
+                    "cycle": cycle, "status": reconciliation["status"],
+                    "reconciled": reconciliation["reconciled"],
+                    "differences": reconciliation.get("differences", []),
+                })
+            except Exception as exc:
+                reconciliation = unavailable_reconciliation(
+                    f"audit ledger unavailable: {type(exc).__name__}"
+                )
+
         # Broker reconciliation FIRST: never plan a cycle against a stale view of
         # what we own (see _reconcile_broker for why state alone is not enough).
         recon = self._reconcile_broker(state)
+        recon["orders_resolved"] = []
 
         # Circuit breaker / kill switch — suspends NEW risk this cycle if tripped.
         halt = self._halt_check(state, equity)
         allow_new_risk = trade and not halt["halted"]
+        if mode == "LIVE" and not reconciliation["reconciled"]:
+            allow_new_risk = False
+            reason = "broker position reconciliation failed"
+            halt = {**halt, "halted": True,
+                    "reason": f"{halt.get('reason')}; {reason}".strip("; ")}
+            log.error("NEW RISK HALTED: %s", reason)
 
         # Execution-cadence guard. Every protective rail (trailing stops, hard
         # floors, the daily breaker) only evaluates WHEN A CYCLE RUNS. Scheduled
@@ -536,6 +855,19 @@ class Firm:
             except Exception as exc:
                 log.error("research failed %s: %s", sym, exc)
 
+        # Cross-asset institutional research fabric. This is point-in-time and
+        # advisory-only: it enriches AI/research context and can never invent an order.
+        try:
+            institutional_intelligence = InstitutionalResearchFabric().analyze(
+                [row["snap"] for row in research],
+                requested_symbols=self.cfg.tickers,
+                max_age_seconds=self.cfg.institutional_max_data_age_seconds,
+                require_timestamps=True,
+            )
+        except Exception as exc:
+            log.error("institutional research fabric failed: %s", exc)
+            institutional_intelligence = InstitutionalResearchFabric().analyze([])
+
         # 1b) Alt-data overlay — QuiverQuant insider/congress disclosures per symbol
         # (fault-isolated; empty when disabled). Feeds the brain's view and conviction.
         try:
@@ -565,6 +897,20 @@ class Firm:
             hermes = HermesReport(used=False)
 
         # 2) Chief Strategist — AI brain advisory overlay
+        institutional_factors = institutional_intelligence.get("factors", {})
+        institutional_market = institutional_intelligence.get("market", {})
+        institutional_promotion_stage = "research"
+        try:
+            candidate = self.db.upsert_promotion_candidate(
+                PROMOTION_KEY, "Institutional Research Multiplier", "risk_overlay"
+            )
+            institutional_promotion_stage = str(candidate.get("stage") or "research")
+        except Exception as exc:
+            log.warning("institutional promotion state unavailable: %s", exc)
+        institutional_multiplier_active = multiplier_enabled(
+            institutional_promotion_stage,
+            self.cfg.institutional_multiplier_enabled,
+        )
         portfolio = [{
             "symbol": r["symbol"], "price": round(r["snap"].price, 2),
             "conviction": round(r["verdict"].conviction, 3), "direction": r["verdict"].direction,
@@ -572,18 +918,58 @@ class Firm:
             "alpha": round(r["verdict"].metrics.get("alpha", 0.0), 4),
             "beta": round(r["verdict"].metrics.get("beta", 1.0), 3),
             "vol": round(r["verdict"].metrics.get("vol", 0.0), 3),
+            "market_regime": ("stressed" if r["verdict"].metrics.get("stressed_prob", 0.0) >= 0.5
+                              else "normal"),
+            "asset_class": ("crypto" if "/" in r["symbol"] or r["symbol"].endswith("-USD")
+                            else "options" if self.pm.assign_strategy(r["symbol"], idx) in {"wheel", "spread"}
+                            else "equity"),
             "alt_tilt": round(alt_signals[r["symbol"]].tilt, 3) if r["symbol"] in alt_signals else 0.0,
             "alt_note": alt_signals[r["symbol"]].summary if r["symbol"] in alt_signals else "",
-        } for r in research]
+            "institutional_factor_score": (institutional_factors.get(r["symbol"]) or {}).get(
+                "composite_factor_score", 0.0),
+            "liquidity_rank": (institutional_factors.get(r["symbol"]) or {}).get(
+                "liquidity_rank", 0.0),
+            "expected_shortfall_95": (institutional_factors.get(r["symbol"]) or {}).get(
+                "expected_shortfall_95", 0.0),
+            "cross_asset_regime": institutional_market.get("regime", "unknown"),
+            "institutional_advisory_risk": institutional_market.get(
+                "advisory_risk_multiplier", 0.5),
+        } for idx, r in enumerate(research)]
         brain = self.brain.advise(portfolio)
         if brain.used:
             log.info("AI BRAIN posture=%s risk_mult=%.2f — %s",
                      brain.posture, brain.global_risk_multiplier, brain.commentary[:120])
+        learning = {}
+        if self.cfg.ai_shadow_enabled and portfolio:
+            try:
+                overlays = self.brain.shadow_advise(portfolio, brain)
+                learning = AutonomousLearningPipeline(
+                    min_observations=self.cfg.ai_shadow_min_observations,
+                    database=self.db,
+                ).run_cycle(cycle, portfolio, overlays)
+            except Exception as exc:
+                log.error("autonomous learning pipeline failed: %s", exc)
 
         # 3-6) PM → Strategy → Risk → Execution → Treasurer, per ticker.
         # The deployed cap gates on GROSS exposure so shorts consume budget too.
         deployed = self._gross_exposure(state)
         executed: List[Dict] = []
+        proposed_institutional_risk = max(.5, min(1.0, float(
+            institutional_market.get("advisory_risk_multiplier", .5) or .5
+        )))
+        institutional_risk = applied_multiplier(
+            proposed_institutional_risk,
+            institutional_promotion_stage,
+            self.cfg.institutional_multiplier_enabled,
+        )
+        institutional_intelligence["promotion"] = {
+            "key": PROMOTION_KEY,
+            "stage": institutional_promotion_stage,
+            "feature_flag_enabled": self.cfg.institutional_multiplier_enabled,
+            "multiplier_active": institutional_multiplier_active,
+            "proposed_multiplier": proposed_institutional_risk,
+            "applied_multiplier": institutional_risk,
+        }
         for idx, r in enumerate(research):
             sym, snap, verdict = r["symbol"], r["snap"], r["verdict"]
             try:
@@ -607,7 +993,7 @@ class Firm:
                 conviction, risk_mult, budget = self.pm.effective(verdict, brain, equity, tilt)
                 # Hermes strategy calibration: budget leans toward desks with a proven
                 # realized edge (bounded 0.70–1.15; hard risk ceilings still apply).
-                budget *= hermes.strategy_weights.get(strat, 1.0) * vol_scale
+                budget *= hermes.strategy_weights.get(strat, 1.0) * vol_scale * institutional_risk
                 if pairs_owned:
                     intents = []
                 elif strat == "wheel":
@@ -667,7 +1053,10 @@ class Firm:
         # 6c) Day-Trading / Forex desk — intraday momentum + mean-reversion on the
         # FX majors (and any extra DAY_TRADE_SYMBOLS), disjoint from the core tickers.
         if trade and self.cfg.day_trading_enabled:
-            universe = [*self.cfg.forex_pairs, *self.cfg.day_trade_symbols]
+            if self.cfg.broker == "robinhood":
+                universe = list(self.cfg.day_trade_symbols)
+            else:
+                universe = [*self.cfg.forex_pairs, *self.cfg.day_trade_symbols]
             today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
             for sym in universe:
                 try:
@@ -675,7 +1064,7 @@ class Firm:
                     pos = state.get("positions", {}).get(sym)
                     conv = 0.70   # technical-signal desk; risk engine still gates size
                     budget = self.risk.position_budget(equity, conv, 1.0) \
-                        * hermes.strategy_weights.get("daytrade", 1.0) * vol_scale
+                        * hermes.strategy_weights.get("daytrade", 1.0) * vol_scale * institutional_risk
                     intents = self.dayts.decide(sym, snap, pos, budget, today)
                     done, deployed = self.execution.execute(intents, state, cycle, equity,
                                                             deployed, conv, allow_new_risk)
@@ -710,7 +1099,7 @@ class Firm:
                     pos_b = state.get("positions", {}).get(sym_b)
                     conv = 0.70   # signal desk; the Risk Officer still gates size
                     budget = self.risk.position_budget(equity, conv, 1.0) \
-                        * hermes.strategy_weights.get("pairs", 1.0) * vol_scale
+                        * hermes.strategy_weights.get("pairs", 1.0) * vol_scale * institutional_risk
                     intents = self.pairs_desk.decide(sym_a, sym_b, snap_a.price, snap_b.price,
                                                      pos_a, pos_b, budget, coint)
                     done, deployed = self.execution.execute(intents, state, cycle, equity,
@@ -733,6 +1122,10 @@ class Firm:
 
         return {"cycle": cycle, "equity": eq_now, "cash": cash_now,
                 "research": research, "brain": brain, "executed": executed,
+                "ai_shadow": learning,
                 "deployed": self._position_value(state), "halt": halt,
+                "reconciliation": recon,
+                "execution_reconciliation": reconciliation,
+                "institutional_intelligence": institutional_intelligence,
                 "hermes": hermes, "board": board, "vol_scale": round(vol_scale, 3),
-                "cadence": cadence, "reconciliation": recon}
+                "cadence": cadence}

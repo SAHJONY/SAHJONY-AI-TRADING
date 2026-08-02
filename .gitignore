@@ -2,6 +2,9 @@
 .env
 .env.*
 !.env.template
+# per-desk env files (scripts/desk.sh) hold real keys — only *.env.example is committed
+desks/*.env
+desks/homes/
 # keep committed templates/examples (they hold NO secrets, only blank keys)
 !.env.example
 !**/.env.example
@@ -30,6 +33,11 @@ venv/
 
 # per-investor read-only snapshots carry names + stakes — generated at deploy time, never committed
 public/investors/
+public/promotion_producers.json
+public/brain_status.json
+public/broker_evidence.json
+public/broker_diagnostics.json
+public/crypto_capability.json
 
 # NOTE: public/status.json IS committed — it is the dashboard's (secret-free) data snapshot.
 
@@ -42,5 +50,12 @@ package-lock.json
 package.json
 .vercel
 .env.local
+.env*
+
+# Local agent/test scratch data and broker private key material
+.tmp/
+robinhood_keypair*.txt
+.env
+.venv
 backtest/data/
 backtest/results/

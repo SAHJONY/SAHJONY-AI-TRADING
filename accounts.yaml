@@ -1,0 +1,69 @@
+accounts:
+  - id: sahjony_brokerage
+    display_name: SAHJONY
+    institution: robinhood
+    account_type: RHS
+    account_number_last4: "1100"
+    enabled: true
+    broker: robinhood_brokerage
+    asset_class: equity
+    strategy: balanced
+    execution_mode: monitor_only
+    live_requested: true
+    adapter_ready: false
+    symbols:
+      - VTI
+      - SPY
+      - QQQ
+    max_risk: 0.01
+    max_position: 0.10
+    max_daily_loss: 0.03
+    paper: true
+
+  - id: agentic_brokerage
+    display_name: Agentic
+    institution: robinhood
+    account_type: RHS
+    account_number_last4: "1131"
+    enabled: true
+    broker: robinhood_mcp
+    asset_class: equity
+    strategy: growth
+    execution_mode: monitor_only
+    live_requested: true
+    adapter_ready: false
+    symbols:
+      - VTI
+      - QQQ
+      - NVDA
+      - MSFT
+    max_risk: 0.015
+    max_position: 0.12
+    max_daily_loss: 0.04
+    # Switch to execution_mode: api, adapter_ready: true, paper: false only after
+    # the local MCP gateway verifies the dedicated Agentic account ending 1131.
+    paper: true
+
+  - id: robinhood_crypto
+    display_name: SAHJONY CRYPTO
+    institution: robinhood
+    account_type: RHS
+    account_number_last4: "5744"
+    enabled: true
+    broker: robinhood
+    asset_class: crypto
+    strategy: crypto
+    execution_mode: api
+    live_requested: true
+    adapter_ready: true
+    symbols:
+      - BTC/USD
+      - ETH/USD
+      - XRP/USD
+    max_risk: 0.005
+    max_position: 0.05
+    max_daily_loss: 0.02
+    # Live-intent for the roster/audit only. Real orders are still hard-gated by
+    # the adapter's double-lock (LIVE_TRADING_ACK + ROBINHOOD_LIVE=true); this flag
+    # places nothing by itself. Equity accounts stay paper:true until verified.
+    paper: false

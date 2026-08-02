@@ -25,6 +25,12 @@ from utils.logger import get_logger
 
 log = get_logger("copy_trading")
 
+# Crypto-only venues cannot price or trade equities. Public-disclosure feeds
+# (SEC Form 4 insider buys, congressional filings) are almost all equities, so
+# on these venues we drop non-crypto symbols before pricing them — otherwise
+# each one hits the crypto marketdata endpoint and logs a spurious
+# "Invalid symbol" error every cycle.
+_CRYPTO_ONLY_BROKERS = frozenset({"robinhood_crypto", "robinhood", "ccxt"})
 # Placeholder tickers seen in disclosure feeds — never tradeable.
 _JUNK_TICKERS = {"NONE", "N/A", "NA", "-", "--", "NULL", "UNKNOWN", "TBD", ""}
 
@@ -163,8 +169,11 @@ class CopyTrader:
         cap = max(0, int(getattr(self.cfg, "copy_trading_max_symbols", 10)))
         budget_each = equity * self.cfg.max_allocation_pct
         seen = set()
+        crypto_only = getattr(self.cfg, "broker", "") in _CRYPTO_ONLY_BROKERS
         for s in signals:
             sym = s["symbol"]
+            if crypto_only and not is_crypto(sym):
+                continue  # equity filing on a crypto-only venue — cannot trade
             if sym in seen:
                 continue
             seen.add(sym)

@@ -1,17 +1,21 @@
-"""Large-scale strategy parameter search over the desk's crypto universe.
+"""Large-scale, research-only strategy search over the desk's crypto universe.
 
 Runs ~200k systematic-strategy backtests across BTC/ETH/SOL/LTC and ranks them —
 HONESTLY. Picking the best of 200k configs on one dataset is data-mining: the top
 in-sample result is usually overfit noise. So we:
-  1. split each series into IN-SAMPLE (train, first 70%) and OUT-OF-SAMPLE (test),
-  2. rank candidates by the WORSE of train/test Sharpe (robustness, not luck),
-  3. report test performance + buy&hold benchmark + train→test degradation.
+  1. reserve the final 20% as an untouched holdout before ranking anything,
+  2. rank on the worse of two pre-holdout selection slices,
+  3. freeze a small shortlist and run the institutional promotion gates,
+  4. report only candidates eligible for further SHADOW research.
 
 Each strategy is tested across THREE realistic dimensions, which is what gets us to
 200k honestly (not padding): the signal family+params, the transaction cost charged
 per position change (0.10% / 0.50% / 0.95%-Robinhood-live), and whether position size
 is volatility-scaled (de-risk when realized vol spikes). A strategy that only works at
 zero cost, or only un-scaled, is fragile — spanning these exposes that.
+
+This module imports no broker or execution package. A passing result is permanently
+marked research-only and cannot activate a strategy or submit an order.
 
 Usage:  python -m scripts.strategy_search [N]      (default N=200000)
 """
@@ -26,13 +30,18 @@ from multiprocessing import Pool
 
 import numpy as np
 
+from backtest.validation import ValidationPolicy, validate_candidate
+
 CG_IDS = {"BTC": "bitcoin", "ETH": "ethereum", "SOL": "solana", "LTC": "litecoin"}
 ANN = math.sqrt(365.0)
-TRAIN_FRAC = 0.70
+HOLDOUT_FRAC = 0.20
+SELECTION_TRAIN_FRAC = 0.70
 COSTS = (0.001, 0.005, 0.0095)     # per-turnover: 0.10% / 0.50% / 0.95% (RH live)
 VOL_SCALES = (False, True)
 VOL_TARGET_DAILY = 0.02            # ~38% annual; vol-scaling caps exposure above this
 SEED = 20260704
+SHORTLIST_SIZE = 100
+STRESS_COST_MULTIPLIER = 1.50
 
 _PRICES: dict = {}
 _RETS: dict = {}
@@ -40,7 +49,7 @@ _VOLSCALE: dict = {}
 
 
 # ── data ─────────────────────────────────────────────────────────────────────
-def fetch_prices(days: int = 365) -> dict:
+def fetch_prices(days: int = 1095) -> dict:
     out = {}
     for sym, cg in CG_IDS.items():
         url = (f"https://api.coingecko.com/api/v3/coins/{cg}/market_chart"
@@ -157,24 +166,68 @@ def _sharpe(rets):
     return float(sh), float(eq[-1] - 1.0), float(((eq - peak) / peak).min())
 
 
-def evaluate(cfg):
+def strategy_returns(cfg, *, cost_multiplier=1.0):
     base, sym, cost, vs = cfg[:-3], cfg[-3], cfg[-2], cfg[-1]
-    prices, rets = _PRICES[sym], _RETS[sym]
+    prices = _PRICES[sym]
     pos = signal(prices, base)
     if vs:
         pos = pos * _VOLSCALE[sym]
-    split = int(len(prices) * TRAIN_FRAC)
+    market = np.diff(prices) / prices[:-1]
+    held = pos[:-1]
+    turn = np.abs(np.diff(np.concatenate([[0.0], held])))
+    return held * market - turn * cost * cost_multiplier
 
-    def run(sl_prices, sl_pos):
-        r = np.diff(sl_prices) / sl_prices[:-1]
-        held = sl_pos[:-1]
-        turn = np.abs(np.diff(np.concatenate([[0.0], held])))
-        return held * r - turn * cost
 
-    tr = _sharpe(run(prices[:split], pos[:split]))
-    te = _sharpe(run(prices[split:], pos[split:]))
+def selection_slices(n):
+    """Return ranking slices that cannot access the final holdout."""
+    selection_end = int(n * (1.0 - HOLDOUT_FRAC))
+    split = int(selection_end * SELECTION_TRAIN_FRAC)
+    return slice(0, split), slice(split, selection_end), selection_end
+
+
+def evaluate(cfg):
+    returns = strategy_returns(cfg)
+    train, test, _ = selection_slices(len(returns))
+    tr = _sharpe(returns[train])
+    te = _sharpe(returns[test])
+    pos = signal(_PRICES[cfg[-3]], cfg[:-3])
     n_trades = int(np.abs(np.diff(np.concatenate([[0.0], np.sign(pos)]))).sum() / 2)
     return (tr[0], te[0], te[1], te[2], n_trades)
+
+
+def validate_shortlist(rows, trials):
+    """Validate frozen candidates without granting execution authority."""
+    validated = []
+    for rank, (cfg, selection) in enumerate(rows[:SHORTLIST_SIZE], 1):
+        returns = strategy_returns(cfg)
+        stressed = strategy_returns(cfg, cost_multiplier=STRESS_COST_MULTIPLIER)
+        prices = _PRICES[cfg[-3]]
+        market = np.diff(prices) / prices[:-1]
+        verdict = validate_candidate(
+            returns,
+            stressed,
+            ValidationPolicy(holdout_fraction=HOLDOUT_FRAC),
+            trials=trials,
+            benchmark_returns=market,
+        )
+        validated.append({
+            "selection_rank": rank,
+            "strategy": _describe(cfg[:-3]),
+            "symbol": cfg[-3],
+            "cost_pct": round(cfg[-2] * 100, 3),
+            "vol_sized": bool(cfg[-1]),
+            "selection_train_sharpe": round(selection[0], 3),
+            "selection_test_sharpe": round(selection[1], 3),
+            "eligible_for_shadow": bool(verdict["promoted"]),
+            "research_only": True,
+            "failed_checks": verdict["failed_checks"],
+            "holdout": verdict["holdout"],
+            "stressed_holdout": verdict["stressed_holdout"],
+            "benchmark_holdout": verdict["benchmark_holdout"],
+            "positive_fold_fraction": verdict["positive_fold_fraction"],
+            "adjusted_sharpe_hurdle": verdict["adjusted_sharpe_hurdle"],
+        })
+    return validated
 
 
 def _init(prices):
@@ -226,8 +279,12 @@ def main(argv=None):
     prices = fetch_prices()
     for s, p in prices.items():
         print(f"  {s}: {len(p)} days  ${p[0]:,.0f} → ${p[-1]:,.0f}  (buy&hold {p[-1]/p[0]-1:+.1%})")
-    split = int(min(len(p) for p in prices.values()) * TRAIN_FRAC)
-    print(f"  train/test split at day {split} ({TRAIN_FRAC:.0%}/{1-TRAIN_FRAC:.0%})\n")
+    min_returns = min(len(p) - 1 for p in prices.values())
+    train, test, selection_end = selection_slices(min_returns)
+    print(f"  selection train: {train.start}:{train.stop}")
+    print(f"  selection test:  {test.start}:{test.stop}")
+    print(f"  untouched holdout starts at return {selection_end} "
+          f"({HOLDOUT_FRAC:.0%} reserved)\n")
 
     base = base_configs()
     cfgs = [(*b, sym, cost, vs) for b in base for sym in CG_IDS
@@ -245,11 +302,10 @@ def main(argv=None):
     dt = time.time() - t0
     print(f"Done: {len(results):,} backtests in {dt:.1f}s ({len(results)/dt:,.0f}/s)\n")
 
-    bh = {s: float(p[split:][-1] / p[split:][0] - 1.0) for s, p in prices.items()}
     rows = [(c, r) for c, r in zip(cfgs, results) if r is not None]
     rows.sort(key=lambda cr: (min(cr[1][0], cr[1][1]), cr[1][1]), reverse=True)
 
-    print("TOP 15 STRATEGIES  (ranked by min(train,test) Sharpe — robust to overfitting)")
+    print("TOP 15 PRE-HOLDOUT CANDIDATES  (holdout unseen during ranking)")
     print("-" * 100)
     print(f"{'#':>2}  {'strategy':<30}{'sym':<5}{'cost':>6}{'sized':>7}"
           f"{'trainSh':>8}{'testSh':>8}{'testRet':>9}{'maxDD':>8}{'trades':>7}")
@@ -266,17 +322,27 @@ def main(argv=None):
     print(f"  Best IN-SAMPLE: {_describe(tb[0][:-3])} [{tb[0][-3]}]  "
           f"train Sharpe {tb[1][0]:.2f} → test {tb[1][1]:.2f}")
     print(f"  Median test Sharpe across all {len(rows):,}: {med_te:.2f}  (≈0 ⇒ most are noise)")
-    print("  Buy & hold (test): " + "  ".join(f"{s} {v:+.1%}" for s, v in bh.items()))
+    print(f"\nValidating frozen top {min(SHORTLIST_SIZE, len(rows))} through "
+          "purged walk-forward and untouched holdout gates…")
+    validated = validate_shortlist(rows, len(rows))
+    eligible = [candidate for candidate in validated
+                if candidate["eligible_for_shadow"]]
+    print(f"  Eligible for shadow research: {len(eligible)}/{len(validated)}")
+    print("  Live/canary/production activation: DISABLED")
 
-    winners = [{"rank": i + 1, "strategy": _describe(c[:-3]), "symbol": c[-3],
-                "cost_pct": round(c[-2] * 100, 3), "vol_sized": bool(c[-1]),
-                "train_sharpe": round(r[0], 3), "test_sharpe": round(r[1], 3),
-                "test_return": round(r[2], 4), "test_max_dd": round(r[3], 4), "trades": r[4]}
-               for i, (c, r) in enumerate(rows[:25])]
     with open("strategy_search_results.json", "w") as fh:
-        json.dump({"tested": len(rows), "split_day": split, "benchmark_test": bh,
-                   "winners": winners}, fh, indent=2)
-    print("\nSaved top 25 → strategy_search_results.json")
+        json.dump({
+            "schema_version": 2,
+            "tested": len(rows),
+            "research_only": True,
+            "execution_authority": False,
+            "holdout_fraction": HOLDOUT_FRAC,
+            "selection_end": selection_end,
+            "shortlist_size": len(validated),
+            "shadow_eligible_count": len(eligible),
+            "candidates": validated,
+        }, fh, indent=2)
+    print("\nSaved audited shortlist → strategy_search_results.json")
     return 0
 
 

@@ -28,10 +28,12 @@ API shape (official): host https://trading.robinhood.com
 from __future__ import annotations
 
 import base64
+from datetime import datetime, timezone
 import json
 import os
 import time
 import uuid
+from datetime import datetime, timezone
 from typing import Dict, List
 
 import numpy as np
@@ -220,14 +222,18 @@ class RobinhoodCryptoBroker:
                 log.warning("CoinGecko %s → HTTP %s; using flat fallback", cid, r.status_code)
                 return None
             data = r.json() or {}
-            closes = np.array([p[1] for p in (data.get("prices") or []) if p and p[1] is not None],
-                              dtype=float)
+            prices = [(p[0], p[1]) for p in (data.get("prices") or [])
+                      if p and len(p) >= 2 and p[1] is not None and np.isfinite(float(p[1]))]
+            closes = np.array([p[1] for p in prices], dtype=float)
+            timestamps = np.array([p[0] for p in prices], dtype=object)
             vols = np.array([v[1] for v in (data.get("total_volumes") or []) if v and v[1] is not None],
                             dtype=float)
-            closes = closes[np.isfinite(closes)]
             if closes.size < 2:
                 return None
-            return {"closes": closes, "volumes": vols[np.isfinite(vols)]}
+            return {"closes": closes, "volumes": vols[np.isfinite(vols)],
+                    "timestamps": timestamps,
+                    "retrieved_at": datetime.now(timezone.utc).isoformat(),
+                    "feed_timestamp": timestamps[-1] if timestamps.size else None}
         except Exception as exc:  # network / parse / rate-limit — degrade, don't crash
             log.warning("CoinGecko history(%s) failed: %s — using flat fallback", symbol, exc)
             return None
@@ -254,7 +260,8 @@ class RobinhoodCryptoBroker:
                         side, rh, notional, self.max_order_usd)
             return {"status": "rejected", "reason": "exceeds ROBINHOOD_MAX_ORDER_USD"}
 
-        body = {"client_order_id": str(uuid.uuid4()), "side": side, "symbol": rh,
+        client_order_id = str(uuid.uuid4())
+        body = {"client_order_id": client_order_id, "side": side, "symbol": rh,
                 "type": "market", "market_order_config": {"asset_quantity": f"{qty}"}}
 
         if not self.armed:
@@ -262,15 +269,84 @@ class RobinhoodCryptoBroker:
                         "Set LIVE_TRADING_ACK + ROBINHOOD_LIVE=true to place real orders.",
                         side, rh, qty, notional)
             return {"status": "filled", "symbol": rh, "qty": qty, "side": side,
-                    "fill_price": px, "simulated": True, "dry_run": True}
+                    "fill_price": px, "simulated": True, "dry_run": True,
+                    "client_order_id": client_order_id}
         try:
             res = self._request("POST", "/api/v1/crypto/trading/orders/", body)
             log.info("ROBINHOOD LIVE ORDER placed: %s %s qty=%s → %s", side, rh, qty, res.get("id"))
             return {"status": "submitted", "symbol": rh, "qty": qty, "side": side,
-                    "fill_price": px, "simulated": False, "order_id": res.get("id")}
+                    "simulated": False, "order_id": res.get("id"),
+                    "client_order_id": res.get("client_order_id") or client_order_id,
+                    "submitted_at": datetime.now(timezone.utc).isoformat()}
         except Exception as exc:
             log.error("Robinhood live order failed: %s", exc)
             return {"status": "rejected", "reason": str(exc)}
 
+    def get_order(self, order_id: str) -> Dict:
+        """Return a normalized Robinhood order lifecycle snapshot.
+
+        A POST acknowledgement is not a fill.  The workforce uses this read-only
+        endpoint on later cycles before mutating positions or booking a trade.
+        Unknown provider states stay pending (fail closed).
+        """
+        if not order_id:
+            return {"status": "unknown", "reason": "missing order_id"}
+        try:
+            raw = self._request("GET", f"/api/v1/crypto/trading/orders/{order_id}/")
+            provider_state = str(raw.get("state") or raw.get("status") or "").lower()
+            status = {
+                "filled": "filled", "partially_filled": "partially_filled",
+                "partially-filled": "partially_filled", "canceled": "cancelled",
+                "cancelled": "cancelled", "rejected": "rejected", "failed": "rejected",
+                "queued": "pending", "new": "pending", "open": "pending",
+                "confirmed": "pending", "submitted": "pending",
+            }.get(provider_state, "pending")
+            executions = raw.get("executions") or []
+            prices = []
+            quantities = []
+            for execution in executions:
+                try:
+                    prices.append(float(execution.get("price") or 0))
+                    quantities.append(float(execution.get("quantity") or 0))
+                except (TypeError, ValueError):
+                    continue
+            avg = float(raw.get("average_price") or 0)
+            filled_qty = float(raw.get("filled_asset_quantity") or 0)
+            if avg <= 0 and prices:
+                denom = sum(quantities)
+                avg = (sum(p * q for p, q in zip(prices, quantities)) / denom
+                       if denom > 0 else prices[-1])
+            if filled_qty <= 0 and quantities:
+                filled_qty = sum(quantities)
+            return {
+                "status": status, "provider_status": provider_state or "unknown",
+                "order_id": raw.get("id") or order_id,
+                "client_order_id": raw.get("client_order_id"),
+                "fill_price": avg, "filled_qty": filled_qty,
+                "filled_at": raw.get("last_transaction_at") or raw.get("updated_at"),
+                "raw": raw,
+            }
+        except Exception as exc:
+            log.error("Robinhood get_order(%s) failed: %s", order_id, exc)
+            return {"status": "unknown", "order_id": order_id, "reason": str(exc)}
+
     def submit_option_order(self, contract: str, qty: int, side: str, premium: float = 0.0) -> Dict:
         return {"status": "rejected", "reason": "Robinhood Crypto has no options"}
+
+    def get_order_status(self, order_id: str, symbol: str = "") -> Dict:
+        """Normalize Robinhood's order state for the workforce reconciliation gate."""
+        if not self.online:
+            return {"status": "unknown", "order_id": order_id, "simulated": True}
+        result = self._request("GET", f"/api/v1/crypto/trading/orders/{order_id}/")
+        raw = str(result.get("state") or result.get("status") or "").lower()
+        if raw in {"filled", "completed"}:
+            status = "filled"
+        elif raw in {"cancelled", "canceled", "rejected", "expired", "failed"}:
+            status = raw
+        else:
+            status = "submitted"
+        normalized = {"status": status, "order_id": order_id, "simulated": False}
+        average = result.get("average_price") or result.get("avg_price")
+        if average not in (None, ""):
+            normalized["fill_price"] = float(average)
+        return normalized

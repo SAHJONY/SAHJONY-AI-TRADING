@@ -62,6 +62,42 @@ regenerates `public/status.json`, and ends with a read-only broker preflight.
 - [ ] `python main.py --once` → confirm the 5-second **LIVE REAL-MONEY** banner,
       then let it run. Tighten caps in `.env` first if you want.
 
+### E. Robinhood Crypto — live DATA (read-only) then, optionally, live TRADING
+Robinhood's Crypto Trading API has **no sandbox**. READ and WRITE are separated:
+**just your keys** gives read-only live data on the dashboard; **real orders** need
+a deliberate double-lock on top.
+- [ ] `pip install -r requirements-robinhood.txt` (Ed25519 signing via PyNaCl).
+- [ ] In the Robinhood app: Crypto → **API** → generate an API key + private key.
+- [ ] `.env`: `BROKER=robinhood`, `ROBINHOOD_API_KEY=…`, `ROBINHOOD_PRIVATE_KEY=…`,
+      `TICKERS=BTC/USD,ETH/USD`, `MARKET_HOURS=24_7`.
+- [ ] `python main.py --preflight` → connects **READ-ONLY (mode `live-data`)**: your
+      real buying power, holdings, and prices appear on the dashboard's Venue
+      Account panel. **No orders are placed here.** Fix any ✗ first.
+- [ ] Run the desk normally to keep those live numbers refreshing (still no orders).
+- [ ] Arm with **both**: `ROBINHOOD_LIVE=true` **and**
+      `LIVE_TRADING_ACK=I_UNDERSTAND_REAL_MONEY`. Either one alone stays sim.
+- [ ] `python main.py --once` → confirm the 5-second **LIVE REAL-MONEY** banner.
+      Start with tiny caps (e.g. `MAX_ALLOCATION_PCT=0.02`) and keep buying power low.
+
+### F. Turning trading ON / OFF (the switch)
+Once armed, use the owner switch to pause/resume without editing `.env`:
+```bash
+scripts/live.sh off      # STOP now — suspends all new orders (kill switch)
+scripts/live.sh on       # RESUME — orders flow again (LIVE if armed, else paper/sim)
+scripts/live.sh status   # show ON/OFF + whether real money is armed
+```
+`off` writes the desk's `HALT` file (the same kill switch the workforce checks every
+cycle) and stops new risk on the next tick; open positions are left untouched. `on`
+clears it. **`on` never arms real money by itself** — that's the deliberate `.env`
+double-lock above; the switch only pauses/resumes within the mode you've armed. The
+dashboard reflects the halt state, and `TRADING_HALT=true` in `.env` is the same
+kill switch for CI / remote runs.
+
+> Notes: Robinhood's Crypto API has no historical-candle feed, so history-based
+> strategies get no data and won't trade live on it — start with a small crypto
+> universe and low caps. This is one Robinhood account (the keys you generate);
+> it is **not** a switch that trades "all your accounts."
+
 > ⚠️ Real money can lose money. The "intelligence" is transparent public-domain
 > estimators, not a profit guarantee. Start on paper and only arm live when you
 > understand the behavior.

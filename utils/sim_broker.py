@@ -9,13 +9,14 @@ has a working, side-effect-free backend instead of crashing (fault isolation).
 from __future__ import annotations
 
 import hashlib
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Dict, List
 
 import numpy as np
 
 from config import Config
 from intelligence import engines
+from execution.cost_model import estimate_equity_fill, option_contract_fee
 from utils.logger import get_logger
 
 log = get_logger("sim_broker")
@@ -71,8 +72,16 @@ class SimBroker:
     def get_history(self, symbol: str, days: int = 120) -> Dict[str, np.ndarray]:
         self._ensure_path(symbol)
         lo = max(0, self._step - days)
+        count = self._step - lo
+        end = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        timestamps = np.array([
+            (end - timedelta(days=count - 1 - index)).isoformat()
+            for index in range(count)
+        ], dtype=object)
         return {"closes": self._paths[symbol][lo:self._step].copy(),
-                "volumes": self._vols[symbol][lo:self._step].copy()}
+                "volumes": self._vols[symbol][lo:self._step].copy(),
+                "timestamps": timestamps, "retrieved_at": datetime.now(timezone.utc).isoformat(),
+                "exchange_timestamp": timestamps[-1] if timestamps.size else None}
 
     def get_price(self, symbol: str) -> float:
         self._ensure_path(symbol)
@@ -115,14 +124,20 @@ class SimBroker:
         side = side.lower()
         if qty <= 0:
             return {"status": "rejected", "reason": "qty<=0"}
-        px = self.get_price(symbol)
+        reference_px = self.get_price(symbol)
+        estimate = estimate_equity_fill(
+            reference_px, qty, side,
+            slippage_bps=self.cfg.sim_slippage_bps,
+            commission_per_share=self.cfg.sim_commission_per_share,
+        )
+        px = estimate.fill_price
         pos = self._positions.setdefault(symbol, {"qty": 0.0, "avg_price": 0.0, "market_value": 0.0})
         if side == "buy":
             cost = px * qty
             new_qty = pos["qty"] + qty
             pos["avg_price"] = (pos["avg_price"] * pos["qty"] + cost) / new_qty if new_qty else px
             pos["qty"] = new_qty
-            self._cash -= cost
+            self._cash -= cost + estimate.commission
             if pos["qty"] == 0:              # buying back a short to flat
                 self._positions.pop(symbol, None)
         else:
@@ -133,16 +148,23 @@ class SimBroker:
             if pos["qty"] >= 0 and new_qty < 0:
                 pos["avg_price"] = px
             pos["qty"] = new_qty
-            self._cash += px * qty
+            self._cash += px * qty - estimate.commission
             if pos["qty"] == 0:
                 self._positions.pop(symbol, None)
         return {"status": "filled", "symbol": symbol, "qty": qty, "side": side,
-                "fill_price": round(px, 2), "simulated": True}
+                "fill_price": round(px, 6), "reference_price": round(reference_px, 6),
+                "slippage_cost": round(estimate.slippage_cost, 6),
+                "commission": round(estimate.commission, 6),
+                "transaction_cost": round(estimate.transaction_cost, 6), "simulated": True}
 
     def submit_option_order(self, contract: str, qty: int, side: str, premium: float = 0.0) -> Dict:
         side = side.lower()
         credit = premium * 100 * qty
+        fee = option_contract_fee(qty, fee_per_contract=self.cfg.sim_option_fee_per_contract)
         if side in ("sell", "sell_to_open"):
             self._cash += credit
+        self._cash -= fee
         return {"status": "filled", "contract": contract, "qty": qty, "side": side,
-                "premium": premium, "credit": round(credit, 2), "simulated": True}
+                "premium": premium, "credit": round(credit, 2),
+                "commission": round(fee, 6), "transaction_cost": round(fee, 6),
+                "simulated": True}
