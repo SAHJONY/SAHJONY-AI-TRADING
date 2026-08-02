@@ -368,6 +368,23 @@ def main() -> int:
         except _DU:
             _check(True, "a missing recorder DB raises DataUnavailable, not a crash")
 
+        # the dashboard's honest answer to "can I backtest this yet"
+        from workforce.reporter import _feed_block
+        class _F: pass
+        f = _F(); f.bars = rec; f.feed = None
+        blk = _feed_block(f).get("recorder", {})
+        ser = {s["interval_m"]: s for s in blk.get("series", [])}
+        _check(blk.get("enabled") and blk.get("intervals") == [15, 60],
+               "status.json reports which intervals are being recorded")
+        _check(ser[60]["usable"] > 0 and ser[15]["usable"] < ser[15]["bars"],
+               "it reports USABLE bars, not a raw count that overstates the record")
+        class _Boom:
+            @property
+            def bars(self): raise RuntimeError("db gone")
+        boom = _feed_block(_Boom()).get("recorder", {})
+        _check(boom.get("enabled") is False and "db gone" in boom.get("error", ""),
+               "a recorder that raises degrades to an error field, never a crash")
+
     print("\n── database indices exist ──")
     import tempfile, os
     with tempfile.TemporaryDirectory() as d:

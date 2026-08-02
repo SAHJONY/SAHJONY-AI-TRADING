@@ -315,10 +315,11 @@ was destroy an apparent edge. That is the machinery behaving correctly. It does
 denies every market-data host that was tried:
 
 ```
-data.binance.vision      403   api.binance.com         403
-api.bybit.com            403   data.alpaca.markets     403
-api.exchange.coinbase.com 403  api.kraken.com          403
+data.binance.vision      403   api.binance.com          403
+api.bybit.com            403   data.alpaca.markets      403
+api.exchange.coinbase.com 403  api.kraken.com           403
 min-api.cryptocompare.com 403  query1.finance.yahoo.com 403
+mcp.financialdatasets.ai 403   api.financialdatasets.ai 403
 ```
 
 The repo has no cached bars either. Per `/root/.ccr/README.md`, a proxy 403 is an

@@ -59,6 +59,15 @@ native SQLite CRM/database and a static owner dashboard deployed on Vercel.
   desk trades. These are human-review drafting tools — they are NOT wired into
   the autonomous loop, make no recommendations, and execute nothing. Keep it
   that way: the trading cycle stays deterministic quant + the advisory AI brain.
+- `.mcp.json` registers the `financial-datasets` MCP server (needs
+  `FINANCIAL_DATASETS_API_KEY` in the environment — never in the repo). Same
+  status as the plugins above: it is a tool for the **Claude Code session**, not
+  for the desk. The trading loop is Python on GitHub Actions and does not speak
+  MCP, so this can never become a live feed. What it *can* do is fetch bulk
+  history once, which a session then commits as a CSV for `backtest/` — and bulk
+  history is exactly what the desk lacks. As of 2026-08-02 both
+  `mcp.financialdatasets.ai` and `api.financialdatasets.ai` return **403 at the
+  egress proxy**, so it is configured but unreachable from a sandboxed session.
 
 ## AI brain hierarchy (owner's directive)
 - **Primary engine / brain:** Claude (`anthropic` SDK).
