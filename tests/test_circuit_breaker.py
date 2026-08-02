@@ -135,6 +135,14 @@ def main() -> int:
     _check(rr["ok"] is False and "BTC/USD" in s7["positions"],
            "a broker failure never mutates state")
 
+    client.get_broker_positions = lambda: {"BTC-USD": {"qty": 0.9, "avg_price": 100.0}}
+    s8 = {"positions": {"BTC/USD": {"strategy": "ladder", "shares": 1.0,
+                                      "cost_basis": 100.0}}}
+    rq = firm4._reconcile_broker(s8)
+    _check(rq["ok"] is False and rq["mismatched"] and
+           s8["positions"]["BTC/USD"]["shares"] == 1.0,
+           "quantity drift fails closed and preserves local state")
+
     db.close()
     print("\nCIRCUIT BREAKER CHECKS PASSED ✓")
     return 0
