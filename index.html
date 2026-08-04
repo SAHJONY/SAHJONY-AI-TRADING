@@ -1055,7 +1055,14 @@ function setStatus(){
   const ev=(DATA.health||{}).evaluation||{};
   if(eb){
     const am=Array.isArray(ev.amendments)?ev.amendments:[];
-    if(ev.days){ eb.style.display='';
+    if(ev.voided){ eb.style.display=''; eb.className='evalBadge off';
+      // A void window that still counts down would keep advertising a result it
+      // cannot produce. Say VOID, not "day 9 of 90".
+      eb.textContent='EVAL VOID';
+      eb.title=(ev.void_verdict||'This out-of-sample window has been voided.')
+        +`\nVoided at day ${ev.day}/${ev.days}. See public/evaluation.json for the reasoning and the restart preconditions.`;
+    }
+    else if(ev.days){ eb.style.display='';
       // An amended window is still a valid window, but the reader has to know.
       eb.textContent=`EVAL ${ev.day}/${ev.days}`+(am.length?` ·${am.length}Δ`:'');
       eb.title=`Out-of-sample window ${ev.pct}% elapsed · frozen at ${ev.frozen_at_commit}`
