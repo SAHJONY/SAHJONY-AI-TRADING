@@ -220,6 +220,24 @@ jobs:
             n=$(( n + 1 ))
             echo "── live cycle $n (window ${LOOP_MINUTES:-0} min, gap ${GAP}s) ──"
             python main.py --once --force
+            # The paper crypto trainer is evaluation.json's PRIMARY evidence
+            # ("enough trade count for statistics") but it ran --once per JOB,
+            # so it got ~1 cycle for every 4 the live desk took. Run it here and
+            # it collects at the same rate. Zero real money: Alpaca paper, both
+            # live locks explicitly blanked, its own SAHJONY_HOME and knowledge
+            # role, so it cannot touch live state.
+            if [ "${{ vars.PAPER_TRAINER_ENABLED }}" = "true" ] && [ "$n" -gt 1 ]; then
+              echo "── paper trainer cycle $n ──"
+              SAHJONY_HOME=desks/paper BROKER=alpaca ALPACA_PAPER=true \
+              LIVE_TRADING_ACK='' ROBINHOOD_LIVE=false COPY_TRADING_ENABLED=false \
+              TICKERS="${{ vars.PAPER_TICKERS || vars.TICKERS || 'BTC/USD,ETH/USD,SOL/USD,LTC/USD' }}" \
+              TRADING_CAPITAL="${{ vars.PAPER_TRADING_CAPITAL == '' && '2000' || vars.PAPER_TRADING_CAPITAL }}" \
+              MIN_COUNCIL_CONVICTION="${{ vars.PAPER_MIN_CONVICTION || '0.40' }}" \
+              KNOWLEDGE_ROLE=alpaca-paper-trainer \
+              BENCHMARK="${{ vars.PAPER_BENCHMARK || 'BTC/USD' }}" \
+                python main.py --once --force || true
+              git add desks/paper/public/status.json 2>/dev/null
+            fi
             # Publish each cycle immediately so the dashboard and its freshness
             # indicator track the DESK, not the scheduler.
             # Stage EVERY artifact a cycle rewrites. Staging only two of them
