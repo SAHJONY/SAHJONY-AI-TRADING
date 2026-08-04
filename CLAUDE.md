@@ -36,6 +36,11 @@ native SQLite CRM/database and a static owner dashboard deployed on Vercel.
 - `python -m tests.test_optimizations` — locks in the hot-path work (expanding-vol
   equivalence, per-cycle quote cache, DB indices, recorded-feed bars).
   See `docs/system_review.md`.
+- `python -m tools.position_audit` — audits every desk's books against the risk
+  invariants (over-cap, unpriceable, sign/state contradiction, insolvent).
+  Read-only, exits 1 on any finding so it can gate a pipeline. Run it before
+  trusting any desk's P&L: three of its four checks were failing silently on
+  `desks/paper` and `desks/stocks` while both dashboards rendered normally.
 - `python -m pytest tests/ -q` — the whole suite (343 tests). Needs `pytest`,
   `python-dotenv` and `alpaca-py`; without `alpaca-py`, `test_historical_data`
   fails 3 tests on `ModuleNotFoundError`, which is a missing dependency and not

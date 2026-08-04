@@ -259,6 +259,15 @@ def _cap_breach_block(firm, state: Dict[str, Any], equity: float) -> list:
         return []
 
 
+def _integrity_block(firm, state: Dict[str, Any]) -> list:
+    """Position-record contradictions, fault-isolated like the rest of the telemetry."""
+    try:
+        fn = getattr(firm, "position_integrity", None)
+        return fn(state) if callable(fn) else []
+    except Exception:               # telemetry never breaks the report
+        return []
+
+
 def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[str, Any]) -> Dict[str, Any]:
     db = firm.db
     client = firm.client
@@ -488,6 +497,10 @@ def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[st
         # automatic; unwinding is the owner's call, so the breach has to be
         # visible rather than sitting silently in the position table.
         "cap_breaches": _cap_breach_block(firm, state, eq),
+        # Positions whose own fields contradict each other (a short recorded as a
+        # long, a missing basis). Surfaced beside the breaches for the same
+        # reason: the books being wrong is not something to discover later.
+        "position_integrity": _integrity_block(firm, state),
     }
 
 
