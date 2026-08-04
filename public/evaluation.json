@@ -45,7 +45,7 @@
     "paper_trainer_sharpe_at_start": -3.81,
     "paper_trainer_return_pct_at_start": -22.77
   },
-  "decision_rule": "Pass on all criteria → scale capital deliberately. Fail, or fewer than 30 trades → do NOT add capital; recalibrate and re-run the window.",
+  "decision_rule": "VOID (see 'voided'): do NOT add capital, do NOT cite this window's P&L as evidence for or against any strategy, and restart only once every restart_precondition holds. The original rule is preserved below for the re-run. Pass on all criteria → scale capital deliberately. Fail, or fewer than 30 trades → do NOT add capital; recalibrate and re-run the window.",
   "amendments": [
     {
       "at": "2026-07-29T13:09:45+00:00",
@@ -56,5 +56,27 @@
       "cost": "More broker and LLM calls per hour, and more status.json commits. No additional Actions minutes.",
       "comparability": "Trades before and after this timestamp are drawn at different observation rates. Report the window's trade count and Sharpe split at this boundary as well as pooled; do not present the pooled figure alone."
     }
-  ]
+  ],
+  "voided": {
+    "at": "2026-08-04T23:40:00+00:00",
+    "day_of_window": 9.1,
+    "verdict": "VOID — this window cannot produce a usable out-of-sample result and will not be cited as one",
+    "why": [
+      "The risk gate was broken for the whole window. RiskEngine.approve compared only the incremental order against the per-position cap, so any desk that averaged in compounded past it one approved order at a time; separately, a position the venue could not quote was valued at 0.0 and weighed nothing against the total-deployed cap. Both are fixed (PR #21), but every trade recorded before the fix was sized by a gate that was not enforcing itself.",
+      "Both PRIMARY evidence desks are therefore measuring leverage accidents, not strategy. desks/paper is +5.5% while holding EDRY at 62x its per-position cap (621% of equity); desks/stocks is at -$26,414 from the same defect with the sign reversed. Same bug, opposite luck. Neither number is attributable to the strategies under test.",
+      "The SECONDARY live desk cannot reach the sample floor. minimum_sample is 30 closed trades; it has 1 in 9.1 days. Extrapolated over the full 90 days that is ~10, and no arrangement of the remaining 81 days changes it, because the binding constraint is council conviction landing in a 40-54% band against a 52% gate.",
+      "Both desks also carry position records that contradict themselves (DIA held at -9.935112 shares while recorded 'long'), so direction and realized P&L on those rows are wrong independently of the sizing."
+    ],
+    "what_this_does_not_mean": [
+      "The strategies are not disproven by this. They are unmeasured. The window failed as an instrument; it did not return a negative result.",
+      "Nothing is deleted. The original protocol, criteria and amendment are kept above exactly as written, so the void is auditable rather than a rewrite."
+    ],
+    "restart_preconditions": [
+      "python -m tools.position_audit exits 0 on every desk — no over-cap, unpriceable, contradictory or insolvent position anywhere.",
+      "Both paper desks flattened, so the new window starts from a clean book rather than inheriting positions sized by the broken gate.",
+      "The conviction gate recalibrated against the hit-rate-by-conviction data Hermes has collected. Doing this is the ONLY change that was forbidden during the window and is now the precondition for the next one: a gate that the conviction distribution almost never crosses cannot generate a sample.",
+      "A demonstrated trade rate that reaches 30 closed trades inside 90 days. Measure it over a week before starting the clock, not after."
+    ],
+    "decided_by": "autonomous desk operator, on the evidence above"
+  }
 }
