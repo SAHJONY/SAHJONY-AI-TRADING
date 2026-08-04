@@ -41,6 +41,11 @@ native SQLite CRM/database and a static owner dashboard deployed on Vercel.
   Read-only, exits 1 on any finding so it can gate a pipeline. Run it before
   trusting any desk's P&L: three of its four checks were failing silently on
   `desks/paper` and `desks/stocks` while both dashboards rendered normally.
+- `python -m tools.remediate_positions --home desks/paper` — prints the orders that
+  would flatten every invariant-violating position. **Dry-run by default;
+  `--apply` is the only way to send an order.** Routes through the desk's own
+  broker adapter and journals each fill to the audit ledger. It refuses to touch
+  a position the venue cannot price — selling into an unknown price is guessing.
 - `python -m pytest tests/ -q` — the whole suite (343 tests). Needs `pytest`,
   `python-dotenv` and `alpaca-py`; without `alpaca-py`, `test_historical_data`
   fails 3 tests on `ModuleNotFoundError`, which is a missing dependency and not

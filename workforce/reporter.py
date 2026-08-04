@@ -158,7 +158,11 @@ def _evaluation_block() -> Dict[str, Any]:
         now = datetime.now(timezone.utc)
         total = max(1, (end - start).days)
         elapsed = max(0, (now - start).days)
-        return {"active": now < end, "day": min(elapsed, total), "days": total,
+        voided = m.get("voided") or {}
+        return {"active": (now < end) and not voided,
+                "voided": bool(voided),
+                "void_verdict": str(voided.get("verdict", ""))[:200],
+                "day": min(elapsed, total), "days": total,
                 "started_at": m["started_at"], "ends_at": m["ends_at"],
                 "pct": round(100.0 * min(elapsed, total) / total, 1),
                 "criteria": m.get("success_criteria", {}),
