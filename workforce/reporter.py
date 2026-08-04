@@ -250,6 +250,15 @@ def _recorder_block(firm) -> Dict[str, Any]:
         return {"enabled": True, "error": str(exc)[:120]}
 
 
+def _cap_breach_block(firm, state: Dict[str, Any], equity: float) -> list:
+    """Per-position cap breaches, fault-isolated like the rest of the telemetry."""
+    try:
+        fn = getattr(firm, "cap_breaches", None)
+        return fn(state, equity) if callable(fn) else []
+    except Exception:               # telemetry never breaks the report
+        return []
+
+
 def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[str, Any]) -> Dict[str, Any]:
     db = firm.db
     client = firm.client
@@ -475,6 +484,10 @@ def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[st
         "executed_this_cycle": cycle_result.get("executed", []),
         "env_catalog": _env_catalog(),
         "feed": _feed_block(firm),
+        # Positions already over the per-position cap. Blocking further adds is
+        # automatic; unwinding is the owner's call, so the breach has to be
+        # visible rather than sitting silently in the position table.
+        "cap_breaches": _cap_breach_block(firm, state, eq),
     }
 
 

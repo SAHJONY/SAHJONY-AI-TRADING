@@ -59,6 +59,37 @@ from utils.state_store import record_event
 log = get_logger("workforce")
 
 
+def gross_symbol_value(client, state: Dict[str, Any], symbol: str) -> float:
+    """Gross value held in ONE symbol, as the risk gates must see it.
+
+    Gross (|shares|) because a short is exposure too. Falls back to the recorded
+    cost basis when the venue cannot quote the symbol: a 0.0 price would make the
+    position weigh nothing against the caps, which is precisely how an
+    unpriceable row can quietly widen the risk envelope. Never raises, never
+    returns a negative or non-finite number — a bad price must make the gate
+    stricter, not silently disable it.
+
+    Module-level on purpose: the per-position cap and the total-deployed cap both
+    call it, and they must never disagree about what one symbol is worth.
+    """
+    try:
+        pos = (state.get("positions") or {}).get(symbol) or {}
+        shares = abs(float(pos.get("shares", 0) or 0))
+        if not shares:
+            return 0.0
+        try:
+            price = float(client.get_price(symbol) or 0.0)
+        except Exception:
+            price = 0.0
+        if price <= 0:
+            price = float(pos.get("cost_basis", 0.0) or 0.0)
+        value = shares * max(0.0, price)
+        return value if math.isfinite(value) else 0.0
+    except Exception as exc:
+        log.warning("gross value lookup failed for %s: %s", symbol, exc)
+        return 0.0
+
+
 # ── roles ─────────────────────────────────────────────────────────────────────
 class ResearchDesk:
     def __init__(self, client, council: Council):
@@ -140,25 +171,6 @@ class ExecutionTrader:
             or (intent.risk_check and intent.side == "sell" and intent.kind == "equity")
             or intent.side == "sell_to_open"
         )
-
-    def _held_value(self, state: Dict[str, Any], symbol: str) -> float:
-        """Gross value already held in one symbol — what the per-position cap must
-        add to. Gross (|shares|) because a short is exposure too. Never raises and
-        never returns a negative or non-finite number: a bad price must make the
-        gate stricter, not silently disable it."""
-        try:
-            pos = (state.get("positions") or {}).get(symbol) or {}
-            shares = abs(float(pos.get("shares", 0) or 0))
-            if not shares:
-                return 0.0
-            price = float(self.client.get_price(symbol) or 0.0)
-            if price <= 0:          # unpriceable: fall back to the recorded basis
-                price = float(pos.get("cost_basis", 0.0) or 0.0)
-            value = shares * max(0.0, price)
-            return value if math.isfinite(value) else 0.0
-        except Exception as exc:
-            log.warning("held-value lookup failed for %s: %s", symbol, exc)
-            return 0.0
 
     def reconcile_pending_orders(
         self, state: Dict[str, Any], cycle: int, deployed: float
@@ -323,7 +335,7 @@ class ExecutionTrader:
                 if intent.risk_check:
                     dec = self.risk.approve(equity, deployed, intent.est_notional,
                                             conviction, intent.symbol,
-                                            self._held_value(state, intent.symbol))
+                                            gross_symbol_value(self.client, state, intent.symbol))
                     if not dec.approved:
                         log.info("RISK BLOCK %s %s: %s", intent.symbol, intent.purpose, dec.reason)
                         record_event(state, "risk_block",
@@ -565,13 +577,47 @@ class Firm:
     def _gross_exposure(self, state: Dict[str, Any]) -> float:
         """GROSS exposure (|shares|·price) — what the deployed-capital cap gates on.
         A short is risk too; it must consume the same risk budget as a long.
-        Includes cash-secured-put collateral (0-share short_put legs) — see below."""
+        Includes cash-secured-put collateral (0-share short_put legs) — see below.
+
+        Prices through `gross_symbol_value`, which falls back to cost basis when the
+        venue cannot quote a symbol. Multiplying by a 0.0 price instead would let
+        an unpriceable position contribute NOTHING to deployed capital and quietly
+        raise the total-deployed cap by its full size — the same bypass the
+        per-position cap had. desks/stocks is carrying three such rows right now
+        (BTCUSD/ETHUSD/SOLUSD at price 0.0 inside an equity desk). Note
+        `_position_value` deliberately does NOT do this: marking to cost in the
+        equity calculation would hide losses, whereas a risk gate should
+        over-count capital it cannot price, never under-count it."""
         total = 0.0
         for sym, pos in state.get("positions", {}).items():
-            shares = pos.get("shares", 0) or 0
-            if shares:
-                total += abs(shares) * self.client.get_price(sym)
+            if pos.get("shares", 0) or 0:
+                total += gross_symbol_value(self.client, state, sym)
         return total + self._csp_collateral(state)
+
+    def cap_breaches(self, state: Dict[str, Any], equity: float) -> List[Dict[str, Any]]:
+        """Positions already larger than the per-position cap allows.
+
+        Reported, never auto-traded. A position can end up over the cap through a
+        path no gate can prevent — an inherited position, a deposit-driven change
+        in equity, or (until it was fixed) a cap that only measured the increment.
+        Blocking further adds is automatic; unwinding is an owner decision, so the
+        desk's job is to make the breach impossible to miss rather than to trade
+        its way out of one on its own initiative."""
+        out: List[Dict[str, Any]] = []
+        if not math.isfinite(equity) or equity <= 0:
+            return out
+        cap = equity * self.cfg.max_allocation_pct
+        for sym, pos in (state.get("positions") or {}).items():
+            if not (pos.get("shares", 0) or 0):
+                continue
+            value = gross_symbol_value(self.client, state, sym)
+            if value > cap:
+                out.append({"symbol": sym, "value": round(value, 2),
+                            "cap": round(cap, 2),
+                            "over_pct": round(100.0 * (value / cap - 1.0), 1)
+                            if cap > 0 else 0.0,
+                            "pct_of_equity": round(100.0 * value / equity, 1)})
+        return sorted(out, key=lambda r: r["value"], reverse=True)
 
     def _csp_collateral(self, state: Dict[str, Any]) -> float:
         """Capital committed by open cash-secured puts (stage 'short_put'). A CSP
