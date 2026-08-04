@@ -222,7 +222,13 @@ jobs:
             python main.py --once --force
             # Publish each cycle immediately so the dashboard and its freshness
             # indicator track the DESK, not the scheduler.
-            git add public/status.json public/knowledge.json 2>/dev/null
+            # Stage EVERY artifact a cycle rewrites. Staging only two of them
+            # left public/ai_shadow.json dirty, and `git pull --rebase` refuses
+            # to run with unstaged changes — so every cycle logged
+            # "cannot pull with rebase: You have unstaged changes" and the
+            # intra-loop push survived only while master had not moved.
+            git add public/status.json public/knowledge.json \
+                    public/ai_shadow.json public/copy_signals.json 2>/dev/null
             if ! git diff --cached --quiet; then
               git commit -q -m "Desk snapshot: live cycle ${{ github.run_number }}.$n"
               git pull --rebase -q origin master || git rebase --abort
@@ -293,7 +299,8 @@ jobs:
         run: |
           git config user.name  "sahjony-desk[bot]"
           git config user.email "noreply@anthropic.com"
-          git add public/status.json public/copy_signals.json public/knowledge.json 2>/dev/null || true
+          git add public/status.json public/copy_signals.json public/knowledge.json \
+                  public/ai_shadow.json 2>/dev/null || true
           git add desks/paper/public/status.json 2>/dev/null || true
           git add desks/robinhood/public/status.json 2>/dev/null || true
           git add desks/stocks/public/status.json 2>/dev/null || true
