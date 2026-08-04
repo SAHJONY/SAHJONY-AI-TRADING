@@ -40,6 +40,18 @@ _SYSTEM = (
 # Per-symbol adjustment is clamped to a small range so the LLM can nudge, not hijack.
 _MAX_ADJ = 0.15
 
+# Per-request timeout for the ADVISORY counsellors. These are opinions the desk
+# can trade without: a provider that is down should cost a few seconds, not most
+# of a cycle. Measured on the live desk, NVIDIA NIM timed out at the old
+# hard-coded 45s twice per cycle — once as a counsellor and once as a shadow
+# provider — burning ~90s of every cycle waiting on an endpoint that never
+# answered. Lower it and more cycles fit in the same scheduled window.
+# The PRIMARY brain keeps its own longer budget; this governs the advisors.
+try:
+    _COUNSEL_TIMEOUT = max(5, int(float(os.getenv("COUNSELLOR_TIMEOUT_SECONDS", "20"))))
+except (TypeError, ValueError):
+    _COUNSEL_TIMEOUT = 20
+
 
 def _overlay_schema(symbols: List[str]) -> Dict:
     return {
@@ -506,11 +518,11 @@ class AIBrain:
                    "messages": [{"role": "system", "content": _SYSTEM.format(firm=self.cfg.firm_name)},
                                 {"role": "user", "content": instr}]}
         headers = {"Authorization": "Bearer " + key, "Content-Type": "application/json"}
-        r = requests.post(url, timeout=45, headers=headers, json=payload)
+        r = requests.post(url, timeout=_COUNSEL_TIMEOUT, headers=headers, json=payload)
         if not r.ok and r.status_code in (400, 404, 415, 422):
             # some NIM models reject json_object response_format → retry plain
             payload.pop("response_format", None)
-            r = requests.post(url, timeout=45, headers=headers, json=payload)
+            r = requests.post(url, timeout=_COUNSEL_TIMEOUT, headers=headers, json=payload)
         if not r.ok:
             raise RuntimeError(f"{label} HTTP {r.status_code}: {r.text[:200]}")
         text = r.json()["choices"][0]["message"]["content"]
@@ -538,7 +550,7 @@ class AIBrain:
                             f"{self.cfg.firm_name}. Give a concise (<120 words) risk-"
                             f"aware view on the portfolio. You advise; you do not decide."},
                            {"role": "user", "content": question}]}
-            r = requests.post(url, timeout=45, headers=headers, json=payload)
+            r = requests.post(url, timeout=_COUNSEL_TIMEOUT, headers=headers, json=payload)
             # GPT-5-family reasoning models reject the classic chat params: they want
             # 'max_completion_tokens' (not 'max_tokens') and only the default
             # temperature. The API reports these ONE AT A TIME, so a single-param
@@ -548,7 +560,7 @@ class AIBrain:
                                          or "temperature" in (r.text or "").lower()):
                 payload["max_completion_tokens"] = payload.pop("max_tokens", 400)
                 payload.pop("temperature", None)
-                r = requests.post(url, timeout=45, headers=headers, json=payload)
+                r = requests.post(url, timeout=_COUNSEL_TIMEOUT, headers=headers, json=payload)
             if not r.ok:
                 # Log the model tried AND the provider's error body: a 4xx body says
                 # exactly why (model_not_found vs invalid_api_key vs quota), which the
