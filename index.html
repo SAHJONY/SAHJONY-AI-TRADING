@@ -1711,6 +1711,16 @@ function Brain(v){
       ${bad.length?bad.map(([k,d])=>`<div class="row"><span class="mut">${esc(k)}</span><span class="tag ${(d.rejected||0)?'off':'amber'}">${[(d.rejected||0)?`${d.rejected} rejected`:'',(d.frozen_flags||0)?`${d.frozen_flags}× frozen`:'',(d.venue_stale_flags||0)?`${d.venue_stale_flags}× stale print`:''].filter(Boolean).join(' · ')}</span></div>`).join(''):`<div class="row"><span class="mut">Per-symbol</span><span class="tag on">${Object.keys(syms).length} feed${Object.keys(syms).length===1?'':'s'} healthy</span></div>`}`;
     g.appendChild(panel('Market Data Feed', fs, 'real-time guard', 'span5'));
   }
+  // Per-position cap breaches. Loud on purpose: further adds are blocked
+  // automatically, but unwinding an over-cap position is the owner's decision,
+  // so it must not sit quietly in the position table looking like any other row.
+  const cb=(DATA.cap_breaches)||[];
+  if(cb.length){
+    const cbx=$(`<div></div>`);
+    cbx.innerHTML=cb.map(b=>`<div class="row"><span class="mut">${esc(b.symbol)}</span><span class="tag off" title="cap ${b.cap} at the configured per-position limit">$${(b.value||0).toLocaleString()} · ${b.over_pct}% over cap · ${b.pct_of_equity}% of equity</span></div>`).join('')
+      +`<div class="row"><span class="mut" style="font-size:11px">New adds to these names are blocked. Unwinding is an owner decision \u2014 the desk will not trade its way out on its own.</span></div>`;
+    g.appendChild(panel('\u26a0 Position Cap Breach', cbx, `${cb.length} position${cb.length===1?'':'s'} over the limit`, 'span12'));
+  }
   // Recorded history — the desk turning its own live feed into backtestable bars.
   // 'usable' (not 'bars') is the honest count: a single-tick bar has no range.
   const rc0=(DATA.feed||{}).recorder||{};
