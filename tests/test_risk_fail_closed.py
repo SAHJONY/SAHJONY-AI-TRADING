@@ -222,3 +222,57 @@ def test_cap_breaches_are_silent_when_everything_is_inside_the_cap():
 def test_cap_breaches_fail_quiet_on_unusable_equity(equity):
     assert _firm({"AMPY": 1.69}).cap_breaches(
         {"positions": {"AMPY": {"shares": 12_104.0, "cost_basis": 4.08}}}, equity) == []
+
+
+# ── position-record integrity ───────────────────────────────────────────────────
+def _integrity(positions):
+    from workforce.workforce import Firm
+    return Firm.position_integrity({"positions": positions})
+
+
+def test_short_recorded_as_long_is_flagged():
+    """The desks/stocks and desks/paper row: DIA -9.935112 shares, state 'long'."""
+    rows = _integrity({"DIA": {"shares": -9.935112, "state": "long",
+                               "strategy": "ladder", "cost_basis": 516.18}})
+    assert len(rows) == 1
+    assert rows[0]["symbol"] == "DIA"
+    assert rows[0]["issue"] == "short position recorded as long"
+
+
+def test_long_recorded_as_short_is_flagged():
+    rows = _integrity({"X": {"shares": 5.0, "state": "short", "cost_basis": 1.0}})
+    assert rows[0]["issue"] == "long position recorded as short"
+
+
+def test_consistent_positions_are_silent():
+    assert _integrity({
+        "A": {"shares": 5.0, "state": "long", "cost_basis": 10.0},
+        "B": {"shares": -5.0, "state": "short", "cost_basis": 10.0},
+        "C": {"shares": 0, "state": "flat"},
+    }) == []
+
+
+@pytest.mark.parametrize("shares", [float("nan"), float("inf")])
+def test_non_finite_shares_are_flagged(shares):
+    assert _integrity({"X": {"shares": shares, "state": "long"}})[0]["issue"] \
+        == "shares is not finite"
+
+
+def test_unparseable_shares_are_flagged():
+    assert _integrity({"X": {"shares": "lots", "state": "long"}})[0]["issue"] \
+        == "shares is not a number"
+
+
+def test_missing_cost_basis_on_an_open_position_is_flagged():
+    rows = _integrity({"X": {"shares": 5.0, "state": "long", "cost_basis": None}})
+    assert any(r["issue"] == "cost basis is missing or invalid" for r in rows)
+
+
+def test_a_non_record_position_does_not_crash_the_check():
+    assert _integrity({"X": "not a dict"})[0]["issue"] == "position is not a record"
+
+
+def test_integrity_check_tolerates_empty_state():
+    from workforce.workforce import Firm
+    assert Firm.position_integrity({}) == []
+    assert Firm.position_integrity({"positions": {}}) == []

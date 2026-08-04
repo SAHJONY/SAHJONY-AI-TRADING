@@ -594,6 +594,56 @@ class Firm:
                 total += gross_symbol_value(self.client, state, sym)
         return total + self._csp_collateral(state)
 
+    @staticmethod
+    def position_integrity(state: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Positions whose recorded fields contradict each other.
+
+        Reverse-engineering how one bad row was written is archaeology; the
+        durable fix is to assert the invariant every cycle. desks/stocks carries
+        DIA at -9.935112 shares with state "long" — a short recorded as a long,
+        which makes every downstream reader (P&L sign, exposure direction, the
+        exit path that assumes a long) quietly wrong. Nothing in the desk checked
+        that a position's share sign agrees with the direction it claims.
+
+        Read-only and never raises: this reports, the owner decides.
+        """
+        out: List[Dict[str, Any]] = []
+        for sym, pos in ((state or {}).get("positions") or {}).items():
+            if not isinstance(pos, dict):
+                out.append({"symbol": sym, "issue": "position is not a record"})
+                continue
+            try:
+                shares = float(pos.get("shares", 0) or 0)
+            except (TypeError, ValueError):
+                out.append({"symbol": sym, "issue": "shares is not a number",
+                            "shares": repr(pos.get("shares"))[:40]})
+                continue
+            if not math.isfinite(shares):
+                out.append({"symbol": sym, "issue": "shares is not finite",
+                            "shares": str(shares)})
+                continue
+            state_label = str(pos.get("state") or pos.get("stage") or "").lower()
+            if shares < 0 and state_label in ("long", "ladder_long"):
+                out.append({"symbol": sym, "issue": "short position recorded as long",
+                            "shares": shares, "state": state_label,
+                            "strategy": pos.get("strategy", "")})
+            elif shares > 0 and state_label in ("short", "ladder_short"):
+                out.append({"symbol": sym, "issue": "long position recorded as short",
+                            "shares": shares, "state": state_label,
+                            "strategy": pos.get("strategy", "")})
+            try:
+                basis = float(pos.get("cost_basis", 0.0) or 0.0)
+            except (TypeError, ValueError):
+                basis = float("nan")
+            # An open position must have a POSITIVE basis. Zero is not a
+            # cheap position, it is a missing one — and it silently makes every
+            # realized-P&L calculation on that row read as pure profit.
+            if shares and (not math.isfinite(basis) or basis <= 0):
+                out.append({"symbol": sym, "issue": "cost basis is missing or invalid",
+                            "cost_basis": str(pos.get("cost_basis")),
+                            "strategy": pos.get("strategy", "")})
+        return out
+
     def cap_breaches(self, state: Dict[str, Any], equity: float) -> List[Dict[str, Any]]:
         """Positions already larger than the per-position cap allows.
 
