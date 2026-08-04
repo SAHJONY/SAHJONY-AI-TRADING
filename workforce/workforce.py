@@ -21,8 +21,8 @@ into one trading cycle:
 from __future__ import annotations
 
 from dataclasses import asdict
+import math
 import os
-from dataclasses import asdict
 from datetime import datetime, timezone
 from typing import Any, Dict, List
 
@@ -140,6 +140,25 @@ class ExecutionTrader:
             or (intent.risk_check and intent.side == "sell" and intent.kind == "equity")
             or intent.side == "sell_to_open"
         )
+
+    def _held_value(self, state: Dict[str, Any], symbol: str) -> float:
+        """Gross value already held in one symbol — what the per-position cap must
+        add to. Gross (|shares|) because a short is exposure too. Never raises and
+        never returns a negative or non-finite number: a bad price must make the
+        gate stricter, not silently disable it."""
+        try:
+            pos = (state.get("positions") or {}).get(symbol) or {}
+            shares = abs(float(pos.get("shares", 0) or 0))
+            if not shares:
+                return 0.0
+            price = float(self.client.get_price(symbol) or 0.0)
+            if price <= 0:          # unpriceable: fall back to the recorded basis
+                price = float(pos.get("cost_basis", 0.0) or 0.0)
+            value = shares * max(0.0, price)
+            return value if math.isfinite(value) else 0.0
+        except Exception as exc:
+            log.warning("held-value lookup failed for %s: %s", symbol, exc)
+            return 0.0
 
     def reconcile_pending_orders(
         self, state: Dict[str, Any], cycle: int, deployed: float
@@ -302,7 +321,9 @@ class ExecutionTrader:
                                          "purpose": intent.purpose, "reason": "new risk suspended"})
                     continue
                 if intent.risk_check:
-                    dec = self.risk.approve(equity, deployed, intent.est_notional, conviction, intent.symbol)
+                    dec = self.risk.approve(equity, deployed, intent.est_notional,
+                                            conviction, intent.symbol,
+                                            self._held_value(state, intent.symbol))
                     if not dec.approved:
                         log.info("RISK BLOCK %s %s: %s", intent.symbol, intent.purpose, dec.reason)
                         record_event(state, "risk_block",

@@ -51,12 +51,29 @@ class RiskEngine:
         return budget
 
     def approve(self, equity: float, deployed_value: float, intended_notional: float,
-                conviction: float, symbol: str) -> RiskDecision:
+                conviction: float, symbol: str,
+                existing_position_value: float = 0.0) -> RiskDecision:
+        """Gate one exposure-adding order.
+
+        `existing_position_value` is the gross value ALREADY held in `symbol`. It
+        matters because the cap this method enforces is documented as a cap on a
+        *position*, and without it the check only ever saw the increment: a desk
+        that adds to the same name every cycle — the ladder averaging in, or
+        copy-trading mirroring repeated filings — passes an individually-small
+        order every time and compounds a position without limit. That is not
+        hypothetical. desks/stocks reached 12,104 AMPY shares at a $4.08 basis
+        ($49,384) on a $2,000 account whose per-position cap was $240, built out
+        of orders that were each, on their own, inside the cap.
+
+        Defaults to 0.0 so a caller that genuinely means "size this order alone"
+        keeps the old behaviour.
+        """
         values = {
             "equity": equity,
             "deployed value": deployed_value,
             "intended notional": intended_notional,
             "conviction": conviction,
+            "existing position value": existing_position_value,
         }
         for name, value in values.items():
             if not math.isfinite(value):
@@ -67,6 +84,8 @@ class RiskEngine:
             return RiskDecision(False, "negative deployed value")
         if intended_notional < 0:
             return RiskDecision(False, "negative intended notional")
+        if existing_position_value < 0:
+            return RiskDecision(False, "negative existing position value")
         if not symbol or not symbol.strip():
             return RiskDecision(False, "missing symbol")
         if conviction < self.cfg.min_council_conviction:
@@ -75,11 +94,18 @@ class RiskEngine:
         # absolute hard ceiling (independent of clamped config)
         hard_cap = equity * HARD_MAX_ALLOCATION_PCT
         per_cap = equity * self.cfg.max_allocation_pct
-        if intended_notional > per_cap:
-            return RiskDecision(False, f"${intended_notional:,.0f} exceeds per-position cap "
-                                       f"${per_cap:,.0f}", per_cap)
-        if intended_notional > hard_cap:
-            return RiskDecision(False, "exceeds absolute hard ceiling", hard_cap)
+        # The cap is on the POSITION, so measure what the position becomes.
+        # Allowance is what is left before the cap, never negative.
+        resulting = existing_position_value + intended_notional
+        if resulting > per_cap:
+            room = max(0.0, per_cap - existing_position_value)
+            return RiskDecision(False, f"${resulting:,.0f} in {symbol} would exceed the "
+                                       f"per-position cap ${per_cap:,.0f} "
+                                       f"(holding ${existing_position_value:,.0f}, "
+                                       f"room ${room:,.0f})", room)
+        if resulting > hard_cap:
+            return RiskDecision(False, "exceeds absolute hard ceiling",
+                                max(0.0, hard_cap - existing_position_value))
         total_cap = equity * self.cfg.max_total_deployed_pct
         if deployed_value + intended_notional > total_cap:
             room = max(0.0, total_cap - deployed_value)

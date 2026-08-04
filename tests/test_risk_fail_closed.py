@@ -92,3 +92,62 @@ def test_account_risk_rejects_invalid_policy_limits(field, bad):
 
     assert decision.approved is False
     assert decision.reason == f"invalid account {field}"
+
+
+def _eng(**over):
+    """Risk engine with the desks/stocks configuration: $2,000 and a 12% cap."""
+    return RiskEngine(Config(max_allocation_pct=0.12, min_council_conviction=0.40,
+                             max_total_deployed_pct=0.70, **over))
+
+
+def test_per_position_cap_counts_the_position_not_just_the_order():
+    """The regression that produced 12,104 AMPY shares on a $2,000 account.
+
+    Each order was individually inside the $240 per-position cap; the cap only
+    ever saw the increment, so averaging in compounded a position without limit.
+    """
+    eng = _eng()
+    equity = 2_000.0                      # cap = $240
+    # A lone $200 order is fine.
+    assert eng.approve(equity, 0.0, 200.0, 0.9, "AMPY").approved
+    # The same $200 order on top of $200 already held is not: $400 > $240.
+    dec = eng.approve(equity, 200.0, 200.0, 0.9, "AMPY", existing_position_value=200.0)
+    assert dec.approved is False
+    assert "per-position cap" in dec.reason
+    assert dec.max_notional == pytest.approx(40.0)     # room left, never negative
+
+
+def test_repeated_adds_cannot_compound_past_the_cap():
+    """Simulate the loop that actually ran: add every cycle, always approved."""
+    eng, equity, held = _eng(), 2_000.0, 0.0
+    for _ in range(200):
+        dec = eng.approve(equity, held, 200.0, 0.9, "AMPY", existing_position_value=held)
+        if not dec.approved:
+            break
+        held += 200.0
+    assert held <= equity * 0.12 + 1e-9, f"position compounded to ${held:,.0f}"
+
+
+def test_room_is_never_negative_when_already_over_the_cap():
+    """An inherited over-cap position must block new risk, not report negative room."""
+    dec = _eng().approve(2_000.0, 49_384.0, 100.0, 0.9, "AMPY",
+                         existing_position_value=49_384.0)
+    assert dec.approved is False
+    assert dec.max_notional == 0.0
+
+
+def test_existing_value_defaults_to_zero_for_old_callers():
+    assert _eng().approve(2_000.0, 0.0, 200.0, 0.9, "SPY").approved
+
+
+def test_negative_existing_value_is_rejected():
+    dec = _eng().approve(2_000.0, 0.0, 10.0, 0.9, "SPY", existing_position_value=-1.0)
+    assert dec.approved is False
+    assert dec.reason == "negative existing position value"
+
+
+@pytest.mark.parametrize("bad", [float("nan"), float("inf"), float("-inf")])
+def test_non_finite_existing_value_fails_closed(bad):
+    dec = _eng().approve(2_000.0, 0.0, 10.0, 0.9, "SPY", existing_position_value=bad)
+    assert dec.approved is False
+    assert dec.reason.startswith("invalid ")
