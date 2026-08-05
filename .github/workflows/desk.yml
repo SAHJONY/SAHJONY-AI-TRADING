@@ -91,7 +91,13 @@ jobs:
       SEC_USER_AGENT: 'SAHJONY Capital research contact@sahjonycapital.com'
       BENCHMARK: ${{ vars.BENCHMARK || 'SPY' }}
       LOG_LEVEL: ${{ vars.LOG_LEVEL || 'INFO' }}
-      ANTHROPIC_MODEL: ${{ vars.ANTHROPIC_MODEL || 'claude-fable-5' }}
+      # Pinned to the PRIMARY brain, not read from vars.ANTHROPIC_MODEL. That
+      # variable is set to claude-opus-4-8 — the server-side REFUSAL FALLBACK, not
+      # the primary — and it was silently winning over this default, so the desk
+      # has never run the model it is documented to run. The override knob is
+      # renamed rather than deleted: set vars.ANTHROPIC_MODEL_OVERRIDE to point
+      # somewhere else deliberately. The stale variable no longer applies.
+      ANTHROPIC_MODEL: ${{ vars.ANTHROPIC_MODEL_OVERRIDE || 'claude-fable-5' }}
       OPENAI_MODEL: ${{ vars.OPENAI_MODEL || 'gpt-4o' }}
       XAI_MODEL: ${{ vars.XAI_MODEL || 'grok-4' }}
       GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-2.5-pro' }}
