@@ -77,9 +77,13 @@ native SQLite CRM/database and a static owner dashboard deployed on Vercel.
 ## Deploy
 - `public/` is a zero-build static site. Pushing to the linked Vercel project
   deploys it. The trading loop runs locally/cron (NOT on Vercel serverless).
-- Model IDs: Claude brain default is `claude-fable-5` (thinking always on; steer
-  depth via `output_config.effort`; server-side refusal fallback to `claude-opus-4-8`).
-  If you touch the Anthropic call, consult the claude-api reference — don't guess the SDK.
+- Model IDs: the Claude brain is **pinned to `claude-fable-5`** in `desk.yml`.
+  The override knob is `vars.ANTHROPIC_MODEL_OVERRIDE`, **not**
+  `vars.ANTHROPIC_MODEL` — that variable was set to `claude-opus-4-8`, the
+  server-side *refusal fallback*, and was silently beating the default, so the
+  desk never once ran the model it is documented to run. Thinking is always on;
+  steer depth via `output_config.effort`. If you touch the Anthropic call,
+  consult the claude-api reference — don't guess the SDK.
 
 ## Analyst toolkit (Claude Code sessions on this repo)
 - `.claude/settings.json` registers Anthropic's `claude-for-financial-services`
@@ -105,5 +109,6 @@ native SQLite CRM/database and a static owner dashboard deployed on Vercel.
   `GEMINI_API_KEY` (or `GOOGLE_API_KEY`).
 - **Always latest model (autonomous):** with `AUTO_UPDATE_MODELS=true` (default),
   `utils/model_registry.py` resolves each provider's newest model at run time
-  (latest **Opus** for Claude; latest flagship GPT/Grok/Gemini), cached ~daily,
+  (latest **Fable** for Claude — `_PROVIDERS` prefers fable > opus > sonnet >
+  haiku; latest flagship GPT/Grok/Gemini), cached ~daily,
   and falls back to the configured `*_MODEL` default whenever the lookup can't run.

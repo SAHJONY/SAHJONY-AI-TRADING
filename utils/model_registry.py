@@ -146,7 +146,10 @@ def resolve(provider: str, key: str, default: str, *, force: bool = False) -> st
     """Return the provider's latest preferred model, or `default` on any problem.
 
     Caches per provider for MODEL_REFRESH_HOURS so we query at most once a day.
-    Mini variants etc. are filtered out; Claude prefers Opus (owner directive)."""
+    Mini variants etc. are filtered out. Claude prefers the FABLE family first
+    (see _PROVIDERS) — an older docstring here said Opus, which contradicted the
+    code it documented and matched the stale ANTHROPIC_MODEL repo variable that
+    had been overriding the primary brain."""
     if provider not in _PROVIDERS or not key:
         return default
     cache = _load_cache()
