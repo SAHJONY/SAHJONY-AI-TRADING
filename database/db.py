@@ -106,6 +106,11 @@ CREATE TABLE IF NOT EXISTS council_log (
     composite     REAL,
     risk_mult     REAL,
     metrics       TEXT
+    -- The price the verdict was formed at. Without it a stored verdict cannot be
+    -- graded: you know what the council believed and never what happened next.
+    -- That gap is why "recalibrate the conviction gate against collected data"
+    -- had no data to recalibrate against.
+    ,price         REAL
 );
 CREATE TABLE IF NOT EXISTS events (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -242,6 +247,12 @@ class Database:
         for name in ("order_id", "client_order_id", "order_status", "submitted_at", "filled_at"):
             if name not in trade_cols:
                 self.conn.execute(f"ALTER TABLE trades ADD COLUMN {name} TEXT")
+        council_cols = {r["name"] for r in
+                        self.conn.execute("PRAGMA table_info(council_log)").fetchall()}
+        if "price" not in council_cols:
+            # Rows written before this column exists keep price NULL; the
+            # calibration tool skips them rather than inventing a mark.
+            self.conn.execute("ALTER TABLE council_log ADD COLUMN price REAL")
 
     def close(self) -> None:
         try:
@@ -280,11 +291,15 @@ class Database:
         self.conn.commit()
 
     def log_council(self, cycle, symbol, conviction, direction, composite, risk_mult,
-                    metrics: Dict[str, Any]) -> None:
+                    metrics: Dict[str, Any], price: float = None) -> None:
+        """Record one verdict. `price` is the mark it was formed at — the thing
+        that makes the verdict gradeable later. Optional so old callers still
+        work, but every in-tree caller passes it."""
         self.conn.execute(
-            """INSERT INTO council_log (ts,cycle,symbol,conviction,direction,composite,risk_mult,metrics)
-               VALUES (?,?,?,?,?,?,?,?)""",
-            (_now(), cycle, symbol, conviction, direction, composite, risk_mult, json.dumps(metrics)))
+            """INSERT INTO council_log (ts,cycle,symbol,conviction,direction,composite,risk_mult,metrics,price)
+               VALUES (?,?,?,?,?,?,?,?,?)""",
+            (_now(), cycle, symbol, conviction, direction, composite, risk_mult,
+             json.dumps(metrics), float(price) if price else None))
         self.conn.commit()
 
     def log_event(self, kind: str, detail: Dict[str, Any]) -> None:

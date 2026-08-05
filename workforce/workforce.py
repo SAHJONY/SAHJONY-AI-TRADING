@@ -1159,7 +1159,8 @@ class Firm:
                     executed += done
                 # log council + snapshot
                 self.db.log_council(cycle, sym, verdict.conviction, verdict.direction,
-                                    verdict.composite_score, verdict.risk_multiplier, verdict.metrics)
+                                    verdict.composite_score, verdict.risk_multiplier, verdict.metrics,
+                                    snap.price)
                 npos = state.get("positions", {}).get(sym, {})
                 shares = npos.get("shares", 0) or 0
                 self.db.log_snapshot(cycle, sym, strat, npos.get("stage") or npos.get("strategy") or "flat",
@@ -1216,7 +1217,8 @@ class Firm:
                                                             deployed, conv, allow_new_risk)
                     executed += done
                     self.db.log_council(cycle, sym, verdict.conviction, verdict.direction,
-                                        verdict.composite_score, verdict.risk_multiplier, verdict.metrics)
+                                        verdict.composite_score, verdict.risk_multiplier, verdict.metrics,
+                                    snap.price)
                     npos = state.get("positions", {}).get(sym, {})
                     shares = npos.get("shares", 0) or 0
                     self.db.log_snapshot(cycle, sym, "daytrade", npos.get("strategy") or "flat",

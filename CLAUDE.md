@@ -46,6 +46,13 @@ native SQLite CRM/database and a static owner dashboard deployed on Vercel.
   `--apply` is the only way to send an order.** Routes through the desk's own
   broker adapter and journals each fill to the audit ledger. It refuses to touch
   a position the venue cannot price — selling into an unknown price is guessing.
+- `python -m tools.conviction_calibration --horizon 3` — grades every stored
+  council verdict against what the price actually did next, bucketed by the
+  conviction that produced it, **net of the round-trip fee**. This is the
+  evidence `min_council_conviction` should be set from; the current 0.52 was
+  chosen, not measured. Needs `council_log.price`, added 2026-08-05 — verdicts
+  logged before that are ungradeable and the tool says so rather than reporting
+  an empty table.
 - `python -m pytest tests/ -q` — the whole suite (343 tests). Needs `pytest`,
   `python-dotenv` and `alpaca-py`; without `alpaca-py`, `test_historical_data`
   fails 3 tests on `ModuleNotFoundError`, which is a missing dependency and not
