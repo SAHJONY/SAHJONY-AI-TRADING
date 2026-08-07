@@ -12,19 +12,8 @@ window.SAHJONY_CONFIG = {
   SUPABASE_URL: "https://awzczbaarskqjgdatefv.supabase.co",
   SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF3emN6YmFhcnNrcWpnZGF0ZWZ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI5ODMyMTAsImV4cCI6MjA3ODU1OTIxMH0._4DdIuu9qP82pbwzgVPHol8SWmS6ZBPNowwrPHLt5Fs",
   OWNER_EMAIL: "sahjonycapitalllc@outlook.com",
-  // Optional FREE key from finnhub.io → live stock quotes + financial news.
-  // Crypto (CoinGecko) and fallback news (GDELT) need NO key.
-  //
-  // LEAVE THIS BLANK IN GIT. This repository is public, so a key committed here
-  // is a published key. It is injected at deploy time from the Vercel env var
-  // FINNHUB_API_KEY by scripts/build_public_config.sh (vercel.json buildCommand).
-  //
-  // Note this is a browser key either way: on a static site anything the page
-  // calls Finnhub with is visible to whoever loads the dashboard. Injecting it
-  // keeps it out of git history and out of the public repo — it does not make it
-  // private. Scope/rotate it accordingly, or proxy Finnhub through api/ if it
-  // ever needs to be genuinely secret.
-  FINNHUB_API_KEY: "",
+  // Finnhub is served by the same-origin /api/finnhub function. Its sensitive
+  // FINNHUB_API_KEY is never injected into this public browser configuration.
   // Optional extra news wires (the Financial Wire aggregates every one that's set,
   // on top of the always-on free GDELT + Finnhub feeds). Free tiers available:
   //   Marketaux  → marketaux.com  (entity-tagged market news; free tier + paid)
