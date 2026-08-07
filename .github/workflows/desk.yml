@@ -88,7 +88,29 @@ jobs:
       CYCLE_MINUTES: ${{ vars.CYCLE_MINUTES_OVERRIDE || '5' }}
       MAX_ALLOCATION_PCT: ${{ vars.MAX_ALLOCATION_PCT || '0.12' }}
       MAX_TOTAL_DEPLOYED_PCT: ${{ vars.MAX_TOTAL_DEPLOYED_PCT || '0.70' }}
-      MIN_COUNCIL_CONVICTION: ${{ vars.MIN_COUNCIL_CONVICTION || '0.52' }}
+      # 0.52 -> 0.51. The floor, not the caps or sizing, is what has kept the live
+      # desk to 2 trades in 899 cycles: the council's directional calls land at
+      # 0.503 (BTC), 0.513 (ETH), 0.513 (XRP) — every one of them under 0.52, some
+      # by 0.007. The gate sat marginally above where this council actually scores.
+      #
+      # 0.51, not 0.50: config.HARD_MIN_CONVICTION is 0.50, and setting the
+      # operating floor equal to the absolute floor leaves no margin at all. 0.51
+      # admits the two strongest names and keeps the operating gate above the
+      # safety gate, which is the point of having both.
+      #
+      # Read from the _OVERRIDE name for the reason CYCLE_MINUTES and
+      # ANTHROPIC_MODEL both had to be renamed: a stale repository Variable
+      # silently beating a corrected default is this repo's recurring failure, and
+      # a fix that depends on someone clearing a setting is not a fix.
+      #
+      # This raises trade COUNT, not per-trade risk — caps and order size are
+      # untouched. Expect those extra trades to be roughly break-even at best
+      # until the council stops reading a DAILY series on a 5-minute cycle
+      # (robinhood_crypto.get_history requests CoinGecko interval=daily), because
+      # a ~0.51 call is barely better than a coin flip and the round trip costs
+      # 60 bps. Grade it with `python -m tools.conviction_calibration --horizon 3`
+      # once council_log.price has accumulated, and set this from that evidence.
+      MIN_COUNCIL_CONVICTION: ${{ vars.MIN_COUNCIL_CONVICTION_OVERRIDE || '0.51' }}
       MAX_DAILY_DRAWDOWN_PCT: ${{ vars.MAX_DAILY_DRAWDOWN_PCT || '0.10' }}
       DAY_TRADING_ENABLED: ${{ vars.DAY_TRADING_ENABLED || 'true' }}
       LADDER_ENABLE_AVERAGING: ${{ vars.LADDER_ENABLE_AVERAGING || 'true' }}
