@@ -1075,6 +1075,22 @@ class Firm:
         if self.cfg.ai_shadow_enabled and portfolio:
             try:
                 overlays = self.brain.shadow_advise(portfolio, brain)
+                # Score the intraday overlay against forward returns BEFORE it is
+                # ever allowed to move a real order. shadow_read computes the tilt
+                # whether or not the overlay is armed, so the evidence needed to
+                # decide on arming accumulates without anything being risked to
+                # produce it. Excluded from the LLM consensus (see
+                # AutonomousLearningPipeline.consensus) — it is a quant estimator,
+                # not an opinion, and that metric is mid-measurement.
+                overlays["intraday"] = {
+                    "per_symbol_adjust": {
+                        row["symbol"]: self.intraday.shadow_read(
+                            row["symbol"], row.get("direction", "")).tilt
+                        for row in portfolio
+                    },
+                    "risk_multiplier": 1.0,
+                    "telemetry": {"schema_valid": True, "fallback_used": False},
+                }
                 learning = AutonomousLearningPipeline(
                     min_observations=self.cfg.ai_shadow_min_observations,
                     database=self.db,

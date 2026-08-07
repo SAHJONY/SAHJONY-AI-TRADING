@@ -182,6 +182,40 @@ def test_database_failure_degrades_to_neutral():
     assert read.summary  # reported, not raised
 
 
+# ── shadow evaluation ────────────────────────────────────────────────────────
+def test_shadow_read_scores_while_the_overlay_is_disarmed(db):
+    """The whole point: gather the evidence needed to decide on arming without
+    arming anything to gather it."""
+    db.add("BTC/USD", 60, _rising(60))
+    ov = IntradayOverlay(_Cfg(enabled=False), db)
+    assert ov.read("BTC/USD", "long").tilt == 0.0        # nothing reaches an order
+    assert ov.shadow_read("BTC/USD", "long").tilt > 0.0  # but it is still graded
+
+
+def test_armed_overlay_applies_exactly_what_it_shadowed(db):
+    """No divergence between what was measured and what gets applied — otherwise
+    the shadow score would not describe the armed behaviour."""
+    db.add("BTC/USD", 60, _rising(60))
+    ov = IntradayOverlay(_Cfg(enabled=True), db)
+    assert ov.read("BTC/USD", "long").tilt == ov.shadow_read("BTC/USD", "long").tilt
+
+
+def test_shadow_read_is_also_fault_isolated():
+    assert IntradayOverlay(_Cfg(), _BrokenDB()).shadow_read("BTC/USD", "long").tilt == 0.0
+
+
+def test_intraday_is_excluded_from_the_llm_consensus():
+    """The consensus has a scored history as an average of LLM opinions. Folding a
+    quant overlay in would redefine it mid-measurement."""
+    from intelligence.autonomous_learning import AutonomousLearningPipeline
+    overlays = {
+        "openai":   {"per_symbol_adjust": {"BTC/USD": 0.10}, "risk_multiplier": 1.0},
+        "intraday": {"per_symbol_adjust": {"BTC/USD": 0.90}, "risk_multiplier": 1.0},
+    }
+    out = AutonomousLearningPipeline.consensus(overlays, ["BTC/USD"])
+    assert out["per_symbol_adjust"]["BTC/USD"] == pytest.approx(0.10)
+
+
 def test_reads_maps_every_symbol(db):
     db.add("BTC/USD", 60, _rising(60))
     out = IntradayOverlay(_Cfg(), db).reads([("BTC/USD", "long"), ("ETH/USD", "long")])

@@ -35,8 +35,14 @@ class AutonomousLearningPipeline:
 
     @staticmethod
     def consensus(overlays: Dict[str, Dict[str, Any]], symbols: list[str]) -> Dict[str, Any]:
+        # 'intraday' is excluded alongside the two synthetic entries. This
+        # consensus is the average of the LLM providers' opinions, and it has been
+        # accumulating a scored history under that definition; folding a
+        # deterministic quant overlay into it would change what the metric means
+        # mid-measurement and make its past scores incomparable to its future
+        # ones. The intraday overlay is still scored — as its own provider.
         available = [value for key, value in overlays.items()
-                     if key not in {"neutral", "consensus"} and value]
+                     if key not in {"neutral", "consensus", "intraday"} and value]
         if not available:
             return {"per_symbol_adjust": {}, "risk_multiplier": 1.0,
                     "telemetry": {"schema_valid": True, "fallback_used": False}}

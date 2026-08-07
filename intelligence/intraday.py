@@ -180,9 +180,24 @@ class IntradayOverlay:
         return _clamp(math.tanh(z), -1.0, 1.0)
 
     def read(self, symbol: str, direction: str) -> IntradayRead:
-        """Never raises. Returns a neutral read on any problem."""
+        """The APPLIED read — neutral unless the overlay is armed.
+
+        This is what reaches the conviction stack. Never raises.
+        """
         if not self.enabled:
             return IntradayRead(symbol, summary="overlay disabled")
+        return self.shadow_read(symbol, direction)
+
+    def shadow_read(self, symbol: str, direction: str) -> IntradayRead:
+        """The read the overlay WOULD apply, computed whether or not it is armed.
+
+        Kept separate from `read` so the desk can accumulate gradeable evidence
+        while the overlay has no authority over a single order. Arming an
+        unvalidated estimator on a real-money desk to find out whether it works is
+        the wrong order of operations; this lets the shadow pipeline score it
+        first, against forward returns, and the decision to arm follows the
+        evidence. Never raises.
+        """
         try:
             sign = _direction_sign(direction)
             if sign == 0:
