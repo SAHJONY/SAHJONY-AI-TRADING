@@ -252,3 +252,45 @@ def test_live_universe_excludes_stablecoins():
     m = re.search(r"TICKERS: \$\{\{ vars\.TICKERS_LIVE_OVERRIDE \|\| '([^']+)'", wf)
     universe = m.group(1).upper()
     assert "USDC" not in universe and "USDT" not in universe
+
+
+# ── effective-config reporter (scripts/effective_config) ────────────────────
+def _run_effective_config(payload, monkeypatch, capsys):
+    import json as _json
+    from scripts import effective_config
+    monkeypatch.setenv("DESK_VARS_JSON", _json.dumps(payload))
+    assert effective_config.main() == 0
+    return capsys.readouterr().out
+
+
+def test_retired_variable_still_set_is_reported(monkeypatch, capsys):
+    out = _run_effective_config({"CYCLE_MINUTES": "15"}, monkeypatch, capsys)
+    assert "NO LONGER READ" in out and "CYCLE_MINUTES_OVERRIDE" in out
+
+
+def test_clean_state_reports_nothing_retired(monkeypatch, capsys):
+    out = _run_effective_config({"CYCLE_MINUTES": "", "BROKER": ""}, monkeypatch, capsys)
+    assert "none of the four renamed Variables is still set" in out
+
+
+def test_active_override_is_reported(monkeypatch, capsys):
+    out = _run_effective_config({"BROKER": "robinhood_crypto"}, monkeypatch, capsys)
+    assert "ACTIVE" in out and "BROKER" in out
+
+
+def test_reporter_never_fails_the_build(monkeypatch):
+    from scripts import effective_config
+    monkeypatch.setenv("DESK_VARS_JSON", "not json")
+    assert effective_config.main() == 0
+    monkeypatch.delenv("DESK_VARS_JSON", raising=False)
+    assert effective_config.main() == 0
+
+
+def test_reporter_allowlist_excludes_pii_carrying_variables():
+    """Repository Variables are not secrets and this repo is public, so its Actions
+    logs are world-readable. Variables that can carry personal data must never be
+    in the allowlist."""
+    from scripts.effective_config import ACTIVE_DEFAULTS, RETIRED
+    watched = set(ACTIVE_DEFAULTS) | set(RETIRED)
+    for name in ("WHATSAPP_TO", "COPY_TRADING_SOURCE_URL", "HERMES_GOAL", "WHATSAPP_TEMPLATE"):
+        assert name not in watched

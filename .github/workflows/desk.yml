@@ -377,6 +377,40 @@ jobs:
           ROBINHOOD_MAX_ORDER_USD: ${{ vars.ROBINHOOD_MAX_ORDER_USD || '10' }}
         run: python main.py --once --force || true
 
+      # Surfaces the failure that has now bitten four separate knobs: a stale
+      # repository Variable silently beating a corrected default, found each time
+      # by accident from a symptom rather than from a signal. Prints which
+      # Variables are dead (renamed away, still set, doing nothing) and which are
+      # actively overriding a default. Allowlisted to non-sensitive knobs — this
+      # repository is public, so its Actions logs are too.
+      - name: Effective config (repository Variables vs defaults)
+        if: always()
+        env:
+          DESK_VARS_JSON: >-
+            {"CYCLE_MINUTES": "${{ vars.CYCLE_MINUTES }}",
+             "MIN_COUNCIL_CONVICTION": "${{ vars.MIN_COUNCIL_CONVICTION }}",
+             "TICKERS_LIVE": "${{ vars.TICKERS_LIVE }}",
+             "ANTHROPIC_MODEL": "${{ vars.ANTHROPIC_MODEL }}",
+             "BROKER": "${{ vars.BROKER }}",
+             "TRADING_HALT": "${{ vars.TRADING_HALT }}",
+             "ROBINHOOD_LIVE": "${{ vars.ROBINHOOD_LIVE }}",
+             "ROBINHOOD_MAX_ORDER_USD": "${{ vars.ROBINHOOD_MAX_ORDER_USD }}",
+             "ALPACA_LIVE_ENABLED": "${{ vars.ALPACA_LIVE_ENABLED }}",
+             "MAX_ALLOCATION_PCT": "${{ vars.MAX_ALLOCATION_PCT }}",
+             "MAX_TOTAL_DEPLOYED_PCT": "${{ vars.MAX_TOTAL_DEPLOYED_PCT }}",
+             "MAX_DAILY_DRAWDOWN_PCT": "${{ vars.MAX_DAILY_DRAWDOWN_PCT }}",
+             "VOL_TARGET_ANNUAL": "${{ vars.VOL_TARGET_ANNUAL }}",
+             "LIVE_TRADING_CAPITAL": "${{ vars.LIVE_TRADING_CAPITAL }}",
+             "MARKET_HOURS": "${{ vars.MARKET_HOURS }}",
+             "PAPER_TRAINER_ENABLED": "${{ vars.PAPER_TRAINER_ENABLED }}",
+             "STOCK_DESK_ENABLED": "${{ vars.STOCK_DESK_ENABLED }}",
+             "ROBINHOOD_DESK_ENABLED": "${{ vars.ROBINHOOD_DESK_ENABLED }}",
+             "CYCLE_MINUTES_OVERRIDE": "${{ vars.CYCLE_MINUTES_OVERRIDE }}",
+             "MIN_COUNCIL_CONVICTION_OVERRIDE": "${{ vars.MIN_COUNCIL_CONVICTION_OVERRIDE }}",
+             "TICKERS_LIVE_OVERRIDE": "${{ vars.TICKERS_LIVE_OVERRIDE }}",
+             "ANTHROPIC_MODEL_OVERRIDE": "${{ vars.ANTHROPIC_MODEL_OVERRIDE }}"}
+        run: python -m scripts.effective_config || true
+
       - name: Preflight (read-only) summary
         if: always()
         run: python main.py --preflight || true
