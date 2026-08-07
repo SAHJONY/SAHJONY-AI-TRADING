@@ -35,6 +35,7 @@ from intelligence.ai_brain import AIBrain, BrainVerdict
 from intelligence.alt_data import AltData
 from intelligence.autonomous_learning import AutonomousLearningPipeline
 from intelligence.hermes import Hermes, HermesReport
+from intelligence.intraday import IntradayOverlay
 from intelligence.institutional_research import (
     PROMOTION_KEY,
     InstitutionalResearchFabric,
@@ -531,6 +532,11 @@ class Firm:
         self.council = Council()
         self.brain = AIBrain(cfg)
         self.alt = AltData(cfg)   # QuiverQuant insider/congress alt-data overlay
+        # Intraday confirmation from the desk's own recorded bars. The council is a
+        # DAILY estimator (sma200, 12-1 momentum, 52-week high) re-run every few
+        # minutes, so it has no intraday view at all; this supplies one without
+        # touching the daily series those agents depend on. Default off.
+        self.intraday = IntradayOverlay(cfg, db)
         self.hermes = Hermes(cfg) # background guardian: data integrity + scores + self-calibration
         self.board = AdvisoryBoard(cfg)  # Buffett/Munger/Macro/Growth/Quant council + risk gate
         self.notifier = Notifier(cfg)
@@ -1112,10 +1118,17 @@ class Firm:
                 alt_tilt = alt_signals[sym].tilt if sym in alt_signals else 0.0
                 board_tilt = board[sym].tilt if sym in board else 0.0
                 hermes_tilt = hermes.tilt.get(sym, 0.0)
+                # Intraday confirmation: does the recent tape agree with the
+                # direction this daily verdict already chose? Neutral (0.0) unless
+                # the overlay is armed AND the desk has enough bars with a
+                # measured range, so it contributes nothing until it has grounds to.
+                intraday_read = self.intraday.read(sym, verdict.direction)
+                intraday_tilt = intraday_read.tilt
                 if hermes_tilt <= -1.0:      # data quarantine always wins outright
                     tilt = hermes_tilt
                 else:                        # advisory layers stack, but stay bounded
-                    tilt = max(-0.20, min(0.20, alt_tilt + board_tilt + hermes_tilt))
+                    tilt = max(-0.20, min(0.20, alt_tilt + board_tilt + hermes_tilt
+                                          + intraday_tilt))
                 conviction, risk_mult, budget = self.pm.effective(verdict, brain, equity, tilt)
                 # Hermes strategy calibration: budget leans toward desks with a proven
                 # realized edge (bounded 0.70–1.15; hard risk ceilings still apply).

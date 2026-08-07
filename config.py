@@ -268,6 +268,12 @@ class Config:
     auto_update_models: bool = True
     ai_shadow_enabled: bool = True
     ai_shadow_min_observations: int = 100
+    # Intraday confirmation overlay (intelligence/intraday.py). Scores the desk's
+    # OWN recorded bars against the direction the daily council already chose and
+    # nudges conviction ±0.05 on agreement/disagreement. DEFAULT OFF: it changes
+    # live trading decisions and is an unvalidated estimator on a few days of
+    # self-recorded data. Grade it with tools.conviction_calibration before arming.
+    intraday_overlay_enabled: bool = False
     institutional_multiplier_enabled: bool = False
     institutional_max_data_age_seconds: int = 345600
 
@@ -431,6 +437,7 @@ def load_config() -> Config:
         auto_update_models=_b("AUTO_UPDATE_MODELS", True),
         ai_shadow_enabled=_b("AI_SHADOW_ENABLED", True),
         ai_shadow_min_observations=max(20, _i("AI_SHADOW_MIN_OBSERVATIONS", 100)),
+        intraday_overlay_enabled=_b("INTRADAY_OVERLAY_ENABLED", False),
         institutional_multiplier_enabled=_b("INSTITUTIONAL_MULTIPLIER_ENABLED", False),
         institutional_max_data_age_seconds=max(
             60, _i("INSTITUTIONAL_MAX_DATA_AGE_SECONDS", 345600)

@@ -53,7 +53,7 @@ native SQLite CRM/database and a static owner dashboard deployed on Vercel.
   chosen, not measured. Needs `council_log.price`, added 2026-08-05 — verdicts
   logged before that are ungradeable and the tool says so rather than reporting
   an empty table.
-- `python -m pytest tests/ -q` — the whole suite (405 tests), and what CI runs.
+- `python -m pytest tests/ -q` — the whole suite (424 tests), and what CI runs.
   Needs `pytest`,
   `python-dotenv` and `alpaca-py`; without `alpaca-py`, `test_historical_data`
   fails 3 tests on `ModuleNotFoundError`, which is a missing dependency and not
