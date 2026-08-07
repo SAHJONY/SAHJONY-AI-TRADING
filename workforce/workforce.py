@@ -236,6 +236,31 @@ class ExecutionTrader:
                 })
                 continue
 
+            # Establish a defensible fill price BEFORE mutating anything. Booking a
+            # fill at 0 writes a zero cost basis, which makes every later
+            # realized-P&L calculation on that row read as pure profit — the exact
+            # corruption position_audit reports as "cost basis is missing or
+            # invalid". On a bad price, keep the order pending and look again next
+            # cycle rather than record a fiction. Ordering matters: this must come
+            # before _apply, or a rejected price would leave state already mutated
+            # with the order still pending, and the next cycle would apply it twice.
+            fill_price = (result or {}).get("fill_price")
+            if fill_price is None:
+                fill_price = (self.client.get_price(symbol)
+                              if recovered.kind == "equity" else recovered.premium)
+            try:
+                fill_price = float(fill_price or 0.0)
+            except (TypeError, ValueError):
+                fill_price = 0.0
+            if not math.isfinite(fill_price) or fill_price <= 0:
+                log.warning("FILLED order %s (%s) has no defensible fill price; keeping pending",
+                            broker_ref, symbol)
+                self.db.append_audit("pending_reconciliation_error", {
+                    "cycle": cycle, "symbol": symbol, "intent_id": intent_id,
+                    "error": "filled order has no defensible fill price",
+                })
+                continue
+
             self._apply(recovered, state)
             transaction_cost = max(
                 0.0, float((result or {}).get("transaction_cost", 0.0) or 0.0)
@@ -244,19 +269,26 @@ class ExecutionTrader:
             state["realized_pnl"] = state.get("realized_pnl", 0.0) - transaction_cost
             if self._adds_exposure(recovered):
                 deployed += recovered.est_notional
-            fill_price = (result or {}).get("fill_price")
-            if fill_price is None:
-                fill_price = (self.client.get_price(symbol)
-                              if recovered.kind == "equity" else recovered.premium)
+            filled_qty = (result or {}).get("filled_qty")
             self.db.log_trade({
                 "cycle": cycle, "symbol": recovered.symbol,
                 "strategy": recovered.strategy, "kind": recovered.kind,
-                "side": recovered.side, "qty": recovered.qty,
+                "side": recovered.side,
+                "qty": filled_qty if filled_qty is not None else recovered.qty,
                 "price": fill_price, "premium": recovered.premium,
                 "notional": recovered.est_notional, "purpose": recovered.purpose,
                 "reason": recovered.reason,
                 "mode": getattr(self.client, "mode", self.cfg.mode),
                 "simulated": (result or {}).get("simulated", False),
+                # Broker attribution: a reconciled fill is the one trade the desk
+                # did NOT witness happen, so the ledger has to carry enough to tie
+                # the row back to the venue's own record of it.
+                "order_id": broker_ref,
+                "client_order_id": ((result or {}).get("client_order_id")
+                                    or pending.get("client_order_id")),
+                "order_status": "filled",
+                "submitted_at": pending.get("submitted_at"),
+                "filled_at": (result or {}).get("filled_at"),
             })
             self.db.update_execution_intent(
                 intent_id, "filled", broker_ref=broker_ref,
@@ -285,18 +317,7 @@ class ExecutionTrader:
         for intent in intents:
             intent_id = ""
             try:
-                pending = state.setdefault("pending_orders", {})
-                if intent.kind == "equity" and intent.symbol in pending:
-                    log.info("PENDING BLOCK %s %s — prior broker order unresolved",
-                             intent.symbol, intent.purpose)
-                    record_event(state, "pending_order_block",
-                                 {"symbol": intent.symbol, "purpose": intent.purpose})
-                    self.db.append_audit("pending_order_block", {
-                        "cycle": cycle, "symbol": intent.symbol,
-                        "purpose": intent.purpose,
-                        "pending": pending[intent.symbol],
-                    })
-                    continue
+                state.setdefault("pending_orders", {})
                 if intent.kind == "state":
                     self._apply(intent, state)
                     record_event(state, intent.purpose, {"symbol": intent.symbol, "reason": intent.reason})
@@ -381,6 +402,11 @@ class ExecutionTrader:
                         "side": intent.side,
                         "qty": intent.qty,
                         "purpose": intent.purpose,
+                        # Carried so the reconciled fill can be tied back to the
+                        # venue's record — the status lookup does not always
+                        # return them, and by then the submit result is gone.
+                        "client_order_id": str(res.get("client_order_id") or ""),
+                        "submitted_at": str(res.get("submitted_at") or ""),
                         "intent": asdict(intent),
                     }
                     state.setdefault("pending_orders", {})[intent.symbol] = pending
@@ -461,52 +487,6 @@ class ExecutionTrader:
                         pass
                 log.error("execute intent failed (%s %s): %s", intent.symbol, intent.purpose, exc)
         return done, deployed
-
-    def reconcile_pending(self, state: Dict[str, Any], cycle: int) -> List[Dict]:
-        """Apply state and ledger mutations only after the broker confirms a fill."""
-        pending = state.setdefault("pending_orders", {})
-        resolved = []
-        if not pending or not hasattr(self.client, "get_order"):
-            return resolved
-        for symbol, item in list(pending.items()):
-            order = self.client.get_order(item.get("order_id"))
-            status = order.get("status")
-            if status == "filled":
-                intent = OrderIntent(**item["intent"])
-                price = float(order.get("fill_price") or 0)
-                if price <= 0:
-                    log.warning("FILLED order %s has no defensible fill price; keeping pending",
-                                item.get("order_id"))
-                    continue
-                self._apply(intent, state)
-                self.db.log_trade({
-                    "cycle": item.get("cycle", cycle), "symbol": intent.symbol,
-                    "strategy": intent.strategy, "kind": intent.kind, "side": intent.side,
-                    "qty": order.get("filled_qty") or intent.qty, "price": price,
-                    "premium": intent.premium, "notional": intent.est_notional,
-                    "purpose": intent.purpose, "reason": intent.reason,
-                    "mode": item.get("mode"), "simulated": False,
-                    "order_id": order.get("order_id"),
-                    "client_order_id": order.get("client_order_id") or item.get("client_order_id"),
-                    "order_status": "filled", "submitted_at": item.get("submitted_at"),
-                    "filled_at": order.get("filled_at"),
-                })
-                record_event(state, "order_filled", {
-                    "symbol": symbol, "strategy": intent.strategy,
-                    "order_id": order.get("order_id"),
-                    "client_order_id": order.get("client_order_id") or item.get("client_order_id"),
-                    "fill_price": price,
-                })
-                pending.pop(symbol, None)
-                resolved.append({"symbol": symbol, "status": "filled"})
-            elif status in ("cancelled", "rejected"):
-                record_event(state, f"order_{status}", {
-                    "symbol": symbol, "order_id": item.get("order_id"),
-                    "client_order_id": item.get("client_order_id"),
-                })
-                pending.pop(symbol, None)
-                resolved.append({"symbol": symbol, "status": status})
-        return resolved
 
 
 # ── the firm ────────────────────────────────────────────────────────────────

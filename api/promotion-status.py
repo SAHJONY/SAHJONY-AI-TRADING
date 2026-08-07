@@ -1,5 +1,6 @@
 """Authenticated hosted producer-health status backed by Upstash Redis REST."""
 from http.server import BaseHTTPRequestHandler
+import hmac
 import json
 import os
 from urllib import request
@@ -33,7 +34,7 @@ class handler(BaseHTTPRequestHandler):
     def do_POST(self):
         expected = os.getenv("PROMOTION_STATUS_PUBLISH_TOKEN", "")
         supplied = self.headers.get("Authorization", "").removeprefix("Bearer ")
-        if not expected or supplied != expected:
+        if not expected or not hmac.compare_digest(supplied, expected):
             return self._send(401, {"error": "unauthorized"})
         try:
             length = min(int(self.headers.get("Content-Length", "0")), 100_000)

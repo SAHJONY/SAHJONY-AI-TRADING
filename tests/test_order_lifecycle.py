@@ -28,7 +28,7 @@ class PendingBroker:
                 "client_order_id": "CLIENT-1", "submitted_at": "2026-07-29T00:00:00Z",
                 "simulated": False}
 
-    def get_order(self, order_id):
+    def get_order_status(self, order_id, symbol=""):
         return dict(self.lifecycle)
 
     def get_price(self, symbol):
@@ -58,13 +58,25 @@ def main() -> int:
         again, _ = trader.execute([intent], state, 8, 100.0, 0.0, 0.8)
         _check(again == [], "unresolved order blocks a duplicate order for the same symbol")
 
+        # A broker that reports "filled" with no defensible price must NOT be
+        # booked: a zero fill price writes a zero cost basis, and every later
+        # realized-P&L reading of that row then looks like pure profit.
+        broker.lifecycle = {"status": "filled", "order_id": "RH-1", "fill_price": 0.0}
+        trader.reconcile_pending_orders(state, 9, 0.0)
+        _check("ETH/USD" not in state["positions"],
+               "fill with no defensible price does not mutate positions")
+        _check("ETH/USD" in state["pending_orders"],
+               "fill with no defensible price stays pending for the next cycle")
+        _check(db.recent_trades() == [],
+               "fill with no defensible price is not written to the ledger")
+
         broker.lifecycle = {
             "status": "filled", "order_id": "RH-1", "client_order_id": "CLIENT-1",
             "fill_price": 101.25, "filled_qty": 0.01,
             "filled_at": "2026-07-29T00:00:03Z",
         }
-        resolved = trader.reconcile_pending(state, 9)
-        _check(resolved == [{"symbol": "ETH/USD", "status": "filled"}],
+        trader.reconcile_pending_orders(state, 10, 0.0)
+        _check("ETH/USD" not in state["pending_orders"],
                "confirmed broker fill resolves the pending order")
         _check(state["positions"]["ETH/USD"]["shares"] == 0.01,
                "position mutates only after confirmed fill")
@@ -73,6 +85,9 @@ def main() -> int:
                "ledger stores actual fill price and broker attribution")
         _check(trade["client_order_id"] == "CLIENT-1" and trade["order_status"] == "filled",
                "ledger stores client order id and terminal status")
+        _check(trade["submitted_at"] == "2026-07-29T00:00:00Z"
+               and trade["filled_at"] == "2026-07-29T00:00:03Z",
+               "ledger stores broker submit and fill timestamps")
         db.close()
 
     print("\nORDER LIFECYCLE TESTS PASSED ✓")

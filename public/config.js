@@ -14,7 +14,17 @@ window.SAHJONY_CONFIG = {
   OWNER_EMAIL: "sahjonycapitalllc@outlook.com",
   // Optional FREE key from finnhub.io → live stock quotes + financial news.
   // Crypto (CoinGecko) and fallback news (GDELT) need NO key.
-  FINNHUB_API_KEY: "d8rijc1r01qnkitnb050d8rijc1r01qnkitnb05g",
+  //
+  // LEAVE THIS BLANK IN GIT. This repository is public, so a key committed here
+  // is a published key. It is injected at deploy time from the Vercel env var
+  // FINNHUB_API_KEY by scripts/build_public_config.sh (vercel.json buildCommand).
+  //
+  // Note this is a browser key either way: on a static site anything the page
+  // calls Finnhub with is visible to whoever loads the dashboard. Injecting it
+  // keeps it out of git history and out of the public repo — it does not make it
+  // private. Scope/rotate it accordingly, or proxy Finnhub through api/ if it
+  // ever needs to be genuinely secret.
+  FINNHUB_API_KEY: "",
   // Optional extra news wires (the Financial Wire aggregates every one that's set,
   // on top of the always-on free GDELT + Finnhub feeds). Free tiers available:
   //   Marketaux  → marketaux.com  (entity-tagged market news; free tier + paid)

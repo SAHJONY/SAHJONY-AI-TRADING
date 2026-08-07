@@ -63,27 +63,30 @@ jobs:
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r requirements.txt pytest
 
       - name: Syntax gate
         run: python -m py_compile $(git ls-files '*.py')
 
-      - name: Python test suites
-        run: |
-          python -m tests.test_dry_run
-          python -m tests.test_hermes
-          python -m tests.test_advisors
-          python -m tests.test_credit_spreads
-          python -m tests.test_pairs
-          python -m tests.test_day_trading
-          python -m tests.test_vol_target
-          python -m tests.test_alt_data
-          python -m tests.test_model_registry
-          python -m tests.test_copy_trading
-          python -m tests.test_circuit_breaker
-          python -m tests.test_robinhood_safety
-          python -m tests.test_order_lifecycle
-          python -m tests.test_strategy_validation
+      # The WHOLE suite, not a hand-maintained subset. This used to name ~18 of
+      # the 65 test modules explicitly, which left the safety-critical ones —
+      # test_risk_fail_closed, test_execution_governance, test_position_audit,
+      # test_reconciliation, test_remediate_positions, test_transaction_costs —
+      # green in the repo but never actually executed by CI.
+      - name: Python test suite
+        run: python -m pytest tests/ -q
+
+      # Audits every desk's books against the risk invariants. NON-BLOCKING for
+      # now: desks/paper and desks/stocks currently carry 10 open findings
+      # (both insolvent, a short recorded as long, unpriceable crypto rows in
+      # equity desks), so making this a hard gate today would fail every run and
+      # — with the deploy job now correctly gated on tests — block the dashboard
+      # deploy for reasons that have nothing to do with the dashboard.
+      # FLIP continue-on-error TO false once `python -m tools.position_audit`
+      # exits 0 locally. That is the point of the tool.
+      - name: Position audit (advisory until desks are remediated)
+        continue-on-error: true
+        run: python -m tools.position_audit
 
       - uses: actions/setup-node@v4
         with:
@@ -162,7 +165,11 @@ jobs:
   deploy:
     name: Deploy to Vercel
     runs-on: ubuntu-latest
-    needs: [lint-typecheck]
+    # Gated on `tests`, not just `lint-typecheck`. lint-typecheck skips every one
+    # of its steps when package.json is absent — which it always is, by design —
+    # so it was a guaranteed pass, and production deployed on every push to master
+    # whether or not a single Python test had run.
+    needs: [lint-typecheck, tests]
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
     steps:
       - name: Trigger Vercel deployment

@@ -51,7 +51,6 @@ def preflight(cfg, client) -> int:
     Run this before adding funds / arming live: it confirms the broker connects,
     the account is reachable (and funded, for live), market data flows, and shows
     exactly which mode and risk caps are active."""
-    ok = True
     mode = getattr(client, "mode", cfg.mode)
     bar = "=" * 64
     print(bar)
@@ -59,28 +58,21 @@ def preflight(cfg, client) -> int:
     print(bar)
 
     # connection
-    
-        # connection
     if mode == "offline-sim":
         print(
             f"  • {cfg.broker}: OFFLINE-SIM (no real orders). "
             "Add credentials/connection for paper/live."
         )
         print("  ✗ broker is offline; balances and prices below are simulated.")
-        ok = False
     else:
         print(f"  ✓ Connected to {cfg.broker} ({mode}).")
 
- # account
-
+    # account
     acct = client.get_account()
     print(f"  Equity ${acct['equity']:,.2f} | Cash ${acct['cash']:,.2f} | "
           f"Buying power ${acct['buying_power']:,.2f}")
 
-
-
     if acct["equity"] <= 0:
-        print("  • DATA READY — account and market data are reachable.")
         print("  ✗ TRADING NOT READY — account equity is zero.")
 
     if acct["buying_power"] <= 0:
@@ -101,12 +93,10 @@ def preflight(cfg, client) -> int:
             else:
                 print(f"  ✗ data {sym}: no valid price")
                 quote_failures.append(sym)
-                ok = False
         except Exception as exc:
             print(f"  ✗ data {sym}: unavailable ({type(exc).__name__})")
             log.warning("Preflight quote failed for %s: %s", sym, exc)
             quote_failures.append(sym)
-            ok = False
 
     if quote_failures:
         print(
