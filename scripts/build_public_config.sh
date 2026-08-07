@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Inject browser-side API keys into public/config.js at DEPLOY time.
+# Inject browser-safe API keys into public/config.js at DEPLOY time.
 #
 # public/config.js is committed with these keys BLANK, because this repository is
 # public and a key committed there is a published key. Vercel runs this as its
@@ -9,6 +9,7 @@
 # page calls a vendor with is visible to whoever loads the page. This keeps the
 # keys out of git history and out of the public repo; it does not make them
 # secret. Anything that must actually stay private belongs behind api/.
+# FINNHUB_API_KEY is intentionally excluded and stays behind api/finnhub.py.
 #
 # The Supabase values stay committed on purpose — the anon key is RLS-scoped and
 # designed to be public.
@@ -49,7 +50,6 @@ PY
 }
 
 echo "SAHJONY CAPITAL LLC — static owner dashboard, injecting browser config"
-inject FINNHUB_API_KEY    "${FINNHUB_API_KEY:-}"
 inject MARKETAUX_API_KEY  "${MARKETAUX_API_KEY:-}"
 inject CRYPTOPANIC_API_KEY "${CRYPTOPANIC_API_KEY:-}"
 echo "build_public_config: done."
