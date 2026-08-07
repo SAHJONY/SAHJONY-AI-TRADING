@@ -149,6 +149,8 @@ jobs:
       # secret QUIVER_API_KEY to activate; auto-on when present. The desk runs HERE
       # (GitHub Actions), not on Vercel — a Vercel env var can't reach it.
       QUIVER_API_KEY: ${{ secrets.QUIVER_API_KEY }}
+      # Read-only market-data credential. This never grants broker/order access.
+      FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
       # Hermes guardian — background agent (data integrity, Sharpe scorecard,
       # bounded self-calibration). On by default; set Variable HERMES_ENABLED=false to disable.
       HERMES_ENABLED: ${{ vars.HERMES_ENABLED || 'true' }}
@@ -172,6 +174,15 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+
+      - name: Finnhub read-only market-data canary
+        if: ${{ env.FINNHUB_API_KEY != '' }}
+        env:
+          LIVE_TRADING_ACK: ''
+          ROBINHOOD_LIVE: 'false'
+          ALPACA_API_KEY: ''
+          ALPACA_SECRET_KEY: ''
+        run: python -m scripts.finnhub_check
 
       - name: Restore desk state
         uses: actions/cache@v4
