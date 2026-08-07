@@ -364,6 +364,16 @@ const SB=LIVE_OK ? window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_A
 
 const $=(h)=>{const t=document.createElement('template');t.innerHTML=String(h).trim();return t.content.firstElementChild;};
 const esc=(s)=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+// esc() alone is NOT enough for an href. It escapes & < > " — none of which appear
+// in `javascript:alert(1)`, so a hostile URL passes through untouched and runs in
+// THIS origin (the one holding the owner's Supabase session and the broker-key
+// fields) the moment a headline is clicked. Links in the news wire come from
+// third-party feeds (GDELT / Finnhub / CryptoPanic / Marketaux), so the scheme has
+// to be checked, not just the characters. Anything not http(s) degrades to a dead
+// link rather than being rendered as-is.
+const safeUrl=(u)=>{const raw=String(u==null?"":u).trim();if(!raw)return '#';
+  try{const p=new URL(raw,window.location.href);
+  return(p.protocol==='http:'||p.protocol==='https:')?esc(p.href):'#';}catch(_){return '#';}};
 const money=(n)=>"$"+Number(n||0).toLocaleString(undefined,{maximumFractionDigits:2});
 const pct=(n)=>(Number(n||0)>=0?"+":"")+Number(n||0).toFixed(2)+"%";
 const num=(n,d=2)=>Number(n||0).toLocaleString(undefined,{maximumFractionDigits:d});
@@ -866,7 +876,7 @@ function News(v){
   else if(!(NEWS.list||[]).length) body='<div class="empty">loading financial wire…</div>';
   else{
     const box=$(`<div></div>`);
-    NEWS.list.forEach(a=>box.appendChild($(`<a href="${esc(a.url)}" target="_blank" rel="noopener" style="display:block;text-decoration:none;color:inherit;padding:9px 0;border-bottom:1px solid var(--line)">
+    NEWS.list.forEach(a=>box.appendChild($(`<a href="${safeUrl(a.url)}" target="_blank" rel="noopener" style="display:block;text-decoration:none;color:inherit;padding:9px 0;border-bottom:1px solid var(--line)">
       <div style="font-size:13px;font-weight:600;line-height:1.4">${esc(a.title)}</div>
       <div class="mono mut" style="font-size:10px;margin-top:3px">${esc(a.source||'')} · ${esc(a.time||'')}</div></a>`)));
     body=box;
@@ -1519,7 +1529,7 @@ function Council(v){
     if(!news){ fetchSymbolNews(c.symbol); nb.appendChild($(`<div class="empty">loading…</div>`)); }
     else if(news.loading) nb.appendChild($(`<div class="empty">loading…</div>`));
     else if(!news.items.length) nb.appendChild($(`<div class="empty">no recent headlines</div>`));
-    else news.items.forEach(a=>nb.appendChild($(`<a href="${esc(a.url)}" target="_blank" rel="noopener" style="display:block;color:#cdd8ee;text-decoration:none;font-size:11.5px;padding:3px 0">• ${esc(a.title)} <span class="mut" style="font-size:9px">${esc(a.source||'')}</span></a>`)));
+    else news.items.forEach(a=>nb.appendChild($(`<a href="${safeUrl(a.url)}" target="_blank" rel="noopener" style="display:block;color:#cdd8ee;text-decoration:none;font-size:11.5px;padding:3px 0">• ${esc(a.title)} <span class="mut" style="font-size:9px">${esc(a.source||'')}</span></a>`)));
     body.appendChild(nb);
     g.appendChild(panel(`${esc(c.symbol)} · ${esc(c.direction)} · conv ${(c.conviction*100).toFixed(0)}%`, body,
       money(c.price), 'span6'));
