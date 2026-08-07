@@ -348,7 +348,9 @@ const STREAM={connected:false,live:{},tries:0,started:false,chanFor:null,cryptoW
 let INTEL={fng:null,global:null,trending:null,fx:null,indices:null,earnings:null,symNews:{},ts:0,err:{}};   // free macro intelligence
 
 const CFG=(window.SAHJONY_CONFIG||{});
-const FINNHUB=(CFG.FINNHUB_API_KEY||"").trim();
+// Sensitive Finnhub credentials stay server-side. The browser only calls this
+// allowlisted, same-origin read-only proxy.
+const FINNHUB_API='/api/finnhub';
 // Owner-device gate: shared/public links show a clean view-only page with NO
 // sign-in entry point. A device proves ownership by visiting once with #owner
 // (or signing in) — that sets a persistent local flag. /login.html still works
@@ -523,8 +525,8 @@ async function fetchNews(force){
       return {title:a.title,url:a.url,source:a.domain,time:fmtGdelt(a.seendate),t};});
   }catch(e){return [];}})());
   // Finnhub — free key (already used elsewhere): general market headlines
-  if(FINNHUB) jobs.push((async()=>{try{
-    const r=await fetch(`https://finnhub.io/api/v1/news?category=general&token=${encodeURIComponent(FINNHUB)}`);
+  jobs.push((async()=>{try{
+    const r=await fetch(`${FINNHUB_API}?action=news`);
     if(!r.ok)throw 0; const a=((await r.json())||[]).slice(0,40);
     used.push('Finnhub'); return a.map(x=>({title:x.headline,url:x.url,source:x.source,time:fmtTs(x.datetime*1000),t:(x.datetime||0)*1000}));
   }catch(e){return [];}})());
@@ -551,7 +553,7 @@ async function fetchNews(force){
 
 async function fetchStockQuotes(syms){
   const out=[]; for(const s of syms.slice(0,12)){
-    try{ const r=await fetch(`https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(s)}&token=${encodeURIComponent(FINNHUB)}`);
+    try{ const r=await fetch(`${FINNHUB_API}?action=quote&symbol=${encodeURIComponent(s)}`);
       const q=await r.json(); out.push(Object.assign({sym:s}, q)); }catch(e){}
   } return out;
 }
@@ -560,9 +562,9 @@ async function fetchSymbolNews(sym){    // per-ticker headlines (Finnhub key, el
   INTEL.symNews[sym]={loading:true,items:[]};
   try{
     let items=[];
-    if(FINNHUB && !sym.includes('/')){
+    if(!sym.includes('/')){
       const to=new Date().toISOString().slice(0,10), from=new Date(Date.now()-10*864e5).toISOString().slice(0,10);
-      const j=await getJSON(`https://finnhub.io/api/v1/company-news?symbol=${encodeURIComponent(sym)}&from=${from}&to=${to}&token=${encodeURIComponent(FINNHUB)}`);
+      const j=await getJSON(`${FINNHUB_API}?action=company-news&symbol=${encodeURIComponent(sym)}&from=${from}&to=${to}`);
       items=(j||[]).slice(0,5).map(a=>({title:a.headline,url:a.url,source:a.source,time:fmtTs(a.datetime*1000)}));
     }else{
       const j=await getJSON(`https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent('"'+sym+'" (stock OR shares OR earnings)')}&mode=ArtList&maxrecords=5&sort=DateDesc&format=json`);
@@ -696,23 +698,10 @@ setInterval(()=>{
   }
 }, 30000);
 function connectStocks(){
-  if(!FINNHUB||!('WebSocket' in window)) return;
-  const syms=((DATA&&DATA.council)||[]).map(c=>c.symbol).filter(s=>!String(s).includes('/'));
-  // Streams start before the first snapshot lands, so an empty council used to
-  // abort permanently — no stock stream for the whole session. Retry instead.
-  if(!syms.length){ clearTimeout(STREAM.stockRetry);
-    STREAM.stockRetry=setTimeout(connectStocks,5000); return; }
-  const key=syms.slice().sort().join(',');
-  if(STREAM.stockSyms===key && STREAM.stockWS && STREAM.stockWS.readyState<=1) return;
-  STREAM.stockSyms=key;
-  try{ if(STREAM.stockWS) STREAM.stockWS.close(); }catch(e){}
-  try{
-    const ws=new WebSocket('wss://ws.finnhub.io?token='+encodeURIComponent(FINNHUB)); STREAM.stockWS=ws;
-    ws.onopen=()=>{syms.forEach(s=>ws.send(JSON.stringify({type:'subscribe',symbol:s})));STREAM.connected=true;setStreamDot();};
-    ws.onmessage=(ev)=>{try{const m=JSON.parse(ev.data);if(m.type==='trade'&&m.data)m.data.forEach(t=>{STREAM.live[t.s]={price:t.p,t:Date.now()};});scheduleTick();}catch(e){}};
-    ws.onclose=()=>{setTimeout(connectStocks,5000);};
-    ws.onerror=()=>{try{ws.close();}catch(e){}};
-  }catch(e){}
+  // Direct Finnhub WebSockets require putting the token in the browser URL.
+  // Keep stock updates on cached same-origin polling so the sensitive key never
+  // leaves Vercel's server-side environment.
+  return;
 }
 function subscribeRealtime(){          // Supabase Realtime: worker writes → instant UI
   if(!LIVE_OK || !DESK || STREAM.chanFor===DESK.id) return;
@@ -739,14 +728,14 @@ async function fetchIntel(force){
     getJSON('https://api.coingecko.com/api/v3/search/trending').then(j=>{nx.trending=j.coins||[];}).catch(e=>{nx.err.trending=String(e.message||e);}),
     getJSON('https://api.frankfurter.app/latest?from=USD&to=EUR,GBP,JPY,CAD,AUD,CHF,CNY').then(j=>{nx.fx=j.rates||null;}).catch(e=>{nx.err.fx=String(e.message||e);}),
   ];
-  if(FINNHUB){   // indices (via liquid ETF proxies) + this week's earnings — free tier
+  {   // indices (via liquid ETF proxies) + this week's earnings — server-side Finnhub
     jobs.push(Promise.all(INDEX_PROXIES.map(([s,label])=>
-      getJSON(`https://finnhub.io/api/v1/quote?symbol=${s}&token=${encodeURIComponent(FINNHUB)}`)
+      getJSON(`${FINNHUB_API}?action=quote&symbol=${encodeURIComponent(s)}`)
         .then(q=>({sym:s,label,...q})).catch(()=>null)))
       .then(rows=>{nx.indices=rows.filter(Boolean);}).catch(e=>{nx.err.indices=String(e.message||e);}));
     const today=new Date().toISOString().slice(0,10);
     const wk=new Date(Date.now()+7*864e5).toISOString().slice(0,10);
-    jobs.push(getJSON(`https://finnhub.io/api/v1/calendar/earnings?from=${today}&to=${wk}&token=${encodeURIComponent(FINNHUB)}`)
+    jobs.push(getJSON(`${FINNHUB_API}?action=earnings&from=${today}&to=${wk}`)
       .then(j=>{nx.earnings=(j.earningsCalendar||[]).slice(0,25);}).catch(e=>{nx.err.earnings=String(e.message||e);}));
   }
   await Promise.all(jobs);
@@ -804,7 +793,7 @@ function Macro(v){
     INTEL.indices.forEach(q=>{const up=(q.dp||0)>=0;
       ib.appendChild($(`<div class="row"><span class="mut">${esc(q.label)} <span class="mono" style="font-size:9px">${esc(q.sym)}</span></span>
         <span><span class="mono">${money(q.c)}</span> <span class="tag ${up?'on':'off'}">${pct(q.dp)}</span></span></div>`));});}
-  else ib = FINNHUB ? `<div class="empty">loading indices…</div>` : `<div class="empty">add FINNHUB_API_KEY for live indices</div>`;
+  else ib = `<div class="empty">live indices unavailable</div>`;
   g.appendChild(panel('Equity Indices', ib, 'Finnhub', 'span4'));
   // earnings this week
   let eb;
@@ -813,7 +802,7 @@ function Macro(v){
     INTEL.earnings.forEach(e=>t.querySelector('tbody').appendChild($(`<tr><td class="amber">${esc(e.symbol)}</td><td>${esc(e.date)}</td>
       <td class="mut opt">${esc(e.hour||'')}</td><td class="n">${e.epsEstimate!=null?num(e.epsEstimate):'—'}</td></tr>`)));
     w.appendChild(t); eb=w; }
-  else eb = FINNHUB ? `<div class="empty">no earnings in the next 7 days</div>` : `<div class="empty">add FINNHUB_API_KEY for the earnings calendar</div>`;
+  else eb = `<div class="empty">no earnings in the next 7 days</div>`;
   g.appendChild(panel('Earnings · Next 7 Days', eb, 'Finnhub', 'span8'));
   // top movers
   let mv;
@@ -849,12 +838,12 @@ function Markets(v){
   g.appendChild(panel('Crypto · Live (CoinGecko, no key)', cbody, (MARKETS.list||[]).length+' assets', 'span12'));
 
   const syms=((DATA&&DATA.council)||[]).map(c=>c.symbol).filter(s=>!String(s).includes('/'));
-  if(FINNHUB && syms.length){
+  if(syms.length){
     const sb=$(`<div class="empty">loading live quotes…</div>`);
     g.appendChild(panel('Equities · Live (Finnhub)', sb, syms.length+' symbols', 'span12'));
     fetchStockQuotes(syms).then(rows=>{
       const valid=(rows||[]).filter(q=>q && q.c);   // drop empty/zero quotes (bad key / rate limit)
-      if(!valid.length){ sb.textContent='live quotes unavailable — check FINNHUB_API_KEY (free tier 60/min)'; return; }
+      if(!valid.length){ sb.textContent='live Finnhub quotes unavailable'; return; }
       const w=$(`<div class="scroll"></div>`);
       const t=$(`<table><thead><tr><th>SYM</th><th class="n">PRICE</th><th class="n opt">CHG</th><th class="n">%</th><th class="n opt">HIGH</th><th class="n opt">LOW</th></tr></thead><tbody></tbody></table>`);
       valid.forEach(q=>{const up=(q.dp||0)>=0; t.querySelector('tbody').appendChild($(`<tr><td class="amber">${esc(q.sym)}</td><td class="n">${money(q.c)}</td>
@@ -864,7 +853,7 @@ function Markets(v){
     }).catch(()=>{ sb.textContent='live quotes unavailable'; });
   } else {
     g.appendChild(panel('Equities · Live',
-      `<div class="empty">Add a free <a class="amber" href="https://finnhub.io" target="_blank" rel="noopener">Finnhub</a> key as FINNHUB_API_KEY in config.js to stream live stock quotes (crypto above needs no key).</div>`,'', 'span12'));
+      `<div class="empty">No equity symbols are configured for the Finnhub feed.</div>`,'', 'span12'));
   }
   v.appendChild(g);
 }
