@@ -242,7 +242,34 @@ jobs:
       # schedule — with no paid infrastructure. Manual dispatch runs one pass.
       - name: Run live desk cycles (loops through the scheduled window)
         env:
-          LOOP_MINUTES: ${{ github.event_name == 'schedule' && (vars.DESK_LOOP_MINUTES == '' && '55' || vars.DESK_LOOP_MINUTES) || '0' }}
+          # 55 -> 165. Measured across 30 scheduled runs (58.7 h): the desk was
+          # actually LIVE for 26.0 h — 44% coverage — because the job looped for
+          # 55 minutes and then the next run took a median 105 minutes to start.
+          # The remaining 56% is not idle time, it is BLIND time on a real-money
+          # 24/7 crypto desk: no cycle means no stop-loss check, no daily
+          # circuit-breaker evaluation and no ladder ratchet. The worst single
+          # stretch was 5.2 hours unattended, on 2026-08-06T18:08Z.
+          #
+          # This is a larger constraint on trade count than the conviction floor
+          # ever was — the desk cannot take a setup while it is not running — and
+          # CYCLE_MINUTES does nothing for it, since that only governs the gap
+          # WITHIN a window.
+          #
+          # 165 with a 180-minute timeout (GitHub's job ceiling is 6 h, and
+          # standard runners are free on a public repository) lifts coverage to
+          # roughly 165/215 ~ 77% against the same ~50-minute restart latency.
+          # Not higher, because the ceiling here is the deploy budget rather than
+          # Actions: see the commit gate below.
+          LOOP_MINUTES: ${{ github.event_name == 'schedule' && (vars.DESK_LOOP_MINUTES == '' && '165' || vars.DESK_LOOP_MINUTES) || '0' }}
+          # Publish every Nth cycle rather than every cycle. Each snapshot commit
+          # triggers a Vercel build on BOTH linked projects, so at a 5-minute
+          # cadence a 165-minute window would be 33 commits and 66 builds per run
+          # — several hundred a day, which is over a Hobby-tier daily deployment
+          # limit and would break the deploy pipeline in exchange for freshness
+          # nobody sees. Committing every 3rd cycle publishes every ~15 minutes,
+          # the same dashboard freshness this desk had historically, at a LOWER
+          # commit rate than today while tripling coverage.
+          PUBLISH_EVERY: ${{ vars.DESK_PUBLISH_EVERY || '3' }}
           # Live crypto universe — 5 -> 13 names, for BREADTH rather than a looser
           # gate. Measured on the live desk: of five symbols, the two with a
           # directional view (BTC, ETH) were already held so the ladder was
@@ -315,7 +342,17 @@ jobs:
             # intra-loop push survived only while master had not moved.
             git add public/status.json public/knowledge.json \
                     public/ai_shadow.json public/copy_signals.json 2>/dev/null
-            if ! git diff --cached --quiet; then
+            # Publish on every PUBLISH_EVERY-th cycle, and always on the last one
+            # so a window never ends with unpublished state. Staging still happens
+            # each cycle, so a skipped publish is only deferred, never lost.
+            PUB=${PUBLISH_EVERY:-1}
+            [ "$PUB" -lt 1 ] 2>/dev/null && PUB=1
+            LAST=0
+            [ $SECONDS -ge $END ] && LAST=1
+            [ $(( END - SECONDS )) -lt $GAP ] && LAST=1
+            if [ $(( n % PUB )) -ne 0 ] && [ "$LAST" -eq 0 ]; then
+              echo "cycle $n — staged, publishing every ${PUB} cycle(s)"
+            elif ! git diff --cached --quiet; then
               git commit -q -m "Desk snapshot: live cycle ${{ github.run_number }}.$n"
               git pull --rebase -q origin master || git rebase --abort
               git push -q origin HEAD:master || echo "push deferred to the final commit step"
