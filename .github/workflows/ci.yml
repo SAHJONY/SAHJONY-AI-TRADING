@@ -88,6 +88,17 @@ jobs:
         continue-on-error: true
         run: python -m tools.position_audit
 
+      # Does the LIVE site actually serve what master says? "CI green" and
+      # "deployment READY" were both true for two days while production sat 82
+      # cycles behind, because master pushes were landing as Vercel PREVIEWS
+      # (Production Branch was not 'master') and only a manual promote went live.
+      # Nothing watched the one number that would have shown it. Advisory while
+      # that setting is still wrong; it goes green on its own once master
+      # deploys to production, and can be made blocking after that.
+      - name: Production freshness (is the deployed dashboard current?)
+        continue-on-error: true
+        run: python -m scripts.check_production_freshness
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
