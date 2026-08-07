@@ -69,8 +69,23 @@ jobs:
       # closed trades to be significant and had 1 trade in its first 2.65 days,
       # and the bar recorder can only build a 5-minute bar if it sees the market
       # every 5 minutes (config.bar_intervals_for). Costs more broker/LLM calls
-      # per hour. Set Variable CYCLE_MINUTES to override.
-      CYCLE_MINUTES: ${{ vars.CYCLE_MINUTES || '5' }}
+      # per hour.
+      #
+      # Read from CYCLE_MINUTES_OVERRIDE, not CYCLE_MINUTES. The plain variable is
+      # set to 15 and was silently winning over the '5' default above, so the
+      # change this comment describes has never actually taken effect. The live
+      # desk proves it: status.json reports cadence.expected_min 15 and bar
+      # intervals (15,60), and bar_intervals_for(5) would have produced (5,15).
+      # Consequences were exactly the two this default was raised to fix — 0 closed
+      # trades against the evaluation's 30-trade minimum, and a bar recorder at
+      # 1.01 ticks/bar (98.9% single-tick, 2 of 181 bars with a measured range),
+      # because a 15-minute poll cannot fill a 15-minute candle.
+      #
+      # Same failure shape as ANTHROPIC_MODEL, and fixed the same way: rename the
+      # knob rather than delete it, so the fix does not depend on anyone
+      # remembering to clear a stale setting. Set CYCLE_MINUTES_OVERRIDE to
+      # redirect deliberately; the old variable no longer applies.
+      CYCLE_MINUTES: ${{ vars.CYCLE_MINUTES_OVERRIDE || '5' }}
       MAX_ALLOCATION_PCT: ${{ vars.MAX_ALLOCATION_PCT || '0.12' }}
       MAX_TOTAL_DEPLOYED_PCT: ${{ vars.MAX_TOTAL_DEPLOYED_PCT || '0.70' }}
       MIN_COUNCIL_CONVICTION: ${{ vars.MIN_COUNCIL_CONVICTION || '0.52' }}
