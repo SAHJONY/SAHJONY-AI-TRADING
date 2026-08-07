@@ -76,6 +76,20 @@ def _coingecko_id(symbol: str) -> str:
     return _CG_IDS.get(base, "")
 
 
+def unmapped_symbols(symbols) -> list:
+    """Configured symbols with no CoinGecko id, in configured order.
+
+    Worth surfacing loudly because the failure is silent and total. RH's trading
+    API has no candles, so an unmapped symbol falls all the way through to
+    get_history's flat two-point fallback; every council estimator then reads a
+    series with no variance, returns neutral, and the symbol sits at direction
+    'flat' forever. It never errors and never trades — it just quietly occupies a
+    slot in the universe. Cheaper to say so at boot than to infer it later from a
+    symbol that has somehow never once produced a signal.
+    """
+    return [s for s in (symbols or []) if not _coingecko_id(s)]
+
+
 class RobinhoodCryptoBroker:
     """BrokerAdapter for Robinhood Crypto. Real-money orders are hard-gated;
     unarmed it is a dry-run venue that prices from live market data but places
@@ -117,6 +131,14 @@ class RobinhoodCryptoBroker:
         except (TypeError, ValueError):
             self.max_order_usd = 25.0
         self._price_cache: Dict[str, float] = {}
+        # Fail loudly at boot rather than silently forever — see unmapped_symbols.
+        stranded = unmapped_symbols(getattr(cfg, "tickers", []) or [])
+        if stranded:
+            log.warning(
+                "%d configured symbol(s) have no CoinGecko mapping and will sit at "
+                "direction 'flat' permanently (never priced for history, never "
+                "traded): %s. Add them to _CG_IDS or drop them from TICKERS.",
+                len(stranded), ", ".join(stranded))
 
     # ── BrokerAdapter surface ────────────────────────────────────────────────
     @property

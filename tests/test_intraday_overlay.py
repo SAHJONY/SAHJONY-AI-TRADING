@@ -221,3 +221,34 @@ def test_reads_maps_every_symbol(db):
     out = IntradayOverlay(_Cfg(), db).reads([("BTC/USD", "long"), ("ETH/USD", "long")])
     assert set(out) == {"BTC/USD", "ETH/USD"}
     assert out["ETH/USD"].tilt == 0.0        # no bars recorded for it
+
+
+# ── universe mapping guard (utils/brokers/robinhood_crypto) ──────────────────
+def test_every_live_universe_symbol_has_a_coingecko_mapping():
+    """An unmapped symbol falls through to get_history's flat two-point fallback,
+    so its council verdict is neutral forever: it never errors, never trades, and
+    just occupies a slot. The shipped live universe must contain none."""
+    import re
+    from utils.brokers.robinhood_crypto import unmapped_symbols
+    wf = open(".github/workflows/desk.yml", encoding="utf-8").read()
+    m = re.search(r"TICKERS: \$\{\{ vars\.TICKERS_LIVE_OVERRIDE \|\| '([^']+)'", wf)
+    assert m, "live universe default not found in desk.yml"
+    symbols = [s.strip() for s in m.group(1).split(",") if s.strip()]
+    assert len(symbols) >= 13
+    assert unmapped_symbols(symbols) == []
+
+
+def test_unmapped_symbols_flags_the_unmapped_ones():
+    from utils.brokers.robinhood_crypto import unmapped_symbols
+    assert unmapped_symbols(["BTC/USD", "NOTACOIN/USD", "ETH/USD"]) == ["NOTACOIN/USD"]
+    assert unmapped_symbols([]) == []
+
+
+def test_live_universe_excludes_stablecoins():
+    """USDC/USDT are in _CG_IDS but are pegged — they would add permanently flat
+    symbols, which is the opposite of adding breadth."""
+    import re
+    wf = open(".github/workflows/desk.yml", encoding="utf-8").read()
+    m = re.search(r"TICKERS: \$\{\{ vars\.TICKERS_LIVE_OVERRIDE \|\| '([^']+)'", wf)
+    universe = m.group(1).upper()
+    assert "USDC" not in universe and "USDT" not in universe

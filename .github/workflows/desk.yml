@@ -243,9 +243,34 @@ jobs:
       - name: Run live desk cycles (loops through the scheduled window)
         env:
           LOOP_MINUTES: ${{ github.event_name == 'schedule' && (vars.DESK_LOOP_MINUTES == '' && '55' || vars.DESK_LOOP_MINUTES) || '0' }}
-          # Live crypto universe: vars.TICKERS_LIVE overrides; XRP/USD included
-          # per owner directive (Robinhood-supported crypto only).
-          TICKERS: ${{ vars.TICKERS_LIVE || 'BTC/USD,ETH/USD,SOL/USD,LTC/USD,XRP/USD' }}
+          # Live crypto universe — 5 -> 13 names, for BREADTH rather than a looser
+          # gate. Measured on the live desk: of five symbols, the two with a
+          # directional view (BTC, ETH) were already held so the ladder was
+          # managing rather than entering, and the other three were 'flat' — no
+          # direction at all. Lowering the conviction floor further would not
+          # touch a flat call; only more names give more chances that something
+          # has a view on a given cycle.
+          #
+          # Costs nothing per position: the cap is 12% OF EQUITY, not equity/N, so
+          # each budget stays ~$2.04 regardless of symbol count. 13 x $2.04 =
+          # $26.48 against the $34.98 total-deployed cap, so the aggregate fits
+          # with room.
+          #
+          # Every name is in robinhood_crypto._CG_IDS on purpose. An UNMAPPED
+          # symbol gets _coingecko_id() == '' -> _coingecko_history() None ->
+          # get_history's flat two-point fallback -> a council that is permanently
+          # neutral. Adding one would add a symbol that can never produce a
+          # directional view, which is precisely the problem being solved.
+          # Deliberately left out: USDC/USDT (stablecoins — pegged, no directional
+          # signal by construction), MATIC (migrated to POL; both the CoinGecko id
+          # and the RH listing are doubtful), DOT (RH listing unconfirmed), SHIB
+          # (sub-cent — a $2 clip is ~200k units), AAVE/COMP (thin at $2 clips).
+          #
+          # _OVERRIDE for the fourth time in this file, same reason as
+          # CYCLE_MINUTES, MIN_COUNCIL_CONVICTION and ANTHROPIC_MODEL: a stale
+          # repository Variable silently beating a corrected default is this
+          # repo's recurring failure, and it is not worth assuming this one is unset.
+          TICKERS: ${{ vars.TICKERS_LIVE_OVERRIDE || 'BTC/USD,ETH/USD,SOL/USD,LTC/USD,XRP/USD,DOGE/USD,ADA/USD,AVAX/USD,LINK/USD,BCH/USD,UNI/USD,XLM/USD,ETC/USD' }}
           DAY_TRADE_SYMBOLS: ''
           # Owner directive: 0 = size against the FULL live Robinhood balance
           # (equity curve, sizing and Hermes' scorecard all track the real
