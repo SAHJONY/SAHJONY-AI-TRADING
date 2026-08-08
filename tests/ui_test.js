@@ -87,10 +87,10 @@ async function main() {
     if (/frankfurter/.test(url)) return { ok: true, json: async () => ({ rates: { EUR: 0.92, GBP: 0.79, JPY: 150.2, CAD: 1.36, AUD: 1.52, CHF: 0.88, CNY: 7.1 } }) };
     if (/coingecko/.test(url)) return { ok: true, json: async () => CRYPTO };
     if (/gdelt/.test(url)) return { ok: true, json: async () => ({ articles: ARTS }) };
-    if (/finnhub.*calendar\/earnings/.test(url)) return { ok: true, json: async () => ({ earningsCalendar: [{ symbol: 'AAPL', date: '2026-06-25', hour: 'amc', epsEstimate: 1.21 }] }) };
-    if (/finnhub.*company-news/.test(url)) return { ok: true, json: async () => ([{ headline: 'AAPL unveils new chip', url: 'https://x', source: 'CNBC', datetime: 1782000000 }]) };
-    if (/finnhub.*\/news/.test(url)) return { ok: true, json: async () => ([{ headline: 'Fed holds rates steady', url: 'https://x', source: 'Reuters', datetime: 1782000000 }]) };
-    if (/finnhub.*\/quote/.test(url)) return { ok: true, json: async () => ({ c: 540.2, d: 3.1, dp: 0.58, h: 541, l: 537 }) };
+    if (/\/api\/finnhub\?action=earnings/.test(url)) return { ok: true, json: async () => ({ earningsCalendar: [{ symbol: 'AAPL', date: '2026-06-25', hour: 'amc', epsEstimate: 1.21 }] }) };
+    if (/\/api\/finnhub\?action=company-news/.test(url)) return { ok: true, json: async () => ([{ headline: 'AAPL unveils new chip', url: 'https://x', source: 'CNBC', datetime: 1782000000 }]) };
+    if (/\/api\/finnhub\?action=news/.test(url)) return { ok: true, json: async () => ([{ headline: 'Fed holds rates steady', url: 'https://x', source: 'Reuters', datetime: 1782000000 }]) };
+    if (/\/api\/finnhub\?action=quote/.test(url)) return { ok: true, json: async () => ({ c: 540.2, d: 3.1, dp: 0.58, h: 541, l: 537 }) };
     return { ok: true, json: async () => statusJson };
   };
   installRaf(win);
@@ -175,7 +175,7 @@ async function main() {
   const dom2 = new JSDOM(html.replace(/<script src=[^>]*><\/script>/g, ''),
     { runScripts: 'outside-only', url: 'https://desk.test/', virtualConsole: new VirtualConsole() });
   const w2 = dom2.window;
-  w2.SAHJONY_CONFIG = { SUPABASE_URL: 'https://x.supabase.co', SUPABASE_ANON_KEY: 'anon', FINNHUB_API_KEY: 'testkey' };
+  w2.SAHJONY_CONFIG = { SUPABASE_URL: 'https://x.supabase.co', SUPABASE_ANON_KEY: 'anon' };
   w2.supabase = { createClient: () => makeClient(st2) };
   w2.WebSocket = FakeWS;
   w2.fetch = win.fetch;
