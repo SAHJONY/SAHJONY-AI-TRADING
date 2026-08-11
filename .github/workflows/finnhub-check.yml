@@ -1,0 +1,35 @@
+name: Finnhub — read-only canary
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [master]
+    paths:
+      - "market_data/finnhub.py"
+      - "scripts/finnhub_check.py"
+      - "api/finnhub.py"
+      - "tests/test_finnhub.py"
+      - ".github/workflows/finnhub-check.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  canary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
+      FINNHUB_CHECK_SYMBOL: AAPL
+      FINNHUB_MAX_QUOTE_AGE_SECONDS: "259200"
+      LIVE_TRADING_ACK: ""
+      ROBINHOOD_LIVE: "false"
+      ALPACA_API_KEY: ""
+      ALPACA_SECRET_KEY: ""
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Verify read-only Finnhub quote
+        run: python -m scripts.finnhub_check
