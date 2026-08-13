@@ -1,8 +1,8 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "framework": null,
-  "buildCommand": "bash scripts/build_public_config.sh",
-  "outputDirectory": "public",
+  "framework": "vite",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
   "cleanUrls": true,
   "git": {
     "deploymentEnabled": {
@@ -15,6 +15,7 @@
     { "source": "/api/promotion-status", "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }] },
     { "source": "/api/runtime-status", "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }] },
     { "source": "/api/broker-evidence", "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }] },
+    { "source": "/api/snapshot", "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }] },
     { "source": "/", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] }
   ]
 }
