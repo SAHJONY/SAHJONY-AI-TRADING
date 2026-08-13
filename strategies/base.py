@@ -11,9 +11,30 @@ from dataclasses import dataclass, field
 from typing import Dict, Optional
 
 
+# crypto quote currencies recognized in the BASE-QUOTE spelling
+_CRYPTO_QUOTES = ("USD", "USDT", "USDC", "USDD")
+
+
 def is_crypto(symbol: str) -> bool:
-    """Alpaca crypto pairs are written BASE/QUOTE, e.g. BTC/USD."""
-    return "/" in symbol
+    """True for a crypto pair in EITHER venue spelling.
+
+    Alpaca and CCXT write BASE/QUOTE (BTC/USD); Robinhood writes BASE-QUOTE
+    (BTC-USD), and any position adopted from a Robinhood holdings snapshot enters
+    state in that form. Recognizing only the '/' form meant a BTC-USD position was
+    treated as an equity: it was charged the 4bp equity fee instead of 60bp crypto
+    (understating cost ~15x in realized P&L, the equity curve and Hermes'
+    learning), and size_qty() rounded its fractional quantity down to zero whole
+    "shares" — so the order was never placed at all.
+
+    Hyphenated equity tickers are unaffected: 'BRK-B' ends in 'B', not a quote
+    currency, so it stays an equity.
+    """
+    s = str(symbol or "").upper()
+    if "/" in s:
+        return True
+    if "-" in s:
+        return s.rsplit("-", 1)[-1] in _CRYPTO_QUOTES
+    return False
 
 
 def fee_cost(symbol: str, notional: float, cfg) -> float:

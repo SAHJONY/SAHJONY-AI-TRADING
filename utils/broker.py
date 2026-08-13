@@ -91,12 +91,12 @@ def get_broker(cfg: Config):
     if name == "dex":
         from utils.brokers.dex_broker import DEXBroker
         return _verify(DEXBroker(cfg))
-    if name in ("robinhood", "robinhood_crypto", "rh"):
+    if name == "robinhood_crypto":
         # REAL-MONEY crypto venue — orders are hard-gated (dry-run unless armed).
         # Verify auth read-only first: python -m scripts.robinhood_check
         from utils.brokers.robinhood_crypto import RobinhoodCryptoBroker
         return _verify(RobinhoodCryptoBroker(cfg))
-    if name in ("robinhood_mcp", "robinhood_agentic", "rh_mcp"):
+    if name == "robinhood_mcp":
         # Dedicated Robinhood Agentic equity account through an authenticated local
         # MCP gateway. Identity and real-money order submission are fail-closed.
         from utils.brokers.robinhood_mcp import RobinhoodMCPBroker

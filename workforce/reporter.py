@@ -194,7 +194,12 @@ def _hermes_block(firm, db, cycle_result: Dict[str, Any]) -> Dict[str, Any]:
             "strategy_weights": dict(getattr(rep, "strategy_weights", {})),
         })
     try:
-        out["scorecard"] = hermes.scorecard(db.equity_history_regime(150))
+        # Annualize Sharpe/Sortino on the desk's real cadence (24/7 crypto runs far
+        # more cycles a year than a cash-session desk) — see Config.cycles_per_year.
+        out["scorecard"] = hermes.scorecard(
+            db.equity_history_regime(150),
+            getattr(getattr(hermes, "cfg", None), "cycles_per_year", None),
+        )
     except Exception:
         out["scorecard"] = {}
     return out
