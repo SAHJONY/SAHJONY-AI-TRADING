@@ -1,0 +1,57 @@
+import { memo, type ReactNode } from 'react'
+import { Activity, AlertTriangle, BrainCircuit, Database, Gauge, Radio, ShieldCheck, TrendingUp } from 'lucide-react'
+import { Area, AreaChart, CartesianGrid, Cell, Line, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import type { AgentScore, ParquetSnapshot } from './types'
+
+const money = new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:2})
+const pct = (n:number) => `${n >= 0 ? '+' : ''}${n.toFixed(2)}%`
+const scoreColor = (v:number) => v > .12 ? '#00ff88' : v < -.12 ? '#ff3957' : '#f5a623'
+
+export const Panel = memo(function Panel({title,eyebrow,children,className='',action}:{title:string;eyebrow?:string;children:ReactNode;className?:string;action?:ReactNode}) {
+  return <section className={`panel ${className}`} aria-label={title}><header className="panel-head"><div>{eyebrow ? <span>{eyebrow}</span> : null}<h2>{title}</h2></div>{action}</header><div className="panel-body">{children}</div></section>
+})
+
+export function Metric({label,value,tone='neutral',trace}:{label:string;value:string;tone?:'good'|'bad'|'warn'|'neutral';trace?:string}) {
+  return <div className="metric" title={trace}><span>{label}</span><strong className={tone}>{value}</strong>{trace ? <small>{trace}</small> : null}</div>
+}
+
+export function EquityPanel({data}:{data:ParquetSnapshot}) {
+  return <Panel title="Parquet" eyebrow="NAV / ALPHA" className="span-4 tall"><div className="metric-row"><Metric label="NAV" value={data.account.nav.toFixed(4)}/><Metric label="Equity" value={money.format(data.account.equity)}/><Metric label="Alpha" value={pct(data.pnl.alphaPct)} tone={data.pnl.alphaPct>=0?'good':'bad'}/></div><div className="chart"><ResponsiveContainer width="100%" height="100%"><AreaChart data={data.equityCurve}><defs><linearGradient id="nav" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#00ff88" stopOpacity=".32"/><stop offset="1" stopColor="#00ff88" stopOpacity="0"/></linearGradient></defs><CartesianGrid stroke="#242424" vertical={false}/><XAxis dataKey="cycle" hide/><YAxis domain={['dataMin - .2','dataMax + .2']} hide/><Tooltip contentStyle={{background:'#101010',border:'1px solid #333'}}/><Area dataKey="nav" stroke="#00ff88" fill="url(#nav)" strokeWidth={2}/><Line dataKey="benchmark" stroke="#f5a623" dot={false}/><Line dataKey="expected" stroke="#87909e" strokeDasharray="3 3" dot={false}/></AreaChart></ResponsiveContainer></div><div className="legend"><i className="green"/>Parquet NAV <i className="amber"/>Benchmark <i/>Expected</div></Panel>
+}
+
+export function CouncilHeatmap({data,onSelect}:{data:ParquetSnapshot;onSelect:(a:AgentScore)=>void}) {
+  return <Panel title="Council Heatmap" eyebrow="12 PERSONAS × ASSETS" className="span-8 tall"><div className="heatmap-wrap"><table className="heatmap"><thead><tr><th>ASSET</th>{data.attribution.map(a=><th key={a.name} title={`${a.name} — ${a.focus}`}>{a.shortName}</th>)}</tr></thead><tbody>{data.council.map(row=><tr key={row.symbol}><th><b>{row.symbol}</b><small>{Math.round(row.conviction*100)}% {row.direction}</small></th>{row.agents.map(agent=><td key={agent.name}><button onClick={()=>onSelect(agent)} title={`${agent.name}: ${agent.rationale}`} style={{background:`color-mix(in srgb, ${scoreColor(agent.score)} ${Math.abs(agent.score)*80+14}%, #151515)`}}>{agent.score>0?'+':''}{agent.score.toFixed(2)}</button></td>)}</tr>)}</tbody></table></div></Panel>
+}
+
+export function BrainPanel({data}:{data:ParquetSnapshot}) {
+  const p=data.brain.posture
+  return <Panel title="Chief Strategist" eyebrow="BRAIN / SYNTHESIS" className="span-4"><div className="brain-status"><BrainCircuit/><div><strong className={p==='risk_on'?'good':p==='risk_off'?'bad':'warn'}>{p.replace('_',' ').toUpperCase()}</strong><small>{data.brain.model}</small></div><div className="risk-dial"><b>{Math.round(data.brain.globalRiskMultiplier*100)}</b><small>RISK</small></div></div><p className="terminal-copy"><span>PARQUET&gt;</span> {data.brain.commentary}</p></Panel>
+}
+
+export function AllocationPanel({data}:{data:ParquetSnapshot}) {
+  return <Panel title="Capital Allocation" eyebrow="REAL-TIME" className="span-2"><div className="donut"><PieChart width={150} height={100}><Pie data={data.allocation} dataKey="value" nameKey="name" cx={70} cy={48} innerRadius={29} outerRadius={43} paddingAngle={2}>{data.allocation.map(a=><Cell key={a.name} fill={a.color}/>)}</Pie><Tooltip contentStyle={{background:'#101010',border:'1px solid #333'}}/></PieChart><b>{Math.round(data.account.deployed/data.account.equity*100)}%</b></div><div className="legend compact">{data.allocation.map(a=><span key={a.name}><i style={{background:a.color}}/>{a.name} {money.format(a.value)}</span>)}</div></Panel>
+}
+
+export function PositionsPanel({data}:{data:ParquetSnapshot}) { const cap=data.account.equity*.12; return <Panel title="Positions" eyebrow="EXPOSURE / 12% CAP" className="span-3"><div className="positions">{data.positions.length?data.positions.map(p=><div key={p.symbol}><strong>{p.symbol}</strong><span>{p.shares.toLocaleString(undefined,{maximumSignificantDigits:6})} @ {money.format(p.price)}</span><b className={p.marketValue>cap?'bad':'good'}>{money.format(p.marketValue)}</b><small>{Math.round(p.marketValue/data.account.equity*100)}% NAV</small></div>):<p>No open positions.</p>}</div></Panel> }
+
+export function RiskPanel({data}:{data:ParquetSnapshot}) {
+  const h=data.health
+  return <Panel title="Guardian" eyebrow="HARD RISK GATE" className="span-3"><div className="guard"><ShieldCheck className={h.halted?'bad':'good'}/><strong className={h.halted?'bad':'good'}>{h.halted?'BLOCKED':'ENFORCING'}</strong></div><div className="risk-list"><span>Daily loss ceiling <b>10%</b></span><span>Position ceiling <b>12%</b></span><span>Data integrity <b className={h.dataIntegrity<80?'bad':'good'}>{h.dataIntegrity}%</b></span><span>Reconciliation <b className={h.reconciliation==='RECONCILED'?'good':'bad'}>{h.reconciliation}</b></span></div>{h.haltReason?<p className="alert"><AlertTriangle/> {h.haltReason}</p>:null}</Panel>
+}
+
+export function DataPanel({data}:{data:ParquetSnapshot}) { return <Panel title="Hermes" eyebrow="DATA INTEGRITY" className="span-3"><div className="integrity"><Gauge/><b>{data.health.dataIntegrity}</b><small>/ 100</small></div><div className="checks"><span><i className={data.health.brokerOnline?'ok':''}/>Broker feed</span><span><i className={data.health.marketOpen?'ok':''}/>Market clock</span><span><i className={data.health.reconciliation==='RECONCILED'?'ok':''}/>Positions</span><span><i className={data.health.liveArmed?'ok':''}/>Execution authority</span></div></Panel> }
+
+export function BlotterPanel({data}:{data:ParquetSnapshot}) { return <Panel title="Execution Blotter" eyebrow="ORDERS / FILLS" className="span-6"><div className="blotter">{data.blotter.length?data.blotter.slice(0,8).map((r,i)=><div key={`${r.ts}-${i}`}><time>{r.ts.slice(11,19)}</time><b className={r.side==='buy'?'good':'bad'}>{r.side.toUpperCase()}</b><strong>{r.symbol}</strong><span>{money.format(r.notional)}</span><em>{r.status}</em></div>):<div className="empty"><Radio/> No execution events this cycle. Gates remain active.</div>}</div></Panel> }
+
+export function AttributionPanel({data}:{data:ParquetSnapshot}) { const rows=data.attribution.slice().sort((a,b)=>b.alphaContribution-a.alphaContribution); return <Panel title="Alpha Attribution" eyebrow="PERSONA P&L" className="span-6"><div className="attribution">{rows.map(a=><div key={a.name} title={a.rationale}><span>{a.shortName}</span><div><i style={{width:`${Math.min(100,Math.abs(a.alphaContribution)*60+8)}%`,background:scoreColor(a.alphaContribution)}}/></div><b className={a.alphaContribution>=0?'good':'bad'}>{a.alphaContribution>=0?'+':''}{a.alphaContribution.toFixed(2)}</b><small>{a.profitable}W/{a.losing}L</small></div>)}</div></Panel> }
+
+export function DriftPanel({data}:{data:ParquetSnapshot}) { const d=data.drift; return <Panel title="Out-of-Sample Drift" eyebrow="ACTUAL vs 2SIGMA" className="span-3"><div className={`drift ${d.alert?'danger':''}`}><TrendingUp/><div><small>ACTUAL SHARPE</small><b>{d.actualSharpe.toFixed(2)}</b></div><div><small>EXPECTED</small><b>{d.expectedSharpe.toFixed(2)}</b></div></div><p>{d.alert?'Deviation exceeds tolerance. New exposure should remain constrained.':'Observed expectancy remains inside the backtest envelope.'}</p><small>{d.observations} observations · Δ {d.deviation.toFixed(2)}</small></Panel> }
+
+export function IncubationPanel({data}:{data:ParquetSnapshot}) { const x=data.incubation,p=Math.min(100,x.positiveSharpeCycles/x.requiredCycles*100); return <Panel title="Incubation Mode" eyebrow="CAPITAL PROMOTION" className="span-3"><div className="incubation"><Activity/><b>{money.format(x.deployedCapital)}</b><small>of {money.format(x.capitalCeiling)} ceiling</small></div><div className="progress"><i style={{width:`${p}%`}}/></div><p>{x.positiveSharpeCycles}/{x.requiredCycles} positive-Sharpe cycles</p><strong className={x.scaleEligible?'good':'warn'}>{x.scaleEligible?'SCALE ELIGIBLE':'MINIMUM CAPITAL'}</strong></Panel> }
+
+export function TracePanel({selected}:{selected:AgentScore|null}) { return <Panel title="Decision Trace" eyebrow="RADICAL TRANSPARENCY" className="span-6"><div className="trace">{selected?<><header><b style={{color:scoreColor(selected.score)}}>{selected.score>0?'+':''}{selected.score.toFixed(3)}</b><div><strong>{selected.name}</strong><small>{selected.focus} · confidence {Math.round(selected.confidence*100)}%</small></div></header><p>{selected.rationale}</p><footer>Alpha contribution {selected.alphaContribution.toFixed(3)} · outcomes {selected.profitable} profitable / {selected.losing} losing</footer></>:<><Database/><p>Select any heatmap cell to inspect the exact persona, estimator, confidence, rationale, and realized attribution behind it.</p></>}</div></Panel> }
+
+export function RetailSummary({data}:{data:ParquetSnapshot}) {
+  const defensive=data.brain.posture==='risk_off'||data.health.halted||data.health.dataIntegrity<80
+  return <main className="retail"><div className={`retail-hero ${defensive?'danger':''}`}><div>{defensive?<AlertTriangle/>:<ShieldCheck/>}<span>MARKET STATUS</span></div><h1>{defensive?'Stressed — Defensive Mode Active':'Stable — Guardrails Active'}</h1><p>{data.brain.commentary}</p></div><div className="retail-grid"><article><span>Your portfolio</span><b>{money.format(data.account.equity)}</b><small>{pct(data.pnl.returnPct)} since start</small></article><article><span>Bot status</span><b>{data.health.liveArmed?'Live monitoring':'Observation only'}</b><small>{data.health.halted?'New trades paused':'Risk checks running'}</small></article><article><span>Market comparison</span><b>{pct(data.pnl.alphaPct)} alpha</b><small>versus {pct(data.pnl.benchmarkPct)} benchmark</small></article><article><span>Data confidence</span><b>{data.health.dataIntegrity}%</b><small>{data.health.reconciliation.toLowerCase()}</small></article></div><Panel title="What the system is doing"><div className="plain-steps"><p><b>1</b> Twelve transparent models review every asset.</p><p><b>2</b> The strategist recommends a {Math.round(data.brain.globalRiskMultiplier*100)}% risk throttle.</p><p><b>3</b> Hard rules independently approve or block each order.</p><p><b>4</b> Capital stays at {money.format(data.incubation.deployedCapital)} until 100+ positive-Sharpe cycles.</p></div></Panel></main>
+}
