@@ -19,5 +19,15 @@ test('Guardian blocks execution when Hermes integrity is below 80',()=>{
 })
 
 test('incubation cannot scale before 100 positive-Sharpe cycles',()=>{
-  if(snapshot.incubation.positiveSharpeCycles<100)assert.equal(snapshot.incubation.scaleEligible,false)
+  if(snapshot.incubation.qualifiedCycles<100)assert.equal(snapshot.incubation.scaleEligible,false)
+})
+
+test('deterministic volatility throttle can only reduce LLM risk',()=>{
+  assert.equal(snapshot.throttle.effectiveMultiplier,Math.min(snapshot.throttle.brainMultiplier,snapshot.throttle.quantitativeMultiplier))
+  assert.ok(snapshot.throttle.quantitativeMultiplier>=0&&snapshot.throttle.quantitativeMultiplier<=1)
+})
+
+test('every snapshot declares provenance and verification state',()=>{
+  assert.match(snapshot.provenance.kind,/^(LIVE|SIMULATED|BACKTEST|FALLBACK)$/)
+  assert.equal(typeof snapshot.provenance.verified,'boolean')
 })
