@@ -19,18 +19,36 @@
       "blockers": []
     },
     {
-      "provider": "consensus",
-      "score": 21.03,
-      "observations": 1920,
-      "net_return": 0.00134012,
-      "annualized_sharpe": 0.0683,
-      "max_drawdown": 0.014515,
-      "hit_rate": 0.3854,
-      "calibration_error": 0.4767,
+      "provider": "openai",
+      "score": 29.98,
+      "observations": 1816,
+      "net_return": 0.00201451,
+      "annualized_sharpe": 0.0991,
+      "max_drawdown": 0.015726,
+      "hit_rate": 0.3827,
+      "calibration_error": 0.4762,
       "average_turnover_cost_bps": 1.0,
-      "average_latency_ms": 24074.08,
+      "average_latency_ms": 5576.37,
       "schema_valid_rate": 1.0,
-      "fallback_rate": 0.7089,
+      "fallback_rate": 0.7494,
+      "promotion_eligible": false,
+      "blockers": [
+        "incremental Sharpe below threshold"
+      ]
+    },
+    {
+      "provider": "consensus",
+      "score": 20.86,
+      "observations": 1842,
+      "net_return": 0.00088176,
+      "annualized_sharpe": 0.0437,
+      "max_drawdown": 0.014515,
+      "hit_rate": 0.3882,
+      "calibration_error": 0.4769,
+      "average_turnover_cost_bps": 1.0,
+      "average_latency_ms": 25093.51,
+      "schema_valid_rate": 1.0,
+      "fallback_rate": 0.7389,
       "promotion_eligible": false,
       "blockers": [
         "incremental Sharpe below threshold"
@@ -39,35 +57,16 @@
     {
       "provider": "neutral",
       "score": 30.01,
-      "observations": 1920,
+      "observations": 1842,
       "net_return": 0.0,
       "annualized_sharpe": 0.0,
       "max_drawdown": 0.0,
       "hit_rate": 0.0,
-      "calibration_error": 0.4991,
+      "calibration_error": 0.4989,
       "average_turnover_cost_bps": 1.0,
       "average_latency_ms": 0.0,
       "schema_valid_rate": 1.0,
       "fallback_rate": 0.0,
-      "promotion_eligible": false,
-      "blockers": [
-        "incremental Sharpe below threshold",
-        "net shadow contribution is non-positive"
-      ]
-    },
-    {
-      "provider": "openai",
-      "score": 27.45,
-      "observations": 1816,
-      "net_return": -0.0027762,
-      "annualized_sharpe": -0.1441,
-      "max_drawdown": 0.015726,
-      "hit_rate": 0.3794,
-      "calibration_error": 0.4767,
-      "average_turnover_cost_bps": 1.0,
-      "average_latency_ms": 5576.37,
-      "schema_valid_rate": 1.0,
-      "fallback_rate": 0.7494,
       "promotion_eligible": false,
       "blockers": [
         "incremental Sharpe below threshold",
@@ -114,13 +113,13 @@
     },
     {
       "provider": "nvidia",
-      "score": 36.1,
-      "observations": 940,
-      "net_return": -0.00314834,
-      "annualized_sharpe": -0.3647,
+      "score": 34.51,
+      "observations": 862,
+      "net_return": -0.00482632,
+      "annualized_sharpe": -0.5306,
       "max_drawdown": 0.013063,
-      "hit_rate": 0.367,
-      "calibration_error": 0.4955,
+      "hit_rate": 0.3701,
+      "calibration_error": 0.4977,
       "average_turnover_cost_bps": 1.0,
       "average_latency_ms": 0.0,
       "schema_valid_rate": 1.0,
@@ -134,14 +133,14 @@
   ],
   "recommended_provider": "gemini",
   "promotion_policy": "manual approval required; shadow evidence cannot arm live trading",
-  "observations": 9306,
+  "observations": 8994,
   "source": "/home/runner/work/SAHJONY-AI-TRADING/SAHJONY-AI-TRADING/data/ai_shadow_observations.jsonl",
   "leaders": {
     "today": {
-      "provider": "nvidia",
-      "score": 75.82,
-      "sharpe": 3.5487,
-      "observations": 130
+      "provider": "openai",
+      "score": 100.0,
+      "sharpe": 7.8507,
+      "observations": 26
     },
     "week": {
       "provider": "claude",
@@ -172,8 +171,8 @@
     "options": null
   },
   "pipeline": "autonomous-learning",
-  "last_cycle": 923,
+  "last_cycle": 917,
   "resolved_this_cycle": 52,
   "pending_symbols": 13,
-  "archive_record": "/home/runner/work/SAHJONY-AI-TRADING/SAHJONY-AI-TRADING/data/shadow/2026/August/000330.json"
+  "archive_record": "/home/runner/work/SAHJONY-AI-TRADING/SAHJONY-AI-TRADING/data/shadow/2026/August/000324.json"
 }
