@@ -97,6 +97,32 @@ def _clamp(value: float, lo: float, hi: float) -> float:
     return max(lo, min(hi, value))
 
 
+# ── broker identity ──────────────────────────────────────────────────────────
+# get_broker() accepts several spellings per venue. Normalizing them at load time
+# means every downstream `cfg.broker == ...` check sees ONE canonical id. Without
+# this the day desk's venue check only matched "robinhood" and silently missed
+# "robinhood_crypto", leaking FX majors onto a crypto-only venue where every
+# order can only be rejected. Unknown names pass through unchanged so the factory
+# can still fail fast with a helpful error.
+_BROKER_ALIASES = {
+    "robinhood": "robinhood_crypto",
+    "rh": "robinhood_crypto",
+    "robinhood_crypto": "robinhood_crypto",
+    "robinhood_mcp": "robinhood_mcp",
+    "robinhood_agentic": "robinhood_mcp",
+    "rh_mcp": "robinhood_mcp",
+}
+
+# Venues that trade ONLY crypto pairs — no FX, no equities, no options.
+CRYPTO_ONLY_BROKERS = ("robinhood_crypto", "ccxt")
+
+
+def canonical_broker(name: str) -> str:
+    """Map any accepted broker spelling to its canonical id."""
+    key = (name or "alpaca").strip().lower()
+    return _BROKER_ALIASES.get(key, key)
+
+
 @dataclass(frozen=True)
 class Config:
     # broker venue (see utils/broker.py). Default 'alpaca'.
@@ -305,7 +331,7 @@ class Config:
             return True   # always attempts a local TWS/Gateway connection
         if b == "ccxt":
             return bool(self.ccxt_api_key and self.ccxt_secret)
-        if b == "robinhood":
+        if b == "robinhood_crypto":
             return bool(self.robinhood_api_key and self.robinhood_private_key)
         return False
 
@@ -317,6 +343,34 @@ class Config:
         return bool(self.tickers) and all("/" in t for t in self.tickers)
 
     @property
+    def crypto_only_venue(self) -> bool:
+        """True when the selected venue trades ONLY crypto pairs.
+
+        The day/forex desk must not add FX majors to such a venue: those orders
+        can only ever be rejected, while still burning a rate-limited quote and
+        history call per symbol per cycle.
+        """
+        return self.broker in CRYPTO_ONLY_BROKERS
+
+    @property
+    def cycles_per_year(self) -> float:
+        """Cycles per year at the ACTUAL cadence and calendar.
+
+        This is the annualization factor for realized volatility (vol targeting)
+        and for Sharpe/Sortino. It must track the real schedule: a 24/7 crypto
+        desk at 15-minute cadence runs ~35,040 cycles a year, while a US
+        cash-session desk runs 6,552 (26/day x 252). Both realized vol and Sharpe
+        scale by sqrt(cycles), so hardcoding the cash-session figure understated an
+        always-on desk by ~2.3x on both: vol targeting almost never de-risked it
+        (the dangerous direction — the rail was effectively inert), while its Sharpe
+        read ~2.3x too LOW (merely pessimistic).
+        """
+        minutes = max(1.0, float(self.cycle_minutes or 15))
+        if self.always_on:
+            return 365.0 * 24.0 * 60.0 / minutes
+        return 252.0 * 6.5 * 60.0 / minutes      # 6.5h cash session
+
+    @property
     def mode(self) -> str:
         if not self.has_credentials:
             return "offline-sim"
@@ -326,7 +380,7 @@ class Config:
 def load_config() -> Config:
     """Build a Config from the environment, clamping all risk knobs to ceilings."""
     return Config(
-        broker=(os.getenv("BROKER", "alpaca") or "alpaca").strip().lower(),
+        broker=canonical_broker(os.getenv("BROKER", "alpaca")),
         alpaca_api_key=os.getenv("ALPACA_API_KEY", "").strip(),
         alpaca_secret_key=os.getenv("ALPACA_SECRET_KEY", "").strip(),
         alpaca_paper=_b("ALPACA_PAPER", True),

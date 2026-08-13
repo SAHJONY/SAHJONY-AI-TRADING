@@ -62,6 +62,20 @@ class AlpacaClient:
     def online(self) -> bool:
         return self._trading is not None
 
+    @property
+    def trading_armed(self) -> bool:
+        """Whether this adapter may submit orders to the connected venue.
+
+        Paper accounts are safe to operate once connected. A live account requires
+        the explicit desk-wide real-money acknowledgement at the broker boundary;
+        callers cannot bypass it by invoking the adapter directly.
+        """
+        return bool(self.online and (self.cfg.alpaca_paper or self.cfg.live_trading_ack))
+
+    @property
+    def execution_authority(self) -> bool:
+        return self.trading_armed
+
     def advance_sim(self, steps: int = 1) -> None:
         if not self.online:
             self._sim.advance_sim(steps)
@@ -89,7 +103,10 @@ class AlpacaClient:
             return out
         except Exception as exc:
             log.error("get_all_positions failed: %s", exc)
-            return {}
+            # An empty mapping means the broker authoritatively reports no holdings.
+            # A transport/auth failure is not the same thing: propagate it so LIVE
+            # reconciliation halts new risk instead of mistaking failure for flatness.
+            raise RuntimeError("Alpaca position snapshot unavailable") from exc
 
     # ── market data ──────────────────────────────────────────────────────────
     def get_history(self, symbol: str, days: int = 120) -> Dict[str, np.ndarray]:
@@ -223,6 +240,9 @@ class AlpacaClient:
             return {"status": "rejected", "reason": "qty<=0"}
         if not self.online:
             return self._sim.submit_equity_order(symbol, qty, side)
+        if not self.trading_armed:
+            log.error("Alpaca LIVE order blocked: LIVE_TRADING_ACK is not set")
+            return {"status": "rejected", "reason": "live trading is not armed"}
         try:
             from alpaca.trading.requests import MarketOrderRequest
             from alpaca.trading.enums import OrderSide, TimeInForce
@@ -248,6 +268,9 @@ class AlpacaClient:
         side = side.lower()
         if not self.online:
             return self._sim.submit_option_order(contract, qty, side, premium)
+        if not self.trading_armed:
+            log.error("Alpaca LIVE option order blocked: LIVE_TRADING_ACK is not set")
+            return {"status": "rejected", "reason": "live trading is not armed"}
         try:
             from alpaca.trading.requests import MarketOrderRequest
             from alpaca.trading.enums import OrderSide, TimeInForce

@@ -123,7 +123,18 @@ class RiskEngine:
     # Vol targeting can trim budgets to at most half — it de-risks, never leverages
     # up (scale is capped at 1.0), and the hard ceilings above still apply on top.
     VOL_SCALE_MIN = 0.50
+    # Fallback only. The live factor comes from cfg.cycles_per_year, which tracks
+    # the ACTUAL cadence and calendar — a hardcoded cash-session figure understated
+    # a 24/7 crypto desk's realized vol by ~2.3x, leaving this rail nearly inert.
     _CYCLES_PER_YEAR = 6552.0   # 15-min cycles across the US cash session (~26/day × 252)
+
+    @property
+    def _cycles_per_year(self) -> float:
+        try:
+            value = float(getattr(self.cfg, "cycles_per_year", 0.0) or 0.0)
+        except (TypeError, ValueError):
+            return self._CYCLES_PER_YEAR
+        return value if value > 0 else self._CYCLES_PER_YEAR
 
     def vol_scalar(self, equity_values) -> float:
         """Volatility targeting: when the desk's REALIZED portfolio vol runs above
@@ -143,7 +154,7 @@ class RiskEngine:
             n = len(rets)
             mean = sum(rets) / n
             var = sum((r - mean) ** 2 for r in rets) / max(1, n - 1)
-            realized = (var ** 0.5) * (self._CYCLES_PER_YEAR ** 0.5)
+            realized = (var ** 0.5) * (self._cycles_per_year ** 0.5)
             if realized <= target or realized <= 0:
                 return 1.0
             scale = max(self.VOL_SCALE_MIN, min(1.0, target / realized))

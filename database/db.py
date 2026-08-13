@@ -327,7 +327,10 @@ class Database:
 
     def update_execution_intent(self, intent_id: str, status: str, *,
                                 broker_ref: str = "", detail: Dict[str, Any] | None = None) -> None:
-        allowed = {"reserved", "submitted", "filled", "failed", "reconciled"}
+        # 'unresolved' is distinct from 'failed': the broker never told us whether
+        # the order filled, so we released the per-symbol lock WITHOUT applying a
+        # fill. Recording it as 'failed' would assert a rejection we cannot prove.
+        allowed = {"reserved", "submitted", "filled", "failed", "reconciled", "unresolved"}
         if status not in allowed:
             raise ValueError("invalid execution intent status")
         cursor = self.conn.execute(

@@ -314,7 +314,10 @@ jobs:
           while : ; do
             n=$(( n + 1 ))
             echo "── live cycle $n (window ${LOOP_MINUTES:-0} min, gap ${GAP}s) ──"
-            python main.py --once --force
+            if ! python main.py --once --force; then
+              echo "Live desk cycle failed; refusing to publish a success snapshot."
+              exit 1
+            fi
             # The paper crypto trainer is evaluation.json's PRIMARY evidence
             # ("enough trade count for statistics") but it ran --once per JOB,
             # so it got ~1 cycle for every 4 the live desk took. Run it here and
@@ -396,7 +399,7 @@ jobs:
           PAIRS_ENABLED: 'false'
           CREDIT_SPREADS_ENABLED: 'false'
           TRADING_CAPITAL: ${{ vars.ALPACA_LIVE_CAPITAL == '' && '0' || vars.ALPACA_LIVE_CAPITAL }}
-        run: python main.py --once --force || true
+        run: python main.py --once --force
 
       # Skipped when the MAIN desk already runs on robinhood_crypto (vars.BROKER),
       # so one account can never be traded by two desks at once.
@@ -412,7 +415,7 @@ jobs:
           COPY_TRADING_ENABLED: 'false'
           TRADING_CAPITAL: ${{ vars.ROBINHOOD_TRADING_CAPITAL == '' && '100' || vars.ROBINHOOD_TRADING_CAPITAL }}
           ROBINHOOD_MAX_ORDER_USD: ${{ vars.ROBINHOOD_MAX_ORDER_USD || '10' }}
-        run: python main.py --once --force || true
+        run: python main.py --once --force
 
       # Surfaces the failure that has now bitten four separate knobs: a stale
       # repository Variable silently beating a corrected default, found each time

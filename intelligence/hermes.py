@@ -164,7 +164,8 @@ class Hermes:
 
     # ── 2) SHARP SCORES — honest stats straight off the equity curve ─────────────
     @staticmethod
-    def scorecard(equity_rows: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def scorecard(equity_rows: List[Dict[str, Any]],
+                  cycles_per_year: float = _CYCLES_PER_YEAR) -> Dict[str, Any]:
         ys = []
         for row in equity_rows or []:
             try:
@@ -181,7 +182,15 @@ class Hermes:
         mean = sum(rets) / n
         sd = math.sqrt(sum((x - mean) ** 2 for x in rets) / max(1, n - 1))
         dsd = math.sqrt(sum(min(0.0, x) ** 2 for x in rets) / max(1, n - 1))
-        ann = math.sqrt(_CYCLES_PER_YEAR)
+        # Annualize on the desk's REAL cadence (cfg.cycles_per_year, passed by the
+        # reporter). A 24/7 crypto desk runs ~5.3x more cycles a year than a cash-
+        # session desk, so the old fixed constant understated its Sharpe by ~2.3x
+        # (sqrt of the ratio) — the desk looked worse than it actually was.
+        try:
+            per_year = float(cycles_per_year or _CYCLES_PER_YEAR)
+        except (TypeError, ValueError):
+            per_year = _CYCLES_PER_YEAR
+        ann = math.sqrt(per_year if per_year > 0 else _CYCLES_PER_YEAR)
         peak, mdd = -float("inf"), 0.0
         for y in ys:
             peak = max(peak, y)
