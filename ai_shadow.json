@@ -21,35 +21,16 @@
     {
       "provider": "neutral",
       "score": 30.01,
-      "observations": 1842,
+      "observations": 1881,
       "net_return": 0.0,
       "annualized_sharpe": 0.0,
       "max_drawdown": 0.0,
       "hit_rate": 0.0,
-      "calibration_error": 0.499,
+      "calibration_error": 0.4992,
       "average_turnover_cost_bps": 1.0,
       "average_latency_ms": 0.0,
       "schema_valid_rate": 1.0,
       "fallback_rate": 0.0,
-      "promotion_eligible": false,
-      "blockers": [
-        "incremental Sharpe below threshold",
-        "net shadow contribution is non-positive"
-      ]
-    },
-    {
-      "provider": "consensus",
-      "score": 19.03,
-      "observations": 1842,
-      "net_return": -0.00246372,
-      "annualized_sharpe": -0.1282,
-      "max_drawdown": 0.014515,
-      "hit_rate": 0.3844,
-      "calibration_error": 0.4769,
-      "average_turnover_cost_bps": 1.0,
-      "average_latency_ms": 25093.51,
-      "schema_valid_rate": 1.0,
-      "fallback_rate": 0.7389,
       "promotion_eligible": false,
       "blockers": [
         "incremental Sharpe below threshold",
@@ -69,6 +50,25 @@
       "average_latency_ms": 18218.95,
       "schema_valid_rate": 1.0,
       "fallback_rate": 0.0,
+      "promotion_eligible": false,
+      "blockers": [
+        "incremental Sharpe below threshold",
+        "net shadow contribution is non-positive"
+      ]
+    },
+    {
+      "provider": "consensus",
+      "score": 18.14,
+      "observations": 1881,
+      "net_return": -0.00378392,
+      "annualized_sharpe": -0.1953,
+      "max_drawdown": 0.014515,
+      "hit_rate": 0.3775,
+      "calibration_error": 0.4779,
+      "average_turnover_cost_bps": 1.0,
+      "average_latency_ms": 24573.23,
+      "schema_valid_rate": 1.0,
+      "fallback_rate": 0.7236,
       "promotion_eligible": false,
       "blockers": [
         "incremental Sharpe below threshold",
@@ -115,13 +115,13 @@
     },
     {
       "provider": "nvidia",
-      "score": 31.4,
-      "observations": 849,
-      "net_return": -0.00650807,
-      "annualized_sharpe": -0.8387,
+      "score": 29.61,
+      "observations": 875,
+      "net_return": -0.00782292,
+      "annualized_sharpe": -0.9899,
       "max_drawdown": 0.013063,
-      "hit_rate": 0.3687,
-      "calibration_error": 0.4972,
+      "hit_rate": 0.36,
+      "calibration_error": 0.4984,
       "average_turnover_cost_bps": 1.0,
       "average_latency_ms": 0.0,
       "schema_valid_rate": 1.0,
@@ -135,20 +135,20 @@
   ],
   "recommended_provider": "gemini",
   "promotion_policy": "manual approval required; shadow evidence cannot arm live trading",
-  "observations": 8981,
+  "observations": 9124,
   "source": "/home/runner/work/SAHJONY-AI-TRADING/SAHJONY-AI-TRADING/data/ai_shadow_observations.jsonl",
   "leaders": {
     "today": {
-      "provider": "nvidia",
-      "score": 75.71,
-      "sharpe": 3.6243,
-      "observations": 39
+      "provider": "openai",
+      "score": 64.2,
+      "sharpe": 4.3311,
+      "observations": 26
     },
     "week": {
       "provider": "nvidia",
-      "score": 72.31,
-      "sharpe": 2.894,
-      "observations": 89
+      "score": 57.12,
+      "sharpe": 1.6442,
+      "observations": 115
     },
     "month": {
       "provider": "gemini",
@@ -173,8 +173,8 @@
     "options": null
   },
   "pipeline": "autonomous-learning",
-  "last_cycle": 917,
+  "last_cycle": 920,
   "resolved_this_cycle": 52,
   "pending_symbols": 13,
-  "archive_record": "/home/runner/work/SAHJONY-AI-TRADING/SAHJONY-AI-TRADING/data/shadow/2026/August/000324.json"
+  "archive_record": "/home/runner/work/SAHJONY-AI-TRADING/SAHJONY-AI-TRADING/data/shadow/2026/August/000327.json"
 }
