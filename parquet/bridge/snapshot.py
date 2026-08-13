@@ -115,6 +115,15 @@ def project(raw: dict, desk: str, attribution: dict[str, dict]) -> dict:
     expected_sharpe = 1.0
     integrity_raw = number(hermes.get("data_ok_pct"), 1.0)
     integrity = round(max(0, min(100, integrity_raw * 100 if integrity_raw <= 1 else integrity_raw)))
+    mode = str(raw.get("mode", "UNKNOWN")).upper()
+    pnl_verified = bool(raw.get("pnl", {}).get("broker_verified"))
+    provenance_kind = "LIVE" if mode == "LIVE" else "SIMULATED"
+    provenance_label = "LIVE · BROKER VERIFIED" if provenance_kind == "LIVE" and pnl_verified else (
+        "LIVE TELEMETRY · UNVERIFIED P&L" if provenance_kind == "LIVE" else "SIMULATED / TRAINING")
+    vol_target = number(health.get("vol_targeting", {}).get("target_annual"))
+    quantitative_multiplier = max(0, min(1, number(health.get("vol_targeting", {}).get("scale"), 1)))
+    brain_multiplier = max(0, min(1, number(brain.get("global_risk_multiplier"))))
+    effective_multiplier = min(brain_multiplier, quantitative_multiplier)
     halted = bool(health.get("circuit_breaker", {}).get("halted")) or integrity < 80
     halt_reason = health.get("circuit_breaker", {}).get("reason", "")
     if integrity < 80:
@@ -158,11 +167,16 @@ def project(raw: dict, desk: str, attribution: dict[str, dict]) -> dict:
     for p in raw.get("positions", []):
         allocation.append({"name": p.get("symbol", "").replace("/USD", ""),
                            "value": number(p.get("market_value")), "color": "#00ff88"})
-    positive_cycles = int(scorecard.get("cycles", 0)) if number(scorecard.get("sharpe")) > 0 else 0
+    scorecard_cycles = int(scorecard.get("cycles", 0))
+    scorecard_sharpe = scorecard.get("sharpe")
+    qualified_cycles = scorecard_cycles if scorecard_cycles >= 12 and scorecard_sharpe is not None and number(scorecard_sharpe) > 0 else 0
+    qualification = "Sharpe > 0 with at least 12 observations; count resets when the scorecard no longer qualifies"
     return {
         "schemaVersion": 1, "desk": desk, "cycle": int(raw.get("cycle", 0)),
         "ts": raw.get("ts") or datetime.now(timezone.utc).isoformat(), "mode": raw.get("mode", "UNKNOWN"),
         "broker": raw.get("broker", "unknown"),
+        "provenance": {"kind": provenance_kind, "label": provenance_label,
+                       "source": "Python engine status snapshot", "verified": pnl_verified},
         "account": {"equity": equity, "equityStart": start, "cash": number(account.get("cash")),
                     "deployed": deployed, "nav": (equity / start * 100) if start else 100},
         "pnl": {"returnPct": return_pct, "realized": number(raw.get("pnl", {}).get("realized")),
@@ -174,6 +188,9 @@ def project(raw: dict, desk: str, attribution: dict[str, dict]) -> dict:
                   "globalRiskMultiplier": number(brain.get("global_risk_multiplier")),
                   "commentary": brain.get("commentary", "No strategist commentary available."),
                   "model": brain.get("brain_model", "deterministic fallback"), "used": bool(brain.get("used"))},
+        "throttle": {"brainMultiplier": brain_multiplier, "quantitativeMultiplier": quantitative_multiplier,
+                     "effectiveMultiplier": effective_multiplier, "targetVolatility": vol_target,
+                     "rationale": "Effective risk is the lower of the LLM recommendation and deterministic realized-volatility scale."},
         "council": council, "positions": [{"symbol": p.get("symbol", ""), "strategy": p.get("strategy", ""),
           "shares": number(p.get("shares")), "price": number(p.get("price")), "marketValue": number(p.get("market_value")),
           "unrealized": number(p.get("unrealized"))} for p in raw.get("positions", [])],
@@ -185,9 +202,10 @@ def project(raw: dict, desk: str, attribution: dict[str, dict]) -> dict:
         "drift": {"actualSharpe": actual_sharpe, "expectedSharpe": expected_sharpe,
                   "deviation": actual_sharpe - expected_sharpe, "alert": abs(actual_sharpe - expected_sharpe) > .75,
                   "observations": int(perf.get("return_observations", len(equity_values)))},
-        "incubation": {"active": positive_cycles < 100, "deployedCapital": deployed,
-                       "capitalCeiling": 100, "positiveSharpeCycles": positive_cycles,
-                       "requiredCycles": 100, "scaleEligible": positive_cycles >= 100},
+        "incubation": {"active": qualified_cycles < 100, "deployedCapital": deployed,
+                       "capitalCeiling": 100, "qualifiedCycles": qualified_cycles,
+                       "requiredCycles": 100, "scaleEligible": qualified_cycles >= 100,
+                       "qualification": qualification},
         "traces": {"dataIntegrity": {"value": integrity, "source": "health.hermes.data_ok_pct",
           "rationale": "Percentage of symbols passing Hermes freshness and integrity checks.", "asOf": raw.get("ts", "")}},
     }
