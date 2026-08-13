@@ -2,10 +2,9 @@
   "name": "sahjony-parquet-terminal",
   "private": true,
   "version": "1.0.0",
-  "type": "module",
   "scripts": {
     "dev": "concurrently -k \"npm:dev:ui\" \"npm:dev:server\"",
-    "dev:ui": "vite --config parquet/vite.config.ts",
+    "dev:ui": "vite --config parquet/vite.config.mts",
     "dev:server": "tsx parquet/server/index.ts",
     "build": "sh scripts/build_parquet.sh",
     "typecheck": "tsc -p parquet/tsconfig.json --noEmit",
