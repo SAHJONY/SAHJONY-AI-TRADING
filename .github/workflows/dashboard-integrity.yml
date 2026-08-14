@@ -1,0 +1,33 @@
+name: Dashboard integrity
+
+on:
+  pull_request:
+    paths:
+      - public/index.html
+      - scripts/build_public_config.sh
+      - .github/workflows/dashboard-integrity.yml
+  push:
+    branches:
+      - master
+    paths:
+      - public/index.html
+      - scripts/build_public_config.sh
+      - .github/workflows/dashboard-integrity.yml
+
+permissions:
+  contents: read
+
+jobs:
+  verify-canonical-dashboard:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Verify canonical f51362f dashboard
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected="d50b3f9711415d0e1d0a0fc633f2e2cb2552d5f3"
+          test -f public/index.html
+          actual="$(git hash-object public/index.html)"
+          test "$actual" = "$expected"
