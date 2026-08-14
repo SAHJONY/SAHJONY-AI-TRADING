@@ -17,6 +17,24 @@
 # dashboard already degrades to GDELT + CoinGecko, which need no key).
 set -uo pipefail
 
+# The owner dashboard is intentionally pinned to the canonical UI from
+# f51362ff14388547034592a36c14f6ae43b6497b. Live status JSON may change, but
+# the production shell must not be replaced or deleted by snapshot publishers.
+DASHBOARD="public/index.html"
+EXPECTED_DASHBOARD_BLOB="d50b3f9711415d0e1d0a0fc633f2e2cb2552d5f3"
+if [ ! -f "$DASHBOARD" ]; then
+  echo "dashboard_integrity: $DASHBOARD is missing — refusing deployment"
+  exit 1
+fi
+ACTUAL_DASHBOARD_BLOB="$(git hash-object "$DASHBOARD" 2>/dev/null || true)"
+if [ "$ACTUAL_DASHBOARD_BLOB" != "$EXPECTED_DASHBOARD_BLOB" ]; then
+  echo "dashboard_integrity: canonical dashboard mismatch — refusing deployment"
+  echo "  expected: $EXPECTED_DASHBOARD_BLOB"
+  echo "  actual:   ${ACTUAL_DASHBOARD_BLOB:-unavailable}"
+  exit 1
+fi
+echo "dashboard_integrity: canonical f51362f dashboard verified"
+
 CONFIG="public/config.js"
 [ -f "$CONFIG" ] || { echo "build_public_config: $CONFIG not found — skipping."; exit 0; }
 
