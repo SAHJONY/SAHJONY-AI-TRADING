@@ -3,12 +3,11 @@
     python -m tools.remediate_positions --home desks/paper            # plan only
     python -m tools.remediate_positions --home desks/paper --apply    # send the orders
 
-**Dry-run is the default and --apply is the only way to send an order.** Apply
-mode is additionally blocked unless the published local/broker reconciliation is
-explicitly clean. When reconciliation is clean and the broker snapshot is online,
-broker equity is used for cap calculations; otherwise the plan falls back to local
-equity but remains non-executable. This prevents a stale local equity snapshot from
-creating an unsafe false-positive liquidation plan.
+**Dry-run is the default and --apply is the only way to send an order.** The plan
+uses the desk's published `account.equity`, which is the same effective/virtual
+capital base used by the risk system. Apply mode is additionally blocked unless
+the published local/broker reconciliation is explicitly clean. This prevents an
+unreconciled snapshot from becoming an automated liquidation instruction.
 """
 from __future__ import annotations
 
@@ -17,7 +16,7 @@ import json
 import math
 import os
 import sys
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List
 
 _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -32,32 +31,16 @@ def _status(home: str) -> Dict[str, Any]:
         return {}
 
 
-def _equity_context(st: Dict[str, Any]) -> Tuple[float, str, bool]:
-    local = st.get("account") or {}
-    broker = st.get("broker_account") or {}
-    recon = st.get("reconciliation") or {}
-    recon_ok = recon.get("ok") is True
-    broker_online = broker.get("online") is True
-
-    def _num(value: Any) -> float:
-        try:
-            out = float(value or 0.0)
-            return out if math.isfinite(out) else 0.0
-        except (TypeError, ValueError):
-            return 0.0
-
-    broker_equity = _num(broker.get("equity"))
-    local_equity = _num(local.get("equity"))
-    if broker_online and recon_ok and broker_equity > 0:
-        return broker_equity, "broker_account", True
-    return local_equity, "local_account", recon_ok
-
-
 def plan(home: str, max_allocation_pct: float) -> Dict[str, Any]:
     """Decide what to flatten. Pure: reads a snapshot, returns orders. No I/O out."""
     st = _status(home)
-    equity, equity_source, recon_ok = _equity_context(st)
+    try:
+        equity = float((st.get("account") or {}).get("equity", 0.0) or 0.0)
+    except (TypeError, ValueError):
+        equity = 0.0
     cap = equity * max_allocation_pct if equity > 0 else 0.0
+    recon = st.get("reconciliation") or {}
+    reconciliation_ok = recon.get("ok") is True
 
     orders: List[Dict[str, Any]] = []
     skipped: List[Dict[str, Any]] = []
@@ -94,13 +77,12 @@ def plan(home: str, max_allocation_pct: float) -> Dict[str, Any]:
                        "est_proceeds": round(abs(shares) * price, 2),
                        "reason": "; ".join(reasons)})
     return {"home": home or "(root)", "equity": round(equity, 2),
-            "equity_source": equity_source, "reconciliation_ok": recon_ok,
-            "cap": round(cap, 2), "orders": orders, "skipped": skipped}
+            "cap": round(cap, 2), "reconciliation_ok": reconciliation_ok,
+            "orders": orders, "skipped": skipped}
 
 
 def _render(p: Dict[str, Any]) -> str:
-    out = [f"{p['home']}   equity ${p['equity']:,.2f}   per-position cap ${p['cap']:,.2f} "
-           f"({p['equity_source']})", ""]
+    out = [f"{p['home']}   equity ${p['equity']:,.2f}   per-position cap ${p['cap']:,.2f}", ""]
     if not p["reconciliation_ok"]:
         out.append("  BLOCKED: local/broker reconciliation is not explicitly clean; --apply refused")
     if not p["orders"]:
@@ -137,7 +119,7 @@ def main(argv=None) -> int:
         print(_render(p))
         if not args.apply and p["orders"]:
             print(f"\nDRY RUN — {len(p['orders'])} order(s) NOT sent. "
-                  f"Re-run with --apply to send them, but only after reconciliation is clean.")
+                  f"Re-run with --apply only after reconciliation is clean.")
     if not args.apply:
         return 0
     if not p["reconciliation_ok"]:
