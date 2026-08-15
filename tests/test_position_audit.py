@@ -35,7 +35,6 @@ def test_over_cap_position_is_reported_with_the_multiple(sandbox):
             "cost_basis": 24.57, "price": 26.62}])
     f = pa.audit("desks/x", 0.12)["findings"]
     assert [x["kind"] for x in f] == ["over-cap"]
-    # $13,097.04 held against a 12% cap on $2,109.15 equity ($253.10) = 51.7x
     assert "51.7x" in f[0]["detail"] and "621% of equity" in f[0]["detail"]
 
 

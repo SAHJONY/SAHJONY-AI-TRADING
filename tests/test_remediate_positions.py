@@ -8,11 +8,14 @@ import pytest
 from tools import remediate_positions as rp
 
 
-def _desk(root, home, equity, positions):
+def _desk(root, home, equity, positions, *, recon_ok=None):
     d = os.path.join(root, home, "public")
     os.makedirs(d, exist_ok=True)
+    payload = {"account": {"equity": equity}, "positions": positions}
+    if recon_ok is not None:
+        payload["reconciliation"] = {"ok": recon_ok, "mismatched": [] if recon_ok else [{"symbol": "X"}]}
     with open(os.path.join(d, "status.json"), "w") as fh:
-        json.dump({"account": {"equity": equity}, "positions": positions}, fh)
+        json.dump(payload, fh)
 
 
 @pytest.fixture
@@ -30,12 +33,11 @@ def test_flattening_a_long_is_a_sell(sandbox):
 
 
 def test_flattening_a_short_is_a_buy_of_the_absolute_size(sandbox):
-    """The DIA row. Signing the qty as well as the side would re-open it inverted."""
     _desk(sandbox, "d", 2_109.15, [{"symbol": "DIA", "shares": -9.935112, "state": "long",
                                     "cost_basis": 516.18, "price": 537.92}])
     o = rp.plan("d", 0.10)["orders"][0]
     assert o["side"] == "buy"
-    assert o["qty"] == pytest.approx(9.935112)      # positive, not -9.935112
+    assert o["qty"] == pytest.approx(9.935112)
 
 
 def test_unpriceable_positions_are_skipped_not_guessed(sandbox):
@@ -50,7 +52,7 @@ def test_unpriceable_positions_are_skipped_not_guessed(sandbox):
 def test_positions_inside_the_cap_are_left_alone(sandbox):
     _desk(sandbox, "d", 2_109.15, [{"symbol": "AMPY", "shares": 60.0, "state": "long",
                                     "cost_basis": 4.08, "price": 1.69}])
-    assert rp.plan("d", 0.10)["orders"] == []       # $101.40 < $210.92 cap
+    assert rp.plan("d", 0.10)["orders"] == []
 
 
 def test_a_contradictory_record_is_flattened_even_when_inside_the_cap(sandbox):
@@ -68,16 +70,18 @@ def test_a_missing_cost_basis_is_flattened(sandbox):
 
 def test_a_clean_desk_plans_nothing(sandbox):
     _desk(sandbox, "d", 100_000.0, [{"symbol": "SPY", "shares": 1.0, "state": "long",
-                                     "cost_basis": 500.0, "price": 520.0}])
-    assert rp.plan("d", 0.10) == {"home": "d", "equity": 100_000.0, "cap": 10_000.0,
-                                  "orders": [], "skipped": []}
+                                     "cost_basis": 500.0, "price": 520.0}], recon_ok=True)
+    p = rp.plan("d", 0.10)
+    assert p["home"] == "d" and p["equity"] == 100_000.0 and p["cap"] == 10_000.0
+    assert p["reconciliation_ok"] is True
+    assert p["orders"] == [] and p["skipped"] == []
 
 
 def test_dry_run_is_the_default_and_sends_nothing(sandbox, capsys, monkeypatch):
     _desk(sandbox, "d", 2_109.15, [{"symbol": "EDRY", "shares": 492.0, "state": "long",
                                     "cost_basis": 24.57, "price": 26.62}])
 
-    def _boom(*a, **k):                       # any broker call is a test failure
+    def _boom(*a, **k):
         raise AssertionError("dry run must not reach the broker")
     monkeypatch.setattr("utils.broker.get_broker", _boom)
 
@@ -86,12 +90,26 @@ def test_dry_run_is_the_default_and_sends_nothing(sandbox, capsys, monkeypatch):
     assert "DRY RUN" in out and "NOT sent" in out
 
 
+def test_apply_refuses_when_reconciliation_is_not_clean(sandbox, capsys, monkeypatch):
+    _desk(sandbox, "d", 2_109.15,
+          [{"symbol": "EDRY", "shares": 492.0, "state": "long",
+            "cost_basis": 24.57, "price": 26.62}], recon_ok=False)
+
+    def _boom(*a, **k):
+        raise AssertionError("unreconciled apply must never reach broker")
+    monkeypatch.setattr("utils.broker.get_broker", _boom)
+
+    assert rp.main(["--home", "d", "--max-allocation-pct", "0.10", "--apply"]) == 2
+    assert "REFUSED" in capsys.readouterr().err
+
+
 def test_json_mode_emits_the_plan(sandbox, capsys):
     _desk(sandbox, "d", 2_109.15, [{"symbol": "EDRY", "shares": 492.0, "state": "long",
                                     "cost_basis": 24.57, "price": 26.62}])
     rp.main(["--home", "d", "--max-allocation-pct", "0.10", "--json"])
     payload = json.loads(capsys.readouterr().out)
     assert payload["orders"][0]["symbol"] == "EDRY"
+    assert payload["reconciliation_ok"] is False
 
 
 def test_the_plan_never_writes_the_status_file(sandbox):
@@ -104,4 +122,6 @@ def test_the_plan_never_writes_the_status_file(sandbox):
 
 
 def test_a_missing_desk_plans_nothing(sandbox):
-    assert rp.plan("desks/nope", 0.10)["orders"] == []
+    p = rp.plan("desks/nope", 0.10)
+    assert p["orders"] == []
+    assert p["reconciliation_ok"] is False
