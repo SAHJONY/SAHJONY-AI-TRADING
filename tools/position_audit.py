@@ -7,25 +7,12 @@
 Exit code is 0 when every desk is clean and 1 when anything is wrong, so this can
 gate a pipeline instead of being a report someone remembers to read.
 
-**It never trades and never writes.** Three of the four findings below were live
-on desks/stocks and none of them announced themselves — the desk kept running,
-the dashboard kept rendering, and the damage only showed up when someone summed
-a position by hand. A standing check is the difference between "the books are
-clean" being a belief and being a measurement.
-
-What it checks, and why each one hid:
-
-  over-cap        A position larger than max_allocation_pct of equity. Until the
-                  cap counted the position instead of the increment, averaging in
-                  compounded past it one approved order at a time.
-  unpriceable     A holding the venue will not quote. Valued at 0.0 it weighs
-                  nothing against the deployed-capital cap and silently widens it.
-  contradiction   A record whose fields disagree — a short recorded as long, a
-                  missing cost basis. Every downstream reader is then wrong about
-                  direction or P&L.
-  insolvent       Equity at or below zero. The risk engine fails closed here, so
-                  the desk stops trading; that is correct, and it is also a state
-                  nobody should learn about from a dashboard tile.
+**It never trades and never writes.** The audit is reconciliation-aware: when the
+published broker account is online and the local/broker position reconciliation is
+explicitly clean, broker equity becomes the denominator for portfolio caps. When
+reconciliation is not clean, the audit deliberately falls back to local equity and
+adds a reconciliation finding instead of mixing broker capital with a local book
+that may not represent the same positions.
 """
 from __future__ import annotations
 
@@ -33,8 +20,7 @@ import argparse
 import json
 import math
 import os
-import sys
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 
 _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -74,19 +60,48 @@ def _positions(home: str) -> List[Dict[str, Any]]:
             for sym, p in ((state.get("positions") or {}).items())]
 
 
-def _equity(home: str) -> float:
-    acct = (_read_status(home).get("account") or {})
-    try:
-        return float(acct.get("equity", 0.0) or 0.0)
-    except (TypeError, ValueError):
-        return 0.0
+def _equity_context(home: str) -> Tuple[float, str, bool]:
+    """Return (equity, source, reconciliation_ok).
+
+    Broker equity is authoritative only when the broker snapshot is online and the
+    same published snapshot says local/broker reconciliation is clean. Otherwise
+    using broker equity to cap local positions could hide a mismatch, so we keep
+    local equity and force the discrepancy to remain visible.
+    """
+    status = _read_status(home)
+    local = status.get("account") or {}
+    broker = status.get("broker_account") or {}
+    recon = status.get("reconciliation") or {}
+    reconciliation_ok = recon.get("ok") is True
+    broker_online = broker.get("online") is True
+
+    def _number(value: Any) -> float:
+        try:
+            out = float(value or 0.0)
+            return out if math.isfinite(out) else 0.0
+        except (TypeError, ValueError):
+            return 0.0
+
+    broker_equity = _number(broker.get("equity"))
+    local_equity = _number(local.get("equity"))
+    if broker_online and reconciliation_ok and broker_equity > 0:
+        return broker_equity, "broker_account", True
+    return local_equity, "local_account", reconciliation_ok
 
 
 def audit(home: str, max_allocation_pct: float) -> Dict[str, Any]:
-    equity = _equity(home)
+    equity, equity_source, reconciliation_ok = _equity_context(home)
     rows = _positions(home)
     cap = equity * max_allocation_pct if equity > 0 else 0.0
     findings: List[Dict[str, Any]] = []
+
+    status = _read_status(home)
+    recon = status.get("reconciliation") or {}
+    if recon and recon.get("ok") is False:
+        mismatched = recon.get("mismatched") or []
+        findings.append({"kind": "reconciliation", "detail":
+                         f"local/broker books do not reconcile ({len(mismatched)} mismatch(es)); "
+                         "broker equity is not used for cap calculations"})
 
     if not math.isfinite(equity) or equity <= 0:
         findings.append({"kind": "insolvent", "detail":
@@ -133,6 +148,7 @@ def audit(home: str, max_allocation_pct: float) -> Dict[str, Any]:
                                        f"({value / cap:.1f}x, {100 * value / equity:.0f}% of equity)"})
 
     return {"home": home or "(root)", "equity": round(equity, 2),
+            "equity_source": equity_source, "reconciliation_ok": reconciliation_ok,
             "cap": round(cap, 2), "positions": len(rows), "findings": findings}
 
 
@@ -172,7 +188,8 @@ def main(argv=None) -> int:
 
     for r in reports:
         head = (f"{r['home']:<18} equity ${r['equity']:>12,.2f}  "
-                f"cap ${r['cap']:>10,.2f}  {r['positions']} position(s)")
+                f"cap ${r['cap']:>10,.2f}  {r['positions']} position(s)  "
+                f"equity={r['equity_source']}")
         print(head)
         if not r["findings"]:
             print("    clean")
