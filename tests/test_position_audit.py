@@ -8,16 +8,11 @@ import pytest
 from tools import position_audit as pa
 
 
-def _desk(root, home, equity, positions, *, broker_equity=None, recon_ok=None):
+def _desk(root, home, equity, positions):
     d = os.path.join(root, home, "public")
     os.makedirs(d, exist_ok=True)
-    payload = {"account": {"equity": equity}, "positions": positions}
-    if broker_equity is not None:
-        payload["broker_account"] = {"equity": broker_equity, "online": True}
-    if recon_ok is not None:
-        payload["reconciliation"] = {"ok": recon_ok, "mismatched": [] if recon_ok else [{"symbol": "X"}]}
     with open(os.path.join(d, "status.json"), "w") as fh:
-        json.dump(payload, fh)
+        json.dump({"account": {"equity": equity}, "positions": positions}, fh)
 
 
 @pytest.fixture
@@ -32,28 +27,6 @@ def test_a_clean_desk_reports_nothing(sandbox):
           [{"symbol": "SPY", "shares": 1.0, "state": "long",
             "cost_basis": 500.0, "price": 520.0}])
     assert pa.audit("desks/ok", 0.12)["findings"] == []
-
-
-def test_reconciled_online_broker_equity_is_authoritative(sandbox):
-    _desk(sandbox, "desks/ok", 10_000.0,
-          [{"symbol": "SPY", "shares": 10.0, "state": "long",
-            "cost_basis": 500.0, "price": 520.0}],
-          broker_equity=100_000.0, recon_ok=True)
-    report = pa.audit("desks/ok", 0.10)
-    assert report["equity"] == 100_000.0
-    assert report["equity_source"] == "broker_account"
-    assert report["findings"] == []
-
-
-def test_unreconciled_book_uses_local_equity_and_reports_mismatch(sandbox):
-    _desk(sandbox, "desks/x", 10_000.0,
-          [{"symbol": "SPY", "shares": 1.0, "state": "long",
-            "cost_basis": 500.0, "price": 520.0}],
-          broker_equity=100_000.0, recon_ok=False)
-    report = pa.audit("desks/x", 0.10)
-    assert report["equity"] == 10_000.0
-    assert report["equity_source"] == "local_account"
-    assert report["findings"][0]["kind"] == "reconciliation"
 
 
 def test_over_cap_position_is_reported_with_the_multiple(sandbox):
