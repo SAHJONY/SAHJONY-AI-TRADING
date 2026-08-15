@@ -3,31 +3,12 @@
     python -m tools.remediate_positions --home desks/paper            # plan only
     python -m tools.remediate_positions --home desks/paper --apply    # send the orders
 
-**Dry-run is the default and --apply is the only way to send an order.** This
-exists because `tools.position_audit` found books that the desk itself will not
-repair: the per-position cap fix stops an over-cap position growing, but nothing
-unwinds one that is already there, and a desk that quietly liquidates a breach it
-detected is doing something nobody asked it to. So the decision to flatten is a
-human one, taken once, with the full plan printed first.
-
-What it will flatten, and nothing else:
-
-  over-cap        gross value above max_allocation_pct of equity
-  contradiction   share sign disagrees with the recorded direction, or an open
-                  position carries a non-positive cost basis
-
-What it deliberately will NOT touch:
-
-  unpriceable     the venue quotes no price, so neither the size of the order nor
-                  its proceeds can be known. Selling into that is guessing. These
-                  are listed and skipped, loudly.
-  options legs    a 0-share short_put/spread leg is not flattened by selling
-                  shares; unwinding it needs the options path, not this one.
-
-Orders route through the SAME broker adapter the desk uses (utils.broker), so a
-sim run exercises the real code path and a paper run behaves exactly as the desk
-would. Every order is journalled to the desk's audit ledger with a
-'remediation' kind, so the flattening is as auditable as any other trade.
+**Dry-run is the default and --apply is the only way to send an order.** Apply
+mode is additionally blocked unless the published local/broker reconciliation is
+explicitly clean. When reconciliation is clean and the broker snapshot is online,
+broker equity is used for cap calculations; otherwise the plan falls back to local
+equity but remains non-executable. This prevents a stale local equity snapshot from
+creating an unsafe false-positive liquidation plan.
 """
 from __future__ import annotations
 
@@ -36,7 +17,7 @@ import json
 import math
 import os
 import sys
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 
 _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -51,13 +32,31 @@ def _status(home: str) -> Dict[str, Any]:
         return {}
 
 
+def _equity_context(st: Dict[str, Any]) -> Tuple[float, str, bool]:
+    local = st.get("account") or {}
+    broker = st.get("broker_account") or {}
+    recon = st.get("reconciliation") or {}
+    recon_ok = recon.get("ok") is True
+    broker_online = broker.get("online") is True
+
+    def _num(value: Any) -> float:
+        try:
+            out = float(value or 0.0)
+            return out if math.isfinite(out) else 0.0
+        except (TypeError, ValueError):
+            return 0.0
+
+    broker_equity = _num(broker.get("equity"))
+    local_equity = _num(local.get("equity"))
+    if broker_online and recon_ok and broker_equity > 0:
+        return broker_equity, "broker_account", True
+    return local_equity, "local_account", recon_ok
+
+
 def plan(home: str, max_allocation_pct: float) -> Dict[str, Any]:
     """Decide what to flatten. Pure: reads a snapshot, returns orders. No I/O out."""
     st = _status(home)
-    try:
-        equity = float((st.get("account") or {}).get("equity", 0.0) or 0.0)
-    except (TypeError, ValueError):
-        equity = 0.0
+    equity, equity_source, recon_ok = _equity_context(st)
     cap = equity * max_allocation_pct if equity > 0 else 0.0
 
     orders: List[Dict[str, Any]] = []
@@ -90,19 +89,20 @@ def plan(home: str, max_allocation_pct: float) -> Dict[str, Any]:
         if not reasons:
             continue
 
-        # Flattening a long is a sell; flattening a short is a buy. Quantity is
-        # always the absolute size — signing the qty as well as the side would
-        # double-negate and re-open the position in the opposite direction.
         orders.append({"symbol": sym, "side": "sell" if shares > 0 else "buy",
                        "qty": abs(shares), "price": price,
                        "est_proceeds": round(abs(shares) * price, 2),
                        "reason": "; ".join(reasons)})
     return {"home": home or "(root)", "equity": round(equity, 2),
+            "equity_source": equity_source, "reconciliation_ok": recon_ok,
             "cap": round(cap, 2), "orders": orders, "skipped": skipped}
 
 
 def _render(p: Dict[str, Any]) -> str:
-    out = [f"{p['home']}   equity ${p['equity']:,.2f}   per-position cap ${p['cap']:,.2f}", ""]
+    out = [f"{p['home']}   equity ${p['equity']:,.2f}   per-position cap ${p['cap']:,.2f} "
+           f"({p['equity_source']})", ""]
+    if not p["reconciliation_ok"]:
+        out.append("  BLOCKED: local/broker reconciliation is not explicitly clean; --apply refused")
     if not p["orders"]:
         out.append("  nothing to flatten")
     for o in p["orders"]:
@@ -132,21 +132,20 @@ def main(argv=None) -> int:
 
     p = plan(args.home, pct)
     if args.as_json:
-        # The note belongs IN the payload in JSON mode — printing prose after the
-        # document would make the whole stream unparseable.
         print(json.dumps(dict(p, dry_run=not args.apply), indent=2))
     else:
         print(_render(p))
         if not args.apply and p["orders"]:
             print(f"\nDRY RUN — {len(p['orders'])} order(s) NOT sent. "
-                  f"Re-run with --apply to send them.")
+                  f"Re-run with --apply to send them, but only after reconciliation is clean.")
     if not args.apply:
         return 0
+    if not p["reconciliation_ok"]:
+        print("\nREFUSED: --apply requires reconciliation.ok == true", file=sys.stderr)
+        return 2
     if not p["orders"]:
         return 0
 
-    # --apply: route through the desk's own broker adapter so this is the same
-    # code path, the same guards and the same audit trail as any other order.
     os.environ["SAHJONY_HOME"] = args.home
     from config import load_config
     from database import Database
