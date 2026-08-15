@@ -8,12 +8,10 @@ import pytest
 from tools import remediate_positions as rp
 
 
-def _desk(root, home, equity, positions, *, broker_equity=None, recon_ok=None):
+def _desk(root, home, equity, positions, *, recon_ok=None):
     d = os.path.join(root, home, "public")
     os.makedirs(d, exist_ok=True)
     payload = {"account": {"equity": equity}, "positions": positions}
-    if broker_equity is not None:
-        payload["broker_account"] = {"equity": broker_equity, "online": True}
     if recon_ok is not None:
         payload["reconciliation"] = {"ok": recon_ok, "mismatched": [] if recon_ok else [{"symbol": "X"}]}
     with open(os.path.join(d, "status.json"), "w") as fh:
@@ -32,17 +30,6 @@ def test_flattening_a_long_is_a_sell(sandbox):
                                     "cost_basis": 24.57, "price": 26.62}])
     o = rp.plan("d", 0.10)["orders"][0]
     assert o["side"] == "sell" and o["qty"] == pytest.approx(492.0)
-
-
-def test_reconciled_online_broker_equity_sets_the_cap(sandbox):
-    _desk(sandbox, "d", 2_109.15,
-          [{"symbol": "EDRY", "shares": 100.0, "state": "long",
-            "cost_basis": 24.57, "price": 26.62}],
-          broker_equity=100_000.0, recon_ok=True)
-    p = rp.plan("d", 0.10)
-    assert p["equity"] == 100_000.0
-    assert p["equity_source"] == "broker_account"
-    assert p["orders"] == []
 
 
 def test_flattening_a_short_is_a_buy_of_the_absolute_size(sandbox):
@@ -83,9 +70,10 @@ def test_a_missing_cost_basis_is_flattened(sandbox):
 
 def test_a_clean_desk_plans_nothing(sandbox):
     _desk(sandbox, "d", 100_000.0, [{"symbol": "SPY", "shares": 1.0, "state": "long",
-                                     "cost_basis": 500.0, "price": 520.0}])
+                                     "cost_basis": 500.0, "price": 520.0}], recon_ok=True)
     p = rp.plan("d", 0.10)
     assert p["home"] == "d" and p["equity"] == 100_000.0 and p["cap"] == 10_000.0
+    assert p["reconciliation_ok"] is True
     assert p["orders"] == [] and p["skipped"] == []
 
 
@@ -105,8 +93,7 @@ def test_dry_run_is_the_default_and_sends_nothing(sandbox, capsys, monkeypatch):
 def test_apply_refuses_when_reconciliation_is_not_clean(sandbox, capsys, monkeypatch):
     _desk(sandbox, "d", 2_109.15,
           [{"symbol": "EDRY", "shares": 492.0, "state": "long",
-            "cost_basis": 24.57, "price": 26.62}],
-          broker_equity=100_000.0, recon_ok=False)
+            "cost_basis": 24.57, "price": 26.62}], recon_ok=False)
 
     def _boom(*a, **k):
         raise AssertionError("unreconciled apply must never reach broker")
@@ -122,6 +109,7 @@ def test_json_mode_emits_the_plan(sandbox, capsys):
     rp.main(["--home", "d", "--max-allocation-pct", "0.10", "--json"])
     payload = json.loads(capsys.readouterr().out)
     assert payload["orders"][0]["symbol"] == "EDRY"
+    assert payload["reconciliation_ok"] is False
 
 
 def test_the_plan_never_writes_the_status_file(sandbox):
@@ -134,4 +122,6 @@ def test_the_plan_never_writes_the_status_file(sandbox):
 
 
 def test_a_missing_desk_plans_nothing(sandbox):
-    assert rp.plan("desks/nope", 0.10)["orders"] == []
+    p = rp.plan("desks/nope", 0.10)
+    assert p["orders"] == []
+    assert p["reconciliation_ok"] is False
