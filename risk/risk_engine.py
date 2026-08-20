@@ -30,13 +30,17 @@ class RiskEngine:
 
     @property
     def effective_position_cap_pct(self) -> float:
-        """Absolute position ceiling used by the actual execution gate.
+        """Position ceiling used by the actual execution gate.
 
-        Configuration may tighten this value, but it can never widen beyond the
-        institutional validation policy or the historical hard ceiling.
+        Paper/sim remain configurable research environments. In LIVE mode,
+        configuration may tighten the institutional ceiling but can never widen
+        beyond it. The historical hard ceiling remains in force everywhere.
         """
         configured = max(0.0, float(getattr(self.cfg, "max_allocation_pct", 0.0) or 0.0))
-        return min(configured, HARD_MAX_ALLOCATION_PCT, DEFAULT_POLICY.max_position_exposure_pct)
+        baseline = min(configured, HARD_MAX_ALLOCATION_PCT)
+        if str(getattr(self.cfg, "mode", "sim") or "sim").lower() == "live":
+            return min(baseline, DEFAULT_POLICY.max_position_exposure_pct)
+        return baseline
 
     def position_budget(self, equity: float, conviction: float, risk_mult: float) -> float:
         """Notional a single new position may use, scaled by conviction × risk.
@@ -104,8 +108,6 @@ class RiskEngine:
             return RiskDecision(False, f"conviction {conviction:.0%} < floor "
                                        f"{self.cfg.min_council_conviction:.0%}")
 
-        # Configuration can only tighten the institutional 5% position ceiling.
-        # It can never widen it, even if an environment variable asks for 10–15%.
         per_cap = equity * self.effective_position_cap_pct
         resulting = existing_position_value + intended_notional
         if resulting > per_cap:
