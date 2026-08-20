@@ -45,6 +45,7 @@ def _evidence(**overrides):
 
 def _wide_risk_config():
     return SimpleNamespace(
+        mode="live",
         max_allocation_pct=0.15,
         max_total_deployed_pct=0.80,
         min_council_conviction=0.0,
@@ -99,13 +100,13 @@ def test_portfolio_risk_blocks_leverage_and_concentration():
     assert report["checks"]["position_concentration"] is False
 
 
-def test_execution_budget_cannot_widen_beyond_five_percent_nav():
+def test_live_execution_budget_cannot_widen_beyond_five_percent_nav():
     engine = RiskEngine(_wide_risk_config())
     assert engine.effective_position_cap_pct == DEFAULT_POLICY.max_position_exposure_pct
     assert engine.position_budget(10000.0, 1.0, 1.0) == 500.0
 
 
-def test_execution_gate_blocks_order_above_five_percent_even_if_config_allows_more():
+def test_live_execution_gate_blocks_order_above_five_percent_even_if_config_allows_more():
     engine = RiskEngine(_wide_risk_config())
     decision = engine.approve(
         equity=10000.0,
