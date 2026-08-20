@@ -11,6 +11,7 @@ import math
 from dataclasses import dataclass
 
 from config import Config, HARD_MAX_ALLOCATION_PCT
+from institutional_validation import DEFAULT_POLICY
 from utils.logger import get_logger
 
 log = get_logger("risk_engine")
@@ -27,6 +28,16 @@ class RiskEngine:
     def __init__(self, cfg: Config):
         self.cfg = cfg
 
+    @property
+    def effective_position_cap_pct(self) -> float:
+        """Absolute position ceiling used by the actual execution gate.
+
+        Configuration may tighten this value, but it can never widen beyond the
+        institutional validation policy or the historical hard ceiling.
+        """
+        configured = max(0.0, float(getattr(self.cfg, "max_allocation_pct", 0.0) or 0.0))
+        return min(configured, HARD_MAX_ALLOCATION_PCT, DEFAULT_POLICY.max_position_exposure_pct)
+
     def position_budget(self, equity: float, conviction: float, risk_mult: float) -> float:
         """Notional a single new position may use, scaled by conviction × risk.
 
@@ -35,14 +46,15 @@ class RiskEngine:
         """
         if not all(math.isfinite(value) for value in (equity, conviction, risk_mult)):
             return 0.0
-        cap = equity * self.cfg.max_allocation_pct
+        cap_pct = self.effective_position_cap_pct
+        cap = equity * cap_pct
         budget = max(0.0, cap * max(0.0, min(1.0, conviction)) * max(0.0, min(1.0, risk_mult)))
         floor = max(0.0, float(getattr(self.cfg, "min_order_notional", 0.0) or 0.0))
         if floor > 0 and 0.0 < budget < floor:
             if floor <= cap:
                 log.info("budget $%.2f below the $%.2f venue minimum — sizing at the "
                          "minimum (still inside the %.0f%% per-position cap)",
-                         budget, floor, self.cfg.max_allocation_pct * 100)
+                         budget, floor, cap_pct * 100)
                 return floor
             log.info("budget $%.2f below the $%.2f venue minimum and the minimum "
                      "exceeds the per-position cap $%.2f — standing down",
@@ -91,11 +103,10 @@ class RiskEngine:
         if conviction < self.cfg.min_council_conviction:
             return RiskDecision(False, f"conviction {conviction:.0%} < floor "
                                        f"{self.cfg.min_council_conviction:.0%}")
-        # absolute hard ceiling (independent of clamped config)
-        hard_cap = equity * HARD_MAX_ALLOCATION_PCT
-        per_cap = equity * self.cfg.max_allocation_pct
-        # The cap is on the POSITION, so measure what the position becomes.
-        # Allowance is what is left before the cap, never negative.
+
+        # Configuration can only tighten the institutional 5% position ceiling.
+        # It can never widen it, even if an environment variable asks for 10–15%.
+        per_cap = equity * self.effective_position_cap_pct
         resulting = existing_position_value + intended_notional
         if resulting > per_cap:
             room = max(0.0, per_cap - existing_position_value)
@@ -103,9 +114,7 @@ class RiskEngine:
                                        f"per-position cap ${per_cap:,.0f} "
                                        f"(holding ${existing_position_value:,.0f}, "
                                        f"room ${room:,.0f})", room)
-        if resulting > hard_cap:
-            return RiskDecision(False, "exceeds absolute hard ceiling",
-                                max(0.0, hard_cap - existing_position_value))
+
         total_cap = equity * self.cfg.max_total_deployed_pct
         if deployed_value + intended_notional > total_cap:
             room = max(0.0, total_cap - deployed_value)
