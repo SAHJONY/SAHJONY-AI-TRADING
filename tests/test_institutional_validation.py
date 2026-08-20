@@ -1,3 +1,5 @@
+from types import SimpleNamespace
+
 from institutional_validation import (
     DEFAULT_POLICY,
     evaluate_portfolio_risk,
@@ -5,6 +7,7 @@ from institutional_validation import (
     reconcile_runtime_and_evidence,
     strategy_promotion_gate,
 )
+from risk.risk_engine import RiskEngine
 
 
 def _runtime(**overrides):
@@ -38,6 +41,15 @@ def _evidence(**overrides):
     }
     payload.update(overrides)
     return payload
+
+
+def _wide_risk_config():
+    return SimpleNamespace(
+        max_allocation_pct=0.15,
+        max_total_deployed_pct=0.80,
+        min_council_conviction=0.0,
+        min_order_notional=0.0,
+    )
 
 
 def test_missing_runtime_fails_closed():
@@ -85,6 +97,25 @@ def test_portfolio_risk_blocks_leverage_and_concentration():
     assert report["passed"] is False
     assert report["checks"]["gross_exposure"] is False
     assert report["checks"]["position_concentration"] is False
+
+
+def test_execution_budget_cannot_widen_beyond_five_percent_nav():
+    engine = RiskEngine(_wide_risk_config())
+    assert engine.effective_position_cap_pct == DEFAULT_POLICY.max_position_exposure_pct
+    assert engine.position_budget(10000.0, 1.0, 1.0) == 500.0
+
+
+def test_execution_gate_blocks_order_above_five_percent_even_if_config_allows_more():
+    engine = RiskEngine(_wide_risk_config())
+    decision = engine.approve(
+        equity=10000.0,
+        deployed_value=0.0,
+        intended_notional=501.0,
+        conviction=1.0,
+        symbol="BTC/USD",
+    )
+    assert decision.approved is False
+    assert decision.max_notional == 500.0
 
 
 def test_strategy_promotion_requires_meaningful_oos_evidence():
