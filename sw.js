@@ -1,8 +1,8 @@
 // SAHJONY parquet — minimal service worker (enables install + offline shell).
 // App shell is cached network-first; live data (status.json) and all cross-origin
 // APIs / Supabase / WebSockets are never cached.
-const C = 'sahjony-v2';
-const SHELL = ['./','./index.html','./login.html','./config.js','./manifest.webmanifest',
+const C = 'sahjony-v3-connect-bridge';
+const SHELL = ['./','./index.html','./login.html','./config.js','./connect-bridge.js','./manifest.webmanifest',
   './ai-war-room.html','./operations.html','./favicon.svg','./icon-192.png','./icon-512.png','./apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
