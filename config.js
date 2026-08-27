@@ -10,8 +10,14 @@
 // Find the Supabase values in Supabase → Project Settings → API.
 window.SAHJONY_CONFIG = {
   SUPABASE_URL: "https://awzczbaarskqjgdatefv.supabase.co",
-  SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF3emN6YmFhcnNrcWpnZGF0ZWZ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI5ODMyMTAsImV4cCI6MjA3ODU1OTIxMH0._4DdIuu9qP82pbwzgVPHol8SWmS6ZBPNowwrPHLt5Fs",
+  SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFhcnNrcWpnZGF0ZWZ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI5ODMyMTAsImV4cCI6MjA3ODU1OTIxMH0._4DdIuu9qP82pbwzgVPHol8SWmS6ZBPNowwrPHLt5Fs",
   OWNER_EMAIL: "sahjonycapitalllc@outlook.com",
+
+  // SAHJONY CONNECT is a first-party communications surface. Trading OS embeds
+  // only exact, approved CONNECT session paths from this origin; arbitrary URLs
+  // are rejected by public/connect-bridge.js. This is a public origin, not a secret.
+  CONNECT_ORIGIN: "https://sahjony-connect.vercel.app",
+
   // Optional FREE key from finnhub.io → live stock quotes + financial news.
   // Crypto (CoinGecko) and fallback news (GDELT) need NO key.
   //
@@ -32,3 +38,14 @@ window.SAHJONY_CONFIG = {
   MARKETAUX_API_KEY: "",
   CRYPTOPANIC_API_KEY: ""
 };
+
+// Load the CONNECT bridge without modifying the integrity-pinned trading shell.
+// The bridge is deliberately isolated from order/execution code.
+(() => {
+  if (document.querySelector('script[data-sahjony-connect-bridge]')) return;
+  const s = document.createElement('script');
+  s.src = './connect-bridge.js';
+  s.defer = true;
+  s.dataset.sahjonyConnectBridge = '1';
+  document.head.appendChild(s);
+})();
