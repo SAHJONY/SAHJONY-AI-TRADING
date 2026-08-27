@@ -57,7 +57,7 @@
       #connectPaste.open{display:block}#connectPaste input{width:100%;padding:9px;border-radius:7px;border:1px solid #27324a;
         background:#070a10;color:#e9eff9;font:11px ui-monospace,SFMono-Regular,Menlo,monospace}#connectPaste .row{display:flex;gap:7px;margin-top:8px}
       #connectPaste button{flex:1;border:1px solid #27324a;background:#111925;color:#e9eff9;border-radius:7px;padding:8px;cursor:pointer}
-      @media(max-width:700px){#connectDock{inset:0; border-radius:0}.cdstatus{display:none!important}}
+      @media(max-width:700px){#connectDock{inset:0;border-radius:0}.cdstatus{display:none!important}}
     `;
     document.head.appendChild(style);
 
@@ -118,7 +118,7 @@
     const frame = document.createElement('iframe');
     frame.src = u.href;
     frame.title = 'SAHJONY CONNECT communication session';
-    frame.referrerPolicy = 'strict-origin-when-cross-origin';
+    frame.referrerPolicy = 'no-referrer';
     frame.allow = 'microphone; camera; display-capture; fullscreen; clipboard-read; clipboard-write';
     frame.setAttribute('allowfullscreen', '');
     body.appendChild(frame);
@@ -145,16 +145,25 @@
     try {
       const u = new URL(href);
       ['connect_url','connectUrl','url','text','title'].forEach(k => u.searchParams.delete(k));
-      return u.pathname + (u.search ? u.search : '') + (u.hash || '');
+      // Session tokens carried in the fragment never reach Trading OS servers.
+      const hp = new URLSearchParams(u.hash.replace(/^#/, ''));
+      ['connect_url','connectUrl','url','text','title'].forEach(k => hp.delete(k));
+      const nextHash = hp.toString();
+      return u.pathname + (u.search ? u.search : '') + (nextHash ? '#' + nextHash : '');
     } catch (_) { return href; }
   }
 
   function deepLinkFromLocation() {
     const q = new URLSearchParams(location.search);
-    // Web Share Target may send the URL in `url`, or browsers may include it in `text`.
-    const candidates = [q.get('connect_url'), q.get('connectUrl'), q.get('url')];
-    const text = q.get('text');
-    if (text) {
+    const h = new URLSearchParams(location.hash.replace(/^#/, ''));
+    // Preferred path is fragment-based so the nested CONNECT token is never sent
+    // to the Trading OS origin. Query parsing remains for Web Share Target fallback.
+    const candidates = [
+      h.get('connect_url'), h.get('connectUrl'), h.get('url'),
+      q.get('connect_url'), q.get('connectUrl'), q.get('url')
+    ];
+    for (const text of [h.get('text'), q.get('text')]) {
+      if (!text) continue;
       const match = text.match(/https?:\/\/[^\s]+/i);
       if (match) candidates.push(match[0]);
     }
@@ -168,7 +177,7 @@
     const u = parseTrustedUrl(sessionUrl);
     if (!u) throw new Error('Untrusted CONNECT URL');
     const here = new URL(location.origin + location.pathname);
-    here.searchParams.set('connect_url', u.href);
+    here.hash = new URLSearchParams({ connect_url: u.href }).toString();
     return here.href;
   }
 
@@ -199,7 +208,7 @@
     wrap,
     isTrusted: raw => Boolean(parseTrustedUrl(raw)),
     origin: configuredOrigin,
-    version: '1.0.0'
+    version: '1.1.0'
   });
 
   function boot() {
