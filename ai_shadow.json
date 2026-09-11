@@ -4,15 +4,15 @@
   "providers": [
     {
       "provider": "gemini",
-      "score": 39.06,
-      "observations": 310,
-      "net_return": 0.00719238,
-      "annualized_sharpe": 1.712,
+      "score": 39.68,
+      "observations": 323,
+      "net_return": 0.00753583,
+      "annualized_sharpe": 1.7551,
       "max_drawdown": 0.002546,
-      "hit_rate": 0.3968,
-      "calibration_error": 0.471,
+      "hit_rate": 0.4025,
+      "calibration_error": 0.4695,
       "average_turnover_cost_bps": 1.0,
-      "average_latency_ms": 12598.34,
+      "average_latency_ms": 12548.1,
       "schema_valid_rate": 1.0,
       "fallback_rate": 0.0,
       "promotion_eligible": true,
@@ -21,12 +21,12 @@
     {
       "provider": "neutral",
       "score": 30.01,
-      "observations": 1842,
+      "observations": 1881,
       "net_return": 0.0,
       "annualized_sharpe": 0.0,
       "max_drawdown": 0.0,
       "hit_rate": 0.0,
-      "calibration_error": 0.4991,
+      "calibration_error": 0.4992,
       "average_turnover_cost_bps": 1.0,
       "average_latency_ms": 0.0,
       "schema_valid_rate": 1.0,
@@ -78,16 +78,16 @@
     {
       "provider": "consensus",
       "score": 0.0,
-      "observations": 1842,
-      "net_return": -0.13645599,
-      "annualized_sharpe": -1.0618,
-      "max_drawdown": 0.139862,
-      "hit_rate": 0.3822,
+      "observations": 1881,
+      "net_return": -0.13727498,
+      "annualized_sharpe": -1.0576,
+      "max_drawdown": 0.140678,
+      "hit_rate": 0.378,
       "calibration_error": 0.4773,
       "average_turnover_cost_bps": 1.0,
-      "average_latency_ms": 25188.64,
+      "average_latency_ms": 24923.33,
       "schema_valid_rate": 1.0,
-      "fallback_rate": 0.753,
+      "fallback_rate": 0.7581,
       "promotion_eligible": false,
       "blockers": [
         "shadow drawdown exceeds threshold",
@@ -97,17 +97,17 @@
     },
     {
       "provider": "openai",
-      "score": 3.68,
-      "observations": 1842,
-      "net_return": -0.15470862,
-      "annualized_sharpe": -1.0884,
-      "max_drawdown": 0.157361,
-      "hit_rate": 0.3751,
+      "score": 3.41,
+      "observations": 1881,
+      "net_return": -0.15556723,
+      "annualized_sharpe": -1.0836,
+      "max_drawdown": 0.158217,
+      "hit_rate": 0.3716,
       "calibration_error": 0.4773,
       "average_turnover_cost_bps": 1.0,
-      "average_latency_ms": 5592.8,
+      "average_latency_ms": 5655.33,
       "schema_valid_rate": 1.0,
-      "fallback_rate": 0.753,
+      "fallback_rate": 0.7581,
       "promotion_eligible": false,
       "blockers": [
         "shadow drawdown exceeds threshold",
@@ -138,46 +138,46 @@
   ],
   "recommended_provider": "gemini",
   "promotion_policy": "manual approval required; shadow evidence cannot arm live trading",
-  "observations": 8994,
+  "observations": 9163,
   "source": "/home/runner/work/SAHJONY-AI-TRADING/SAHJONY-AI-TRADING/data/ai_shadow_observations.jsonl",
   "leaders": {
     "today": {
-      "provider": "openai",
-      "score": 0.0,
-      "sharpe": -7.944,
-      "observations": 39
+      "provider": "gemini",
+      "score": 100.0,
+      "sharpe": 8.6288,
+      "observations": 13
     },
     "week": {
-      "provider": "openai",
-      "score": 0.0,
-      "sharpe": -7.944,
-      "observations": 39
+      "provider": "gemini",
+      "score": 100.0,
+      "sharpe": 8.6288,
+      "observations": 13
     },
     "month": {
-      "provider": "openai",
-      "score": 0.0,
-      "sharpe": -6.669,
-      "observations": 52
+      "provider": "gemini",
+      "score": 100.0,
+      "sharpe": 8.6288,
+      "observations": 13
     },
     "market_regime": {
       "provider": "gemini",
-      "score": 39.06,
-      "sharpe": 1.712,
-      "observations": 310,
+      "score": 39.68,
+      "sharpe": 1.7551,
+      "observations": 323,
       "regime": "normal"
     },
     "crypto": {
       "provider": "gemini",
-      "score": 39.06,
-      "sharpe": 1.712,
-      "observations": 310
+      "score": 39.68,
+      "sharpe": 1.7551,
+      "observations": 323
     },
     "equity": null,
     "options": null
   },
   "pipeline": "autonomous-learning",
-  "last_cycle": 917,
+  "last_cycle": 920,
   "resolved_this_cycle": 52,
   "pending_symbols": 13,
-  "archive_record": "/home/runner/work/SAHJONY-AI-TRADING/SAHJONY-AI-TRADING/data/shadow/2026/September/000003.json"
+  "archive_record": "/home/runner/work/SAHJONY-AI-TRADING/SAHJONY-AI-TRADING/data/shadow/2026/September/000006.json"
 }
