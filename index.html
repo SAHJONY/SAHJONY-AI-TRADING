@@ -79,6 +79,20 @@ header.cmd{position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:
   background:linear-gradient(90deg,#4d0d13,#8f1620,#4d0d13);border-bottom:1px solid var(--down)}
 #liveBanner.show{display:block;animation:livePulse 2.6s ease-in-out infinite}
 
+/* ── venues strip ── */
+.vstrip{display:flex;gap:10px;flex-wrap:wrap;align-items:stretch;max-width:1460px;margin:0 auto;
+  padding:12px 14px 0;position:relative;z-index:1}
+.vstrip[hidden]{display:none}
+.vstrip-lbl{flex:1 1 100%;font:700 10px var(--mono);letter-spacing:2px;color:var(--mut);text-transform:uppercase}
+.venue{flex:1 1 210px;min-width:210px;background:linear-gradient(180deg,var(--panel2),var(--panel));
+  border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.venue .vid{font:700 11px var(--mono);letter-spacing:1px;color:var(--txt);display:flex;align-items:center;gap:8px}
+.venue .vmeta{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;align-items:center}
+.venue .vstats{display:flex;gap:14px;margin-top:8px;font:500 10.5px var(--mono);color:var(--mut)}
+.venue .vstats b{color:var(--txt);font-weight:600}
+.pill.vmode-live{color:#ff6b7e;border-color:rgba(255,93,115,.5);background:rgba(255,93,115,.07);animation:livePulse 1.8s ease-in-out infinite}
+.pill.vmode-paper{color:var(--teal);border-color:rgba(63,193,216,.45);background:rgba(63,193,216,.07)}
+
 /* ── layout ──────────────────────────────────── */
 main{max-width:1460px;margin:0 auto;padding:16px 14px 40px;position:relative;z-index:1}
 .sec{margin:22px 0}
@@ -223,6 +237,7 @@ footer .warn{color:var(--amber);font-weight:600}
   <div class="seg" role="group" aria-label="language"><button id="langEs" class="on">ES</button><button id="langEn">EN</button></div>
 </header>
 <div id="liveBanner"></div>
+<div class="vstrip" id="venueStrip" hidden></div>
 
 <main>
   <!-- 01 · AI COUNCIL CHAMBER -->
@@ -446,7 +461,7 @@ es:{
   disclaimer:"El trading con criptomonedas conlleva un riesgo sustancial de pérdida. El capital está en riesgo y el rendimiento pasado no garantiza resultados futuros. Este panel es informativo; no constituye asesoramiento financiero.",
   dataMinAgo:"datos de hace", dataJustNow:"datos actuales", dataStale:"DATOS OBSOLETOS",
   cycle:"ciclo", broker:"Bróker", mode:"Modo", entries:"entradas", valid:"válida",
-  symbols:"símbolos",
+  symbols:"símbolos", venues:"Mercados",
   vs:"vs", benchmark:"Referencia", perOrderCap:"Tope por orden", haltLevel:"Nivel de halt"
 },
 en:{
@@ -489,7 +504,7 @@ en:{
   disclaimer:"Trading cryptocurrency carries a substantial risk of loss. Capital is at risk and past performance does not guarantee future results. This dashboard is informational; it is not financial advice.",
   dataMinAgo:"data from", dataJustNow:"live data", dataStale:"STALE DATA",
   cycle:"cycle", broker:"Broker", mode:"Mode", entries:"entries", valid:"valid",
-  symbols:"symbols",
+  symbols:"symbols", venues:"Venues",
   vs:"vs", benchmark:"Benchmark", perOrderCap:"Per-order cap", haltLevel:"Halt level"
 }};
 let LANG = "es";
@@ -599,6 +614,27 @@ async function loadNews(force){
     if(!k||seen[k]) return; seen[k]=1; merged.push(it); });
   merged.sort(function(a,b){ return (b.t||0)-(a.t||0); });
   NEWS={list:merged.slice(0,40),ts:Date.now(),src:used.join(" + ")||"GDELT"};
+}
+
+/* ── render: venues strip ── */
+function renderVenues(){
+  const el=$("#venueStrip"); if(!el) return;
+  const vs=(S&&S.venues)||[];
+  if(!vs.length){ el.hidden=true; el.innerHTML=""; return; }
+  el.hidden=false;
+  el.innerHTML='<div class="vstrip-lbl">'+esc(t("venues"))+'</div>'+vs.map(function(v){
+    const live=String(v.mode||"").toUpperCase()==="LIVE";
+    const dot=v.online?'<span class="dot '+(live?"live":"g")+'"></span>':'<span class="dot r"></span>';
+    const modeCls=live?"vmode-live":"vmode-paper";
+    const modeTxt=live?t("live"):t("paper");
+    const eq=fmtMoney(v.equity);
+    const syms=(v.symbol_count!=null?v.symbol_count:((v.symbols||[]).length));
+    const cap=(v.max_order_usd!=null&&v.max_order_usd>0)?'<span>'+t("perOrderCap")+' <b>'+fmtMoney(v.max_order_usd,0)+'</b></span>':"";
+    return '<div class="venue"><div class="vid">'+dot+esc(String(v.id||"?"))+'</div>'
+      +'<div class="vmeta"><span class="pill '+modeCls+'">'+esc(modeTxt)+'</span>'
+      +'<span class="pill">'+esc(String(v.kind||"").toUpperCase())+'</span></div>'
+      +'<div class="vstats"><span><b>'+eq+'</b></span><span>'+syms+' '+esc(t("symbols"))+'</span>'+cap+'</div></div>';
+  }).join("");
 }
 
 /* ── render: header / hero ── */
@@ -1142,7 +1178,7 @@ function applyLang(){
 }
 function render(){
   if(!S) return;
-  renderHeader(); renderCouncil(); renderStream(); renderBrain();
+  renderHeader(); renderVenues(); renderCouncil(); renderStream(); renderBrain();
   renderEquity(); renderPositions(); renderRisk(); renderRegime(); renderLab(); renderNews();
   renderIntel(); renderTopTraders(); renderBrief();
   Array.prototype.forEach.call(document.querySelectorAll("[data-i18n]"),function(el){
