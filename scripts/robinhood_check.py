@@ -61,7 +61,13 @@ def main() -> int:
     acct = rh.get_account()
     ok = acct["buying_power"] > 0 or acct["equity"] > 0 or acct["cash"] >= 0
     print(f"    buying_power=${acct['buying_power']:,.2f}  equity=${acct['equity']:,.2f}")
-    holdings = rh.get_broker_positions()
+    try:
+        holdings = rh.get_broker_positions()
+    except Exception as exc:
+        # One unpriceable holding shouldn't kill the connectivity check —
+        # auth and account reads above already proved the credential works.
+        print(f"    (could not price every holding: {str(exc)[:100]} — continuing)")
+        holdings = {}
     if holdings:
         for sym, h in holdings.items():
             print(f"    holding {sym}: {h.get('qty')} (${h.get('market_value', 0):,.2f})")

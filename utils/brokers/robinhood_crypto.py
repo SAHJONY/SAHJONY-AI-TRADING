@@ -238,20 +238,34 @@ class RobinhoodCryptoBroker:
         return self._price_cache.get(rh, 0.0)
 
     def _coingecko_spot(self, symbol: str) -> float:
-        """Free spot price from CoinGecko. Returns 0.0 on any issue (never raises)."""
+        """Free spot price from CoinGecko. Returns 0.0 on any issue (never raises).
+
+        Retries on 429 (shared CI egress IPs burn the free quota fast)."""
         cid = _coingecko_id(symbol)
         if not cid:
             return 0.0
-        try:
-            import requests
-            r = requests.get(f"{_CG_BASE}/simple/price",
-                             params={"ids": cid, "vs_currencies": "usd"}, timeout=15)
+        import requests
+        url = f"{_CG_BASE}/simple/price"
+        params = {"ids": cid, "vs_currencies": "usd"}
+        for attempt in range(3):
+            try:
+                r = requests.get(url, params=params, timeout=15)
+            except Exception as exc:
+                log.warning("CoinGecko spot(%s) attempt %d failed: %s", symbol, attempt + 1, exc)
+                time.sleep(5)
+                continue
+            if r.status_code == 429 and attempt < 2:
+                time.sleep(5 * (attempt + 1))
+                continue
             if not r.ok:
+                log.warning("CoinGecko spot(%s) → HTTP %s", symbol, r.status_code)
                 return 0.0
-            px = float((((r.json() or {}).get(cid)) or {}).get("usd", 0.0) or 0.0)
+            try:
+                px = float((((r.json() or {}).get(cid)) or {}).get("usd", 0.0) or 0.0)
+            except Exception:
+                return 0.0
             return px if math.isfinite(px) and px > 0 else 0.0
-        except Exception:
-            return 0.0
+        return 0.0
 
     def get_history(self, symbol: str, days: int = 120) -> Dict[str, np.ndarray]:
         """Daily closes+volumes for the council. RH's trading API has no candles,
