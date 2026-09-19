@@ -127,6 +127,10 @@ def canonical_broker(name: str) -> str:
 class Config:
     # broker venue (see utils/broker.py). Default 'alpaca'.
     broker: str = "alpaca"
+    # Multi-venue mode (see venues/registry.py): e.g.
+    #   VENUES="robinhood_crypto:live,alpaca:paper,simulator:paper"
+    # Empty (default) = legacy single-broker behavior, unchanged.
+    venues: str = ""
     # credentials
     alpaca_api_key: str = ""
     alpaca_secret_key: str = ""
@@ -457,6 +461,7 @@ def load_config() -> Config:
     """Build a Config from the environment, clamping all risk knobs to ceilings."""
     return Config(
         broker=canonical_broker(os.getenv("BROKER", "alpaca")),
+        venues=(os.getenv("VENUES", "") or "").strip(),
         alpaca_api_key=os.getenv("ALPACA_API_KEY", "").strip(),
         alpaca_secret_key=os.getenv("ALPACA_SECRET_KEY", "").strip(),
         alpaca_paper=_b("ALPACA_PAPER", True),
