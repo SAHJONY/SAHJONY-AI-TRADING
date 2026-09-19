@@ -226,10 +226,32 @@ class RobinhoodCryptoBroker:
             mid = (bid + ask) / 2 if (bid and ask) else (bid or ask)
             if mid > 0:
                 self._price_cache[rh] = mid
-            return mid
+                return mid
         except Exception as exc:
-            log.error("get_price(%s) failed: %s", symbol, exc)
-            return self._price_cache.get(rh, 0.0)
+            log.warning("get_price(%s) via Robinhood failed: %s — trying CoinGecko", symbol, exc)
+        # Fallback: CoinGecko spot (public, no key). RH's v1 quote endpoint 403s
+        # on some credentials; the venue's own bid/ask stays preferred when up.
+        cg = self._coingecko_spot(symbol)
+        if cg > 0:
+            self._price_cache[rh] = cg
+            return cg
+        return self._price_cache.get(rh, 0.0)
+
+    def _coingecko_spot(self, symbol: str) -> float:
+        """Free spot price from CoinGecko. Returns 0.0 on any issue (never raises)."""
+        cid = _coingecko_id(symbol)
+        if not cid:
+            return 0.0
+        try:
+            import requests
+            r = requests.get(f"{_CG_BASE}/simple/price",
+                             params={"ids": cid, "vs_currencies": "usd"}, timeout=15)
+            if not r.ok:
+                return 0.0
+            px = float((((r.json() or {}).get(cid)) or {}).get("usd", 0.0) or 0.0)
+            return px if math.isfinite(px) and px > 0 else 0.0
+        except Exception:
+            return 0.0
 
     def get_history(self, symbol: str, days: int = 120) -> Dict[str, np.ndarray]:
         """Daily closes+volumes for the council. RH's trading API has no candles,
