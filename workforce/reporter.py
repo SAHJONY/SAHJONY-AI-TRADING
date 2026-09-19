@@ -48,6 +48,14 @@ WORKFORCE = [
     ("Risk Officer", "Hard allocation & total-deployed gatekeeper"),
     ("Execution Trader", "Routes orders to Alpaca paper / sim"),
     ("Treasurer + CRM", "SQLite ledger, investor accounting"),
+    ("Intel Regime Analyst", "Per-ticker regime (trend/range/volatile) — advisory"),
+    ("Intel Whale Watcher", "Top-trader / whale flow alerts — advisory"),
+    ("Intel Sentiment Analyst", "Article-count buzz proxy — advisory"),
+    ("Intel Macro Analyst", "BTC dominance, funding, fear/greed — advisory"),
+    ("Intel Risk Officer", "Independent de-risk advisories only — never blocks"),
+    ("Intel Quant Researcher", "Strategy attribution from realized outcomes"),
+    ("Intel Execution Optimizer", "Cost vs premium/realized analysis — advisory"),
+    ("Intel Copy-Signal Scout", "Top-trader copy-signal translation — advisory"),
     ("Reporter", "This dashboard"),
 ]
 
@@ -106,6 +114,8 @@ ENV_CATALOG = [
     ("DAY_TRADE_STOP_PCT", "Day Trading / Forex", False, "intraday stop loss"),
     ("CYCLE_MINUTES", "Ops", False, "run cadence"),
     ("LOG_LEVEL", "Ops", False, "INFO / DEBUG"),
+    ("INTEL_WORKFORCE_ENABLED", "Intel", False, "8-agent advisory intel team (default on)"),
+    ("INTEL_TOP_TRADERS_ENABLED", "Intel", False, "top-trader intel feed refresh (default on)"),
 ]
 
 
@@ -275,6 +285,17 @@ def _integrity_block(firm, state: Dict[str, Any]) -> list:
         return fn(state) if callable(fn) else []
     except Exception:               # telemetry never breaks the report
         return []
+
+
+def _top_traders_block() -> Dict[str, Any]:
+    """Top-trader intelligence snapshot for the dashboard — the sibling feed
+    (intel/top_traders.py). Secret-free and fault-isolated: a missing module or
+    an unreadable payload yields a marked-down unavailable block, never a crash."""
+    try:
+        from intel.top_traders import load_payload, summary_for_status
+        return summary_for_status(load_payload())
+    except Exception as exc:
+        return {"available": False, "error": type(exc).__name__}
 
 
 def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[str, Any]) -> Dict[str, Any]:
@@ -477,6 +498,13 @@ def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[st
              "composite": v.composite, "tilt": v.tilt, "rationale": v.rationale}
             for v in (cycle_result.get("board") or {}).values()
         ],
+        # Intel Workforce (intel/workforce/) — 8 advisory-only analysts, one
+        # plain-language finding each. Advisory only: never orders, never caps.
+        "intel_workforce": cycle_result.get("intel_findings") or [],
+        # Top-trader intelligence feed (intel/top_traders.py) — whale alerts and
+        # copy signals as context, never auto-copied. Unavailable when the
+        # sibling module or its cached payload is missing.
+        "top_traders": _top_traders_block(),
         "council": council,
         "brain": brain_block,
         "positions": positions,

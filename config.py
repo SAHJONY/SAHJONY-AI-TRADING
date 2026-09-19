@@ -295,6 +295,13 @@ class Config:
     copy_trail_trigger_pct: float = 0.15
     copy_trail_pct: float = 0.08
 
+    # intel workforce — 8-agent advisory-only analyst team (intel/workforce/);
+    # never emits orders, never changes risk caps, never touches the arming chain
+    intel_workforce_enabled: bool = True
+    # top-trader intelligence feed (intel/top_traders.py) feeding the intel
+    # workforce's whale/copy-signal agents
+    intel_top_traders_enabled: bool = True
+
     # pairs / statistical arbitrage (market-neutral desk)
     pairs_enabled: bool = True
     pairs: List[str] = field(default_factory=lambda: ["SPY:QQQ", "GLD:SLV"])
@@ -516,6 +523,8 @@ def load_config() -> Config:
         ladder_enable_averaging=_b("LADDER_ENABLE_AVERAGING", True),
         ladder_catastrophic_pct=_clamp(_f("LADDER_CATASTROPHIC_PCT", 0.40), 0.15, 0.90),
         copy_trading_enabled=_b("COPY_TRADING_ENABLED", False),
+        intel_workforce_enabled=_b("INTEL_WORKFORCE_ENABLED", True),
+        intel_top_traders_enabled=_b("INTEL_TOP_TRADERS_ENABLED", True),
         copy_trading_source_url=(os.getenv("COPY_TRADING_SOURCE_URL", "") or "").strip(),
         copy_trading_api_key=os.getenv("COPY_TRADING_API_KEY", "").strip(),
         copy_trading_max_symbols=max(1, _i("COPY_TRADING_MAX_SYMBOLS", 10)),

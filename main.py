@@ -257,6 +257,17 @@ def run_once(firm: Firm, state, force: bool) -> dict:
     _seed_shared_knowledge(firm, state)
     result = firm.run_cycle(state, trade=trade)
     _save_shared_knowledge(firm, state)
+    # Top-trader intelligence refresh (intel/top_traders.py) — runs AFTER the
+    # trading pipeline so it can never delay research or execution. Cached
+    # (6h leaderboard); fault-isolated: any failure skips with a warning and
+    # the desk keeps the previous payload. Placed BEFORE build_status so
+    # status.json carries this cycle's summary, not last cycle's.
+    if getattr(firm.cfg, "intel_top_traders_enabled", False):
+        try:
+            from intel.top_traders import refresh as tt_refresh
+            tt_refresh()
+        except Exception as exc:
+            log.warning("top-traders refresh skipped: %s", exc)
     status = build_status(firm, firm.cfg, state, result)
     write_status(status, status_path())
     shared = write_investor_views(firm.db, status)  # token-keyed read-only investor snapshots

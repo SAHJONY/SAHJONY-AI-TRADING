@@ -671,6 +671,16 @@ class Firm:
             log.info("promoted desks ENABLED: %s on symbols %s",
                      [a.strategy_id for a in self.promoted_adapters],
                      list(cfg.promoted_symbols or []))
+        # Intel workforce (intel/workforce/) — 8-agent advisory-only analyst
+        # team. Runs AFTER the research block; never emits orders, never
+        # touches risk caps or the arming chain. Import-guarded so the desk
+        # boots even if the module is absent.
+        self.intel_desk = None
+        try:
+            from intel.workforce.desk import IntelDesk
+            self.intel_desk = IntelDesk(cfg)
+        except Exception as exc:
+            log.warning("intel workforce unavailable: %s", exc)
         # Per-cycle stash for risk events that must page the owner (e.g. halt
         # flatten). Reset at the top of every run_cycle; drained by _maybe_notify.
         self._cycle_risk_events = []
@@ -1410,6 +1420,29 @@ class Firm:
             except Exception as exc:
                 log.error("research failed %s: %s", sym, exc)
 
+        # 1d) Intel workforce — the 8-agent advisory-only analyst team
+        # (intel/workforce/). Runs after the research block and reports
+        # plain-language findings to the dashboard. Fault-isolated: a dead
+        # data source makes that agent abstain; a dead module leaves an empty
+        # list. Never emits orders, never touches risk caps or the arming chain.
+        intel_findings: List[Dict[str, Any]] = []
+        try:
+            if getattr(self.cfg, "intel_workforce_enabled", True) \
+                    and self.intel_desk is not None:
+                intel_ctx = {
+                    "client": self.client,
+                    "db": self.db,
+                    "state": state,
+                    "cfg": self.cfg,
+                    "tickers": list(self.cfg.tickers or []),
+                    "research": research,
+                    "reconciliation": recon,
+                }
+                intel_findings = [f.as_dict() for f in self.intel_desk.run(intel_ctx)]
+        except Exception as exc:
+            log.error("intel workforce failed: %s", exc)
+            intel_findings = []
+
         # Cross-asset institutional research fabric. This is point-in-time and
         # advisory-only: it enriches AI/research context and can never invent an order.
         try:
@@ -1868,7 +1901,7 @@ class Firm:
 
         return {"cycle": cycle, "equity": eq_now, "cash": cash_now,
                 "research": research, "brain": brain, "executed": executed,
-                "ai_shadow": learning,
+                "ai_shadow": learning, "intel_findings": intel_findings,
                 "deployed": self._position_value(state), "halt": halt,
                 "reconciliation": recon,
                 "execution_reconciliation": reconciliation,
