@@ -56,10 +56,13 @@ def main() -> int:
 
     # fractional sizing: a high-priced coin must size in fractions, not whole units
     from types import SimpleNamespace
+    from strategies.base import StrategyContext
     from strategies.trailing_ladder import TrailingLadder
     snap = SimpleNamespace(price=60000.0)                       # BTC ~ $60k
     verdict = SimpleNamespace(conviction=0.9, direction="long")
-    intents = TrailingLadder(cfg).decide("BTC/USD", snap, None, verdict, budget=6000.0)
+    intents = TrailingLadder(cfg).decide(StrategyContext(
+        symbol="BTC/USD", snap=snap, position=None, council=verdict,
+        budget=6000.0))
     buys = [i for i in intents if i.kind == "equity" and i.side == "buy"]
     _check(len(buys) == 1, "crypto ladder emits a buy on a high-conviction long")
     qty = buys[0].qty

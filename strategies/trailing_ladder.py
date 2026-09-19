@@ -18,16 +18,32 @@ from typing import Dict, List, Optional
 
 from config import Config
 from intelligence.agents import CouncilVerdict, MarketSnapshot
-from strategies.base import OrderIntent, is_crypto, size_qty
+from strategies.base import OrderIntent, StrategyContext, is_crypto, size_qty
 
 
 class TrailingLadder:
     name = "Equity Ladder Desk"
+    strategy_id = "ladder"  # LiveStrategy protocol identity
 
     def __init__(self, cfg: Config):
         self.cfg = cfg
 
-    def decide(self, symbol: str, snap: MarketSnapshot, pos: Optional[Dict],
+    # -- LiveStrategy protocol ------------------------------------------------
+    def decide(self, ctx: StrategyContext) -> List[OrderIntent]:
+        """Unified entry point (strategies.base.LiveStrategy).
+
+        Reads everything from the context; pure — no broker/DB access.
+        """
+        return self._decide_legacy(ctx.symbol, ctx.snap, ctx.position,
+                                  ctx.council, ctx.budget)
+
+    # -- legacy signature (kept for backward-compat; delegates to decide) ------
+    def decide_legacy(self, symbol: str, snap: MarketSnapshot, pos: Optional[Dict],
+                      council: CouncilVerdict, budget: float) -> List[OrderIntent]:
+        return self.decide(StrategyContext(
+            symbol=symbol, snap=snap, position=pos, council=council, budget=budget))
+
+    def _decide_legacy(self, symbol: str, snap: MarketSnapshot, pos: Optional[Dict],
                council: CouncilVerdict, budget: float) -> List[OrderIntent]:
         if pos is None or pos.get("shares", 0) <= 0:
             return self._enter(symbol, snap, council, budget)

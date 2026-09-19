@@ -16,7 +16,7 @@ import numpy as np
 os.environ.setdefault("LOG_LEVEL", "ERROR")
 
 from config import load_config
-from strategies.base import OrderIntent
+from strategies.base import OrderIntent, StrategyContext
 from strategies.wheel_strategy import WheelStrategy
 from strategies.trailing_ladder import TrailingLadder
 from strategies.copy_trading import CopyTrader
@@ -97,7 +97,9 @@ def test_ladder_no_phantom_shares_when_blocked(cfg):
     base = {"strategy": "ladder", "shares": 10, "entry_price": 100.0, "cost_basis": 100.0,
             "peak_price": 100.0, "ratcheted": False, "trailing_floor": None,
             "hard_floor": 100.0 * (1 - cfg.ladder_catastrophic_pct), "rungs_hit": [False, False]}
-    intents = tl.decide("X", _Snap(78.0), dict(base), None, budget=5000.0)  # -22% → rung 1
+    intents = tl.decide(StrategyContext(symbol="X", snap=_Snap(78.0),
+                                        position=dict(base), council=None,
+                                        budget=5000.0))  # -22% → rung 1
     state = {"positions": {"X": dict(base)}}
     for it in intents:
         if it.kind == "equity" and it.risk_check:
@@ -115,7 +117,8 @@ def test_ladder_no_liquidation_on_zero_price(cfg):
     pos = {"strategy": "ladder", "shares": 10, "entry_price": 100.0, "cost_basis": 100.0,
            "peak_price": 100.0, "ratcheted": False, "trailing_floor": None,
            "hard_floor": 80.0, "rungs_hit": [False, False]}
-    intents = tl.decide("X", _Snap(0.0), pos, None, budget=5000.0)
+    intents = tl.decide(StrategyContext(symbol="X", snap=_Snap(0.0),
+                                        position=pos, council=None, budget=5000.0))
     sells = [i for i in intents if i.side == "sell"]
     _check(not sells, "price==0 produces no sell/liquidation intent")
 

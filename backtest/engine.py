@@ -32,12 +32,23 @@ class CostModel:
     stop_slip_mult: float = 2.0     # stops fire into a thin book
     event_slip_mult: float = 4.0    # bars whose range > 3x ATR
     funding_bps_per_8h: float = 0.0  # perp carry; 5m trades rarely cross settlement
+    spread_bps: float = 1.0         # full quoted bid-ask spread; a taker fill
+                                    # crosses half of it vs mid (per side).
+                                    # BTC perps typically print 0.5–2 bps.
 
     def slip_bps(self, atr_pct: float, bar_range_atr: float) -> float:
         s = self.base_slip_bps * (1.0 + max(atr_pct, 0.0) / 0.0015)
         if bar_range_atr > 3.0:
             s *= self.event_slip_mult
         return min(s, 30.0)
+
+    def taker_cross_bps(self, atr_pct: float, bar_range_atr: float,
+                        is_stop: bool) -> float:
+        """Total adverse bps a taker fill pays vs mid: slippage + half-spread."""
+        s = self.slip_bps(atr_pct, bar_range_atr)
+        if is_stop:
+            s *= self.stop_slip_mult
+        return s + self.spread_bps / 2.0
 
 
 @dataclass
@@ -182,11 +193,15 @@ class Backtester:
         return abs(notional) * bps / 10_000.0
 
     def _fill_px(self, px: float, side: int, atr_pct: float, bar_range_atr: float,
-                 is_stop: bool) -> float:
-        """Slippage always moves the fill against us."""
-        s = self.costs.slip_bps(atr_pct, bar_range_atr)
-        if is_stop:
-            s *= self.costs.stop_slip_mult
+                 is_stop: bool, maker: bool) -> float:
+        """Slippage always moves the fill against us; takers also cross half
+        the quoted spread vs mid. Makers rest in the book and pay no spread."""
+        if maker:
+            s = self.costs.slip_bps(atr_pct, bar_range_atr)
+            if is_stop:
+                s *= self.costs.stop_slip_mult
+        else:
+            s = self.costs.taker_cross_bps(atr_pct, bar_range_atr, is_stop)
         return px * (1.0 + side * s / 10_000.0)
 
     # -- main loop -------------------------------------------------------------
@@ -243,7 +258,7 @@ class Backtester:
             assert pos is not None
             a_pct = float(atr[t] / b.close[t]) if b.close[t] else 0.0
             rng = float((b.high[t] - b.low[t]) / atr[t]) if atr[t] else 0.0
-            fill = self._fill_px(px, -pos.side, a_pct, rng, is_stop)
+            fill = self._fill_px(px, -pos.side, a_pct, rng, is_stop, maker)
             gross = pos.side * (fill - pos.entry_px) * qty
             fee = self._fee(fill * qty, maker)
             pos.pnl += gross - fee
@@ -279,13 +294,13 @@ class Backtester:
             # -- edge gate: TP1 must clear the round-trip cost by min_edge_mult
             if s.targets:
                 cost_bps = 2 * (self.costs.taker_bps
-                                + self.costs.slip_bps(a_pct, 1.0))
+                                + self.costs.taker_cross_bps(a_pct, 1.0, is_stop=False))
                 tp1_bps = abs(s.targets[0][0] - raw_px) / raw_px * 10_000.0
                 if tp1_bps < self.risk.min_edge_mult * cost_bps:
                     skipped_edge += 1
                     return
             rng = float((b.high[t] - b.low[t]) / atr[t]) if atr[t] else 0.0
-            fill = self._fill_px(raw_px, s.side, a_pct, rng, is_stop=False)
+            fill = self._fill_px(raw_px, s.side, a_pct, rng, is_stop=False, maker=maker)
             stop_dist = abs(fill - s.stop)
             if stop_dist <= 0:
                 return

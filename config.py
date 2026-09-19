@@ -181,6 +181,26 @@ class Config:
     max_daily_drawdown_pct: float = 0.06
     # Kill switch: hard-stop all new risk regardless of P&L (env or a HALT file).
     trading_halt: bool = False
+    # Portfolio governor (risk/portfolio_governor.py): second risk gate after
+    # RiskEngine.approve(). Enforces portfolio-level rails the per-order gate
+    # cannot see — hard max-drawdown stop, drawdown throttle, gross-exposure
+    # cap, single-position room, correlation penalty. Reduction-only: it can
+    # only shrink or reject the RiskEngine-approved notional, never grow it.
+    # Kelly sizing is neutralized in the live wiring (fractional_kelly=1.0 with
+    # raw_kelly=1.0 → pass-through) so the governor acts purely as a portfolio
+    # overlay; RiskEngine remains the position sizer. Default ON.
+    portfolio_governor_enabled: bool = True
+    portfolio_max_gross_exposure_pct: float = 0.80
+    portfolio_max_drawdown_soft: float = 0.05
+    portfolio_max_drawdown_hard: float = 0.10
+    portfolio_max_pair_correlation: float = 0.75
+    # Catastrophic per-position backstop (risk/risk_engine.py::hard_stop_breached).
+    # A central sweep each cycle liquidates any equity position that has fallen
+    # this far below its cost basis, regardless of strategy — a backstop for
+    # desks without their own downside stop (e.g. wheel-assigned shares).
+    # Wide by design (default 25%): strategy-level stops fire first; this is the
+    # Millennium-style programmatic exit before a drawdown grows. Exits only.
+    catastrophic_stop_pct: float = 0.25
     # Smallest notional a venue will accept (Robinhood/Alpaca ≈ $1). Sub-minimum
     # budgets are rounded up to this when it still fits the per-position cap,
     # otherwise the desk stands down instead of sending a doomed order.
@@ -415,6 +435,12 @@ def load_config() -> Config:
         min_council_conviction=_clamp(_f("MIN_COUNCIL_CONVICTION", 0.55), HARD_MIN_CONVICTION, 1.0),
         max_daily_drawdown_pct=_clamp(_f("MAX_DAILY_DRAWDOWN_PCT", 0.06), 0.01, HARD_MAX_DAILY_DRAWDOWN_PCT),
         trading_halt=_b("TRADING_HALT", False),
+        portfolio_governor_enabled=_b("PORTFOLIO_GOVERNOR", True),
+        portfolio_max_gross_exposure_pct=_clamp(_f("PORTFOLIO_MAX_GROSS_PCT", 0.80), 0.05, 1.0),
+        portfolio_max_drawdown_soft=_clamp(_f("PORTFOLIO_DD_SOFT", 0.05), 0.01, 0.25),
+        portfolio_max_drawdown_hard=_clamp(_f("PORTFOLIO_DD_HARD", 0.10), 0.02, 0.50),
+        portfolio_max_pair_correlation=_clamp(_f("PORTFOLIO_MAX_PAIR_CORR", 0.75), 0.0, 1.0),
+        catastrophic_stop_pct=_clamp(_f("CATASTROPHIC_STOP_PCT", 0.25), 0.05, 0.90),
         min_order_notional=max(0.0, _f("MIN_ORDER_NOTIONAL_USD", 1.0)),
         # Real-time quote guard. DEFAULT OFF: it changes when the desk trades
         # (rejected ticks, feed-based quarantine), and public/evaluation.json
