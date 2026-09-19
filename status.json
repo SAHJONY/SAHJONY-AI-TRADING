@@ -6,11 +6,11 @@
   "benchmark": {
     "symbol": "BTC-USD",
     "start_price": 64337.05,
-    "last_price": 81388.0,
-    "return_pct": 26.503,
-    "alpha_pct": -26.503
+    "last_price": 81699.0,
+    "return_pct": 26.986,
+    "alpha_pct": -26.986
   },
-  "ts": "2026-09-19T14:08:14.082304+00:00",
+  "ts": "2026-09-19T17:20:40.280577+00:00",
   "cycle": 920,
   "strategy_ranking": [
     {
@@ -30,8 +30,8 @@
       "key": "ai_consensus",
       "stage": "shadow",
       "score": 0.0,
-      "observations": 1867,
-      "win_rate": 0.376,
+      "observations": 1870,
+      "win_rate": 0.3781,
       "evidence": "ai-shadow",
       "live_eligible": false,
       "rank": 2,
@@ -129,7 +129,7 @@
         "evidence": {},
         "approvals": {},
         "created_at": "2026-07-31T07:38:01.624897+00:00",
-        "updated_at": "2026-09-19T14:08:14.078519+00:00"
+        "updated_at": "2026-09-19T17:20:40.276996+00:00"
       },
       {
         "key": "spread",
@@ -139,7 +139,7 @@
         "evidence": {},
         "approvals": {},
         "created_at": "2026-07-31T07:38:01.623113+00:00",
-        "updated_at": "2026-09-19T14:08:14.078618+00:00"
+        "updated_at": "2026-09-19T17:20:40.277083+00:00"
       },
       {
         "key": "institutional_research",
@@ -149,7 +149,7 @@
         "evidence": {},
         "approvals": {},
         "created_at": "2026-07-31T07:36:25.948812+00:00",
-        "updated_at": "2026-09-19T14:07:57.094938+00:00"
+        "updated_at": "2026-09-19T17:20:22.741252+00:00"
       },
       {
         "key": "mean_reversion",
@@ -159,7 +159,7 @@
         "evidence": {},
         "approvals": {},
         "created_at": "2026-07-31T07:38:01.622615+00:00",
-        "updated_at": "2026-09-19T14:08:14.078589+00:00"
+        "updated_at": "2026-09-19T17:20:40.277057+00:00"
       },
       {
         "key": "daytrade",
@@ -169,7 +169,7 @@
         "evidence": {},
         "approvals": {},
         "created_at": "2026-07-31T07:38:01.621297+00:00",
-        "updated_at": "2026-09-19T14:08:14.078390+00:00"
+        "updated_at": "2026-09-19T17:20:40.276842+00:00"
       },
       {
         "key": "pairs",
@@ -179,7 +179,7 @@
         "evidence": {},
         "approvals": {},
         "created_at": "2026-07-31T07:38:01.622116+00:00",
-        "updated_at": "2026-09-19T14:08:14.078558+00:00"
+        "updated_at": "2026-09-19T17:20:40.277031+00:00"
       },
       {
         "key": "regime_momentum",
@@ -189,7 +189,7 @@
         "evidence": {},
         "approvals": {},
         "created_at": "2026-07-31T07:38:01.624374+00:00",
-        "updated_at": "2026-09-19T14:08:14.078704+00:00"
+        "updated_at": "2026-09-19T17:20:40.277154+00:00"
       },
       {
         "key": "volatility_breakout",
@@ -199,7 +199,7 @@
         "evidence": {},
         "approvals": {},
         "created_at": "2026-07-31T07:38:01.623965+00:00",
-        "updated_at": "2026-09-19T14:08:14.078675+00:00"
+        "updated_at": "2026-09-19T17:20:40.277130+00:00"
       },
       {
         "key": "wheel",
@@ -209,7 +209,7 @@
         "evidence": {},
         "approvals": {},
         "created_at": "2026-07-31T07:38:01.623545+00:00",
-        "updated_at": "2026-09-19T14:08:14.078646+00:00"
+        "updated_at": "2026-09-19T17:20:40.277107+00:00"
       }
     ],
     "audit": [],
@@ -261,12 +261,12 @@
       "score": 75.0,
       "nodes": 15
     },
-    "model_accuracy": 0.3757,
+    "model_accuracy": 0.3764,
     "learning_progress": 1.0,
-    "observation_count": 9082,
+    "observation_count": 9094,
     "training_coverage": 0.7667,
     "promotion_ready": true,
-    "overall_intelligence": 74.73,
+    "overall_intelligence": 74.74,
     "interpretation": "operational learning index; not a measure of general intelligence",
     "evidence_state": "mature"
   },
@@ -312,7 +312,7 @@
     "cadence": {
       "degraded": false,
       "reason": "",
-      "gap_min": 16.8,
+      "gap_min": 15.7,
       "expected_min": 5,
       "tolerance_min": 90.0
     },
@@ -375,47 +375,41 @@
       "agent": "hermes",
       "goal": "Beat buy-and-hold (positive alpha vs BTC) while keeping max drawdown under 15% and never risking the mandate on a single trade \u2014 capital preservation first. Near-term: prove a sustained, fee-aware, positive out-of-sample edge on the paper trainer over ~90 days before scaling any live capital; grow the live account only on demonstrated alpha.",
       "used": true,
-      "data_ok_pct": 0.308,
+      "data_ok_pct": 0.385,
       "quarantined": [
-        "DOGE/USD",
-        "ADA/USD",
-        "ETC/USD"
+        "AVAX/USD"
       ],
       "issues": {
         "BTC/USD": [
           "short history"
         ],
-        "SOL/USD": [
+        "ETH/USD": [
           "short history"
         ],
-        "LTC/USD": [
+        "XRP/USD": [
           "short history"
         ],
         "DOGE/USD": [
-          "bad price"
-        ],
-        "ADA/USD": [
-          "bad price",
           "short history"
         ],
         "AVAX/USD": [
+          "bad price"
+        ],
+        "LINK/USD": [
           "short history"
         ],
         "BCH/USD": [
           "short history"
         ],
-        "UNI/USD": [
-          "short history"
-        ],
         "ETC/USD": [
-          "bad price"
+          "short history"
         ]
       },
       "hit_rates": {
-        "BTC/USD": 0.561,
-        "ETH/USD": 0.513,
-        "SOL/USD": 0.475,
-        "XRP/USD": 0.44
+        "BTC/USD": 0.531,
+        "ETH/USD": 0.498,
+        "SOL/USD": 0.572,
+        "XRP/USD": 0.444
       },
       "strategy_weights": {
         "daytrade": 0.867
@@ -480,131 +474,68 @@
     {
       "symbol": "ETH/USD",
       "scores": {
-        "buffett": -0.787,
-        "munger": -0.041,
+        "buffett": 0.45,
+        "munger": 0.3,
         "macro": 0.0,
-        "growth": 0.364,
-        "quant": -0.094
+        "growth": 0.35,
+        "quant": 0.0
       },
-      "gate": 0.911,
-      "composite": -0.131,
-      "tilt": -0.0119,
+      "gate": 1.0,
+      "composite": 0.223,
+      "tilt": 0.0223,
       "rationale": {
-        "buffett": "-27.2% vs 200d mean, vol 53%",
-        "munger": "+16.8% vs 50d trend, 5d move +4.9%",
+        "buffett": "+0.0% vs 200d mean, vol 0%",
+        "munger": "+0.0% vs 50d trend, 5d move +0.0%",
         "macro": "insufficient benchmark history",
-        "growth": "6m +21.0%, -21.3% off the high",
-        "quant": "z +2.52, 20/50 trend +10.0%",
-        "risk_gate": "drawdown -21.3%, vol 53% \u2192 gate 0.91"
+        "growth": "6m +0.0%, +0.0% off the high",
+        "quant": "insufficient history",
+        "risk_gate": "drawdown +0.0%, vol 0% \u2192 gate 1.00"
       }
     },
     {
       "symbol": "SOL/USD",
       "scores": {
-        "buffett": 0.45,
-        "munger": 0.3,
+        "buffett": -0.847,
+        "munger": -0.389,
         "macro": 0.0,
-        "growth": 0.35,
-        "quant": 0.0
+        "growth": 0.432,
+        "quant": -0.043
       },
-      "gate": 1.0,
-      "composite": 0.223,
-      "tilt": 0.0223,
+      "gate": 0.833,
+      "composite": -0.181,
+      "tilt": -0.0151,
       "rationale": {
-        "buffett": "+0.0% vs 200d mean, vol 0%",
-        "munger": "+0.0% vs 50d trend, 5d move +0.0%",
+        "buffett": "-34.1% vs 200d mean, vol 54%",
+        "munger": "+22.6% vs 50d trend, 5d move +9.4%",
         "macro": "insufficient benchmark history",
-        "growth": "6m +0.0%, +0.0% off the high",
-        "quant": "insufficient history",
-        "risk_gate": "drawdown +0.0%, vol 0% \u2192 gate 1.00"
+        "growth": "6m +29.7%, -23.4% off the high",
+        "quant": "z +2.44, 20/50 trend +12.2%",
+        "risk_gate": "drawdown -23.4%, vol 54% \u2192 gate 0.83"
       }
     },
     {
       "symbol": "LTC/USD",
       "scores": {
-        "buffett": 0.452,
-        "munger": 0.3,
+        "buffett": -0.478,
+        "munger": -0.114,
         "macro": 0.0,
-        "growth": 0.349,
-        "quant": 0.0
+        "growth": 0.039,
+        "quant": -0.111
       },
-      "gate": 1.0,
-      "composite": 0.223,
-      "tilt": 0.0223,
+      "gate": 0.82,
+      "composite": -0.146,
+      "tilt": -0.012,
       "rationale": {
-        "buffett": "+0.1% vs 200d mean, vol 0%",
-        "munger": "-0.1% vs 50d trend, 5d move +0.0%",
+        "buffett": "-15.0% vs 200d mean, vol 42%",
+        "munger": "+17.4% vs 50d trend, 5d move +9.1%",
         "macro": "insufficient benchmark history",
-        "growth": "6m +0.0%, -0.1% off the high",
-        "quant": "insufficient history",
-        "risk_gate": "drawdown -0.1%, vol 0% \u2192 gate 1.00"
+        "growth": "6m +3.3%, -26.0% off the high",
+        "quant": "z +1.98, 20/50 trend +7.5%",
+        "risk_gate": "drawdown -26.0%, vol 42% \u2192 gate 0.82"
       }
     },
     {
       "symbol": "XRP/USD",
-      "scores": {
-        "buffett": -0.628,
-        "munger": 0.064,
-        "macro": 0.0,
-        "growth": -0.094,
-        "quant": 0.023
-      },
-      "gate": 0.528,
-      "composite": -0.14,
-      "tilt": -0.0074,
-      "rationale": {
-        "buffett": "-13.1% vs 200d mean, vol 54%",
-        "munger": "+14.7% vs 50d trend, 5d move +0.9%",
-        "macro": "insufficient benchmark history",
-        "growth": "6m +1.7%, -33.6% off the high",
-        "quant": "z +1.38, 20/50 trend +9.6%",
-        "risk_gate": "drawdown -33.6%, vol 54% \u2192 gate 0.53"
-      }
-    },
-    {
-      "symbol": "DOGE/USD",
-      "scores": {
-        "buffett": 0.207,
-        "munger": 0.3,
-        "macro": 0.0,
-        "growth": -0.635,
-        "quant": 0.737
-      },
-      "gate": 0.0,
-      "composite": 0.157,
-      "tilt": 0.0,
-      "rationale": {
-        "buffett": "+100.0% vs 200d mean, vol 53%",
-        "munger": "-100.0% vs 50d trend, 5d move +6.2%",
-        "macro": "insufficient benchmark history",
-        "growth": "6m -18.8%, -100.0% off the high",
-        "quant": "z -24.89, 20/50 trend +6.4%",
-        "risk_gate": "drawdown -100.0%, vol 53% \u2192 gate 0.00"
-      }
-    },
-    {
-      "symbol": "ADA/USD",
-      "scores": {
-        "buffett": 0.45,
-        "munger": 0.3,
-        "macro": 0.0,
-        "growth": -0.35,
-        "quant": 0.0
-      },
-      "gate": 1.0,
-      "composite": 0.083,
-      "tilt": 0.0083,
-      "rationale": {
-        "buffett": "+0.0% vs 200d mean, vol 0%",
-        "munger": "+0.0% vs 50d trend, 5d move +0.0%",
-        "macro": "insufficient benchmark history",
-        "growth": "6m +0.0%, -100.0% off the high",
-        "quant": "insufficient history",
-        "risk_gate": "drawdown +0.0%, vol 0% \u2192 gate 1.00"
-      }
-    },
-    {
-      "symbol": "AVAX/USD",
       "scores": {
         "buffett": 0.45,
         "munger": 0.3,
@@ -625,24 +556,87 @@
       }
     },
     {
+      "symbol": "DOGE/USD",
+      "scores": {
+        "buffett": 0.45,
+        "munger": 0.3,
+        "macro": 0.0,
+        "growth": 0.35,
+        "quant": 0.0
+      },
+      "gate": 1.0,
+      "composite": 0.223,
+      "tilt": 0.0223,
+      "rationale": {
+        "buffett": "+0.0% vs 200d mean, vol 0%",
+        "munger": "+0.0% vs 50d trend, 5d move +0.0%",
+        "macro": "insufficient benchmark history",
+        "growth": "6m +0.0%, +0.0% off the high",
+        "quant": "insufficient history",
+        "risk_gate": "drawdown +0.0%, vol 0% \u2192 gate 1.00"
+      }
+    },
+    {
+      "symbol": "ADA/USD",
+      "scores": {
+        "buffett": -0.589,
+        "munger": -0.012,
+        "macro": 0.0,
+        "growth": -0.455,
+        "quant": -0.216
+      },
+      "gate": 0.0,
+      "composite": -0.277,
+      "tilt": -0.0,
+      "rationale": {
+        "buffett": "-6.4% vs 200d mean, vol 65%",
+        "munger": "+14.3% vs 50d trend, 5d move +10.5%",
+        "macro": "insufficient benchmark history",
+        "growth": "6m -9.7%, -46.5% off the high",
+        "quant": "z +1.96, 20/50 trend +4.2%",
+        "risk_gate": "drawdown -46.5%, vol 65% \u2192 gate 0.00"
+      }
+    },
+    {
+      "symbol": "AVAX/USD",
+      "scores": {
+        "buffett": 0.139,
+        "munger": -0.546,
+        "macro": 0.0,
+        "growth": -0.267,
+        "quant": 0.76
+      },
+      "gate": 0.0,
+      "composite": 0.069,
+      "tilt": 0.0,
+      "rationale": {
+        "buffett": "+100.0% vs 200d mean, vol 57%",
+        "munger": "-100.0% vs 50d trend, 5d move +29.2%",
+        "macro": "insufficient benchmark history",
+        "growth": "6m +5.1%, -100.0% off the high",
+        "quant": "z -13.66, 20/50 trend +7.2%",
+        "risk_gate": "drawdown -100.0%, vol 57% \u2192 gate 0.00"
+      }
+    },
+    {
       "symbol": "LINK/USD",
       "scores": {
-        "buffett": -0.912,
-        "munger": -0.134,
+        "buffett": 0.45,
+        "munger": 0.3,
         "macro": 0.0,
-        "growth": 0.559,
-        "quant": 0.091
+        "growth": 0.35,
+        "quant": 0.0
       },
-      "gate": 0.871,
-      "composite": -0.09,
-      "tilt": -0.0078,
+      "gate": 1.0,
+      "composite": 0.223,
+      "tilt": 0.0223,
       "rationale": {
-        "buffett": "-34.2% vs 200d mean, vol 59%",
-        "munger": "+18.3% vs 50d trend, 5d move +8.4%",
+        "buffett": "+0.0% vs 200d mean, vol 0%",
+        "munger": "+0.0% vs 50d trend, 5d move +0.0%",
         "macro": "insufficient benchmark history",
-        "growth": "6m +28.5%, -13.5% off the high",
-        "quant": "z +1.20, 20/50 trend +11.4%",
-        "risk_gate": "drawdown -13.5%, vol 59% \u2192 gate 0.87"
+        "growth": "6m +0.0%, +0.0% off the high",
+        "quant": "insufficient history",
+        "risk_gate": "drawdown +0.0%, vol 0% \u2192 gate 1.00"
       }
     },
     {
@@ -669,64 +663,64 @@
     {
       "symbol": "UNI/USD",
       "scores": {
-        "buffett": 0.44,
+        "buffett": -1.0,
+        "munger": -1.0,
+        "macro": 0.0,
+        "growth": 0.993,
+        "quant": 0.079
+      },
+      "gate": 0.647,
+      "composite": -0.182,
+      "tilt": -0.0118,
+      "rationale": {
+        "buffett": "-132.4% vs 200d mean, vol 74%",
+        "munger": "+74.7% vs 50d trend, 5d move +35.1%",
+        "macro": "insufficient benchmark history",
+        "growth": "6m +153.0%, -0.5% off the high",
+        "quant": "z +2.37, 20/50 trend +31.8%",
+        "risk_gate": "drawdown -0.5%, vol 74% \u2192 gate 0.65"
+      }
+    },
+    {
+      "symbol": "XLM/USD",
+      "scores": {
+        "buffett": -0.721,
+        "munger": 0.125,
+        "macro": 0.0,
+        "growth": 0.461,
+        "quant": -0.27
+      },
+      "gate": 0.636,
+      "composite": -0.111,
+      "tilt": -0.0071,
+      "rationale": {
+        "buffett": "-13.5% vs 200d mean, vol 68%",
+        "munger": "+13.5% vs 50d trend, 5d move +4.6%",
+        "macro": "insufficient benchmark history",
+        "growth": "6m +32.1%, -23.0% off the high",
+        "quant": "z +2.43, 20/50 trend +3.8%",
+        "risk_gate": "drawdown -23.0%, vol 68% \u2192 gate 0.64"
+      }
+    },
+    {
+      "symbol": "ETC/USD",
+      "scores": {
+        "buffett": 0.45,
         "munger": 0.3,
         "macro": 0.0,
         "growth": 0.35,
         "quant": 0.0
       },
       "gate": 1.0,
-      "composite": 0.221,
-      "tilt": 0.0221,
+      "composite": 0.223,
+      "tilt": 0.0223,
       "rationale": {
-        "buffett": "-0.4% vs 200d mean, vol 0%",
-        "munger": "+0.4% vs 50d trend, 5d move +0.0%",
+        "buffett": "+0.0% vs 200d mean, vol 0%",
+        "munger": "+0.0% vs 50d trend, 5d move +0.0%",
         "macro": "insufficient benchmark history",
-        "growth": "6m +0.0%, +0.4% off the high",
+        "growth": "6m +0.0%, +0.0% off the high",
         "quant": "insufficient history",
-        "risk_gate": "drawdown +0.4%, vol 0% \u2192 gate 1.00"
-      }
-    },
-    {
-      "symbol": "XLM/USD",
-      "scores": {
-        "buffett": -0.723,
-        "munger": 0.121,
-        "macro": 0.0,
-        "growth": 0.461,
-        "quant": -0.272
-      },
-      "gate": 0.638,
-      "composite": -0.113,
-      "tilt": -0.0072,
-      "rationale": {
-        "buffett": "-13.6% vs 200d mean, vol 68%",
-        "munger": "+13.6% vs 50d trend, 5d move +4.5%",
-        "macro": "insufficient benchmark history",
-        "growth": "6m +32.0%, -22.9% off the high",
-        "quant": "z +2.46, 20/50 trend +3.8%",
-        "risk_gate": "drawdown -22.9%, vol 68% \u2192 gate 0.64"
-      }
-    },
-    {
-      "symbol": "ETC/USD",
-      "scores": {
-        "buffett": 0.168,
-        "munger": 0.153,
-        "macro": 0.0,
-        "growth": -0.456,
-        "quant": 0.747
-      },
-      "gate": 0.0,
-      "composite": 0.16,
-      "tilt": 0.0,
-      "rationale": {
-        "buffett": "+100.0% vs 200d mean, vol 55%",
-        "munger": "-100.0% vs 50d trend, 5d move +11.7%",
-        "macro": "insufficient benchmark history",
-        "growth": "6m -6.6%, -100.0% off the high",
-        "quant": "z -20.14, 20/50 trend +6.8%",
-        "risk_gate": "drawdown -100.0%, vol 55% \u2192 gate 0.00"
+        "risk_gate": "drawdown +0.0%, vol 0% \u2192 gate 1.00"
       }
     }
   ],
@@ -740,7 +734,7 @@
       "confidence": 0.0,
       "rationale": "no usable price history for 13 ticker(s) (13 feed failures)",
       "inputs": [],
-      "ts": "2026-09-19T14:06:44.987772+00:00",
+      "ts": "2026-09-19T17:19:06.934256+00:00",
       "abstain_reason": "no usable price history for 13 ticker(s) (13 feed failures)",
       "details": {}
     },
@@ -755,17 +749,17 @@
       "inputs": [
         "intel.top_traders.load_payload"
       ],
-      "ts": "2026-09-19T14:06:44.991632+00:00",
+      "ts": "2026-09-19T17:19:06.937608+00:00",
       "abstain_reason": null,
       "details": {
         "alert_count": 0,
         "summary": {
           "available": true,
-          "ts": "2026-09-19T13:54:22.022244+00:00",
+          "ts": "2026-09-19T17:06:37.505678+00:00",
           "trader_count": 20,
           "top_trader": {
             "alias": "0x393d\u20262109",
-            "pnl": 270917049.498192
+            "pnl": 278155821.467757
           },
           "copy_signal": {
             "label": "INTELLIGENCE ONLY \u2014 not auto-copying",
@@ -774,7 +768,7 @@
               "ETH": 0.0
             },
             "net_bias": "mixed",
-            "ts": "2026-09-19T13:54:15.515773+00:00"
+            "ts": "2026-09-19T17:06:30.403072+00:00"
           },
           "whale_alert_count": 0,
           "funds_tracked": 5,
@@ -790,21 +784,34 @@
     {
       "name": "Sentiment Analyst",
       "role": "Article-count buzz proxy (NOT true sentiment)",
-      "status": "abstained",
-      "finding": "Sentiment Analyst abstained this cycle: GDELT feed unreachable for all coins: BTC (HTTPError), ETH (HTTPError), SOL (HTTPError), LTC (ReadTimeout), XRP (HTTPError), DOGE (HTTPError). No numbers were estimated in place of the missing data.",
+      "status": "active",
+      "finding": "Article-count buzz (volume, NOT directional sentiment) from the GDELT doc API: BTC 20 article(s); SOL 20 article(s). Dropped: ETH (HTTPError), LTC (HTTPError), XRP (HTTPError), DOGE (HTTPError). A high article count means news volume, not bullishness \u2014 this agent takes no directional stance on buzz alone.",
       "conviction_delta": 0.0,
-      "confidence": 0.0,
-      "rationale": "GDELT feed unreachable for all coins: BTC (HTTPError), ETH (HTTPError), SOL (HTTPError), LTC (ReadTimeout), XRP (HTTPError), DOGE (HTTPError)",
-      "inputs": [],
-      "ts": "2026-09-19T14:07:56.381235+00:00",
-      "abstain_reason": "GDELT feed unreachable for all coins: BTC (HTTPError), ETH (HTTPError), SOL (HTTPError), LTC (ReadTimeout), XRP (HTTPError), DOGE (HTTPError)",
-      "details": {}
+      "confidence": 0.5,
+      "rationale": "buzz counts={'BTC': 20, 'SOL': 20}",
+      "inputs": [
+        "GDELT doc API (api.gdeltproject.org, keyless)"
+      ],
+      "ts": "2026-09-19T17:20:21.961116+00:00",
+      "abstain_reason": null,
+      "details": {
+        "article_counts": {
+          "BTC": 20,
+          "SOL": 20
+        },
+        "failed": [
+          "ETH (HTTPError)",
+          "LTC (HTTPError)",
+          "XRP (HTTPError)",
+          "DOGE (HTTPError)"
+        ]
+      }
     },
     {
       "name": "Macro Analyst",
       "role": "Crypto macro: BTC dominance, funding, fear/greed",
       "status": "active",
-      "finding": "Crypto macro read \u2014 BTC dominance 58.3%; avg funding 0.0016%/h (~+14%/yr); fear/greed 71 (Greed). Net tilt -0.12 (contrarian lean on extremes only). Context for the dashboard, not a position signal.",
+      "finding": "Crypto macro read \u2014 BTC dominance 58.3%; avg funding 0.0019%/h (~+17%/yr); fear/greed 71 (Greed). Net tilt -0.12 (contrarian lean on extremes only). Context for the dashboard, not a position signal.",
       "conviction_delta": -0.12,
       "confidence": 0.55,
       "rationale": "sources=3/3 ok; tilt -0.12",
@@ -813,11 +820,11 @@
         "Hyperliquid funding",
         "fear/greed index"
       ],
-      "ts": "2026-09-19T14:07:57.078129+00:00",
+      "ts": "2026-09-19T17:20:22.725340+00:00",
       "abstain_reason": null,
       "details": {
-        "btc_dominance": 58.28037244986001,
-        "funding_per_hour": 1.558682478632479e-05,
+        "btc_dominance": 58.331305156638656,
+        "funding_per_hour": 1.9129745726495728e-05,
         "fear_greed": 71.0,
         "dropped": []
       }
@@ -837,7 +844,7 @@
         "cfg.max_total_deployed_pct",
         "cfg.max_daily_drawdown_pct"
       ],
-      "ts": "2026-09-19T14:07:57.078184+00:00",
+      "ts": "2026-09-19T17:20:22.725390+00:00",
       "abstain_reason": null,
       "details": {
         "advisories": [],
@@ -856,7 +863,7 @@
         "state.hermes_events",
         "db.recent_trades"
       ],
-      "ts": "2026-09-19T14:07:57.078519+00:00",
+      "ts": "2026-09-19T17:20:22.725854+00:00",
       "abstain_reason": null,
       "details": {
         "by_strategy": {
@@ -880,7 +887,7 @@
       "confidence": 0.0,
       "rationale": "no cost or P&L data recorded yet",
       "inputs": [],
-      "ts": "2026-09-19T14:07:57.078543+00:00",
+      "ts": "2026-09-19T17:20:22.725874+00:00",
       "abstain_reason": "no cost or P&L data recorded yet",
       "details": {}
     },
@@ -895,14 +902,14 @@
       "inputs": [
         "intel.top_traders.load_payload"
       ],
-      "ts": "2026-09-19T14:07:57.078966+00:00",
+      "ts": "2026-09-19T17:20:22.726242+00:00",
       "abstain_reason": null,
       "details": {
         "signal": {
           "label": "INTELLIGENCE ONLY \u2014 not auto-copying",
           "assets": "{'BTC': 0.0, 'ETH': 0.0}",
           "net_bias": "mixed",
-          "ts": "2026-09-19T13:54:15.515773+00:00"
+          "ts": "2026-09-19T17:06:30.403072+00:00"
         }
       }
     },
@@ -915,18 +922,18 @@
       "confidence": 0.0,
       "rationale": "no symbol in context",
       "inputs": [],
-      "ts": "2026-09-19T14:07:57.078993+00:00",
+      "ts": "2026-09-19T17:20:22.726262+00:00",
       "abstain_reason": "no symbol in context",
       "details": {}
     }
   ],
   "top_traders": {
     "available": true,
-    "ts": "2026-09-19T13:54:22.022244+00:00",
+    "ts": "2026-09-19T17:06:37.505678+00:00",
     "trader_count": 20,
     "top_trader": {
       "alias": "0x393d\u20262109",
-      "pnl": 270917049.498192
+      "pnl": 278155821.467757
     },
     "copy_signal": {
       "label": "INTELLIGENCE ONLY \u2014 not auto-copying",
@@ -935,7 +942,7 @@
         "ETH": 0.0
       },
       "net_bias": "mixed",
-      "ts": "2026-09-19T13:54:15.515773+00:00"
+      "ts": "2026-09-19T17:06:30.403072+00:00"
     },
     "whale_alert_count": 0,
     "funds_tracked": 5,
@@ -953,100 +960,100 @@
       "details": []
     },
     "council_calibration_accuracy": {
-      "Bridgewater Risk": 0.518,
-      "AQR Factor": 0.228,
-      "Citadel Securities MM": 0.705
+      "Bridgewater Risk": 0.62,
+      "AQR Factor": 0.465,
+      "Citadel Securities MM": 0.535
     },
     "dispersion": {
       "BTC/USD": {
-        "scale": 0.805,
+        "scale": 0.802,
         "reason": "disagreement haircut",
-        "dispersion": 0.078,
-        "accurate_mass_pct": 0.104,
+        "dispersion": 0.079,
+        "accurate_mass_pct": 0.118,
         "k": 2.5
       },
       "ETH/USD": {
-        "scale": 0.3,
+        "scale": 0.802,
         "reason": "disagreement haircut",
-        "dispersion": 0.564,
-        "accurate_mass_pct": 0.076,
+        "dispersion": 0.079,
+        "accurate_mass_pct": 0.118,
         "k": 2.5
       },
       "SOL/USD": {
-        "scale": 0.805,
+        "scale": 0.3,
         "reason": "disagreement haircut",
-        "dispersion": 0.078,
-        "accurate_mass_pct": 0.104,
+        "dispersion": 0.546,
+        "accurate_mass_pct": 0.095,
         "k": 2.5
       },
       "LTC/USD": {
-        "scale": 0.805,
-        "reason": "disagreement haircut",
-        "dispersion": 0.078,
-        "accurate_mass_pct": 0.104,
-        "k": 2.5
-      },
-      "XRP/USD": {
-        "scale": 0.3,
-        "reason": "disagreement haircut",
-        "dispersion": 0.488,
-        "accurate_mass_pct": 0.078,
-        "k": 2.5
-      },
-      "DOGE/USD": {
-        "scale": 0.3,
-        "reason": "disagreement haircut",
-        "dispersion": 0.512,
-        "accurate_mass_pct": 0.078,
-        "k": 2.5
-      },
-      "ADA/USD": {
-        "scale": 0.805,
-        "reason": "disagreement haircut",
-        "dispersion": 0.078,
-        "accurate_mass_pct": 0.104,
-        "k": 2.5
-      },
-      "AVAX/USD": {
-        "scale": 0.805,
-        "reason": "disagreement haircut",
-        "dispersion": 0.078,
-        "accurate_mass_pct": 0.104,
-        "k": 2.5
-      },
-      "LINK/USD": {
         "scale": 0.3,
         "reason": "disagreement haircut",
         "dispersion": 0.504,
-        "accurate_mass_pct": 0.079,
+        "accurate_mass_pct": 0.095,
+        "k": 2.5
+      },
+      "XRP/USD": {
+        "scale": 0.802,
+        "reason": "disagreement haircut",
+        "dispersion": 0.079,
+        "accurate_mass_pct": 0.118,
+        "k": 2.5
+      },
+      "DOGE/USD": {
+        "scale": 0.802,
+        "reason": "disagreement haircut",
+        "dispersion": 0.079,
+        "accurate_mass_pct": 0.118,
+        "k": 2.5
+      },
+      "ADA/USD": {
+        "scale": 0.3,
+        "reason": "disagreement haircut",
+        "dispersion": 0.538,
+        "accurate_mass_pct": 0.099,
+        "k": 2.5
+      },
+      "AVAX/USD": {
+        "scale": 0.3,
+        "reason": "disagreement haircut",
+        "dispersion": 0.625,
+        "accurate_mass_pct": 0.095,
+        "k": 2.5
+      },
+      "LINK/USD": {
+        "scale": 0.802,
+        "reason": "disagreement haircut",
+        "dispersion": 0.079,
+        "accurate_mass_pct": 0.118,
         "k": 2.5
       },
       "BCH/USD": {
-        "scale": 0.805,
+        "scale": 0.802,
         "reason": "disagreement haircut",
-        "dispersion": 0.078,
-        "accurate_mass_pct": 0.104,
+        "dispersion": 0.079,
+        "accurate_mass_pct": 0.118,
         "k": 2.5
       },
       "UNI/USD": {
-        "scale": 0.805,
+        "scale": 0.3,
         "reason": "disagreement haircut",
-        "dispersion": 0.078,
-        "accurate_mass_pct": 0.104,
+        "dispersion": 0.625,
+        "accurate_mass_pct": 0.093,
         "k": 2.5
       },
       "XLM/USD": {
         "scale": 0.3,
         "reason": "disagreement haircut",
-        "dispersion": 0.514,
-        "accurate_mass_pct": 0.078,
+        "dispersion": 0.511,
+        "accurate_mass_pct": 0.095,
         "k": 2.5
       },
       "ETC/USD": {
-        "scale": 0.3,
+        "scale": 0.802,
         "reason": "disagreement haircut",
-        "dispersion": 0.554,
-        "accurate_mass_pct": 0.078,
+        "dispersion": 0.079,
+        "accurate_mass_pct": 0.118,
         "k": 2.5
       }
     },
@@ -1082,7 +1089,7 @@
     "escalation": {
       "active": true,
       "subsystem": "data_freshness",
-      "ts": "2026-09-19T14:08:13.185487+00:00",
+      "ts": "2026-09-19T17:20:39.471843+00:00",
       "note": "\ud83d\udd27 ACTION NEEDED: 'data_freshness' failed 3 auto-recoveries (feed guard flagged stale data). The desk stood down to dry-run. Review the healing log, fix the underlying issue, and the desk resumes on green health.",
       "dry_run_standdown": true
     },
@@ -1118,31 +1125,31 @@
         "result": "feeds fresh"
       },
       {
-        "ts": "2026-09-19T13:37:52.818857+00:00",
+        "ts": "2026-09-19T16:50:11.199742+00:00",
         "subsystem": "data_freshness",
         "action": "auto-recovery attempt 1",
         "result": "serving last-good quotes; quarantine already blocks new risk on stale feeds"
       },
       {
-        "ts": "2026-09-19T13:52:35.684658+00:00",
+        "ts": "2026-09-19T17:04:40.677538+00:00",
         "subsystem": "data_freshness",
         "action": "auto-recovery attempt 2",
         "result": "serving last-good quotes; quarantine already blocks new risk on stale feeds"
       },
       {
-        "ts": "2026-09-19T14:08:13.185467+00:00",
+        "ts": "2026-09-19T17:20:39.471810+00:00",
         "subsystem": "data_freshness",
         "action": "auto-recovery attempt 3",
         "result": "serving last-good quotes; quarantine already blocks new risk on stale feeds"
       },
       {
-        "ts": "2026-09-19T14:08:13.185492+00:00",
+        "ts": "2026-09-19T17:20:39.471848+00:00",
         "subsystem": "data_freshness",
         "action": "3-STRIKE ESCALATION \u2014 desk stood down to dry-run",
         "result": "\ud83d\udd27 ACTION NEEDED: 'data_freshness' failed 3 auto-recoveries (feed guard flagged stale data). The desk stood down to dry-run. Review the healing log, fix the underlying issue, and the desk resumes on green health."
       }
     ],
-    "last_check": "2026-09-19T14:08:13.185633+00:00"
+    "last_check": "2026-09-19T17:20:39.472152+00:00"
   },
   "self_review": {
     "ran": false
@@ -1171,10 +1178,10 @@
   "council": [
     {
       "symbol": "BTC/USD",
-      "price": 81322.0,
-      "conviction": 0.513,
+      "price": 81792.0,
+      "conviction": 0.514,
       "direction": "long",
-      "composite": 0.026,
+      "composite": 0.029,
       "risk_multiplier": 1.0,
       "agents": [
         {
@@ -1265,104 +1272,10 @@
     },
     {
       "symbol": "ETH/USD",
-      "price": 2637.17,
-      "conviction": 0.49,
-      "direction": "flat",
-      "composite": -0.021,
-      "risk_multiplier": 0.262,
-      "agents": [
-        {
-          "name": "Citadel Systematic",
-          "persona": "Trend/Systematic",
-          "score": 1.0,
-          "confidence": 1.0,
-          "rationale": "MACD=-4.05, 20-50 slope=+0.085, Q-mom=+41.6%"
-        },
-        {
-          "name": "Two Sigma Backtest",
-          "persona": "Statistical expectancy",
-          "score": -0.15,
-          "confidence": 0.475,
-          "rationale": "ann.Sharpe=-0.30, win-rate=51%"
-        },
-        {
-          "name": "Bridgewater Risk",
-          "persona": "Risk parity / vol-target",
-          "score": -0.322,
-          "confidence": 0.6,
-          "rationale": "ann.vol=53% vs target 15%, risk_scale=0.28"
-        },
-        {
-          "name": "Renaissance Patterns",
-          "persona": "Mean-reversion",
-          "score": -0.908,
-          "confidence": 0.805,
-          "rationale": "z(20)=+2.52 (mean-revert), autocorr=+0.02"
-        },
-        {
-          "name": "Goldman Technical",
-          "persona": "Technical analysis",
-          "score": -0.577,
-          "confidence": 0.5,
-          "rationale": "RSI=62, MACD-hist=-4.05"
-        },
-        {
-          "name": "JPMorgan Fundamental",
-          "persona": "Valuation proxy",
-          "score": 0.572,
-          "confidence": 0.45,
-          "rationale": "px/200d=1.27, drawdown-from-1y-high=-21% (proxy)"
-        },
-        {
-          "name": "D.E. Shaw Options",
-          "persona": "Vol surface / premium",
-          "score": -0.243,
-          "confidence": 0.526,
-          "rationale": "vol=53%, IV-rank=9% \u2192 premium-sell favorability 9%"
-        },
-        {
-          "name": "AQR Factor",
-          "persona": "Multi-factor",
-          "score": -0.49,
-          "confidence": 0.55,
-          "rationale": "mom(12-1)=-7.3%, value=-41.6%, quality=-0.53"
-        },
-        {
-          "name": "Citadel Securities MM",
-          "persona": "Order-flow microstructure",
-          "score": 0.14,
-          "confidence": 0.546,
-          "rationale": "VPIN order-flow toxicity=0.14 (1=max adverse selection)"
-        },
-        {
-          "name": "Millennium Pod",
-          "persona": "Residual alpha / beta-neutral",
-          "score": 0.0,
-          "confidence": 0.5,
-          "rationale": "ann.alpha=+0.0%, beta=+1.00, beta-neutrality=0.50"
-        },
-        {
-          "name": "Renaissance Medallion",
-          "persona": "Regime / cointegration",
-          "score": -0.038,
-          "confidence": 0.8,
-          "rationale": "state=calm (p_stay=0.87), coint-z=+0.00"
-        },
-        {
-          "name": "Sovereign Wealth",
-          "persona": "Secular macro / SAA",
-          "score": 0.373,
-          "confidence": 0.4,
-          "rationale": "secular trend=+27%, structural drawdown=-21% (accumulate dips)"
-        }
-      ]
-    },
-    {
-      "symbol": "SOL/USD",
-      "price": 111.52,
-      "conviction": 0.513,
+      "price": 2651.98,
+      "conviction": 0.514,
       "direction": "long",
-      "composite": 0.026,
+      "composite": 0.029,
       "risk_multiplier": 1.0,
       "agents": [
         {
@@ -1452,120 +1365,26 @@
       ]
     },
     {
-      "symbol": "LTC/USD",
-      "price": 57.83,
-      "conviction": 0.513,
+      "symbol": "SOL/USD",
+      "price": 112.21,
+      "conviction": 0.506,
       "direction": "long",
-      "composite": 0.026,
-      "risk_multiplier": 1.0,
-      "agents": [
-        {
-          "name": "Citadel Systematic",
-          "persona": "Trend/Systematic",
-          "score": 0.0,
-          "confidence": 0.3,
-          "rationale": "MACD=0.00, 20-50 slope=+0.000, Q-mom=+0.0%"
-        },
-        {
-          "name": "Two Sigma Backtest",
-          "persona": "Statistical expectancy",
-          "score": 0.0,
-          "confidence": 0.2,
-          "rationale": "insufficient history"
-        },
-        {
-          "name": "Bridgewater Risk",
-          "persona": "Risk parity / vol-target",
-          "score": 0.146,
-          "confidence": 0.6,
-          "rationale": "ann.vol=0% vs target 15%, risk_scale=1.00"
-        },
-        {
-          "name": "Renaissance Patterns",
-          "persona": "Mean-reversion",
-          "score": 0.0,
-          "confidence": 0.2,
-          "rationale": "insufficient history"
-        },
-        {
-          "name": "Goldman Technical",
-          "persona": "Technical analysis",
-          "score": 0.0,
-          "confidence": 0.5,
-          "rationale": "RSI=50, MACD-hist=+0.00"
-        },
-        {
-          "name": "JPMorgan Fundamental",
-          "persona": "Valuation proxy",
-          "score": -0.001,
-          "confidence": 0.45,
-          "rationale": "px/200d=1.00, drawdown-from-1y-high=-0% (proxy)"
-        },
-        {
-          "name": "D.E. Shaw Options",
-          "persona": "Vol surface / premium",
-          "score": 0.0,
-          "confidence": 0.65,
-          "rationale": "vol=25%, IV-rank=50% \u2192 premium-sell favorability 50%"
-        },
-        {
-          "name": "AQR Factor",
-          "persona": "Multi-factor",
-          "score": -0.1,
-          "confidence": 0.55,
-          "rationale": "mom(12-1)=+0.0%, value=-0.0%, quality=-0.25"
-        },
-        {
-          "name": "Citadel Securities MM",
-          "persona": "Order-flow microstructure",
-          "score": 0.185,
-          "confidence": 0.6,
-          "rationale": "VPIN order-flow toxicity=0.00 (1=max adverse selection)"
-        },
-        {
-          "name": "Millennium Pod",
-          "persona": "Residual alpha / beta-neutral",
-          "score": 0.0,
-          "confidence": 0.5,
-          "rationale": "ann.alpha=+0.0%, beta=+1.00, beta-neutrality=0.50"
-        },
-        {
-          "name": "Renaissance Medallion",
-          "persona": "Regime / cointegration",
-          "score": 0.0,
-          "confidence": 0.8,
-          "rationale": "state=calm (p_stay=0.50), coint-z=+0.00"
-        },
-        {
-          "name": "Sovereign Wealth",
-          "persona": "Secular macro / SAA",
-          "score": 0.001,
-          "confidence": 0.4,
-          "rationale": "secular trend=-0%, structural drawdown=-0% (accumulate dips)"
-        }
-      ]
-    },
-    {
-      "symbol": "XRP/USD",
-      "price": 1.44,
-      "conviction": 0.516,
-      "direction": "long",
-      "composite": 0.031,
-      "risk_multiplier": 0.26,
+      "composite": 0.011,
+      "risk_multiplier": 0.259,
       "agents": [
         {
           "name": "Citadel Systematic",
           "persona": "Trend/Systematic",
           "score": 1.0,
           "confidence": 1.0,
-          "rationale": "MACD=-0.01, 20-50 slope=+0.083, Q-mom=+31.5%"
+          "rationale": "MACD=0.18, 20-50 slope=+0.100, Q-mom=+48.6%"
         },
         {
           "name": "Two Sigma Backtest",
           "persona": "Statistical expectancy",
-          "score": -0.324,
-          "confidence": 0.562,
-          "rationale": "ann.Sharpe=-0.67, win-rate=45%"
+          "score": -0.197,
+          "confidence": 0.499,
+          "rationale": "ann.Sharpe=-0.40, win-rate=48%"
         },
         {
           "name": "Bridgewater Risk",
@@ -1577,43 +1396,43 @@
         {
           "name": "Renaissance Patterns",
           "persona": "Mean-reversion",
-          "score": -0.678,
-          "confidence": 0.575,
-          "rationale": "z(20)=+1.38 (mean-revert), autocorr=-0.04"
+          "score": -0.898,
+          "confidence": 0.788,
+          "rationale": "z(20)=+2.44 (mean-revert), autocorr=+0.03"
         },
         {
           "name": "Goldman Technical",
           "persona": "Technical analysis",
-          "score": -0.31,
+          "score": -0.098,
           "confidence": 0.5,
-          "rationale": "RSI=52, MACD-hist=-0.01"
+          "rationale": "RSI=60, MACD-hist=+0.18"
         },
         {
           "name": "JPMorgan Fundamental",
           "persona": "Valuation proxy",
-          "score": 0.405,
+          "score": 0.663,
           "confidence": 0.45,
-          "rationale": "px/200d=1.13, drawdown-from-1y-high=-34% (proxy)"
+          "rationale": "px/200d=1.34, drawdown-from-1y-high=-23% (proxy)"
         },
         {
           "name": "D.E. Shaw Options",
           "persona": "Vol surface / premium",
-          "score": -0.056,
-          "confidence": 0.622,
-          "rationale": "vol=54%, IV-rank=41% \u2192 premium-sell favorability 41%"
+          "score": -0.174,
+          "confidence": 0.562,
+          "rationale": "vol=54%, IV-rank=21% \u2192 premium-sell favorability 21%"
         },
         {
           "name": "AQR Factor",
           "persona": "Multi-factor",
-          "score": -0.41,
+          "score": -0.516,
           "confidence": 0.55,
-          "rationale": "mom(12-1)=-2.9%, value=-31.5%, quality=-0.54"
+          "rationale": "mom(12-1)=-6.2%, value=-48.6%, quality=-0.54"
         },
         {
           "name": "Citadel Securities MM",
           "persona": "Order-flow microstructure",
-          "score": 0.146,
-          "confidence": 0.553,
+          "score": 0.144,
+          "confidence": 0.55,
           "rationale": "VPIN order-flow toxicity=0.12 (1=max adverse selection)"
         },
         {
@@ -1626,89 +1445,277 @@
         {
           "name": "Renaissance Medallion",
           "persona": "Regime / cointegration",
-          "score": -0.086,
+          "score": -0.052,
           "confidence": 0.8,
-          "rationale": "state=calm (p_stay=0.97), coint-z=+0.00"
+          "rationale": "state=calm (p_stay=0.74), coint-z=+0.00"
         },
         {
           "name": "Sovereign Wealth",
           "persona": "Secular macro / SAA",
-          "score": 0.437,
+          "score": 0.423,
           "confidence": 0.4,
-          "rationale": "secular trend=+13%, structural drawdown=-34% (accumulate dips)"
+          "rationale": "secular trend=+34%, structural drawdown=-23% (accumulate dips)"
+        }
+      ]
+    },
+    {
+      "symbol": "LTC/USD",
+      "price": 57.95,
+      "conviction": 0.507,
+      "direction": "long",
+      "composite": 0.014,
+      "risk_multiplier": 0.338,
+      "agents": [
+        {
+          "name": "Citadel Systematic",
+          "persona": "Trend/Systematic",
+          "score": 1.0,
+          "confidence": 1.0,
+          "rationale": "MACD=0.27, 20-50 slope=+0.064, Q-mom=+23.4%"
+        },
+        {
+          "name": "Two Sigma Backtest",
+          "persona": "Statistical expectancy",
+          "score": -0.313,
+          "confidence": 0.556,
+          "rationale": "ann.Sharpe=-0.65, win-rate=47%"
+        },
+        {
+          "name": "Bridgewater Risk",
+          "persona": "Risk parity / vol-target",
+          "score": -0.248,
+          "confidence": 0.6,
+          "rationale": "ann.vol=42% vs target 15%, risk_scale=0.36"
+        },
+        {
+          "name": "Renaissance Patterns",
+          "persona": "Mean-reversion",
+          "score": -0.83,
+          "confidence": 0.696,
+          "rationale": "z(20)=+1.98 (mean-revert), autocorr=-0.03"
+        },
+        {
+          "name": "Goldman Technical",
+          "persona": "Technical analysis",
+          "score": -0.118,
+          "confidence": 0.5,
+          "rationale": "RSI=61, MACD-hist=+0.27"
+        },
+        {
+          "name": "JPMorgan Fundamental",
+          "persona": "Valuation proxy",
+          "score": 0.405,
+          "confidence": 0.45,
+          "rationale": "px/200d=1.15, drawdown-from-1y-high=-26% (proxy)"
+        },
+        {
+          "name": "D.E. Shaw Options",
+          "persona": "Vol surface / premium",
+          "score": -0.151,
+          "confidence": 0.574,
+          "rationale": "vol=42%, IV-rank=25% \u2192 premium-sell favorability 25%"
+        },
+        {
+          "name": "AQR Factor",
+          "persona": "Multi-factor",
+          "score": -0.456,
+          "confidence": 0.55,
+          "rationale": "mom(12-1)=-18.3%, value=-23.4%, quality=-0.42"
+        },
+        {
+          "name": "Citadel Securities MM",
+          "persona": "Order-flow microstructure",
+          "score": 0.152,
+          "confidence": 0.56,
+          "rationale": "VPIN order-flow toxicity=0.10 (1=max adverse selection)"
+        },
+        {
+          "name": "Millennium Pod",
+          "persona": "Residual alpha / beta-neutral",
+          "score": 0.0,
+          "confidence": 0.5,
+          "rationale": "ann.alpha=+0.0%, beta=+1.00, beta-neutrality=0.50"
+        },
+        {
+          "name": "Renaissance Medallion",
+          "persona": "Regime / cointegration",
+          "score": -0.065,
+          "confidence": 0.8,
+          "rationale": "state=calm (p_stay=0.92), coint-z=+0.00"
+        },
+        {
+          "name": "Sovereign Wealth",
+          "persona": "Secular macro / SAA",
+          "score": 0.369,
+          "confidence": 0.4,
+          "rationale": "secular trend=+15%, structural drawdown=-26% (accumulate dips)"
+        }
+      ]
+    },
+    {
+      "symbol": "XRP/USD",
+      "price": 1.44,
+      "conviction": 0.514,
+      "direction": "long",
+      "composite": 0.029,
+      "risk_multiplier": 1.0,
+      "agents": [
+        {
+          "name": "Citadel Systematic",
+          "persona": "Trend/Systematic",
+          "score": 0.0,
+          "confidence": 0.3,
+          "rationale": "MACD=0.00, 20-50 slope=+0.000, Q-mom=+0.0%"
+        },
+        {
+          "name": "Two Sigma Backtest",
+          "persona": "Statistical expectancy",
+          "score": 0.0,
+          "confidence": 0.2,
+          "rationale": "insufficient history"
+        },
+        {
+          "name": "Bridgewater Risk",
+          "persona": "Risk parity / vol-target",
+          "score": 0.146,
+          "confidence": 0.6,
+          "rationale": "ann.vol=0% vs target 15%, risk_scale=1.00"
+        },
+        {
+          "name": "Renaissance Patterns",
+          "persona": "Mean-reversion",
+          "score": 0.0,
+          "confidence": 0.2,
+          "rationale": "insufficient history"
+        },
+        {
+          "name": "Goldman Technical",
+          "persona": "Technical analysis",
+          "score": 0.0,
+          "confidence": 0.5,
+          "rationale": "RSI=50, MACD-hist=+0.00"
+        },
+        {
+          "name": "JPMorgan Fundamental",
+          "persona": "Valuation proxy",
+          "score": 0.0,
+          "confidence": 0.45,
+          "rationale": "px/200d=1.00, drawdown-from-1y-high=+0% (proxy)"
+        },
+        {
+          "name": "D.E. Shaw Options",
+          "persona": "Vol surface / premium",
+          "score": 0.0,
+          "confidence": 0.65,
+          "rationale": "vol=25%, IV-rank=50% \u2192 premium-sell favorability 50%"
+        },
+        {
+          "name": "AQR Factor",
+          "persona": "Multi-factor",
+          "score": -0.1,
+          "confidence": 0.55,
+          "rationale": "mom(12-1)=+0.0%, value=-0.0%, quality=-0.25"
+        },
+        {
+          "name": "Citadel Securities MM",
+          "persona": "Order-flow microstructure",
+          "score": 0.185,
+          "confidence": 0.6,
+          "rationale": "VPIN order-flow toxicity=0.00 (1=max adverse selection)"
+        },
+        {
+          "name": "Millennium Pod",
+          "persona": "Residual alpha / beta-neutral",
+          "score": 0.0,
+          "confidence": 0.5,
+          "rationale": "ann.alpha=+0.0%, beta=+1.00, beta-neutrality=0.50"
+        },
+        {
+          "name": "Renaissance Medallion",
+          "persona": "Regime / cointegration",
+          "score": 0.0,
+          "confidence": 0.8,
+          "rationale": "state=calm (p_stay=0.50), coint-z=+0.00"
+        },
+        {
+          "name": "Sovereign Wealth",
+          "persona": "Secular macro / SAA",
+          "score": 0.0,
+          "confidence": 0.4,
+          "rationale": "secular trend=+0%, structural drawdown=+0% (accumulate dips)"
         }
       ]
     },
     {
       "symbol": "DOGE/USD",
-      "price": 0.0,
-      "conviction": 0.518,
+      "price": 0.09,
+      "conviction": 0.514,
       "direction": "long",
-      "composite": 0.036,
-      "risk_multiplier": 0.269,
+      "composite": 0.029,
+      "risk_multiplier": 1.0,
       "agents": [
         {
           "name": "Citadel Systematic",
           "persona": "Trend/Systematic",
-          "score": 0.358,
-          "confidence": 0.658,
-          "rationale": "MACD=-0.00, 20-50 slope=+0.000, Q-mom=+22.5%"
+          "score": 0.0,
+          "confidence": 0.3,
+          "rationale": "MACD=0.00, 20-50 slope=+0.000, Q-mom=+0.0%"
         },
         {
           "name": "Two Sigma Backtest",
           "persona": "Statistical expectancy",
-          "score": -0.391,
-          "confidence": 0.595,
-          "rationale": "ann.Sharpe=-0.83, win-rate=47%"
+          "score": 0.0,
+          "confidence": 0.2,
+          "rationale": "insufficient history"
         },
         {
           "name": "Bridgewater Risk",
           "persona": "Risk parity / vol-target",
-          "score": -0.32,
+          "score": 0.146,
           "confidence": 0.6,
-          "rationale": "ann.vol=53% vs target 15%, risk_scale=0.28"
+          "rationale": "ann.vol=0% vs target 15%, risk_scale=1.00"
         },
         {
           "name": "Renaissance Patterns",
           "persona": "Mean-reversion",
-          "score": 1.0,
-          "confidence": 1.0,
-          "rationale": "z(20)=-24.89 (mean-revert), autocorr=-0.04"
+          "score": 0.0,
+          "confidence": 0.2,
+          "rationale": "insufficient history"
         },
         {
           "name": "Goldman Technical",
           "persona": "Technical analysis",
-          "score": -0.192,
+          "score": 0.0,
           "confidence": 0.5,
-          "rationale": "RSI=48, MACD-hist=-0.00"
+          "rationale": "RSI=50, MACD-hist=+0.00"
         },
         {
           "name": "JPMorgan Fundamental",
           "persona": "Valuation proxy",
-          "score": -0.905,
+          "score": 0.0,
           "confidence": 0.45,
-          "rationale": "px/200d=0.00, drawdown-from-1y-high=-100% (proxy)"
+          "rationale": "px/200d=1.00, drawdown-from-1y-high=+0% (proxy)"
         },
         {
           "name": "D.E. Shaw Options",
           "persona": "Vol surface / premium",
-          "score": -0.186,
-          "confidence": 0.556,
-          "rationale": "vol=53%, IV-rank=19% \u2192 premium-sell favorability 19%"
+          "score": 0.0,
+          "confidence": 0.65,
+          "rationale": "vol=25%, IV-rank=50% \u2192 premium-sell favorability 50%"
         },
         {
           "name": "AQR Factor",
           "persona": "Multi-factor",
-          "score": -0.369,
+          "score": -0.1,
           "confidence": 0.55,
-          "rationale": "mom(12-1)=-4.1%, value=-22.5%, quality=-0.53"
+          "rationale": "mom(12-1)=+0.0%, value=-0.0%, quality=-0.25"
         },
         {
           "name": "Citadel Securities MM",
           "persona": "Order-flow microstructure",
-          "score": 0.149,
-          "confidence": 0.557,
-          "rationale": "VPIN order-flow toxicity=0.11 (1=max adverse selection)"
+          "score": 0.185,
+          "confidence": 0.6,
+          "rationale": "VPIN order-flow toxicity=0.00 (1=max adverse selection)"
         },
         {
           "name": "Millennium Pod",
@@ -1720,270 +1727,82 @@
         {
           "name": "Renaissance Medallion",
           "persona": "Regime / cointegration",
-          "score": -0.103,
+          "score": 0.0,
           "confidence": 0.8,
-          "rationale": "state=calm (p_stay=0.87), coint-z=+0.00"
+          "rationale": "state=calm (p_stay=0.50), coint-z=+0.00"
         },
         {
           "name": "Sovereign Wealth",
           "persona": "Secular macro / SAA",
-          "score": 0.604,
+          "score": 0.0,
           "confidence": 0.4,
-          "rationale": "secular trend=-100%, structural drawdown=-100% (accumulate dips)"
+          "rationale": "secular trend=+0%, structural drawdown=+0% (accumulate dips)"
         }
       ]
     },
     {
       "symbol": "ADA/USD",
-      "price": 0.0,
-      "conviction": 0.513,
-      "direction": "long",
-      "composite": 0.026,
-      "risk_multiplier": 1.0,
+      "price": 0.23,
+      "conviction": 0.5,
+      "direction": "flat",
+      "composite": -0.001,
+      "risk_multiplier": 0.213,
       "agents": [
         {
           "name": "Citadel Systematic",
           "persona": "Trend/Systematic",
-          "score": 0.0,
-          "confidence": 0.3,
-          "rationale": "MACD=0.00, 20-50 slope=+0.000, Q-mom=+0.0%"
-        },
-        {
-          "name": "Two Sigma Backtest",
-          "persona": "Statistical expectancy",
-          "score": 0.0,
-          "confidence": 0.2,
-          "rationale": "insufficient history"
-        },
-        {
-          "name": "Bridgewater Risk",
-          "persona": "Risk parity / vol-target",
-          "score": 0.146,
-          "confidence": 0.6,
-          "rationale": "ann.vol=0% vs target 15%, risk_scale=1.00"
-        },
-        {
-          "name": "Renaissance Patterns",
-          "persona": "Mean-reversion",
-          "score": 0.0,
-          "confidence": 0.2,
-          "rationale": "insufficient history"
-        },
-        {
-          "name": "Goldman Technical",
-          "persona": "Technical analysis",
-          "score": 0.0,
-          "confidence": 0.5,
-          "rationale": "RSI=50, MACD-hist=+0.00"
-        },
-        {
-          "name": "JPMorgan Fundamental",
-          "persona": "Valuation proxy",
-          "score": 0.0,
-          "confidence": 0.45,
-          "rationale": "px/200d=1.00, drawdown-from-1y-high=+0% (proxy)"
-        },
-        {
-          "name": "D.E. Shaw Options",
-          "persona": "Vol surface / premium",
-          "score": 0.0,
-          "confidence": 0.65,
-          "rationale": "vol=25%, IV-rank=50% \u2192 premium-sell favorability 50%"
-        },
-        {
-          "name": "AQR Factor",
-          "persona": "Multi-factor",
-          "score": -0.1,
-          "confidence": 0.55,
-          "rationale": "mom(12-1)=+0.0%, value=-0.0%, quality=-0.25"
-        },
-        {
-          "name": "Citadel Securities MM",
-          "persona": "Order-flow microstructure",
-          "score": 0.185,
-          "confidence": 0.6,
-          "rationale": "VPIN order-flow toxicity=0.00 (1=max adverse selection)"
-        },
-        {
-          "name": "Millennium Pod",
-          "persona": "Residual alpha / beta-neutral",
-          "score": 0.0,
-          "confidence": 0.5,
-          "rationale": "ann.alpha=+0.0%, beta=+1.00, beta-neutrality=0.50"
-        },
-        {
-          "name": "Renaissance Medallion",
-          "persona": "Regime / cointegration",
-          "score": 0.0,
-          "confidence": 0.8,
-          "rationale": "state=calm (p_stay=0.50), coint-z=+0.00"
-        },
-        {
-          "name": "Sovereign Wealth",
-          "persona": "Secular macro / SAA",
-          "score": 0.0,
-          "confidence": 0.4,
-          "rationale": "secular trend=+0%, structural drawdown=+0% (accumulate dips)"
-        }
-      ]
-    },
-    {
-      "symbol": "AVAX/USD",
-      "price": 9.37,
-      "conviction": 0.513,
-      "direction": "long",
-      "composite": 0.026,
-      "risk_multiplier": 1.0,
-      "agents": [
-        {
-          "name": "Citadel Systematic",
-          "persona": "Trend/Systematic",
-          "score": 0.0,
-          "confidence": 0.3,
-          "rationale": "MACD=0.00, 20-50 slope=+0.000, Q-mom=+0.0%"
-        },
-        {
-          "name": "Two Sigma Backtest",
-          "persona": "Statistical expectancy",
-          "score": 0.0,
-          "confidence": 0.2,
-          "rationale": "insufficient history"
-        },
-        {
-          "name": "Bridgewater Risk",
-          "persona": "Risk parity / vol-target",
-          "score": 0.146,
-          "confidence": 0.6,
-          "rationale": "ann.vol=0% vs target 15%, risk_scale=1.00"
-        },
-        {
-          "name": "Renaissance Patterns",
-          "persona": "Mean-reversion",
-          "score": 0.0,
-          "confidence": 0.2,
-          "rationale": "insufficient history"
-        },
-        {
-          "name": "Goldman Technical",
-          "persona": "Technical analysis",
-          "score": 0.0,
-          "confidence": 0.5,
-          "rationale": "RSI=50, MACD-hist=+0.00"
-        },
-        {
-          "name": "JPMorgan Fundamental",
-          "persona": "Valuation proxy",
-          "score": 0.0,
-          "confidence": 0.45,
-          "rationale": "px/200d=1.00, drawdown-from-1y-high=+0% (proxy)"
-        },
-        {
-          "name": "D.E. Shaw Options",
-          "persona": "Vol surface / premium",
-          "score": 0.0,
-          "confidence": 0.65,
-          "rationale": "vol=25%, IV-rank=50% \u2192 premium-sell favorability 50%"
-        },
-        {
-          "name": "AQR Factor",
-          "persona": "Multi-factor",
-          "score": -0.1,
-          "confidence": 0.55,
-          "rationale": "mom(12-1)=+0.0%, value=-0.0%, quality=-0.25"
-        },
-        {
-          "name": "Citadel Securities MM",
-          "persona": "Order-flow microstructure",
-          "score": 0.185,
-          "confidence": 0.6,
-          "rationale": "VPIN order-flow toxicity=0.00 (1=max adverse selection)"
-        },
-        {
-          "name": "Millennium Pod",
-          "persona": "Residual alpha / beta-neutral",
-          "score": 0.0,
-          "confidence": 0.5,
-          "rationale": "ann.alpha=+0.0%, beta=+1.00, beta-neutrality=0.50"
-        },
-        {
-          "name": "Renaissance Medallion",
-          "persona": "Regime / cointegration",
-          "score": 0.0,
-          "confidence": 0.8,
-          "rationale": "state=calm (p_stay=0.50), coint-z=+0.00"
-        },
-        {
-          "name": "Sovereign Wealth",
-          "persona": "Secular macro / SAA",
-          "score": 0.0,
-          "confidence": 0.4,
-          "rationale": "secular trend=+0%, structural drawdown=+0% (accumulate dips)"
-        }
-      ]
-    },
-    {
-      "symbol": "LINK/USD",
-      "price": 12.47,
-      "conviction": 0.525,
-      "direction": "long",
-      "composite": 0.051,
-      "risk_multiplier": 0.237,
-      "agents": [
-        {
-          "name": "Citadel Systematic",
-          "persona": "Trend/Systematic",
-          "score": 1.0,
+          "score": 0.997,
           "confidence": 1.0,
-          "rationale": "MACD=-0.05, 20-50 slope=+0.096, Q-mom=+49.6%"
+          "rationale": "MACD=0.00, 20-50 slope=+0.036, Q-mom=+38.2%"
         },
         {
           "name": "Two Sigma Backtest",
           "persona": "Statistical expectancy",
-          "score": -0.072,
-          "confidence": 0.436,
-          "rationale": "ann.Sharpe=-0.14, win-rate=50%"
+          "score": -0.401,
+          "confidence": 0.601,
+          "rationale": "ann.Sharpe=-0.85, win-rate=42%"
         },
         {
           "name": "Bridgewater Risk",
           "persona": "Risk parity / vol-target",
-          "score": -0.351,
+          "score": -0.382,
           "confidence": 0.6,
-          "rationale": "ann.vol=59% vs target 15%, risk_scale=0.26"
+          "rationale": "ann.vol=65% vs target 15%, risk_scale=0.23"
         },
         {
           "name": "Renaissance Patterns",
           "persona": "Mean-reversion",
-          "score": -0.619,
-          "confidence": 0.541,
-          "rationale": "z(20)=+1.20 (mean-revert), autocorr=-0.10"
+          "score": -0.826,
+          "confidence": 0.692,
+          "rationale": "z(20)=+1.96 (mean-revert), autocorr=+0.01"
         },
         {
           "name": "Goldman Technical",
           "persona": "Technical analysis",
-          "score": -0.356,
+          "score": 0.008,
           "confidence": 0.5,
-          "rationale": "RSI=54, MACD-hist=-0.05"
+          "rationale": "RSI=57, MACD-hist=+0.00"
         },
         {
           "name": "JPMorgan Fundamental",
           "persona": "Valuation proxy",
-          "score": 0.636,
+          "score": 0.346,
           "confidence": 0.45,
-          "rationale": "px/200d=1.34, drawdown-from-1y-high=-14% (proxy)"
+          "rationale": "px/200d=1.06, drawdown-from-1y-high=-46% (proxy)"
         },
         {
           "name": "D.E. Shaw Options",
           "persona": "Vol surface / premium",
           "score": -0.163,
           "confidence": 0.568,
-          "rationale": "vol=59%, IV-rank=23% \u2192 premium-sell favorability 23%"
+          "rationale": "vol=65%, IV-rank=23% \u2192 premium-sell favorability 23%"
         },
         {
           "name": "AQR Factor",
           "persona": "Multi-factor",
-          "score": -0.552,
+          "score": -0.559,
           "confidence": 0.55,
-          "rationale": "mom(12-1)=-9.0%, value=-49.6%, quality=-0.59"
+          "rationale": "mom(12-1)=-14.1%, value=-38.2%, quality=-0.65"
         },
         {
           "name": "Citadel Securities MM",
@@ -2002,25 +1821,213 @@
         {
           "name": "Renaissance Medallion",
           "persona": "Regime / cointegration",
-          "score": -0.02,
-          "confidence": 0.8,
-          "rationale": "state=calm (p_stay=0.83), coint-z=+0.00"
+          "score": -0.052,
+          "confidence": 0.5,
+          "rationale": "state=stressed (p_stay=0.46), coint-z=+0.00"
         },
         {
           "name": "Sovereign Wealth",
           "persona": "Secular macro / SAA",
-          "score": 0.321,
+          "score": 0.53,
           "confidence": 0.4,
-          "rationale": "secular trend=+34%, structural drawdown=-14% (accumulate dips)"
+          "rationale": "secular trend=+6%, structural drawdown=-46% (accumulate dips)"
+        }
+      ]
+    },
+    {
+      "symbol": "AVAX/USD",
+      "price": 0.0,
+      "conviction": 0.559,
+      "direction": "long",
+      "composite": 0.119,
+      "risk_multiplier": 0.246,
+      "agents": [
+        {
+          "name": "Citadel Systematic",
+          "persona": "Trend/Systematic",
+          "score": 0.943,
+          "confidence": 1.0,
+          "rationale": "MACD=0.13, 20-50 slope=+0.000, Q-mom=+48.7%"
+        },
+        {
+          "name": "Two Sigma Backtest",
+          "persona": "Statistical expectancy",
+          "score": -0.278,
+          "confidence": 0.539,
+          "rationale": "ann.Sharpe=-0.57, win-rate=46%"
+        },
+        {
+          "name": "Bridgewater Risk",
+          "persona": "Risk parity / vol-target",
+          "score": -0.345,
+          "confidence": 0.6,
+          "rationale": "ann.vol=57% vs target 15%, risk_scale=0.26"
+        },
+        {
+          "name": "Renaissance Patterns",
+          "persona": "Mean-reversion",
+          "score": 1.0,
+          "confidence": 1.0,
+          "rationale": "z(20)=-13.66 (mean-revert), autocorr=-0.01"
+        },
+        {
+          "name": "Goldman Technical",
+          "persona": "Technical analysis",
+          "score": -0.52,
+          "confidence": 0.5,
+          "rationale": "RSI=75, MACD-hist=+0.13"
+        },
+        {
+          "name": "JPMorgan Fundamental",
+          "persona": "Valuation proxy",
+          "score": -0.905,
+          "confidence": 0.45,
+          "rationale": "px/200d=0.00, drawdown-from-1y-high=-100% (proxy)"
+        },
+        {
+          "name": "D.E. Shaw Options",
+          "persona": "Vol surface / premium",
+          "score": -0.066,
+          "confidence": 0.617,
+          "rationale": "vol=57%, IV-rank=39% \u2192 premium-sell favorability 39%"
+        },
+        {
+          "name": "AQR Factor",
+          "persona": "Multi-factor",
+          "score": -0.693,
+          "confidence": 0.55,
+          "rationale": "mom(12-1)=-33.2%, value=-48.7%, quality=-0.57"
+        },
+        {
+          "name": "Citadel Securities MM",
+          "persona": "Order-flow microstructure",
+          "score": 0.147,
+          "confidence": 0.554,
+          "rationale": "VPIN order-flow toxicity=0.12 (1=max adverse selection)"
+        },
+        {
+          "name": "Millennium Pod",
+          "persona": "Residual alpha / beta-neutral",
+          "score": 0.0,
+          "confidence": 0.5,
+          "rationale": "ann.alpha=+0.0%, beta=+1.00, beta-neutrality=0.50"
+        },
+        {
+          "name": "Renaissance Medallion",
+          "persona": "Regime / cointegration",
+          "score": -0.031,
+          "confidence": 0.5,
+          "rationale": "state=stressed (p_stay=0.23), coint-z=+0.00"
+        },
+        {
+          "name": "Sovereign Wealth",
+          "persona": "Secular macro / SAA",
+          "score": 0.604,
+          "confidence": 0.4,
+          "rationale": "secular trend=-100%, structural drawdown=-100% (accumulate dips)"
+        }
+      ]
+    },
+    {
+      "symbol": "LINK/USD",
+      "price": 12.62,
+      "conviction": 0.514,
+      "direction": "long",
+      "composite": 0.029,
+      "risk_multiplier": 1.0,
+      "agents": [
+        {
+          "name": "Citadel Systematic",
+          "persona": "Trend/Systematic",
+          "score": 0.0,
+          "confidence": 0.3,
+          "rationale": "MACD=0.00, 20-50 slope=+0.000, Q-mom=+0.0%"
+        },
+        {
+          "name": "Two Sigma Backtest",
+          "persona": "Statistical expectancy",
+          "score": 0.0,
+          "confidence": 0.2,
+          "rationale": "insufficient history"
+        },
+        {
+          "name": "Bridgewater Risk",
+          "persona": "Risk parity / vol-target",
+          "score": 0.146,
+          "confidence": 0.6,
+          "rationale": "ann.vol=0% vs target 15%, risk_scale=1.00"
+        },
+        {
+          "name": "Renaissance Patterns",
+          "persona": "Mean-reversion",
+          "score": 0.0,
+          "confidence": 0.2,
+          "rationale": "insufficient history"
+        },
+        {
+          "name": "Goldman Technical",
+          "persona": "Technical analysis",
+          "score": 0.0,
+          "confidence": 0.5,
+          "rationale": "RSI=50, MACD-hist=+0.00"
+        },
+        {
+          "name": "JPMorgan Fundamental",
+          "persona": "Valuation proxy",
+          "score": 0.0,
+          "confidence": 0.45,
+          "rationale": "px/200d=1.00, drawdown-from-1y-high=+0% (proxy)"
+        },
+        {
+          "name": "D.E. Shaw Options",
+          "persona": "Vol surface / premium",
+          "score": 0.0,
+          "confidence": 0.65,
+          "rationale": "vol=25%, IV-rank=50% \u2192 premium-sell favorability 50%"
+        },
+        {
+          "name": "AQR Factor",
+          "persona": "Multi-factor",
+          "score": -0.1,
+          "confidence": 0.55,
+          "rationale": "mom(12-1)=+0.0%, value=-0.0%, quality=-0.25"
+        },
+        {
+          "name": "Citadel Securities MM",
+          "persona": "Order-flow microstructure",
+          "score": 0.185,
+          "confidence": 0.6,
+          "rationale": "VPIN order-flow toxicity=0.00 (1=max adverse selection)"
+        },
+        {
+          "name": "Millennium Pod",
+          "persona": "Residual alpha / beta-neutral",
+          "score": 0.0,
+          "confidence": 0.5,
+          "rationale": "ann.alpha=+0.0%, beta=+1.00, beta-neutrality=0.50"
+        },
+        {
+          "name": "Renaissance Medallion",
+          "persona": "Regime / cointegration",
+          "score": 0.0,
+          "confidence": 0.8,
+          "rationale": "state=calm (p_stay=0.50), coint-z=+0.00"
+        },
+        {
+          "name": "Sovereign Wealth",
+          "persona": "Secular macro / SAA",
+          "score": 0.0,
+          "confidence": 0.4,
+          "rationale": "secular trend=+0%, structural drawdown=+0% (accumulate dips)"
         }
       ]
     },
     {
       "symbol": "BCH/USD",
-      "price": 252.7,
-      "conviction": 0.513,
+      "price": 256.57,
+      "conviction": 0.514,
       "direction": "long",
-      "composite": 0.026,
+      "composite": 0.029,
       "risk_multiplier": 1.0,
       "agents": [
         {
@@ -2111,10 +2118,198 @@
     },
     {
       "symbol": "UNI/USD",
-      "price": 9.03,
-      "conviction": 0.513,
+      "price": 8.82,
+      "conviction": 0.531,
       "direction": "long",
-      "composite": 0.026,
+      "composite": 0.063,
+      "risk_multiplier": 0.187,
+      "agents": [
+        {
+          "name": "Citadel Systematic",
+          "persona": "Trend/Systematic",
+          "score": 1.0,
+          "confidence": 1.0,
+          "rationale": "MACD=0.19, 20-50 slope=+0.182, Q-mom=+147.2%"
+        },
+        {
+          "name": "Two Sigma Backtest",
+          "persona": "Statistical expectancy",
+          "score": 0.314,
+          "confidence": 0.557,
+          "rationale": "ann.Sharpe=+0.65, win-rate=49%"
+        },
+        {
+          "name": "Bridgewater Risk",
+          "persona": "Risk parity / vol-target",
+          "score": -0.412,
+          "confidence": 0.6,
+          "rationale": "ann.vol=74% vs target 15%, risk_scale=0.20"
+        },
+        {
+          "name": "Renaissance Patterns",
+          "persona": "Mean-reversion",
+          "score": -0.89,
+          "confidence": 0.774,
+          "rationale": "z(20)=+2.37 (mean-revert), autocorr=+0.06"
+        },
+        {
+          "name": "Goldman Technical",
+          "persona": "Technical analysis",
+          "score": -0.292,
+          "confidence": 0.5,
+          "rationale": "RSI=67, MACD-hist=+0.19"
+        },
+        {
+          "name": "JPMorgan Fundamental",
+          "persona": "Valuation proxy",
+          "score": 0.99,
+          "confidence": 0.45,
+          "rationale": "px/200d=2.32, drawdown-from-1y-high=-0% (proxy)"
+        },
+        {
+          "name": "D.E. Shaw Options",
+          "persona": "Vol surface / premium",
+          "score": 0.082,
+          "confidence": 0.691,
+          "rationale": "vol=74%, IV-rank=64% \u2192 premium-sell favorability 64%"
+        },
+        {
+          "name": "AQR Factor",
+          "persona": "Multi-factor",
+          "score": -0.968,
+          "confidence": 0.55,
+          "rationale": "mom(12-1)=-88.4%, value=-147.2%, quality=-0.74"
+        },
+        {
+          "name": "Citadel Securities MM",
+          "persona": "Order-flow microstructure",
+          "score": 0.129,
+          "confidence": 0.534,
+          "rationale": "VPIN order-flow toxicity=0.16 (1=max adverse selection)"
+        },
+        {
+          "name": "Millennium Pod",
+          "persona": "Residual alpha / beta-neutral",
+          "score": 0.0,
+          "confidence": 0.5,
+          "rationale": "ann.alpha=+0.0%, beta=+1.00, beta-neutrality=0.50"
+        },
+        {
+          "name": "Renaissance Medallion",
+          "persona": "Regime / cointegration",
+          "score": 0.113,
+          "confidence": 0.8,
+          "rationale": "state=calm (p_stay=0.69), coint-z=+0.00"
+        },
+        {
+          "name": "Sovereign Wealth",
+          "persona": "Secular macro / SAA",
+          "score": 0.583,
+          "confidence": 0.4,
+          "rationale": "secular trend=+132%, structural drawdown=-0% (accumulate dips)"
+        }
+      ]
+    },
+    {
+      "symbol": "XLM/USD",
+      "price": 0.2,
+      "conviction": 0.506,
+      "direction": "long",
+      "composite": 0.011,
+      "risk_multiplier": 0.21,
+      "agents": [
+        {
+          "name": "Citadel Systematic",
+          "persona": "Trend/Systematic",
+          "score": 0.976,
+          "confidence": 1.0,
+          "rationale": "MACD=0.00, 20-50 slope=+0.034, Q-mom=+6.8%"
+        },
+        {
+          "name": "Two Sigma Backtest",
+          "persona": "Statistical expectancy",
+          "score": -0.066,
+          "confidence": 0.433,
+          "rationale": "ann.Sharpe=-0.13, win-rate=46%"
+        },
+        {
+          "name": "Bridgewater Risk",
+          "persona": "Risk parity / vol-target",
+          "score": -0.394,
+          "confidence": 0.6,
+          "rationale": "ann.vol=68% vs target 15%, risk_scale=0.22"
+        },
+        {
+          "name": "Renaissance Patterns",
+          "persona": "Mean-reversion",
+          "score": -0.898,
+          "confidence": 0.787,
+          "rationale": "z(20)=+2.43 (mean-revert), autocorr=+0.05"
+        },
+        {
+          "name": "Goldman Technical",
+          "persona": "Technical analysis",
+          "score": -0.049,
+          "confidence": 0.5,
+          "rationale": "RSI=59, MACD-hist=+0.00"
+        },
+        {
+          "name": "JPMorgan Fundamental",
+          "persona": "Valuation proxy",
+          "score": 0.367,
+          "confidence": 0.45,
+          "rationale": "px/200d=1.14, drawdown-from-1y-high=-23% (proxy)"
+        },
+        {
+          "name": "D.E. Shaw Options",
+          "persona": "Vol surface / premium",
+          "score": -0.076,
+          "confidence": 0.612,
+          "rationale": "vol=68%, IV-rank=37% \u2192 premium-sell favorability 37%"
+        },
+        {
+          "name": "AQR Factor",
+          "persona": "Multi-factor",
+          "score": -0.405,
+          "confidence": 0.55,
+          "rationale": "mom(12-1)=-11.5%, value=-6.8%, quality=-0.68"
+        },
+        {
+          "name": "Citadel Securities MM",
+          "persona": "Order-flow microstructure",
+          "score": 0.156,
+          "confidence": 0.564,
+          "rationale": "VPIN order-flow toxicity=0.09 (1=max adverse selection)"
+        },
+        {
+          "name": "Millennium Pod",
+          "persona": "Residual alpha / beta-neutral",
+          "score": 0.0,
+          "confidence": 0.5,
+          "rationale": "ann.alpha=+0.0%, beta=+1.00, beta-neutrality=0.50"
+        },
+        {
+          "name": "Renaissance Medallion",
+          "persona": "Regime / cointegration",
+          "score": -0.022,
+          "confidence": 0.8,
+          "rationale": "state=calm (p_stay=0.94), coint-z=+0.00"
+        },
+        {
+          "name": "Sovereign Wealth",
+          "persona": "Secular macro / SAA",
+          "score": 0.33,
+          "confidence": 0.4,
+          "rationale": "secular trend=+14%, structural drawdown=-23% (accumulate dips)"
+        }
+      ]
+    },
+    {
+      "symbol": "ETC/USD",
+      "price": 8.5,
+      "conviction": 0.514,
+      "direction": "long",
+      "composite": 0.029,
       "risk_multiplier": 1.0,
       "agents": [
         {
@@ -2155,7 +2350,7 @@
         {
           "name": "JPMorgan Fundamental",
           "persona": "Valuation proxy",
-          "score": 0.007,
+          "score": 0.0,
           "confidence": 0.45,
           "rationale": "px/200d=1.00, drawdown-from-1y-high=+0% (proxy)"
         },
@@ -2197,197 +2392,9 @@
         {
           "name": "Sovereign Wealth",
           "persona": "Secular macro / SAA",
-          "score": -0.003,
+          "score": 0.0,
           "confidence": 0.4,
           "rationale": "secular trend=+0%, structural drawdown=+0% (accumulate dips)"
-        }
-      ]
-    },
-    {
-      "symbol": "XLM/USD",
-      "price": 0.2,
-      "conviction": 0.508,
-      "direction": "long",
-      "composite": 0.015,
-      "risk_multiplier": 0.21,
-      "agents": [
-        {
-          "name": "Citadel Systematic",
-          "persona": "Trend/Systematic",
-          "score": 0.976,
-          "confidence": 1.0,
-          "rationale": "MACD=0.00, 20-50 slope=+0.034, Q-mom=+6.7%"
-        },
-        {
-          "name": "Two Sigma Backtest",
-          "persona": "Statistical expectancy",
-          "score": -0.067,
-          "confidence": 0.433,
-          "rationale": "ann.Sharpe=-0.13, win-rate=46%"
-        },
-        {
-          "name": "Bridgewater Risk",
-          "persona": "Risk parity / vol-target",
-          "score": -0.394,
-          "confidence": 0.6,
-          "rationale": "ann.vol=68% vs target 15%, risk_scale=0.22"
-        },
-        {
-          "name": "Renaissance Patterns",
-          "persona": "Mean-reversion",
-          "score": -0.901,
-          "confidence": 0.792,
-          "rationale": "z(20)=+2.46 (mean-revert), autocorr=+0.05"
-        },
-        {
-          "name": "Goldman Technical",
-          "persona": "Technical analysis",
-          "score": -0.048,
-          "confidence": 0.5,
-          "rationale": "RSI=59, MACD-hist=+0.00"
-        },
-        {
-          "name": "JPMorgan Fundamental",
-          "persona": "Valuation proxy",
-          "score": 0.368,
-          "confidence": 0.45,
-          "rationale": "px/200d=1.14, drawdown-from-1y-high=-23% (proxy)"
-        },
-        {
-          "name": "D.E. Shaw Options",
-          "persona": "Vol surface / premium",
-          "score": -0.076,
-          "confidence": 0.612,
-          "rationale": "vol=68%, IV-rank=37% \u2192 premium-sell favorability 37%"
-        },
-        {
-          "name": "AQR Factor",
-          "persona": "Multi-factor",
-          "score": -0.404,
-          "confidence": 0.55,
-          "rationale": "mom(12-1)=-11.5%, value=-6.7%, quality=-0.68"
-        },
-        {
-          "name": "Citadel Securities MM",
-          "persona": "Order-flow microstructure",
-          "score": 0.156,
-          "confidence": 0.564,
-          "rationale": "VPIN order-flow toxicity=0.09 (1=max adverse selection)"
-        },
-        {
-          "name": "Millennium Pod",
-          "persona": "Residual alpha / beta-neutral",
-          "score": 0.0,
-          "confidence": 0.5,
-          "rationale": "ann.alpha=+0.0%, beta=+1.00, beta-neutrality=0.50"
-        },
-        {
-          "name": "Renaissance Medallion",
-          "persona": "Regime / cointegration",
-          "score": -0.022,
-          "confidence": 0.8,
-          "rationale": "state=calm (p_stay=0.94), coint-z=+0.00"
-        },
-        {
-          "name": "Sovereign Wealth",
-          "persona": "Secular macro / SAA",
-          "score": 0.33,
-          "confidence": 0.4,
-          "rationale": "secular trend=+14%, structural drawdown=-23% (accumulate dips)"
-        }
-      ]
-    },
-    {
-      "symbol": "ETC/USD",
-      "price": 0.0,
-      "conviction": 0.562,
-      "direction": "long",
-      "composite": 0.124,
-      "risk_multiplier": 0.259,
-      "agents": [
-        {
-          "name": "Citadel Systematic",
-          "persona": "Trend/Systematic",
-          "score": 0.723,
-          "confidence": 1.0,
-          "rationale": "MACD=0.02, 20-50 slope=+0.000, Q-mom=+20.5%"
-        },
-        {
-          "name": "Two Sigma Backtest",
-          "persona": "Statistical expectancy",
-          "score": -0.407,
-          "confidence": 0.604,
-          "rationale": "ann.Sharpe=-0.86, win-rate=45%"
-        },
-        {
-          "name": "Bridgewater Risk",
-          "persona": "Risk parity / vol-target",
-          "score": -0.335,
-          "confidence": 0.6,
-          "rationale": "ann.vol=55% vs target 15%, risk_scale=0.27"
-        },
-        {
-          "name": "Renaissance Patterns",
-          "persona": "Mean-reversion",
-          "score": 1.0,
-          "confidence": 1.0,
-          "rationale": "z(20)=-20.14 (mean-revert), autocorr=-0.02"
-        },
-        {
-          "name": "Goldman Technical",
-          "persona": "Technical analysis",
-          "score": -0.055,
-          "confidence": 0.5,
-          "rationale": "RSI=59, MACD-hist=+0.02"
-        },
-        {
-          "name": "JPMorgan Fundamental",
-          "persona": "Valuation proxy",
-          "score": -0.905,
-          "confidence": 0.45,
-          "rationale": "px/200d=0.00, drawdown-from-1y-high=-100% (proxy)"
-        },
-        {
-          "name": "D.E. Shaw Options",
-          "persona": "Vol surface / premium",
-          "score": -0.087,
-          "confidence": 0.606,
-          "rationale": "vol=55%, IV-rank=35% \u2192 premium-sell favorability 35%"
-        },
-        {
-          "name": "AQR Factor",
-          "persona": "Multi-factor",
-          "score": -0.436,
-          "confidence": 0.55,
-          "rationale": "mom(12-1)=-12.2%, value=-20.5%, quality=-0.55"
-        },
-        {
-          "name": "Citadel Securities MM",
-          "persona": "Order-flow microstructure",
-          "score": 0.158,
-          "confidence": 0.567,
-          "rationale": "VPIN order-flow toxicity=0.08 (1=max adverse selection)"
-        },
-        {
-          "name": "Millennium Pod",
-          "persona": "Residual alpha / beta-neutral",
-          "score": 0.0,
-          "confidence": 0.5,
-          "rationale": "ann.alpha=+0.0%, beta=+1.00, beta-neutrality=0.50"
-        },
-        {
-          "name": "Renaissance Medallion",
-          "persona": "Regime / cointegration",
-          "score": -0.045,
-          "confidence": 0.5,
-          "rationale": "state=stressed (p_stay=0.25), coint-z=+0.00"
-        },
-        {
-          "name": "Sovereign Wealth",
-          "persona": "Secular macro / SAA",
-          "score": 0.604,
-          "confidence": 0.4,
-          "rationale": "secular trend=-100%, structural drawdown=-100% (accumulate dips)"
         }
       ]
     }
@@ -2395,9 +2402,9 @@
   "brain": {
     "enabled": true,
     "used": true,
-    "posture": "neutral",
-    "global_risk_multiplier": 0.75,
-    "commentary": "Data quality is the dominant risk this cycle, not market direction. Most symbols show placeholder-like fields (vol=0.0, alpha=0.0, beta=1.0, liquidity_rank=0.0, ES95=0.0, identical composite 0.026 / conviction 0.513), indicating the council is emitting default outputs rather than live feature computations. DOGE, ADA and ETC report price=0.0 \u2014 these are unpriceable and their 'long' verdicts must be treated as invalid; ETC's standout conviction (0.562) on a zero price is a clear fragility flag. Cross-asset regime is risk_on and market regime normal, but conviction is barely above coin-flip (~0.5",
+    "posture": "risk_off",
+    "global_risk_multiplier": 0.55,
+    "commentary": "Cross-asset regime is flagged as STRESS across every symbol while the per-symbol market_regime reads 'normal' \u2014 that divergence alone warrants defensive sizing. Signal quality is poor: convictions cluster at 0.50\u20130.56 (coin-flip territory), alpha is 0.0 everywhere, and a large block of symbols (BTC, ETH, XRP, DOGE, LINK, BCH, ETC) share an identical conviction/composite/vol=0/ES=0 fingerprint, which indicates missing or stale feature data rather than a genuine signal \u2014 treat these as fragile placeholders, not tradeable views. AVAX shows the highest conviction but reports price 0.0 with vol 0.5",
     "brain_model": "claude-fable-5-1",
     "counsellors": {
       "openai": "",
@@ -2411,26 +2418,26 @@
       "resolved_model": "claude-fable-5-1",
       "fallback_used": false,
       "schema_valid": true,
-      "latency_ms": 11971,
-      "input_tokens": 4106,
-      "output_tokens": 632,
-      "estimated_cost_usd": 0.07266,
+      "latency_ms": 11286,
+      "input_tokens": 4076,
+      "output_tokens": 626,
+      "estimated_cost_usd": 0.07206,
       "conviction_adjustment": {
-        "BTC/USD": 0.0,
-        "ETH/USD": -0.03,
-        "SOL/USD": -0.05,
-        "LTC/USD": -0.05,
+        "BTC/USD": -0.03,
+        "ETH/USD": -0.04,
+        "SOL/USD": -0.02,
+        "LTC/USD": -0.02,
         "XRP/USD": -0.08,
-        "DOGE/USD": -0.15,
-        "ADA/USD": -0.15,
-        "AVAX/USD": -0.05,
-        "LINK/USD": 0.05,
-        "BCH/USD": -0.05,
-        "UNI/USD": -0.05,
+        "DOGE/USD": -0.1,
+        "ADA/USD": -0.1,
+        "AVAX/USD": -0.15,
+        "LINK/USD": -0.07,
+        "BCH/USD": -0.08,
+        "UNI/USD": -0.06,
         "XLM/USD": -0.12,
-        "ETC/USD": -0.15
+        "ETC/USD": -0.09
       },
-      "risk_multiplier": 0.75,
+      "risk_multiplier": 0.55,
       "clamp_applied": false
     },
     "shadow_evaluation": {
@@ -2456,7 +2463,7 @@
         {
           "provider": "neutral",
           "score": 30.01,
-          "observations": 1867,
+          "observations": 1870,
           "net_return": 0.0,
           "annualized_sharpe": 0.0,
           "max_drawdown": 0.0,
@@ -2514,16 +2521,16 @@
         {
           "provider": "consensus",
           "score": 0.0,
-          "observations": 1867,
-          "net_return": -0.22607443,
-          "annualized_sharpe": -0.9972,
-          "max_drawdown": 0.229127,
-          "hit_rate": 0.376,
+          "observations": 1870,
+          "net_return": -0.23026569,
+          "annualized_sharpe": -1.0146,
+          "max_drawdown": 0.23341,
+          "hit_rate": 0.3781,
           "calibration_error": 0.4787,
           "average_turnover_cost_bps": 1.0,
-          "average_latency_ms": 25019.48,
+          "average_latency_ms": 24954.24,
           "schema_valid_rate": 1.0,
-          "fallback_rate": 0.729,
+          "fallback_rate": 0.7278,
           "promotion_eligible": false,
           "blockers": [
             "shadow drawdown exceeds threshold",
@@ -2553,15 +2560,15 @@
         },
         {
           "provider": "claude",
-          "score": 5.39,
-          "observations": 482,
-          "net_return": -0.01323107,
-          "annualized_sharpe": -1.4579,
-          "max_drawdown": 0.013231,
-          "hit_rate": 0.3693,
+          "score": 6.02,
+          "observations": 485,
+          "net_return": -0.018575,
+          "annualized_sharpe": -1.3638,
+          "max_drawdown": 0.018713,
+          "hit_rate": 0.3773,
           "calibration_error": 0.4785,
           "average_turnover_cost_bps": 1.0,
-          "average_latency_ms": 18060.26,
+          "average_latency_ms": 17851.76,
           "schema_valid_rate": 1.0,
           "fallback_rate": 0.0,
           "promotion_eligible": false,
@@ -2573,7 +2580,7 @@
       ],
       "recommended_provider": "gemini",
       "promotion_policy": "manual approval required; shadow evidence cannot arm live trading",
-      "observations": 9082,
+      "observations": 9094,
       "source": "/home/runner/work/SAHJONY-AI-TRADING/SAHJONY-AI-TRADING/data/ai_shadow_observations.jsonl",
       "leaders": {
         "today": {
@@ -2654,8 +2661,8 @@
   },
   "audit_chain": {
     "valid": true,
-    "entries": 466,
-    "head": "84405e21c83a24deba89d7ef8b14004df655396ec7fb424ea8369e7cd362dd98"
+    "entries": 463,
+    "head": "67b196f81eba9dfad6a25c504fb0fde3020ec71488a03fc8e7cc501a59846ce1"
   },
   "institutional_health": {
     "score": 70,
@@ -2674,9 +2681,7 @@
         "severity": "critical",
         "code": "market_data_quarantined",
         "symbols": [
-          "DOGE/USD",
-          "ADA/USD",
-          "ETC/USD"
+          "AVAX/USD"
         ]
       },
       {
@@ -2698,117 +2703,134 @@
   },
   "institutional_intelligence": {
     "version": "institutional-research-v1",
-    "as_of": "2026-09-19T14:07:57.079145+00:00",
+    "as_of": "2026-09-19T17:20:22.726394+00:00",
     "point_in_time": true,
     "execution_authority": false,
     "universe": [
-      "ETH/USD",
-      "LINK/USD",
-      "XLM/USD",
-      "XRP/USD"
+      "ADA/USD",
+      "LTC/USD",
+      "SOL/USD",
+      "UNI/USD",
+      "XLM/USD"
     ],
-    "coverage": 0.3076923076923077,
+    "coverage": 0.38461538461538464,
     "configured_symbols": 13,
-    "successful_symbols": 4,
+    "successful_symbols": 5,
     "rejected_symbols": {
       "BTC/USD": "invalid_or_short_history",
-      "SOL/USD": "invalid_or_short_history",
-      "LTC/USD": "invalid_or_short_history",
+      "ETH/USD": "invalid_or_short_history",
+      "XRP/USD": "invalid_or_short_history",
       "DOGE/USD": "invalid_or_short_history",
-      "ADA/USD": "invalid_or_short_history",
       "AVAX/USD": "invalid_or_short_history",
+      "LINK/USD": "invalid_or_short_history",
       "BCH/USD": "invalid_or_short_history",
-      "UNI/USD": "invalid_or_short_history",
       "ETC/USD": "invalid_or_short_history"
     },
     "market": {
-      "regime": "risk_on",
+      "regime": "stress",
       "regime_probabilities": {
-        "risk_on": 0.433855,
-        "transition": 0.139025,
-        "stress": 0.427119
+        "risk_on": 0.408761,
+        "transition": 0.133971,
+        "stress": 0.457267
       },
       "breadth_20d": 1.0,
       "breadth_50d": 1.0,
       "breadth_200d": 1.0,
-      "median_correlation_60d": 0.766373,
-      "correlation_pairs": 6,
+      "median_correlation_60d": 0.637643,
+      "correlation_pairs": 10,
       "minimum_pair_overlap": 60,
-      "cross_sectional_dispersion": 0.07274597,
-      "average_volatility": 0.586131,
-      "volatility_change": 0.159978,
-      "expected_shortfall_95": -0.07918403,
-      "stress_score": 0.936574,
-      "advisory_risk_multiplier": 0.531713
+      "cross_sectional_dispersion": 0.48625962,
+      "average_volatility": 0.60736,
+      "volatility_change": 0.306184,
+      "expected_shortfall_95": -0.08176811,
+      "stress_score": 0.974158,
+      "advisory_risk_multiplier": 0.512921
     },
     "factors": {
-      "ETH/USD": {
-        "momentum_1m": 0.07329156,
-        "momentum_3m": 0.41606702,
-        "momentum_6m": 0.20966305,
-        "volatility": 0.53271103,
-        "volatility_change": -0.15034617,
-        "expected_shortfall_95": -0.07581413,
-        "max_drawdown": -0.53278817,
-        "amihud_illiquidity": 5.1e-07,
+      "ADA/USD": {
+        "momentum_1m": 0.14125779,
+        "momentum_3m": 0.38243864,
+        "momentum_6m": -0.09687312,
+        "volatility": 0.65290495,
+        "volatility_change": 0.0486403,
+        "expected_shortfall_95": -0.09263912,
+        "max_drawdown": -0.66637992,
+        "amihud_illiquidity": 0.34436073,
         "above_sma20": 1.0,
         "above_sma50": 1.0,
         "above_sma200": 1.0,
-        "momentum_rank": 0.333333,
-        "low_vol_rank": 1.0,
-        "liquidity_rank": 1.0,
-        "composite_factor_score": 0.566667
+        "momentum_rank": -1.0,
+        "low_vol_rank": -0.0,
+        "liquidity_rank": -0.5,
+        "composite_factor_score": -0.65
       },
-      "LINK/USD": {
-        "momentum_1m": 0.08971013,
-        "momentum_3m": 0.49595533,
-        "momentum_6m": 0.28504535,
-        "volatility": 0.58587134,
-        "volatility_change": 0.32469081,
-        "expected_shortfall_95": -0.08905268,
-        "max_drawdown": -0.50124026,
-        "amihud_illiquidity": 0.0059519,
+      "LTC/USD": {
+        "momentum_1m": 0.18289458,
+        "momentum_3m": 0.23388756,
+        "momentum_6m": 0.03253594,
+        "volatility": 0.42196265,
+        "volatility_change": 0.33597259,
+        "expected_shortfall_95": -0.06319485,
+        "max_drawdown": -0.47811516,
+        "amihud_illiquidity": 0.00122602,
+        "above_sma20": 1.0,
+        "above_sma50": 1.0,
+        "above_sma200": 1.0,
+        "momentum_rank": -0.5,
+        "low_vol_rank": 1.0,
+        "liquidity_rank": 0.5,
+        "composite_factor_score": 0.175
+      },
+      "SOL/USD": {
+        "momentum_1m": 0.06239435,
+        "momentum_3m": 0.48623186,
+        "momentum_6m": 0.29665256,
+        "volatility": 0.54330682,
+        "volatility_change": 0.30714392,
+        "expected_shortfall_95": -0.07746998,
+        "max_drawdown": -0.5756,
+        "amihud_illiquidity": 8.495e-05,
+        "above_sma20": 1.0,
+        "above_sma50": 1.0,
+        "above_sma200": 1.0,
+        "momentum_rank": 0.5,
+        "low_vol_rank": 0.5,
+        "liquidity_rank": 1.0,
+        "composite_factor_score": 0.55
+      },
+      "UNI/USD": {
+        "momentum_1m": 0.88378618,
+        "momentum_3m": 1.47238178,
+        "momentum_6m": 1.53027777,
+        "volatility": 0.73531643,
+        "volatility_change": 0.56563653,
+        "expected_shortfall_95": -0.09438162,
+        "max_drawdown": -0.59063358,
+        "amihud_illiquidity": 0.02043552,
         "above_sma20": 1.0,
         "above_sma50": 1.0,
         "above_sma200": 1.0,
         "momentum_rank": 1.0,
-        "low_vol_rank": -0.333333,
-        "liquidity_rank": 0.333333,
-        "composite_factor_score": 0.466667
+        "low_vol_rank": -1.0,
+        "liquidity_rank": -0.0,
+        "composite_factor_score": 0.15
       },
       "XLM/USD": {
-        "momentum_1m": 0.11511751,
-        "momentum_3m": 0.0673453,
-        "momentum_6m": 0.32030395,
-        "volatility": 0.68329298,
-        "volatility_change": 0.27309328,
+        "momentum_1m": 0.11547042,
+        "momentum_3m": 0.06768309,
+        "momentum_6m": 0.3207218,
+        "volatility": 0.68331047,
+        "volatility_change": 0.27352451,
         "expected_shortfall_95": -0.08115496,
         "max_drawdown": -0.43273493,
         "amihud_illiquidity": 0.87052372,
         "above_sma20": 1.0,
         "above_sma50": 1.0,
         "above_sma200": 1.0,
-        "momentum_rank": -0.333333,
-        "low_vol_rank": -1.0,
+        "momentum_rank": 0.0,
+        "low_vol_rank": -0.5,
         "liquidity_rank": -1.0,
-        "composite_factor_score": -0.5
-      },
-      "XRP/USD": {
-        "momentum_1m": 0.02892067,
-        "momentum_3m": 0.31533849,
-        "momentum_6m": 0.01664033,
-        "volatility": 0.54264908,
-        "volatility_change": 0.19247598,
-        "expected_shortfall_95": -0.07071435,
-        "max_drawdown": -0.54235226,
-        "amihud_illiquidity": 0.00819598,
-        "above_sma20": 1.0,
-        "above_sma50": 1.0,
-        "above_sma200": 1.0,
-        "momentum_rank": -1.0,
-        "low_vol_rank": 0.333333,
-        "liquidity_rank": -0.333333,
-        "composite_factor_score": -0.533333
+        "composite_factor_score": -0.225
       }
     },
     "provenance": {
@@ -2818,40 +2840,48 @@
         "bar_timestamp"
       ],
       "method": "transparent_public_domain_estimators",
-      "latest_bar_timestamp": "2026-09-19T14:02:30+00:00",
-      "oldest_age_seconds": 517.079,
+      "latest_bar_timestamp": "2026-09-19T17:14:10+00:00",
+      "oldest_age_seconds": 512.726,
       "snapshots": {
-        "ETH/USD": {
-          "bar_timestamp": "2026-09-19T13:59:20+00:00",
+        "SOL/USD": {
+          "bar_timestamp": "2026-09-19T17:11:50+00:00",
           "exchange_timestamp": null,
-          "feed_timestamp": 1789826360000,
-          "retrieved_at": "2026-09-19T14:01:35.676310+00:00",
-          "latency_ms": 135676.31,
-          "age_seconds": 517.079
+          "feed_timestamp": 1789837910000,
+          "retrieved_at": "2026-09-19T17:13:53.668204+00:00",
+          "latency_ms": 123668.204,
+          "age_seconds": 512.726
         },
-        "XRP/USD": {
-          "bar_timestamp": "2026-09-19T14:00:30+00:00",
+        "LTC/USD": {
+          "bar_timestamp": "2026-09-19T17:12:10+00:00",
           "exchange_timestamp": null,
-          "feed_timestamp": 1789826430000,
-          "retrieved_at": "2026-09-19T14:02:37.355284+00:00",
-          "latency_ms": 127355.284,
-          "age_seconds": 447.079
+          "feed_timestamp": 1789837930000,
+          "retrieved_at": "2026-09-19T17:13:54.094902+00:00",
+          "latency_ms": 104094.902,
+          "age_seconds": 492.726
         },
-        "LINK/USD": {
-          "bar_timestamp": "2026-09-19T14:01:40+00:00",
+        "ADA/USD": {
+          "bar_timestamp": "2026-09-19T17:13:00+00:00",
           "exchange_timestamp": null,
-          "feed_timestamp": 1789826500000,
-          "retrieved_at": "2026-09-19T14:03:39.288983+00:00",
-          "latency_ms": 119288.983,
-          "age_seconds": 377.079
+          "feed_timestamp": 1789837980000,
+          "retrieved_at": "2026-09-19T17:14:56.741536+00:00",
+          "latency_ms": 116741.536,
+          "age_seconds": 442.726
+        },
+        "UNI/USD": {
+          "bar_timestamp": "2026-09-19T17:14:10+00:00",
+          "exchange_timestamp": null,
+          "feed_timestamp": 1789838050000,
+          "retrieved_at": "2026-09-19T17:15:59.510388+00:00",
+          "latency_ms": 109510.388,
+          "age_seconds": 372.726
         },
         "XLM/USD": {
-          "bar_timestamp": "2026-09-19T14:02:30+00:00",
+          "bar_timestamp": "2026-09-19T17:14:00+00:00",
           "exchange_timestamp": null,
-          "feed_timestamp": 1789826550000,
-          "retrieved_at": "2026-09-19T14:04:40.816680+00:00",
-          "latency_ms": 130816.68,
-          "age_seconds": 327.079
+          "feed_timestamp": 1789838040000,
+          "retrieved_at": "2026-09-19T17:15:59.971495+00:00",
+          "latency_ms": 119971.495,
+          "age_seconds": 382.726
         }
       },
       "future_data_used": false
@@ -2861,7 +2891,7 @@
       "stage": "research",
       "feature_flag_enabled": false,
       "multiplier_active": false,
-      "proposed_multiplier": 0.531713,
+      "proposed_multiplier": 0.512921,
       "applied_multiplier": 1.0
     }
   },
@@ -3311,7 +3341,7 @@
       "premium": 0.0
     },
     {
-      "ts": "2026-09-19T13:37:52.818511+00:00",
+      "ts": "2026-09-19T16:50:11.199253+00:00",
       "cycle": 918,
       "equity": 67.54,
       "cash": 67.54,
@@ -3320,7 +3350,7 @@
       "premium": 0.0
     },
     {
-      "ts": "2026-09-19T13:52:35.684299+00:00",
+      "ts": "2026-09-19T17:04:40.677077+00:00",
       "cycle": 919,
       "equity": 67.54,
       "cash": 67.54,
@@ -3329,7 +3359,7 @@
       "premium": 0.0
     },
     {
-      "ts": "2026-09-19T14:08:13.185165+00:00",
+      "ts": "2026-09-19T17:20:38.889319+00:00",
       "cycle": 920,
       "equity": 67.54,
       "cash": 67.54,
@@ -3340,142 +3370,63 @@
   ],
   "decisions": [
     {
-      "ts": "2026-09-19T14:08:12.720242+00:00",
-      "kind": "risk_block",
-      "symbol": "UNI/USD",
-      "purpose": "ladder_entry",
-      "reason": "conviction 39% < floor 51%"
-    },
-    {
-      "ts": "2026-09-19T14:08:12.719942+00:00",
-      "kind": "risk_block",
-      "symbol": "BCH/USD",
-      "purpose": "ladder_entry",
-      "reason": "conviction 39% < floor 51%"
-    },
-    {
-      "ts": "2026-09-19T14:08:12.719628+00:00",
-      "kind": "risk_block",
-      "symbol": "LINK/USD",
-      "purpose": "ladder_entry",
-      "reason": "conviction 17% < floor 51%"
-    },
-    {
-      "ts": "2026-09-19T14:08:12.719242+00:00",
-      "kind": "risk_block",
-      "symbol": "AVAX/USD",
-      "purpose": "ladder_entry",
-      "reason": "conviction 39% < floor 51%"
-    },
-    {
-      "ts": "2026-09-19T14:08:12.718630+00:00",
-      "kind": "risk_block",
-      "symbol": "XRP/USD",
-      "purpose": "ladder_entry",
-      "reason": "conviction 12% < floor 51%"
-    },
-    {
-      "ts": "2026-09-19T14:08:12.718227+00:00",
-      "kind": "risk_block",
-      "symbol": "LTC/USD",
-      "purpose": "ladder_entry",
-      "reason": "conviction 39% < floor 51%"
-    },
-    {
-      "ts": "2026-09-19T14:08:12.717882+00:00",
-      "kind": "risk_block",
-      "symbol": "SOL/USD",
-      "purpose": "ladder_entry",
-      "reason": "conviction 38% < floor 51%"
-    },
-    {
-      "ts": "2026-09-19T14:08:12.716975+00:00",
-      "kind": "risk_block",
-      "symbol": "BTC/USD",
-      "purpose": "ladder_entry",
-      "reason": "conviction 46% < floor 51%"
-    },
-    {
-      "ts": "2026-09-19T14:01:04.656600+00:00",
-      "kind": "governor_cycle_gate",
-      "scale": 1.0,
-      "blocked": false,
-      "reason": "approved by portfolio governor",
-      "drawdown": 0.0,
-      "gross": 0
-    },
-    {
-      "ts": "2026-09-19T13:52:35.143056+00:00",
+      "ts": "2026-09-19T17:20:38.438720+00:00",
       "kind": "risk_block",
       "symbol": "ETC/USD",
       "purpose": "ladder_entry",
       "reason": "conviction 36% < floor 51%"
     },
     {
-      "ts": "2026-09-19T13:52:35.142736+00:00",
-      "kind": "risk_block",
-      "symbol": "XLM/USD",
-      "purpose": "ladder_entry",
-      "reason": "conviction 38% < floor 51%"
-    },
-    {
-      "ts": "2026-09-19T13:52:35.142422+00:00",
+      "ts": "2026-09-19T17:20:38.438192+00:00",
       "kind": "risk_block",
       "symbol": "UNI/USD",
       "purpose": "ladder_entry",
-      "reason": "conviction 13% < floor 51%"
+      "reason": "conviction 14% < floor 51%"
     },
     {
-      "ts": "2026-09-19T13:52:35.142050+00:00",
+      "ts": "2026-09-19T17:20:38.437833+00:00",
       "kind": "risk_block",
       "symbol": "BCH/USD",
-      "purpose": "ladder_entry",
-      "reason": "conviction 38% < floor 51%"
-    },
-    {
-      "ts": "2026-09-19T13:52:35.141716+00:00",
-      "kind": "risk_block",
-      "symbol": "LINK/USD",
-      "purpose": "ladder_entry",
-      "reason": "conviction 39% < floor 51%"
-    },
-    {
-      "ts": "2026-09-19T13:52:35.141336+00:00",
-      "kind": "risk_block",
-      "symbol": "ADA/USD",
       "purpose": "ladder_entry",
       "reason": "conviction 37% < floor 51%"
     },
     {
-      "ts": "2026-09-19T13:52:35.140864+00:00",
+      "ts": "2026-09-19T17:20:38.437556+00:00",
+      "kind": "risk_block",
+      "symbol": "LINK/USD",
+      "purpose": "ladder_entry",
+      "reason": "conviction 37% < floor 51%"
+    },
+    {
+      "ts": "2026-09-19T17:20:38.436834+00:00",
+      "kind": "risk_block",
+      "symbol": "DOGE/USD",
+      "purpose": "ladder_entry",
+      "reason": "conviction 35% < floor 51%"
+    },
+    {
+      "ts": "2026-09-19T17:20:38.436563+00:00",
       "kind": "risk_block",
       "symbol": "XRP/USD",
       "purpose": "ladder_entry",
-      "reason": "conviction 13% < floor 51%"
+      "reason": "conviction 34% < floor 51%"
     },
     {
-      "ts": "2026-09-19T13:52:35.140456+00:00",
+      "ts": "2026-09-19T17:20:38.435828+00:00",
       "kind": "risk_block",
-      "symbol": "LTC/USD",
+      "symbol": "ETH/USD",
       "purpose": "ladder_entry",
-      "reason": "conviction 38% < floor 51%"
+      "reason": "conviction 40% < floor 51%"
     },
     {
-      "ts": "2026-09-19T13:52:35.140106+00:00",
-      "kind": "risk_block",
-      "symbol": "SOL/USD",
-      "purpose": "ladder_entry",
-      "reason": "conviction 39% < floor 51%"
-    },
-    {
-      "ts": "2026-09-19T13:52:35.139314+00:00",
+      "ts": "2026-09-19T17:20:38.435195+00:00",
       "kind": "risk_block",
       "symbol": "BTC/USD",
       "purpose": "ladder_entry",
-      "reason": "conviction 43% < floor 51%"
+      "reason": "conviction 42% < floor 51%"
     },
     {
-      "ts": "2026-09-19T13:44:17.997734+00:00",
+      "ts": "2026-09-19T17:12:51.345150+00:00",
       "kind": "governor_cycle_gate",
       "scale": 1.0,
       "blocked": false,
@@ -3484,34 +3435,113 @@
       "gross": 0
     },
     {
-      "ts": "2026-09-19T13:37:52.447847+00:00",
+      "ts": "2026-09-19T17:04:40.113714+00:00",
+      "kind": "risk_block",
+      "symbol": "UNI/USD",
+      "purpose": "ladder_entry",
+      "reason": "conviction 14% < floor 51%"
+    },
+    {
+      "ts": "2026-09-19T17:04:40.113334+00:00",
+      "kind": "risk_block",
+      "symbol": "BCH/USD",
+      "purpose": "ladder_entry",
+      "reason": "conviction 37% < floor 51%"
+    },
+    {
+      "ts": "2026-09-19T17:04:40.113052+00:00",
+      "kind": "risk_block",
+      "symbol": "LINK/USD",
+      "purpose": "ladder_entry",
+      "reason": "conviction 37% < floor 51%"
+    },
+    {
+      "ts": "2026-09-19T17:04:40.112516+00:00",
+      "kind": "risk_block",
+      "symbol": "ADA/USD",
+      "purpose": "ladder_entry",
+      "reason": "conviction 37% < floor 51%"
+    },
+    {
+      "ts": "2026-09-19T17:04:40.112127+00:00",
+      "kind": "risk_block",
+      "symbol": "XRP/USD",
+      "purpose": "ladder_entry",
+      "reason": "conviction 13% < floor 51%"
+    },
+    {
+      "ts": "2026-09-19T17:04:40.111751+00:00",
+      "kind": "risk_block",
+      "symbol": "LTC/USD",
+      "purpose": "ladder_entry",
+      "reason": "conviction 37% < floor 51%"
+    },
+    {
+      "ts": "2026-09-19T17:04:40.111391+00:00",
+      "kind": "risk_block",
+      "symbol": "SOL/USD",
+      "purpose": "ladder_entry",
+      "reason": "conviction 39% < floor 51%"
+    },
+    {
+      "ts": "2026-09-19T16:57:08.535131+00:00",
+      "kind": "governor_cycle_gate",
+      "scale": 1.0,
+      "blocked": false,
+      "reason": "approved by portfolio governor",
+      "drawdown": 0.0,
+      "gross": 0
+    },
+    {
+      "ts": "2026-09-19T16:50:10.786897+00:00",
       "kind": "halt_block",
-      "symbol": "ETC/USD",
+      "symbol": "UNI/USD",
       "purpose": "ladder_entry"
     },
     {
-      "ts": "2026-09-19T13:37:52.447437+00:00",
+      "ts": "2026-09-19T16:50:10.786751+00:00",
       "kind": "halt_block",
       "symbol": "BCH/USD",
       "purpose": "ladder_entry"
     },
     {
-      "ts": "2026-09-19T13:37:52.447190+00:00",
+      "ts": "2026-09-19T16:50:10.786556+00:00",
       "kind": "halt_block",
       "symbol": "LINK/USD",
       "purpose": "ladder_entry"
     },
     {
-      "ts": "2026-09-19T13:37:52.446419+00:00",
+      "ts": "2026-09-19T16:50:10.785988+00:00",
       "kind": "halt_block",
-      "symbol": "DOGE/USD",
+      "symbol": "ADA/USD",
       "purpose": "ladder_entry"
     },
     {
-      "ts": "2026-09-19T13:37:52.445752+00:00",
+      "ts": "2026-09-19T16:50:10.785664+00:00",
+      "kind": "halt_block",
+      "symbol": "XRP/USD",
+      "purpose": "ladder_entry"
+    },
+    {
+      "ts": "2026-09-19T16:50:10.785344+00:00",
+      "kind": "halt_block",
+      "symbol": "LTC/USD",
+      "purpose": "ladder_entry"
+    },
+    {
+      "ts": "2026-09-19T16:50:10.785095+00:00",
       "kind": "halt_block",
       "symbol": "SOL/USD",
       "purpose": "ladder_entry"
+    },
+    {
+      "ts": "2026-09-19T16:43:19.138335+00:00",
+      "kind": "governor_cycle_gate",
+      "scale": 1.0,
+      "blocked": false,
+      "reason": "approved by portfolio governor",
+      "drawdown": 0.0,
+      "gross": 0
     }
   ],
   "agents_roster": [
@@ -4026,38 +4056,38 @@
         {
           "symbol": "BTC/USD",
           "interval_m": 15,
-          "bars": 196,
-          "usable": 7,
-          "ticks_per_bar": 1.04,
-          "single_tick_pct": 96.4,
-          "span_days": 47.69
+          "bars": 197,
+          "usable": 6,
+          "ticks_per_bar": 1.03,
+          "single_tick_pct": 97.0,
+          "span_days": 47.81
         },
         {
           "symbol": "ETH/USD",
           "interval_m": 15,
-          "bars": 196,
-          "usable": 7,
-          "ticks_per_bar": 1.04,
-          "single_tick_pct": 96.4,
-          "span_days": 47.69
+          "bars": 197,
+          "usable": 6,
+          "ticks_per_bar": 1.03,
+          "single_tick_pct": 97.0,
+          "span_days": 47.81
         },
         {
           "symbol": "SOL/USD",
           "interval_m": 15,
-          "bars": 196,
-          "usable": 7,
-          "ticks_per_bar": 1.04,
-          "single_tick_pct": 96.4,
-          "span_days": 47.69
+          "bars": 197,
+          "usable": 6,
+          "ticks_per_bar": 1.03,
+          "single_tick_pct": 97.0,
+          "span_days": 47.81
         },
         {
           "symbol": "LTC/USD",
           "interval_m": 15,
-          "bars": 195,
-          "usable": 7,
-          "ticks_per_bar": 1.04,
-          "single_tick_pct": 96.4,
-          "span_days": 47.69
+          "bars": 196,
+          "usable": 6,
+          "ticks_per_bar": 1.03,
+          "single_tick_pct": 96.9,
+          "span_days": 47.81
         },
         {
           "symbol": "XRP/USD",
@@ -4066,7 +4096,7 @@
           "usable": 6,
           "ticks_per_bar": 1.03,
           "single_tick_pct": 96.9,
-          "span_days": 47.69
+          "span_days": 47.81
         },
         {
           "symbol": "BTC/USD",
