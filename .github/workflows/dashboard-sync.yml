@@ -1,0 +1,26 @@
+name: Dashboard sync (public/ -> gh-pages)
+
+# Keeps the live bot dashboard (GitHub Pages) fresh: every desk snapshot
+# commit on master mirrors public/ onto the gh-pages branch.
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'public/**'
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Mirror public/ to gh-pages
+        run: |
+          git config user.name "sahjony-dashboard-sync"
+          git config user.email "sahjony-dashboard-sync@users.noreply.github.com"
+          git subtree split --prefix public -b pubsync
+          git push origin pubsync:gh-pages --force
