@@ -114,7 +114,7 @@ ENV_CATALOG = [
     ("DAY_TRADE_STOP_PCT", "Day Trading / Forex", False, "intraday stop loss"),
     ("CYCLE_MINUTES", "Ops", False, "run cadence"),
     ("LOG_LEVEL", "Ops", False, "INFO / DEBUG"),
-    ("INTEL_WORKFORCE_ENABLED", "Intel", False, "8-agent advisory intel team (default on)"),
+    ("INTEL_WORKFORCE_ENABLED", "Intel", False, "9-agent advisory intel team (default on)"),
     ("INTEL_TOP_TRADERS_ENABLED", "Intel", False, "top-trader intel feed refresh (default on)"),
 ]
 
@@ -498,13 +498,37 @@ def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[st
              "composite": v.composite, "tilt": v.tilt, "rationale": v.rationale}
             for v in (cycle_result.get("board") or {}).values()
         ],
-        # Intel Workforce (intel/workforce/) — 8 advisory-only analysts, one
+        # Intel Workforce (intel/workforce/) — 9 advisory-only analysts, one
         # plain-language finding each. Advisory only: never orders, never caps.
         "intel_workforce": cycle_result.get("intel_findings") or [],
         # Top-trader intelligence feed (intel/top_traders.py) — whale alerts and
         # copy signals as context, never auto-copied. Unavailable when the
         # sibling module or its cached payload is missing.
         "top_traders": _top_traders_block(),
+        # Brain upgrade (intel/) — performance-weighted voting accuracy,
+        # anomaly stand-downs, disagreement scaling, trade post-mortems.
+        # All advisory or de-risk-only; none can widen risk caps.
+        "brain_upgrade": {
+            "anomaly": cycle_result.get("anomaly") or {},
+            "council_calibration_accuracy": cycle_result.get("calibration_accuracy") or {},
+            "dispersion": {r["symbol"]: r.get("dispersion")
+                           for r in cycle_result.get("research", [])
+                           if r.get("dispersion")},
+            "trade_memory": cycle_result.get("trade_memory") or {},
+        },
+        # Self-healing (intel/self_heal.py) — watchdog health per subsystem,
+        # circuit-breaker state, 3-strike escalation note, auditable healing log.
+        "self_heal": cycle_result.get("self_heal") or {"enabled": False},
+        # Self-improving — nightly review lessons/demotions, bounded auto-tune
+        # events (non-risk params only; risk caps are never tunable).
+        "self_review": cycle_result.get("self_review") or {"ran": False},
+        "auto_tune": cycle_result.get("auto_tune") or {"tuned": False},
+        # Correlation-aware risk (advisory): nominal vs effective exposure.
+        "correlation": cycle_result.get("correlation") or {},
+        # Execution quality: arrival-vs-fill slippage measurement + reporting.
+        "execution_quality": cycle_result.get("execution_quality") or {},
+        # Daily brief (also committed to public/daily_brief.md).
+        "daily_brief": cycle_result.get("daily_brief") or {},
         "council": council,
         "brain": brain_block,
         "positions": positions,

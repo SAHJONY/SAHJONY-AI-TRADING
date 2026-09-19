@@ -295,12 +295,35 @@ class Config:
     copy_trail_trigger_pct: float = 0.15
     copy_trail_pct: float = 0.08
 
-    # intel workforce — 8-agent advisory-only analyst team (intel/workforce/);
+    # intel workforce — 9-agent advisory-only analyst team (intel/workforce/);
     # never emits orders, never changes risk caps, never touches the arming chain
     intel_workforce_enabled: bool = True
     # top-trader intelligence feed (intel/top_traders.py) feeding the intel
     # workforce's whale/copy-signal agents
     intel_top_traders_enabled: bool = True
+
+    # brain upgrade — all advisory / de-risk-only / measurement-only; none can
+    # widen risk caps, emit orders, or touch credentials. Each has its own
+    # kill-switch env var (default ON per the owner's explicit instruction).
+    council_calibration_enabled: bool = True   # COUNCIL_CALIBRATION_ENABLED
+    dispersion_scaling_enabled: bool = True    # DISPERSION_SCALING_ENABLED
+    anomaly_enabled: bool = True               # ANOMALY_ENABLED
+    self_review_enabled: bool = True           # SELF_REVIEW_ENABLED
+    auto_demote_enabled: bool = True           # AUTO_DEMOTE_ENABLED
+    correlation_enabled: bool = True           # CORRELATION_ENABLED
+    execution_quality_enabled: bool = True     # EXECUTION_QUALITY_ENABLED
+    daily_brief_enabled: bool = True           # DAILY_BRIEF_ENABLED
+    self_heal_enabled: bool = True             # SELF_HEAL_ENABLED
+    auto_tune_enabled: bool = True             # AUTO_TUNE_ENABLED
+    # auto-tune allowlist lives in intel/auto_tune.py (TUNABLE_BOUNDS); the
+    # risk envelope below is NEVER self-tunable (hard-coded exclusion there).
+
+    # auto-tune allowlist defaults (intel/auto_tune.py TUNABLE_BOUNDS). These
+    # are the ONLY self-tunable params; the tuner clamps them to their bounds
+    # and requires recorded out-of-sample improvement. The risk envelope below
+    # is NEVER self-tunable (hard exclusion in the tuner).
+    dispersion_k: float = 2.5
+    anomaly_z_limit: float = 6.0
 
     # pairs / statistical arbitrage (market-neutral desk)
     pairs_enabled: bool = True
@@ -466,6 +489,8 @@ def load_config() -> Config:
         max_allocation_pct=_clamp(_f("MAX_ALLOCATION_PCT", 0.10), 0.0, HARD_MAX_ALLOCATION_PCT),
         max_total_deployed_pct=_clamp(_f("MAX_TOTAL_DEPLOYED_PCT", 0.60), 0.0, HARD_MAX_TOTAL_DEPLOYED_PCT),
         min_council_conviction=_clamp(_f("MIN_COUNCIL_CONVICTION", 0.55), HARD_MIN_CONVICTION, 1.0),
+        dispersion_k=_clamp(_f("DISPERSION_K", 2.5), 1.5, 4.0),
+        anomaly_z_limit=_clamp(_f("ANOMALY_Z_LIMIT", 6.0), 4.0, 8.0),
         max_daily_drawdown_pct=_clamp(_f("MAX_DAILY_DRAWDOWN_PCT", 0.06), 0.01, HARD_MAX_DAILY_DRAWDOWN_PCT),
         trading_halt=_b("TRADING_HALT", False),
         portfolio_governor_enabled=_b("PORTFOLIO_GOVERNOR", True),
@@ -525,6 +550,16 @@ def load_config() -> Config:
         copy_trading_enabled=_b("COPY_TRADING_ENABLED", False),
         intel_workforce_enabled=_b("INTEL_WORKFORCE_ENABLED", True),
         intel_top_traders_enabled=_b("INTEL_TOP_TRADERS_ENABLED", True),
+        council_calibration_enabled=_b("COUNCIL_CALIBRATION_ENABLED", True),
+        dispersion_scaling_enabled=_b("DISPERSION_SCALING_ENABLED", True),
+        anomaly_enabled=_b("ANOMALY_ENABLED", True),
+        self_review_enabled=_b("SELF_REVIEW_ENABLED", True),
+        auto_demote_enabled=_b("AUTO_DEMOTE_ENABLED", True),
+        correlation_enabled=_b("CORRELATION_ENABLED", True),
+        execution_quality_enabled=_b("EXECUTION_QUALITY_ENABLED", True),
+        daily_brief_enabled=_b("DAILY_BRIEF_ENABLED", True),
+        self_heal_enabled=_b("SELF_HEAL_ENABLED", True),
+        auto_tune_enabled=_b("AUTO_TUNE_ENABLED", True),
         copy_trading_source_url=(os.getenv("COPY_TRADING_SOURCE_URL", "") or "").strip(),
         copy_trading_api_key=os.getenv("COPY_TRADING_API_KEY", "").strip(),
         copy_trading_max_symbols=max(1, _i("COPY_TRADING_MAX_SYMBOLS", 10)),

@@ -65,3 +65,32 @@ capital across strategy desks by realized win-rate (×0.70–×1.15; a losing de
 is trimmed, never switched off). Memory lives in state.json (cached across CI
 runs) with exponential decay, so the learning loop runs in perpetuity.
 Deterministic, transparent, fault-isolated; default ON, `HERMES_ENABLED=false` to disable.
+
+## Brain upgrade — performance-weighted voting, de-risking, memory (`intel/`)
+All advisory or de-risk-only; none widen risk caps, emit orders, or touch credentials.
+
+- `council_calibration.py` — decayed per-agent realized accuracy; vote weights
+  bounded [0.5, 1.5]; neutral until 20 observations.
+- `trade_memory.py` — JSONL post-mortems with explicit unknowns (no invented
+  rationale); filter/query + lesson extraction into the knowledge base.
+- `dispersion.py` — council disagreement scales conviction down [0.3, 1.0];
+  reduction-only, never increases it.
+- `anomaly.py` — volatility-shock / extreme-return detection forces conviction
+  to 0 for that symbol (stand-down), like Hermes' quarantine.
+- `self_review.py` — nightly evidence-based review; lessons → knowledge base,
+  and auto-demotion of strategies with sub-threshold rolling accuracy in the
+  promotion pipeline (live → canary → paper), with reasons recorded.
+- `auto_tune.py` — bounded self-tuning of NON-RISK parameters only, only when
+  recorded walk-forward evidence improves; the $10/order, 12%, 70%, 10% halt
+  envelope is hard-excluded and unchangeable by the tuner.
+- `funding_intel.py` — keyless Hyperliquid (+ Binance fallback) funding/OI;
+  9th workforce agent; contrarian advisory tilt bounded ±0.15.
+- `correlation.py` — correlation-adjusted exposure reporting, advisory only.
+- `execution_quality.py` — arrival-price vs fill-price slippage JSONL,
+  measurement only (maker routing intentionally deferred).
+- `daily_brief.py` — real-data morning brief → `public/daily_brief.md` +
+  dashboard panel; never invents figures, marks gaps explicitly.
+- `self_heal.py` — watchdog: health states per subsystem, keyless fallback
+  chain (venue → CoinGecko → Kraken → Coinbase) with real backoff, circuit
+  breaker (resume only after a streak), 3-strike escalation to the owner, and
+  an auditable healing log. Never attempts credential repair.

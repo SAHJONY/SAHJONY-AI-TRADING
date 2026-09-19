@@ -362,6 +362,35 @@ footer .warn{color:var(--amber);font-weight:600}
       </div>
     </div>
   </section>
+
+  <!-- 11 · MORNING BRIEF & SYSTEM HEALTH -->
+  <section class="sec">
+    <div class="sec-h"><h2><span class="n">11</span><span data-i18n="briefTitle">Informe matutino y salud del sistema</span></h2><div class="rule"></div>
+      <span class="mut mono" style="font-size:10.5px" id="briefMeta">—</span></div>
+    <div class="grid g2" style="grid-template-columns:repeat(auto-fit,minmax(340px,1fr))">
+      <div class="panel">
+        <div class="sec-h" style="margin-bottom:6px"><h2 style="font-size:11px"><span data-i18n="briefMorning">Informe de la mañana</span></h2><div class="rule"></div>
+          <a class="linklike mono" style="font-size:10px" href="./daily_brief.md" data-i18n="briefFile">ver archivo</a></div>
+        <div id="briefBody"><div class="empty">—</div></div>
+      </div>
+      <div class="panel">
+        <div class="sec-h" style="margin-bottom:6px"><h2 style="font-size:11px"><span data-i18n="healthTitle">Salud del sistema · auto-recuperación</span></h2><div class="rule"></div><span class="pill" id="healthPill">—</span></div>
+        <div id="healthBody"><div class="empty">—</div></div>
+        <div class="sec-h" style="margin:10px 0 6px"><h2 style="font-size:11px"><span data-i18n="execQTitle">Calidad de ejecución</span></h2><div class="rule"></div></div>
+        <div id="execQBody"><div class="empty">—</div></div>
+      </div>
+    </div>
+    <div class="grid g2" style="grid-template-columns:repeat(auto-fit,minmax(340px,1fr));margin-top:12px">
+      <div class="panel">
+        <div class="sec-h" style="margin-bottom:6px"><h2 style="font-size:11px"><span data-i18n="corrTitle">Riesgo por correlación (asesoría)</span></h2><div class="rule"></div></div>
+        <div id="corrBody"><div class="empty">—</div></div>
+      </div>
+      <div class="panel">
+        <div class="sec-h" style="margin-bottom:6px"><h2 style="font-size:11px"><span data-i18n="brainUpTitle">Mejora continua del cerebro</span></h2><div class="rule"></div></div>
+        <div id="brainUpBody"><div class="empty">—</div></div>
+      </div>
+    </div>
+  </section>
 </main>
 
 <footer>
@@ -396,6 +425,10 @@ es:{
   fundTitle:"Fondos públicos · 13F", noWhales:"Sin alertas de ballenas en esta ventana", noFunds:"Sin datos 13F",
   intelligenceOnly:"SOLO INTELIGENCIA — no es copia automática", mixed:"Mixto", sampled:"muestra",
   filed:"presentado", holding:"Posición", value:"Valor", fund:"Fondo",
+  briefTitle:"Informe matutino y salud del sistema", briefMorning:"Informe de la mañana", briefFile:"ver archivo",
+  healthTitle:"Salud del sistema · auto-recuperación", execQTitle:"Calidad de ejecución",
+  corrTitle:"Riesgo por correlación (asesoría)", brainUpTitle:"Mejora continua del cerebro",
+  noBrief:"Sin informe aún — se genera al cerrar el primer ciclo.",
   confidence:"Confianza", long:"LARGO", short:"CORTO", flat:"PLANO",
   intelligence:"Inteligencia global", learningProgress:"Progreso de aprendizaje", modelAccuracy:"Precisión del modelo",
   observations:"Observaciones", knowledgeNodes:"Nodos de conocimiento", posture:"Postura", shadowProviders:"Proveedores sombra",
@@ -435,6 +468,10 @@ en:{
   fundTitle:"Public funds · 13F", noWhales:"No whale alerts in this window", noFunds:"No 13F data",
   intelligenceOnly:"INTELLIGENCE ONLY — not auto-copying", mixed:"Mixed", sampled:"sampled",
   filed:"filed", holding:"Holding", value:"Value", fund:"Fund",
+  briefTitle:"Morning brief & system health", briefMorning:"Morning brief", briefFile:"view file",
+  healthTitle:"System health · self-healing", execQTitle:"Execution quality",
+  corrTitle:"Correlation risk (advisory)", brainUpTitle:"Brain self-improvement",
+  noBrief:"No brief yet — generated at the close of the first cycle.",
   confidence:"Confidence", long:"LONG", short:"SHORT", flat:"FLAT",
   intelligence:"Overall intelligence", learningProgress:"Learning progress", modelAccuracy:"Model accuracy",
   observations:"Observations", knowledgeNodes:"Knowledge nodes", posture:"Posture", shadowProviders:"Shadow providers",
@@ -1003,6 +1040,84 @@ function renderTopTraders(){
   }
 }
 
+/* ── render: morning brief & system health ── */
+function renderBrief(){
+  const brief=(S&&S.daily_brief)||{}, meta=$("#briefMeta");
+  if(meta) meta.textContent=brief.date?(brief.date+" · "+(brief.generated_at||"")):"—";
+  const bb=$("#briefBody");
+  if(bb){
+    const secs=brief.sections, lines=[];
+    if(secs){
+      if(Array.isArray(secs)){ lines.push.apply(lines,secs); }
+      else Object.keys(secs).forEach(function(k){
+        const v=secs[k];
+        if(Array.isArray(v)) v.forEach(function(l){lines.push("· "+l);});
+        else if(v!=null) lines.push("· "+String(v));
+      });
+    }
+    if(lines.length){
+      bb.innerHTML=lines.map(function(s){return '<div class="row"><span class="mono" style="font-size:11px">'+esc(s)+'</span></div>';}).join("");
+    }else bb.innerHTML='<div class="empty">'+esc(t("noBrief"))+"</div>";
+  }
+  /* health */
+  const heal=(S&&S.self_heal)||{}, health=heal.health||{};
+  const pill=$("#healthPill"), hb=$("#healthBody");
+  const subs=Object.keys(health);
+  const worst=subs.some(function(k){return health[k].state==="critical";})?"critical":
+              subs.some(function(k){return health[k].state==="degraded";})?"degraded":
+              subs.length?"healthy":"unknown";
+  if(pill){ pill.textContent=worst; pill.className="pill"+(worst==="critical"?" r":worst==="degraded"?" gold":worst==="healthy"?" g":""); }
+  if(hb){
+    let h="";
+    if(subs.length){
+      h=subs.map(function(k){
+        const st=health[k], cls=st.state==="critical"?"r":st.state==="degraded"?"gold":"g";
+        return '<div class="row"><span>'+esc(k)+'</span><span class="pill '+cls+'">'+esc(st.state)+'</span></div>'+
+               (st.note?'<div class="mut mono" style="font-size:10px;margin:-4px 0 6px">'+esc(st.note)+'</div>':"");
+      }).join("");
+    }
+    const cb=heal.breaker_tripped;
+    if(cb===true||cb===false) h+='<div class="row"><span>circuit breaker</span><span class="pill '+(cb?"r":"g")+'">'+(cb?"tripped":"ok")+'</span></div>';
+    if(heal.escalation) h+='<div class="row"><span>escalation</span><span>'+esc(heal.escalation.note||"")+'</span></div>';
+    const log=(heal.log||[]).slice(-4).reverse();
+    if(log.length) h+='<div class="mut mono" style="font-size:10px;margin-top:6px">'+log.map(function(e){return esc(e.ts)+" · "+esc(e.action)+" · "+esc(e.target)+" · "+esc(e.result);}).join("<br>")+"</div>";
+    hb.innerHTML=h||'<div class="empty">'+esc(t("awaitingData"))+"</div>";
+  }
+  /* execution quality */
+  const eq=(S&&S.execution_quality)||{}, eb=$("#execQBody");
+  if(eb){
+    const fills=num(eq.fills_measured), bps=num(eq.avg_slippage_bps);
+    eb.innerHTML=fills!=null&&fills>0?
+      '<div class="row"><span>'+esc(LANG==="es"?"ejecuciones":"fills")+'</span><span class="mono">'+Math.round(fills)+'</span></div>'+
+      '<div class="row"><span>slippage</span><span class="mono">'+(bps!=null?bps.toFixed(1)+" bps":"—")+'</span></div>'+
+      '<div class="row"><span>'+esc(LANG==="es"?"adverso":"adverse")+'</span><span class="mono">'+Math.round(num(eq.adverse_fills)||0)+'</span></div>'
+      :'<div class="empty">'+esc(t("awaitingData"))+"</div>";
+  }
+  /* correlation */
+  const corr=(S&&S.correlation)||{}, cb2=$("#corrBody");
+  if(cb2){
+    if(corr.status==="ok"&&corr.nominal!=null){
+      cb2.innerHTML='<div class="row"><span>'+esc(LANG==="es"?"nominal":"nominal")+'</span><span class="mono">$'+(num(corr.nominal)||0).toFixed(0)+'</span></div>'+
+        '<div class="row"><span>'+esc(LANG==="es"?"efectiva (ajustada)":"effective (adjusted)")+'</span><span class="mono">$'+(num(corr.effective)||0).toFixed(0)+'</span></div>'+
+        '<div class="row"><span>'+esc(LANG==="es"?"diversificación":"diversification")+'</span><span class="mono">'+(num(corr.diversification_ratio)||0).toFixed(2)+'×</span></div>'+
+        '<div class="mut mono" style="font-size:10px;margin-top:4px">'+esc(corr.advice||"")+'</div>';
+    }else cb2.innerHTML='<div class="empty">'+esc(t("awaitingData"))+"</div>";
+  }
+  /* brain self-improvement */
+  const bu=(S&&S.brain_upgrade)||{}, rev=(S&&S.self_review)||{}, tune=(S&&S.auto_tune)||{}, ub=$("#brainUpBody");
+  if(ub){
+    let h="";
+    const anom=bu.anomaly||{}, sd=(anom.stood_down||[]).length;
+    if(sd>0) h+='<div class="row"><span>'+esc(LANG==="es"?"pausas por anomalía":"anomaly stand-downs")+'</span><span class="pill gold">'+sd+'</span></div>';
+    const acc=bu.council_calibration_accuracy||{}, av=Object.values(acc);
+    if(av.length) h+='<div class="row"><span>'+esc(t("modelAccuracy"))+'</span><span class="mono">'+(av.reduce(function(a,b){return a+b;},0)/av.length*100).toFixed(1)+'%</span></div>';
+    if(rev.ran) h+='<div class="row"><span>'+esc(LANG==="es"?"auto-revisión":"self-review")+'</span><span class="mono">'+(rev.lessons||[]).length+' '+esc(LANG==="es"?"lecciones":"lessons")+' · '+(rev.demotions||[]).length+' '+esc(LANG==="es"?"degradaciones":"demotions")+'</span></div>';
+    const lastTune=tune.last_tuned_at;
+    if(lastTune) h+='<div class="row"><span>auto-tune</span><span class="mono">'+esc(lastTune)+'</span></div>';
+    ub.innerHTML=h||'<div class="empty">'+esc(t("awaitingData"))+"</div>";
+  }
+}
+
 /* ── render: news wire ── */
 function renderNews(){
   const box=$("#newsList");
@@ -1029,7 +1144,7 @@ function render(){
   if(!S) return;
   renderHeader(); renderCouncil(); renderStream(); renderBrain();
   renderEquity(); renderPositions(); renderRisk(); renderRegime(); renderLab(); renderNews();
-  renderIntel(); renderTopTraders();
+  renderIntel(); renderTopTraders(); renderBrief();
   Array.prototype.forEach.call(document.querySelectorAll("[data-i18n]"),function(el){
     if(!el.textContent||el.getAttribute("data-i18n-live")==="1") el.textContent=t(el.getAttribute("data-i18n"));
   });

@@ -661,6 +661,48 @@ class CopySignalScout(IntelAgent):
         )
 
 
+class FundingRateIntel(IntelAgent):
+    name = "Funding-Rate Intel"
+    role = "Funding-rate / open-interest crowding (contrarian advisory)"
+    inputs_description = "intel.funding_intel.fetch(symbol): Hyperliquid/Binance public funding + OI"
+
+    def evaluate(self, ctx: Dict[str, Any]) -> IntelFinding:
+        symbol = str(ctx.get("symbol") or "").strip()
+        if not symbol:
+            return self.abstain("no symbol in context")
+        try:
+            from intel.funding_intel import fetch
+        except Exception as exc:
+            return self.abstain(f"funding-intel module unavailable ({type(exc).__name__})")
+        try:
+            data = fetch(symbol)
+        except Exception as exc:
+            return self.abstain(f"funding fetch raised ({type(exc).__name__})")
+        if data.get("status") != "ok":
+            return self.abstain(str(data.get("reason") or "funding/OI feeds unreachable"))
+        tilt = float(data.get("contrarian_tilt") or 0.0)
+        crowding = str(data.get("crowding") or "neutral")
+        fr_pct = data.get("funding_8h_pct")
+        source = str(data.get("source") or "unknown")
+        oi = data.get("open_interest")
+        finding = (
+            f"Funding/OI read on {symbol} ({source}): 8h funding "
+            f"{fr_pct:+.4f}% — {crowding.replace('_', ' ')}"
+            + (f", OI {oi:,.0f}" if isinstance(oi, (int, float)) else "")
+            + f". Contrarian tilt {tilt:+.2f}: crowded positioning leans against "
+            f"the crowd (advisory only — a bounded nudge, never an order)."
+        )
+        return self._finding(
+            finding=finding,
+            conviction_delta=max(-0.15, min(0.15, tilt)),
+            confidence=0.55 if abs(tilt) > 0 else 0.3,
+            rationale=f"funding={fr_pct:+.4f}%/8h, crowding={crowding}, source={source}",
+            inputs=[f"intel.funding_intel.fetch({symbol}) → {source}"],
+            details={"funding_8h_pct": fr_pct, "crowding": crowding,
+                     "open_interest": oi, "source": source},
+        )
+
+
 ALL_INTEL_AGENTS: List[IntelAgent] = [
     RegimeAnalyst(),
     WhaleWatcher(),
@@ -670,4 +712,5 @@ ALL_INTEL_AGENTS: List[IntelAgent] = [
     QuantResearcher(),
     ExecutionOptimizer(),
     CopySignalScout(),
+    FundingRateIntel(),
 ]

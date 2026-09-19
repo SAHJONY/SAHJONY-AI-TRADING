@@ -1,4 +1,4 @@
-"""The Intel Workforce — 8-agent advisory-only analyst team.
+"""The Intel Workforce — 9-agent advisory-only analyst team.
 
 Runs after the Research Desk's council block each cycle. Every agent emits an
 ``IntelFinding`` (plain-language, dashboard-ready); the desk is fault-isolated
@@ -9,6 +9,7 @@ from intel.workforce.agents import (
     ALL_INTEL_AGENTS,
     CopySignalScout,
     ExecutionOptimizer,
+    FundingRateIntel,
     IntelAgent,
     IntelFinding,
     MacroAnalyst,

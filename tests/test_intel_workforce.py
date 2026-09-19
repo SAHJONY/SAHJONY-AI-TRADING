@@ -103,13 +103,13 @@ def _choppy():
 
 
 # ── roster ───────────────────────────────────────────────────────────────────
-def test_all_eight_agents_registered():
-    assert len(ALL_INTEL_AGENTS) == 8
+def test_all_nine_agents_registered():
+    assert len(ALL_INTEL_AGENTS) == 9
     names = [a.name for a in ALL_INTEL_AGENTS]
     assert names == [
         "Regime Analyst", "Whale Watcher", "Sentiment Analyst", "Macro Analyst",
         "Risk Officer", "Quant Researcher", "Execution Optimizer",
-        "Copy-Signal Scout",
+        "Copy-Signal Scout", "Funding-Rate Intel",
     ]
 
 
@@ -472,7 +472,7 @@ def test_desk_run_never_raises_even_when_every_agent_explodes(cfg):
 def test_desk_run_never_raises_on_none_ctx(cfg):
     desk = IntelDesk(cfg)
     findings = desk.run(None)
-    assert len(findings) == 8
+    assert len(findings) == 9
     assert all(isinstance(f, IntelFinding) for f in findings)
 
 
@@ -494,7 +494,7 @@ def test_desk_enforces_derisk_only(cfg):
 
 
 def test_desk_full_run_with_mocks(cfg, monkeypatch, fake_top_traders):
-    """All eight agents through the desk with stubbed data sources and no
+    """All nine agents through the desk with stubbed data sources and no
     network: nothing raises, every finding is well-formed."""
     def _boom(*a, **k):
         raise ConnectionError("network disabled in tests")
@@ -508,7 +508,7 @@ def test_desk_full_run_with_mocks(cfg, monkeypatch, fake_top_traders):
              "realized_pnl": 5.0}
     client = MockClient({"BTC/USD": _uptrend()})
     findings = IntelDesk(cfg).run(make_ctx(client=client, state=state, cfg=cfg))
-    assert len(findings) == 8
+    assert len(findings) == 9
     by_name = {f.name: f for f in findings}
     assert by_name["Regime Analyst"].status == "active"
     assert by_name["Risk Officer"].conviction_delta <= 0

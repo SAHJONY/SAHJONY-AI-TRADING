@@ -1,4 +1,4 @@
-"""IntelDesk — runs the 8-agent Intel Workforce inside the trading cycle.
+"""IntelDesk — runs the 9-agent Intel Workforce inside the trading cycle.
 
 Every agent is wrapped in its own fault isolation: on ANY exception the agent
 produces an ABSTAINED finding with a reason instead of failing the cycle.
