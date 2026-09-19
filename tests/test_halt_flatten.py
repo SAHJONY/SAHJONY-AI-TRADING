@@ -135,6 +135,27 @@ def test_flatten_disabled_restores_freeze_only(tmp_path):
     print("✓ FLATTEN_ON_HALT=false restores freeze-only behavior")
 
 
+def test_flatten_never_sells_adopted_positions(tmp_path):
+    # ADOPT-BUT-DON'T-SELL policy: pre-existing broker holdings adopted by
+    # _reconcile_broker (pos["adopted"] is True) must NEVER be auto-liquidated
+    # by a halt flatten — selling into reconciliation uncertainty is the
+    # riskiest action. Bot-opened positions still flatten normally.
+    firm, client = _firm(tmp_path, "fl7", {"AAPL": 150.0, "BTC": 81000.0})
+    state = {"positions": {
+        "AAPL": {"strategy": "ladder", "shares": 10.0, "cost_basis": 145.0},
+        "BTC": {"strategy": "ladder", "shares": 0.001, "cost_basis": 80000.0,
+                "adopted": True},
+    }, "pending_orders": {}}
+    done = firm._halt_flatten_step(state, 1, 100_000.0,
+                                  _halt("broker position reconciliation failed"))
+    assert len(done) == 1, "only the bot-opened position flattens"
+    assert ("AAPL", 10.0, "sell") in client.orders
+    assert not any(o[0] == "BTC" for o in client.orders), \
+        "adopted position must never be auto-sold"
+    assert "BTC" in state["positions"], "adopted position stays in the book"
+    print("✓ halt flatten never sells adopted (pre-existing) positions")
+
+
 if __name__ == "__main__":
     import tempfile
     from pathlib import Path
@@ -146,4 +167,5 @@ if __name__ == "__main__":
         test_flatten_never_closes_option_legs(p)
         test_flatten_exits_flow_during_halt(p)
         test_flatten_disabled_restores_freeze_only(p)
+        test_flatten_never_sells_adopted_positions(p)
     print("ALL HALT FLATTEN TESTS PASSED")

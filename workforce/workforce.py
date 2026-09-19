@@ -1238,12 +1238,21 @@ class Firm:
 
     def _flatten_all_positions(self, state: Dict[str, Any], cycle: int,
                                equity: float, reason: str) -> tuple:
-        """Emergency flatten: liquidate every equity/crypto position on halt.
+        """Emergency flatten: liquidate every BOT-OPENED equity/crypto position on halt.
 
         A halt that only blocks new risk while a bleeding book stays open
         protects nothing, so the kill switch and the daily circuit breaker now
         FLATTEN instead of merely freezing. Edge-triggered by the caller (once
         per halt episode via state["halt_flattened"]).
+
+        ADOPT-BUT-DON'T-SELL POLICY (operator mandate): positions the desk did
+        not open itself — pre-existing broker holdings adopted by
+        _reconcile_broker (pos["adopted"] is True) — are NEVER auto-liquidated
+        here. Selling into uncertainty is the riskiest action: a halt tripped by
+        a reconciliation failure means we cannot see the book clearly, which is
+        exactly when pre-existing holdings must be held, not dumped. Adopted
+        positions stay under their ladder stop/floor protection and are reported
+        for operator handling; only bot-opened positions are flattened.
 
         Equity/crypto shares only — option legs are NOT auto-closed: the desk
         has never exercised an option close, and inventing one inside a
@@ -1258,6 +1267,12 @@ class Firm:
         for sym, pos in list((state.get("positions") or {}).items()):
             try:
                 if not isinstance(pos, dict):
+                    continue
+                if pos.get("adopted"):
+                    # Pre-existing holding the desk adopted but never opened:
+                    # hold it. Never auto-liquidate on halt (see policy above).
+                    log.warning("HALT FLATTEN skipped adopted (pre-existing) %s — "
+                                "held, never auto-liquidated", sym)
                     continue
                 strat = str(pos.get("strategy") or "")
                 if strat in ("wheel_option", "spread") or pos.get("contract"):
