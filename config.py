@@ -201,6 +201,29 @@ class Config:
     # Wide by design (default 25%): strategy-level stops fire first; this is the
     # Millennium-style programmatic exit before a drawdown grows. Exits only.
     catastrophic_stop_pct: float = 0.25
+    # When the kill switch or the daily circuit breaker trips, FLATTEN the book:
+    # liquidate every equity/crypto position instead of merely blocking new risk.
+    # A halt that leaves a bleeding book open protects nothing. Edge-triggered
+    # (fires once per halt, not every cycle); exits flow even during the halt.
+    # Option legs are NOT auto-closed — the desk has never exercised an option
+    # close, and inventing one inside a protective sweep is how accidents happen;
+    # they are logged loudly and paged for manual handling. DEFAULT ON.
+    flatten_on_halt: bool = True
+    # Regime gate (intelligence/regime.py). The council's regime read becomes a
+    # real gate: stressed blocks new entries, bear/chop halve budgets and restrict
+    # which desks may open risk. Reduction-only; exits always flow. DEFAULT ON.
+    regime_gate_enabled: bool = True
+    # Research→live promotion (strategies/promoted.py). Backtest-validated
+    # strategies (S1–S18) can run as live desks ONLY when this global flag AND
+    # membership in promoted_strategy_ids are both true. Double-gated, default
+    # OFF: nothing validated in research reaches a broker by accident.
+    promoted_desks_enabled: bool = False
+    # Symbols the promoted desks may trade (must be disjoint from core tickers
+    # unless a strategy is explicitly assigned there). Empty = nowhere to run.
+    promoted_symbols: List[str] = field(default_factory=list)
+    # Backtest strategy ids promoted to live desks (comma-separated PROMOTED_STRATEGIES,
+    # e.g. "s1,s3"). Unknown ids are rejected loudly at startup.
+    promoted_strategy_ids: List[str] = field(default_factory=list)
     # Smallest notional a venue will accept (Robinhood/Alpaca ≈ $1). Sub-minimum
     # budgets are rounded up to this when it still fits the per-position cap,
     # otherwise the desk stands down instead of sending a doomed order.
@@ -302,16 +325,19 @@ class Config:
 
     # AI brain & counsellors (advisory overlay on the quant council)
     ai_brain_enabled: bool = False
-    # These are FALLBACK defaults. With auto_update_models on (default), the brain
-    # autonomously resolves each provider's latest model at run time (latest Fable
-    # for Claude, latest frontier GPT / Grok for the co-strategists) and only falls
-    # back to these IDs when the lookup can't run (no key / offline / API error).
+    # Model IDs are PINNED by default (auto_update_models off): the brain uses
+    # these exact IDs every cycle. With AUTO_UPDATE_MODELS=true the brain
+    # autonomously resolves each provider's latest model at run time and only
+    # falls back to these IDs when the lookup can't run. Pinned is the safe
+    # default — a model version changing between cycles is unreviewed config
+    # drift in a determinism-oriented system.
     anthropic_model: str = "claude-fable-5"    # PRIMARY brain (Claude Fable 5)
     openai_model: str = "gpt-5.6"              # frontier co-strategist + fallback brain
     xai_model: str = "grok-4"                  # counsellor (Grok / xAI); grok-2 retired
     gemini_model: str = "gemini-2.5-pro"       # counsellor (Gemini / Google)
-    # Autonomously keep every provider on its newest model (owner directive).
-    auto_update_models: bool = True
+    # Keep every provider on its newest model. DEFAULT OFF: model drift between
+    # cycles is a behavior change with no review step; enable deliberately.
+    auto_update_models: bool = False
     ai_shadow_enabled: bool = True
     ai_shadow_min_observations: int = 100
     # Intraday confirmation overlay (intelligence/intraday.py). Scores the desk's
@@ -441,6 +467,14 @@ def load_config() -> Config:
         portfolio_max_drawdown_hard=_clamp(_f("PORTFOLIO_DD_HARD", 0.10), 0.02, 0.50),
         portfolio_max_pair_correlation=_clamp(_f("PORTFOLIO_MAX_PAIR_CORR", 0.75), 0.0, 1.0),
         catastrophic_stop_pct=_clamp(_f("CATASTROPHIC_STOP_PCT", 0.25), 0.05, 0.90),
+        flatten_on_halt=_b("FLATTEN_ON_HALT", True),
+        regime_gate_enabled=_b("REGIME_GATE", True),
+        promoted_desks_enabled=_b("PROMOTED_DESKS_ENABLED", False),
+        promoted_symbols=[s.strip() for s in
+                          (os.getenv("PROMOTED_SYMBOLS", "") or "").split(",") if s.strip()],
+        promoted_strategy_ids=[s.strip().lower() for s in
+                               (os.getenv("PROMOTED_STRATEGIES", "") or "").split(",")
+                               if s.strip()],
         min_order_notional=max(0.0, _f("MIN_ORDER_NOTIONAL_USD", 1.0)),
         # Real-time quote guard. DEFAULT OFF: it changes when the desk trades
         # (rejected ticks, feed-based quarantine), and public/evaluation.json
@@ -514,7 +548,7 @@ def load_config() -> Config:
         openai_model=(os.getenv("OPENAI_MODEL", "gpt-5.6") or "gpt-5.6").strip(),
         xai_model=(os.getenv("XAI_MODEL", "grok-4") or "grok-4").strip(),
         gemini_model=(os.getenv("GEMINI_MODEL", "gemini-2.5-pro") or "gemini-2.5-pro").strip(),
-        auto_update_models=_b("AUTO_UPDATE_MODELS", True),
+        auto_update_models=_b("AUTO_UPDATE_MODELS", False),
         ai_shadow_enabled=_b("AI_SHADOW_ENABLED", True),
         ai_shadow_min_observations=max(20, _i("AI_SHADOW_MIN_OBSERVATIONS", 100)),
         intraday_overlay_enabled=_b("INTRADAY_OVERLAY_ENABLED", False),

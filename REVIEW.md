@@ -1,6 +1,69 @@
 # SAHJONY-AI-TRADING — World-Class Review
 **Date:** 2026-09-19 · **Branch:** `upgrade/world-class` · **Reviewers:** 4 parallel deep-dives (architecture, strategies, risk/execution, data/ops) + lead synthesis
 
+## `upgrade/autonomous-profit` (2026-09-19, unmerged)
+
+Built on `master` after the world-class merge (paper trading only; `LIVE_TRADING_ACK`
+untouched and unused). Goal: make the desk earn more **autonomously** with capital
+protection first. All five controls fail closed and are covered by new tests
+(`test_halt_flatten.py`, `test_regime_gate.py`, `test_bar_guard.py`,
+`test_promotion_bridge.py`, `test_autonomous_profit_guards.py`).
+
+What changed and which review gap it closes:
+
+- **Halt flatten (closes gap #4).** Kill-switch / daily-breaker trips now liquidate
+  equity + crypto positions instead of merely freezing new risk. Edge-triggered
+  (`state["halt_flattened"]`, once per halt episode, re-arms on clear);
+  `FLATTEN_ON_HALT=true` default. Exits are `risk_check=False` so they flow during
+  halts. **Option legs are deliberately NOT auto-closed** — the desk has never
+  exercised an option close; they are reported as critical risk events for manual
+  handling (`state["halt_flattened"]["open_options"]`).
+- **Regime gate (closes gap #10).** `intelligence/regime.py` classifies
+  bull/bear/chop/stressed from `stressed_prob` + council direction + composite.
+  Stressed → no new entries; bear/chop → half budgets and desk allowlists
+  (e.g. no put-selling in bear, market-neutral only); exits always flow. Wired
+  into wheel/ladder/spread, day/forex, copy-desks, pairs (per-leg, conservative),
+  and promoted desks. Unknown regimes/desks deny. `REGIME_GATE=false` restores
+  pre-gate behavior. Failures classify to chop (half-size), never to bull.
+- **Fabricated-bar guard (closes gap #7).** Canonical
+  `MIN_TICKS_MEASURED_RANGE = 2` in `utils/bar_recorder.py`; new
+  `BarRecorder.fetch_bars()` excludes single-observation O=H=L=C poll bars;
+  `intelligence/intraday.py` uses the same constant. One-observation bars can no
+  longer feed ATR/range/wick logic as if measured.
+- **Research→live promotion bridge (closes gap #9).** `strategies/promoted.py`
+  runs validated backtest strategies (s1–s18 registry) as live desks through the
+  `LiveStrategy` protocol. Double-gated and **off by default**
+  (`PROMOTED_DESKS_ENABLED` + `PROMOTED_STRATEGIES`, both empty). Entries carry
+  `risk_check=True` (full RiskEngine + governor + regime gating); exits are
+  halt-proof and trail the backtest stop. Promoted legs live in ordinary
+  `state["positions"]` (marked `strategy="promoted:<sid>"`), so the catastrophic
+  sweep and desk routing treat them like any other position. **No strategy has
+  been promoted yet — the bridge is infrastructure, not a trading decision.**
+  Volume-gated strategies (s1, s2, s15) read tick count as "volume" on recorded
+  bars; promoting them needs evidence produced on equivalent data.
+- **Alert wiring (closes gap #11).** `Firm._maybe_notify()` now runs every cycle:
+  `maybe_risk_alert` pages on breaker/kill-switch trips, broker disconnects,
+  quarantine, and halt-flatten results (caller-supplied `extra_risk_events`),
+  de-duplicated per reason per day; `maybe_alert` sends the routine cycle
+  summary. Silent when no channel is configured.
+- **Model pinning (closes gap #14).** `auto_update_models` now defaults to
+  `False` — no unreviewed model drift between cycles. Opt in via
+  `AUTO_UPDATE_MODELS=true`.
+- **Council conviction for signal desks (part of gap #16).** Day/forex, pairs, and
+  promoted desks now size from the council verdict (floored at
+  `min_council_conviction`, capped 0.95) instead of hardcoded 0.70. Copy-desk
+  entries are regime-filtered per signal symbol (researched once, reusing core
+  research); feed-driven sells and the copy desk's protective exits stay
+  unconditional. Incubator strategies (`regime_momentum`,
+  `statistical_mean_reversion`, `volatility_breakout`) remain research-only; the
+  wheel desk still has no downside stop on assigned names.
+
+Explicitly NOT claimed: profitability. These are controls, not alpha. Every new
+entry path still funnels through the same RiskEngine, portfolio governor, regime
+gate, and halts — the desk can only lose money more slowly, never faster, than
+before; whether it earns money at all is a strategy-and-market question no
+architecture answers.
+
 ## What this repo is
 
 A modular, multi-venue autonomous trading desk ("SAHJONY CAPITAL LLC") in layered Python: pure-domain quant engines (`intelligence/`), an orchestration layer (`workforce/` Firm: Research → AI Brain → Portfolio Manager → Strategy Desks → Risk Officer → Execution Trader → Treasurer → Reporter), and I/O adapters. Defaults to offline-sim; targets Alpaca **paper** with keys; live requires an exact-string ack plus multiple gates. A 12-persona Intelligence Council plus a Claude-primary AI brain produce conviction; hard risk ceilings in `config.py` cannot be widened by `.env`.

@@ -35,12 +35,21 @@ cycle or overlapping recorders cannot double-count.
 """
 from __future__ import annotations
 
+import math
 import time
 from typing import Any, Dict, List, Optional
 
 from utils.logger import get_logger
 
 log = get_logger("bar_recorder")
+
+# Canonical "measured range" threshold. A bar built from fewer observations
+# than this has open == high == low == close: its range — and every ATR, wick
+# or intrabar stop computed from it — is fabricated, not measured. Volume here
+# is a TICK COUNT (see module docstring), so this also filters bars whose
+# "volume" is a single quote. Every consumer that touches high/low/volume must
+# go through fetch_bars() or apply this constant — never invent its own.
+MIN_TICKS_MEASURED_RANGE = 2
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS bars (
@@ -120,6 +129,41 @@ class BarRecorder:
             log.warning("bar commit failed: %s", exc)
 
     # -- reading back --------------------------------------------------------
+    def fetch_bars(self, symbol: str, interval_m: int,
+                   min_ticks: int = MIN_TICKS_MEASURED_RANGE) -> List[Dict[str, Any]]:
+        """Bars with a MEASURED range for one symbol/interval, oldest first.
+
+        The canonical read path for any consumer that touches high/low/volume:
+        bars below `min_ticks` observations are excluded because their range is
+        fabricated (open == high == low == close) and their "volume" is a bare
+        tick count. Never raises; empty list on any problem.
+        """
+        if not self._ready:
+            return []
+        try:
+            rows = self.db.conn.execute(
+                """SELECT ts, open, high, low, close, volume FROM bars
+                    WHERE symbol = ? AND interval_m = ? AND volume >= ?
+                 ORDER BY ts""",
+                (symbol, int(interval_m), float(min_ticks))).fetchall()
+        except Exception as exc:
+            log.warning("fetch_bars failed for %s@%dm: %s", symbol, interval_m, exc)
+            return []
+        out = []
+        for r in rows:
+            try:
+                get = (lambda k: r[k]) if hasattr(r, "keys") else \
+                    (lambda k, _m={"ts": 0, "open": 1, "high": 2, "low": 3,
+                                   "close": 4, "volume": 5}: r[_m[k]])
+                o, h, l, c = (float(get(k)) for k in ("open", "high", "low", "close"))
+                if not all(math.isfinite(v) and v > 0 for v in (o, h, l, c)):
+                    continue
+                out.append({"ts": int(get("ts")), "open": o, "high": h, "low": l,
+                            "close": c, "volume": float(get("volume"))})
+            except (TypeError, ValueError, IndexError, KeyError):
+                continue
+        return out
+
     def coverage(self) -> List[Dict[str, Any]]:
         """What has been accumulated so far, per symbol — the honest answer to
         'is there enough history to backtest yet?'."""
