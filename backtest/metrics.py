@@ -81,7 +81,7 @@ def summarize(res: Dict, bars: Bars, equity0: float) -> Dict:
         "fees_pct_of_gross_win": round(float(fees.sum()) / gross_win * 100, 1) if gross_win else None,
         "avg_bars_held": round(float(np.mean([t.bars_held for t in trades])), 1),
         "mae_r_p50": round(float(np.percentile([t.mae_r for t in trades], 50)), 2),
-        "mae_r_p90": round(float(np.percentile([t.mae_r for t in trades], 10)), 2),
+        "mae_r_p90": round(float(np.percentile([t.mae_r for t in trades], 90)), 2),
         "worst_trade_r": round(float(r.min()), 2),
         "best_trade_r": round(float(r.max()), 2),
         "long_share": round(float(np.mean([t.side > 0 for t in trades])), 2),

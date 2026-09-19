@@ -8,7 +8,10 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field
-from typing import Dict, Optional
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Protocol, runtime_checkable
+
+if TYPE_CHECKING:
+    from intelligence.agents import CouncilVerdict, MarketSnapshot
 
 
 # crypto quote currencies recognized in the BASE-QUOTE spelling
@@ -85,7 +88,11 @@ class OrderIntent:
     strike: float = 0.0
     premium: float = 0.0          # per-share option premium
     est_notional: float = 0.0     # capital at risk this order (for the gatekeeper)
-    risk_check: bool = False      # gate through the Risk Engine?
+    risk_check: bool = True       # gate through the Risk Engine? DEFAULT TRUE
+                                # (fail-closed): every broker order is risk-gated
+                                # unless the strategy explicitly opts out with
+                                # risk_check=False — which is reserved for exits
+                                # and state updates that must flow during halts.
     # how to mutate persistent state once the order fills:
     set_position: Optional[Dict] = None     # replace the symbol's position record
     merge_position: Optional[Dict] = field(default=None)  # shallow-merge into it
@@ -129,3 +136,67 @@ def validate_order_intent(intent: OrderIntent) -> str | None:
         if name != "qty" and value < 0:
             return f"negative {name.replace('_', ' ')}"
     return None
+
+
+# ── unified live-strategy interface (upgrade/world-class) ─────────────────────
+@dataclass
+class StrategyContext:
+    """Everything a live strategy desk may read, in one value.
+
+    Desks stay PURE: they read the context and emit OrderIntents; they never
+    touch the broker or the DB. The context carries the union of what the
+    legacy desks took as positional args — single-symbol desks use
+    symbol/snap/position/council/budget; multi-symbol or feed-driven desks
+    (pairs, copy) use state/get_price plus desk-specific payloads in extras:
+
+    - wheel / credit_spreads: extras["chain"] = option chain (List[Dict])
+    - day_trading:           extras["today"] = "YYYY-MM-DD" (UTC)
+    - pairs_trading:         extras["pair"] = (sym_a, sym_b),
+                             extras["snaps"] = {sym: MarketSnapshot},
+                             extras["positions"] = {sym: position},
+                             extras["coint"] = cointegration result
+    - copy_trading:          extras["signals"] = external feed (List[Dict]),
+                             extras["equity"] = account equity
+    """
+    symbol: str = ""
+    snap: Optional["MarketSnapshot"] = None
+    position: Optional[Dict[str, Any]] = None
+    council: Optional["CouncilVerdict"] = None
+    budget: float = 0.0
+    state: Dict[str, Any] = field(default_factory=dict)
+    get_price: Callable[[str], float] = field(default=lambda s: 0.0)
+    extras: Dict[str, Any] = field(default_factory=dict)
+
+
+@runtime_checkable
+class LiveStrategy(Protocol):
+    """Canonical contract for every live strategy desk.
+
+    Migration path: desks implement decide(ctx) natively; legacy desks are
+    wrapped with adapt_legacy_strategy() until migrated. The workforce calls
+    decide(ctx) exclusively once migration completes.
+    """
+    strategy_id: str
+
+    def decide(self, ctx: StrategyContext) -> List[OrderIntent]:
+        ...
+
+
+def adapt_legacy_strategy(strategy_id: str, decide_fn: Callable[..., List[OrderIntent]],
+                          build_ctx: Callable[[StrategyContext], tuple],
+                          ) -> LiveStrategy:
+    """Wrap a legacy decide(*args) desk behind the LiveStrategy protocol.
+
+    build_ctx maps a StrategyContext to the legacy positional args, e.g.
+    ``lambda ctx: (ctx.symbol, ctx.snap, ctx.position, ctx.council, ctx.budget)``.
+    """
+    class _LegacyAdapter:
+        def __init__(self) -> None:
+            self.strategy_id = strategy_id
+            self._decide = decide_fn
+            self._build = build_ctx
+
+        def decide(self, ctx: StrategyContext) -> List[OrderIntent]:
+            return self._decide(*self._build(ctx))
+
+    return _LegacyAdapter()

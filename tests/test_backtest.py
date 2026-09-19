@@ -79,7 +79,7 @@ def main() -> int:
 
     print("\n── fills, fees and slippage all point against the trade ──")
     flat = _flat_bars()
-    zero = CostModel(taker_bps=0.0, maker_bps=0.0, base_slip_bps=0.0)
+    zero = CostModel(taker_bps=0.0, maker_bps=0.0, base_slip_bps=0.0, spread_bps=0.0)
     risk = RiskConfig(equity0=100_000.0, risk_pct=0.01, min_edge_mult=0.0)
     res = Backtester(flat, zero, risk).run(_AlwaysLong(at=100))
     tr = res["trades"][0]

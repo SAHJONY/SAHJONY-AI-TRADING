@@ -30,6 +30,12 @@ from config import Config
 from database import Database
 from execution.idempotency import execution_intent_id
 from intelligence.agents import Council, CouncilVerdict, MarketSnapshot
+from risk.portfolio_governor import (
+    PortfolioRiskGovernor,
+    PortfolioRiskInput,
+    PortfolioRiskLimits,
+)
+from strategies.base import OrderIntent, StrategyContext, fee_cost, validate_order_intent
 from intelligence.advisors import AdvisoryBoard
 from intelligence.ai_brain import AIBrain, BrainVerdict
 from intelligence.alt_data import AltData
@@ -43,7 +49,6 @@ from intelligence.institutional_research import (
     multiplier_enabled,
 )
 from risk.risk_engine import RiskEngine
-from strategies.base import OrderIntent, fee_cost, validate_order_intent
 from strategies.copy_trading import CopyTrader
 from strategies.credit_spreads import CreditSpreads
 from strategies.day_trading import DayTrading
@@ -138,11 +143,73 @@ class PortfolioManager:
 
 class ExecutionTrader:
     """Risk-gates and executes order intents, applying fills to persistent state."""
-    def __init__(self, client, risk: RiskEngine, db: Database, cfg: Config):
+    def __init__(self, client, risk: RiskEngine, db: Database, cfg: Config,
+                 governor: PortfolioRiskGovernor | None = None):
         self.client = client
         self.risk = risk
         self.db = db
         self.cfg = cfg
+        # Portfolio-level second gate (risk/portfolio_governor.py). Optional so
+        # unit tests can construct ExecutionTrader without one; Firm always
+        # injects a live governor unless PORTFOLIO_GOVERNOR=false.
+        self.governor = governor
+
+    def _governor_decision(self, equity: float, intent: OrderIntent,
+                           dec, state: Dict[str, Any],
+                           cycle_gross: list) -> bool:
+        """Veto-only portfolio backstop. Returns True when the intent may flow.
+
+        Runs AFTER RiskEngine.approve() as defense-in-depth: the smooth
+        portfolio throttle is applied earlier at the budget stage
+        (Firm._governor_cycle_gate), so by the time an intent reaches this
+        gate the only governor outcomes that matter are the hard ones —
+        max-drawdown stop and gross-exposure cap breach. This gate never
+        mutates the intent (no qty/set_position fixup risk); it only blocks.
+        Exits (risk_check=False) never reach this gate. Fail-closed: any
+        exception → intent blocked.
+        """
+        gov = self.governor
+        if gov is None:
+            return True
+        try:
+            peak = float(state.get("equity_peak") or equity or 0.0)
+            drawdown = (peak - equity) / peak if peak > 0 else 0.0
+            gross = cycle_gross[0] + dec.max_notional
+            verdict = gov.size(PortfolioRiskInput(
+                equity=equity,
+                proposed_notional=dec.max_notional,
+                raw_kelly_fraction=1.0,          # Kelly neutral — budget stage owns sizing
+                gross_exposure=gross,
+                existing_position_value=gross_symbol_value(self.client, state, intent.symbol),
+                realized_vol_annual=0.0,        # RiskEngine.vol_scalar already targets vol
+                max_abs_correlation=0.0,        # no correlation matrix yet — neutral
+                drawdown=drawdown,
+                liquidity_cap_notional=None,
+            ))
+            audit = {
+                "cycle": None, "symbol": intent.symbol, "purpose": intent.purpose,
+                "approved": verdict.approved, "reason": verdict.reason,
+                "final_notional": round(verdict.final_notional, 2),
+                "risk_scalar": round(verdict.risk_scalar, 4),
+                "drawdown": round(drawdown, 6),
+                "gross_exposure": round(gross, 2),
+            }
+            self.db.append_audit("portfolio_governor", audit)
+            record_event(state, "portfolio_governor", audit)
+            if not verdict.approved:
+                log.info("GOVERNOR BLOCK %s %s: %s", intent.symbol, intent.purpose,
+                         verdict.reason)
+                return False
+            # Approved intents consume gross-exposure room for later intents
+            # this cycle (single mutable cell — execute() is single-threaded).
+            cycle_gross[0] = gross
+            return True
+        except Exception as exc:  # fail-closed
+            log.error("GOVERNOR ERROR %s %s: %s — blocking", intent.symbol, intent.purpose, exc)
+            record_event(state, "governor_error",
+                         {"symbol": intent.symbol, "purpose": intent.purpose, "error": str(exc)})
+            self.db.append_audit("governor_error", {"symbol": intent.symbol, "error": str(exc)})
+            return False
 
     def _apply(self, intent: OrderIntent, state: Dict[str, Any]) -> None:
         positions = state.setdefault("positions", {})
@@ -315,6 +382,12 @@ class ExecutionTrader:
         always reduce exposure."""
         done = []
         deployed = self.reconcile_pending_orders(state, cycle, deployed)
+        # Running gross-exposure accumulator for the portfolio-governor backstop:
+        # starts from priced positions, grows as intents clear the gates, so the
+        # gross-exposure cap is enforced across intents within one cycle.
+        # Single-element list as a mutable cell (execute() is single-threaded).
+        cycle_gross = [sum(gross_symbol_value(self.client, state, s)
+                           for s in (state.get("positions") or {}))]
         for intent in intents:
             intent_id = ""
             try:
@@ -364,6 +437,14 @@ class ExecutionTrader:
                                      {"symbol": intent.symbol, "purpose": intent.purpose, "reason": dec.reason})
                         self.db.append_audit("risk_block", {"cycle": cycle, "symbol": intent.symbol,
                                              "purpose": intent.purpose, "reason": dec.reason})
+                        continue
+                    # Portfolio-governor backstop (veto-only): hard max-drawdown
+                    # stop + gross-exposure cap, evaluated on the live book.
+                    if not self._governor_decision(equity, intent, dec, state, cycle_gross):
+                        record_event(state, "governor_block",
+                                     {"symbol": intent.symbol, "purpose": intent.purpose})
+                        self.db.append_audit("governor_block", {"cycle": cycle,
+                                             "symbol": intent.symbol, "purpose": intent.purpose})
                         continue
                 intent_id, payload = execution_intent_id(intent, cycle)
                 if not self.db.reserve_execution_intent(intent_id, cycle, payload):
@@ -543,7 +624,31 @@ class Firm:
         self.risk = RiskEngine(cfg)
         self.research = ResearchDesk(client, self.council)
         self.pm = PortfolioManager(cfg, self.risk)
-        self.execution = ExecutionTrader(client, self.risk, db, cfg)
+        # Portfolio governor (risk/portfolio_governor.py): second risk gate.
+        # Kelly is neutralized in the live wiring (fractional_kelly=1.0 and the
+        # call sites pass raw_kelly=1.0 → pass-through), so the governor acts
+        # purely as a portfolio overlay — hard drawdown stop, drawdown
+        # throttle, gross-exposure cap, single-position room, correlation
+        # penalty. RiskEngine remains the position sizer. Reduction-only: it
+        # can only shrink or block the RiskEngine-approved budget, never grow
+        # it. PORTFOLIO_GOVERNOR=false restores the pre-governor behaviour.
+        self.governor = None
+        if getattr(cfg, "portfolio_governor_enabled", True):
+            self.governor = PortfolioRiskGovernor(PortfolioRiskLimits(
+                fractional_kelly=1.0,  # Kelly neutral — see above
+                target_vol_annual=0.0,  # RiskEngine.vol_scalar already targets vol
+                max_gross_exposure_pct=cfg.portfolio_max_gross_exposure_pct,
+                max_single_position_pct=cfg.max_allocation_pct,
+                max_pair_correlation=cfg.portfolio_max_pair_correlation,
+                max_drawdown_soft=cfg.portfolio_max_drawdown_soft,
+                max_drawdown_hard=cfg.portfolio_max_drawdown_hard,
+            ))
+            log.info("portfolio governor ENABLED (gross<=%.0f%%, dd soft/hard %.0f%%/%.0f%%)",
+                     cfg.portfolio_max_gross_exposure_pct * 100,
+                     cfg.portfolio_max_drawdown_soft * 100,
+                     cfg.portfolio_max_drawdown_hard * 100)
+        self.execution = ExecutionTrader(client, self.risk, db, cfg,
+                                         governor=self.governor)
         self.wheel = WheelStrategy(cfg)
         self.ladder = TrailingLadder(cfg)
         self.spread = CreditSpreads(cfg)
@@ -858,6 +963,125 @@ class Firm:
                 "gap_min": (round(gap, 1) if gap is not None else None),
                 "expected_min": expected, "tolerance_min": round(tolerance, 1)}
 
+    def _catastrophic_stop_sweep(self, state: Dict[str, Any], cycle: int,
+                                 equity: float) -> List[Dict]:
+        """Central per-position hard-stop backstop (upgrade/world-class).
+
+        Wires up RiskEngine.hard_stop_breached(), which had zero callers.
+        Each cycle, any equity position that has fallen further than
+        cfg.catastrophic_stop_pct below its cost basis is liquidated —
+        regardless of which desk opened it. This is the backstop for desks
+        without their own downside stop (wheel-assigned shares sit unprotected
+        otherwise). Wide by design: strategy-level stops fire first.
+
+        Emits risk_check=False exit intents so the sweep works even during a
+        kill-switch halt or governor hard stop — the desk must always be able
+        to reduce risk. Never raises; fault-isolated per symbol.
+        """
+        floor = float(getattr(self.cfg, "catastrophic_stop_pct", 0.25) or 0.25)
+        intents: List[OrderIntent] = []
+        for sym, pos in list((state.get("positions") or {}).items()):
+            try:
+                if not isinstance(pos, dict):
+                    continue
+                # Equity shares only — options legs have their own lifecycle.
+                if str(pos.get("strategy") or "") in ("wheel_option", "spread"):
+                    continue
+                shares = float(pos.get("shares", 0) or 0)
+                if not shares or not math.isfinite(shares):
+                    continue
+                basis = float(pos.get("cost_basis", 0) or 0)
+                if not math.isfinite(basis) or basis <= 0:
+                    continue
+                try:
+                    price = float(self.client.get_price(sym) or 0.0)
+                except Exception:
+                    continue
+                if not math.isfinite(price) or price <= 0:
+                    continue
+                breached = self.risk.hard_stop_breached(basis, price, floor)
+                # hard_stop_breached is long-oriented; for shorts the loss is
+                # a price RISE past the floor.
+                if shares < 0:
+                    breached = (price / basis - 1.0) >= abs(floor)
+                if not breached:
+                    continue
+                side = "sell" if shares > 0 else "buy"
+                intents.append(OrderIntent(
+                    symbol=sym, strategy="risk", kind="equity",
+                    purpose="catastrophic_stop",
+                    reason=(f"catastrophic stop: {shares:+.4g} sh @ basis "
+                            f"{basis:.2f} vs {price:.2f} "
+                            f"({(price / basis - 1.0) * 100:+.1f}%)"),
+                    side=side, qty=abs(shares), est_notional=0.0,
+                    risk_check=False, clear_position=True,
+                ))
+                log.warning("CATASTROPHIC STOP %s: %+.4g sh, basis %.2f → %.2f",
+                            sym, shares, basis, price)
+            except Exception as exc:
+                log.error("catastrophic sweep failed for %s: %s", sym, exc)
+        if not intents:
+            return []
+        done, _ = self.execution.execute(intents, state, cycle, equity,
+                                        0.0, 0.0, allow_new_risk=True)
+        for d in done:
+            record_event(state, "catastrophic_stop",
+                         {"symbol": d.get("symbol"), "reason": "hard stop breached"})
+        return done
+
+    def _governor_cycle_gate(self, equity: float, state: Dict[str, Any]
+                             ) -> tuple[float, bool, list]:
+        """Once-per-cycle portfolio throttle for new-position budgets.
+
+        Returns (scale, hard_blocked, reasons) where scale ∈ [0, 1] multiplies
+        every strategy budget this cycle. Uses a representative full-size
+        proposal (the per-position cap) so the factor reflects the room a new
+        position actually has. Tracks the equity peak in state for drawdown.
+        Fail-closed on bad inputs (scale 0, blocked True); neutral (1.0) when
+        the governor is disabled.
+        """
+        if self.governor is None:
+            return 1.0, False, []
+        try:
+            if not (math.isfinite(equity) and equity > 0):
+                return 0.0, True, ["non-finite or non-positive equity"]
+            peak = float(state.get("equity_peak") or equity)
+            if equity > peak:
+                peak = equity
+                state["equity_peak"] = peak
+            drawdown = (peak - equity) / peak if peak > 0 else 0.0
+            gross = sum(gross_symbol_value(self.client, state, s)
+                        for s in (state.get("positions") or {}))
+            rep = equity * self.cfg.max_allocation_pct  # representative full-size new position
+            verdict = self.governor.size(PortfolioRiskInput(
+                equity=equity,
+                proposed_notional=rep,
+                raw_kelly_fraction=1.0,   # Kelly neutral — RiskEngine sizes
+                gross_exposure=gross + rep,
+                existing_position_value=0.0,
+                realized_vol_annual=0.0,  # RiskEngine.vol_scalar already targets vol
+                max_abs_correlation=0.0,  # no correlation matrix yet — neutral
+                drawdown=drawdown,
+                liquidity_cap_notional=None,
+            ))
+            scale = (verdict.final_notional / rep) if rep > 0 else 0.0
+            scale = max(0.0, min(1.0, scale))
+            reasons = [] if verdict.approved else [verdict.reason]
+            if not verdict.approved:
+                log.warning("GOVERNOR cycle gate: %s (dd=%.2f%%, gross=$%.0f)",
+                            verdict.reason, drawdown * 100, gross)
+            elif scale < 1.0:
+                log.info("GOVERNOR throttle: budgets ×%.2f (%s, dd=%.2f%%)",
+                         scale, verdict.reason, drawdown * 100)
+            record_event(state, "governor_cycle_gate",
+                         {"scale": round(scale, 4), "blocked": not verdict.approved,
+                          "reason": verdict.reason, "drawdown": round(drawdown, 6),
+                          "gross": round(gross, 2)})
+            return scale, not verdict.approved, reasons
+        except Exception as exc:  # fail-closed
+            log.error("governor cycle gate failed: %s — blocking new risk", exc)
+            return 0.0, True, [f"governor error: {exc}"]
+
     def run_cycle(self, state: Dict[str, Any], trade: bool = True) -> Dict[str, Any]:
         state["cycle"] = state.get("cycle", 0) + 1
         cycle = state["cycle"]
@@ -975,6 +1199,17 @@ class Firm:
         except Exception as exc:
             log.warning("vol targeting skipped: %s", exc)
             vol_scale = 1.0
+
+        # Portfolio-governor budget throttle — computed once per cycle from the
+        # live book. Smoothly scales every new-position budget down as the
+        # portfolio approaches its rails (drawdown throttle, gross-exposure
+        # room, single-position room); the hard stops are enforced again per
+        # intent in ExecutionTrader._governor_decision. Reduction-only:
+        # gov_scale ∈ [0, 1]. Fault-isolated, neutral (1.0) on failure.
+        gov_scale, gov_hard_block, gov_reasons = self._governor_cycle_gate(equity, state)
+        if gov_hard_block:
+            log.warning("GOVERNOR hard stop: %s — all new-risk budgets zeroed",
+                        "; ".join(gov_reasons))
 
         bench = self.client.get_history(self.cfg.benchmark, 250)["closes"]
 
@@ -1149,6 +1384,9 @@ class Firm:
                 # Hermes strategy calibration: budget leans toward desks with a proven
                 # realized edge (bounded 0.70–1.15; hard risk ceilings still apply).
                 budget *= hermes.strategy_weights.get(strat, 1.0) * vol_scale * institutional_risk
+                # Portfolio-governor throttle: smooth reduction-only scaling from
+                # the once-per-cycle portfolio gate (0 on hard stop).
+                budget *= gov_scale
                 if pairs_owned:
                     intents = []
                 elif strat == "wheel":
@@ -1161,7 +1399,11 @@ class Firm:
                                                          kinds=("put",))
                     intents = self.spread.decide(sym, snap, pos, verdict, budget, chain)
                 else:
-                    intents = self.ladder.decide(sym, snap, pos, verdict, budget)
+                    # LiveStrategy protocol: single context value in, pure intents out.
+                    intents = self.ladder.decide(StrategyContext(
+                        symbol=sym, snap=snap, position=pos, council=verdict,
+                        budget=budget, state=state,
+                        get_price=self.client.get_price))
                 if trade:
                     done, deployed = self.execution.execute(intents, state, cycle, equity,
                                                             deployed, conviction, allow_new_risk)
@@ -1220,7 +1462,8 @@ class Firm:
                     pos = state.get("positions", {}).get(sym)
                     conv = 0.70   # technical-signal desk; risk engine still gates size
                     budget = self.risk.position_budget(equity, conv, 1.0) \
-                        * hermes.strategy_weights.get("daytrade", 1.0) * vol_scale * institutional_risk
+                        * hermes.strategy_weights.get("daytrade", 1.0) * vol_scale * institutional_risk \
+                        * gov_scale  # portfolio-governor throttle (0 on hard stop)
                     intents = self.dayts.decide(sym, snap, pos, budget, today)
                     done, deployed = self.execution.execute(intents, state, cycle, equity,
                                                             deployed, conv, allow_new_risk)
@@ -1256,7 +1499,8 @@ class Firm:
                     pos_b = state.get("positions", {}).get(sym_b)
                     conv = 0.70   # signal desk; the Risk Officer still gates size
                     budget = self.risk.position_budget(equity, conv, 1.0) \
-                        * hermes.strategy_weights.get("pairs", 1.0) * vol_scale * institutional_risk
+                        * hermes.strategy_weights.get("pairs", 1.0) * vol_scale * institutional_risk \
+                        * gov_scale  # portfolio-governor throttle (0 on hard stop)
                     intents = self.pairs_desk.decide(sym_a, sym_b, snap_a.price, snap_b.price,
                                                      pos_a, pos_b, budget, coint)
                     done, deployed = self.execution.execute(intents, state, cycle, equity,
@@ -1267,6 +1511,17 @@ class Firm:
                                  sym_a, sym_b, len(done), coint.get("spread_z", 0.0))
                 except Exception as exc:
                     log.error("pairs desk %s failed: %s", pair, exc)
+
+        # 6e) Catastrophic per-position hard stop — central backstop wiring up
+        # RiskEngine.hard_stop_breached(). Exits only; flows even during halts.
+        try:
+            stopped = self._catastrophic_stop_sweep(state, cycle, equity)
+            if stopped:
+                executed += stopped
+                log.warning("catastrophic stop sweep liquidated %d position(s)",
+                            len(stopped))
+        except Exception as exc:
+            log.error("catastrophic stop sweep failed: %s", exc)
 
         # 7) Treasurer — equity curve
         acct = self.client.get_account()
