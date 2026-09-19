@@ -15,10 +15,11 @@ import os
 import sys
 
 os.environ.setdefault("LOG_LEVEL", "WARNING")
-# Never let ambient credentials make a test "live".
-for _k in ("ALPACA_API_KEY", "ALPACA_SECRET_KEY",
-           "ROBINHOOD_API_KEY", "ROBINHOOD_PRIVATE_KEY"):
-    os.environ.pop(_k, None)
+# NOTE: never pop credential env vars at module import time — pytest imports
+# every test module during collection, so a module-level pop here would strip
+# the deterministic test keypair that test_robinhood_safety.py installs at its
+# own import, breaking the arming/signature tests. Credential isolation happens
+# per-test inside env() below instead.
 
 from config import load_config
 from utils.broker import REQUIRED, get_broker
@@ -48,6 +49,11 @@ def env(**overrides):
     """Isolated env per test: safe defaults, then overrides; restored after."""
     saved = dict(os.environ)
     try:
+        # Never let ambient credentials make a test "live" (scoped here, not at
+        # module import — see note above).
+        for _k in ("ALPACA_API_KEY", "ALPACA_SECRET_KEY",
+                   "ROBINHOOD_API_KEY", "ROBINHOOD_PRIVATE_KEY"):
+            os.environ.pop(_k, None)
         for k, v in _SAFE_ENV.items():
             os.environ[k] = v
         for k, v in overrides.items():
