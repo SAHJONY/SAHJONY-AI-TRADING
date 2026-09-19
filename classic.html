@@ -1,0 +1,2131 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SAHJONY CAPITAL — Parquet</title>
+<meta name="theme-color" content="#070a10" />
+<meta name="description" content="Autonomous multi-agent quant trading parquet — live markets, council intelligence & risk controls." />
+<link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+<link rel="icon" href="./favicon-64.png" sizes="64x64" type="image/png" />
+<link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+<link rel="manifest" href="./manifest.webmanifest" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="SAHJONY" />
+<meta property="og:type" content="website" />
+<meta property="og:title" content="SAHJONY CAPITAL — AI Quant Parquet" />
+<meta property="og:description" content="Autonomous multi-agent quant trading — live markets, council intelligence & risk controls." />
+<meta property="og:image" content="https://sahjonycapital.com/og.png" />
+<meta property="og:url" content="https://sahjonycapital.com" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="SAHJONY CAPITAL — AI Quant Parquet" />
+<meta name="twitter:description" content="Autonomous multi-agent quant trading parquet." />
+<meta name="twitter:image" content="https://sahjonycapital.com/og.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* Refined institutional palette: deep blue-ink surfaces, disciplined gold + teal
+       accents, calmer semantic colours. Token names are unchanged so the whole app
+       recolours from here without touching a single component rule. */
+    --bg:#070a10; --bg2:#0a0e16; --panel:#0f151f; --panel2:#0b0f18; --line:#1b2433;
+    --line2:#27324a; --txt:#e9eff9; --mut:#8a99b6; --dim:#5b6885;
+    --amber:#e7b64a; --amber2:#f4d288; --cyan:#43bdd6; --violet:#8f9bce; --up:#37d69a; --down:#f0647c;
+    --grid:rgba(122,150,200,.038); --glow:rgba(67,189,214,.4);
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    --sans:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+    --shadow:0 8px 26px rgba(0,0,0,.4); --radius:14px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:
+      linear-gradient(var(--grid) 1px,transparent 1px) 0 0/100% 32px,
+      linear-gradient(90deg,var(--grid) 1px,transparent 1px) 0 0/32px 100%,
+      radial-gradient(1300px 620px at 84% -18%,#0e1c2e 0%,transparent 60%),
+      radial-gradient(1100px 560px at 6% 2%,#111528 0%,transparent 52%),
+      var(--bg);
+    color:var(--txt);font-family:var(--sans);font-size:13px;line-height:1.45;min-height:100vh;
+    -webkit-font-smoothing:antialiased;letter-spacing:.1px}
+  body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+    background:radial-gradient(960px 500px at 50% -12%,rgba(67,189,214,.035),transparent 62%)}
+  body::after{content:"";position:fixed;inset:-20%;pointer-events:none;z-index:0;opacity:.4;
+    background:
+      radial-gradient(42% 40% at 18% 20%,rgba(67,189,214,.07),transparent 60%),
+      radial-gradient(40% 42% at 82% 28%,rgba(143,155,206,.055),transparent 60%),
+      radial-gradient(46% 44% at 62% 88%,rgba(231,182,74,.045),transparent 60%);
+    animation:aurora 44s ease-in-out infinite}
+  @keyframes aurora{0%{transform:translate3d(-3%,-1.5%,0) scale(1)}50%{transform:translate3d(3%,2%,0) scale(1.08)}100%{transform:translate3d(-3%,-1.5%,0) scale(1)}}
+  @media(prefers-reduced-motion:reduce){
+    body::after,.tape .track,.dot.live,#voiceBtn.listening{animation:none!important}
+  }
+  main,header,nav,footer,.tape{position:relative;z-index:1}
+  .mono{font-family:var(--mono)}
+  .up{color:var(--up)} .down{color:var(--down)} .mut{color:var(--mut)} .amber{color:var(--amber)}
+  ::selection{background:rgba(42,216,240,.3);color:#fff}
+  ::-webkit-scrollbar{height:8px;width:8px}
+  ::-webkit-scrollbar-thumb{background:var(--line2);border-radius:6px}
+  ::-webkit-scrollbar-thumb:hover{background:var(--cyan)}
+
+  /* command bar */
+  header{display:flex;align-items:center;gap:13px;padding:12px 20px;border-bottom:1px solid var(--line2);
+    background:linear-gradient(180deg,rgba(11,15,24,.94),rgba(8,11,18,.86));backdrop-filter:blur(16px) saturate(130%);
+    position:sticky;top:0;z-index:20;flex-wrap:wrap;box-shadow:0 1px 0 rgba(255,255,255,.03),0 6px 26px rgba(0,0,0,.5)}
+  .brand{display:flex;align-items:center;gap:12px;min-width:0}
+  .logo{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;font-weight:800;font-size:18px;
+    background:linear-gradient(140deg,var(--amber2),var(--amber) 55%,#b9862b);color:#20160a;
+    box-shadow:0 4px 16px rgba(231,182,74,.28),inset 0 0 0 1px rgba(255,255,255,.18);position:relative}
+  .brand h1{font-size:15px;margin:0;font-weight:800;letter-spacing:.4px;white-space:nowrap;
+    background:linear-gradient(90deg,#fff,#c3d3ee);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+  .brand .sub{font-size:9.5px;color:var(--amber);letter-spacing:2.8px;text-transform:uppercase;font-weight:600;margin-top:1px}
+  .spacer{flex:1}
+  .deskSw{display:inline-flex;gap:2px;margin-left:12px;border:1px solid var(--line);border-radius:8px;padding:2px;background:var(--panel2)}
+  .deskSw button{border:0;background:transparent;color:var(--mut);font:600 10.5px var(--mono);letter-spacing:.4px;padding:4px 9px;border-radius:6px;cursor:pointer}
+  .deskSw button.active{background:var(--amber);color:#151004}
+  .liveBadge{margin-left:10px;font:700 10.5px var(--mono);letter-spacing:.6px;color:#ff5c6c;border:1px solid #ff5c6c55;border-radius:8px;padding:4px 9px;animation:livePulse 1.6s ease-in-out infinite}
+  .evalBadge{margin-left:8px;font:600 10.5px var(--mono);letter-spacing:.4px;color:var(--amber);border:1px solid #ffb00055;border-radius:8px;padding:4px 9px}
+  @keyframes livePulse{0%,100%{opacity:1}50%{opacity:.45}}
+  .badge{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;
+    padding:4px 9px;border-radius:6px;color:var(--cyan);border:1px solid rgba(42,216,240,.35);
+    background:rgba(42,216,240,.08);box-shadow:0 0 14px rgba(42,216,240,.12)}
+  .stat{display:flex;align-items:center;gap:7px;font-family:var(--mono);font-size:11px;color:var(--mut);
+    border:1px solid var(--line);background:rgba(255,255,255,.018);padding:5px 10px;border-radius:7px;white-space:nowrap;
+    transition:border-color .2s}
+  .stat:hover{border-color:var(--line2)}
+  .stat b{color:var(--txt);font-weight:600}
+  /* data-freshness badge: green (live) → amber (aging) → red (stale/frozen worker) */
+  .stat.warn{color:var(--amber);border-color:rgba(255,176,0,.4);background:rgba(255,176,0,.07)}
+  .stat.stale{color:var(--down);border-color:rgba(255,92,108,.5);background:rgba(255,92,108,.09)}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--dim);box-shadow:0 0 0 0 rgba(0,0,0,0)}
+  .dot.g{background:var(--up);box-shadow:0 0 9px var(--up)} .dot.r{background:var(--down);box-shadow:0 0 9px var(--down)} .dot.a{background:var(--amber);box-shadow:0 0 9px var(--amber)}
+  .dot.live{background:var(--up);animation:pulse 1.4s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(52,227,168,.55)}70%{box-shadow:0 0 0 7px rgba(52,227,168,0)}100%{box-shadow:0 0 0 0 rgba(52,227,168,0)}}
+  .flash-u{animation:fu .6s} .flash-d{animation:fd .6s}
+  @keyframes fu{0%{background:rgba(52,227,168,.22)}100%{background:transparent}}
+  @keyframes fd{0%{background:rgba(255,92,108,.22)}100%{background:transparent}}
+  .mpill{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:1px;padding:5px 11px;border-radius:7px;
+    border:1px solid var(--line2);text-transform:uppercase;box-shadow:inset 0 0 12px rgba(255,255,255,.02)}
+  #liveBanner{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;
+    text-align:center;padding:7px 12px;color:#fff;background:linear-gradient(90deg,#5c0f16,#a01824,#5c0f16);
+    border-bottom:1px solid var(--down);box-shadow:0 2px 18px rgba(255,92,108,.35);animation:livePulse 2.4s ease-in-out infinite}
+  #liveBanner b{color:var(--amber2)}
+  @keyframes livePulse{0%,100%{opacity:1}50%{opacity:.72}}
+  #haltBanner{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;
+    text-align:center;padding:7px 12px;color:#1a1205;background:linear-gradient(90deg,#c8890f,#ffb000,#c8890f);
+    border-bottom:1px solid var(--amber2)}
+  .btn{font-family:var(--mono);font-size:11px;background:rgba(255,255,255,.025);border:1px solid var(--line2);color:var(--txt);
+    border-radius:7px;padding:6px 11px;cursor:pointer;white-space:nowrap;transition:all .18s}
+  .btn:hover{border-color:var(--amber);color:var(--amber2);box-shadow:0 0 14px rgba(255,176,0,.18)}
+  a.btn{text-decoration:none}
+
+  /* ticker tape */
+  .tape{overflow:hidden;border-bottom:1px solid var(--line);background:linear-gradient(180deg,#05080d,#03050a);white-space:nowrap;position:relative}
+  .tape::after{content:"";position:absolute;inset:0;pointer-events:none;
+    background:linear-gradient(90deg,#04060a 0%,transparent 5%,transparent 95%,#04060a 100%)}
+  .tape .track{display:inline-block;padding:6px 0;animation:scroll 42s linear infinite}
+  .tape:hover .track{animation-play-state:paused}
+  @keyframes scroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+  .tk{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11.5px;padding:0 18px;border-right:1px solid var(--line)}
+  .tk b{color:var(--txt);font-weight:600;letter-spacing:.5px}
+
+  /* function nav */
+  nav{display:flex;gap:3px;padding:8px 14px;border-bottom:1px solid var(--line2);
+    background:linear-gradient(180deg,var(--bg2),rgba(7,10,16,.6));flex-wrap:wrap;align-items:center}
+  nav button{display:flex;align-items:center;gap:7px;background:transparent;border:1px solid transparent;color:var(--mut);
+    cursor:pointer;padding:7px 14px;border-radius:8px;font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:.5px;transition:all .16s}
+  nav button .fk{font-size:9px;color:var(--dim);border:1px solid var(--line2);border-radius:4px;padding:1px 4px}
+  nav button:hover{color:var(--txt);background:rgba(255,255,255,.03)}
+  nav button.active{color:#1c1408;background:linear-gradient(135deg,var(--amber2),var(--amber));border-color:transparent;
+    box-shadow:0 2px 10px rgba(231,182,74,.22),0 1px 4px rgba(0,0,0,.4)}
+  nav button.active .fk{color:#1c1408;border-color:rgba(0,0,0,.25);background:rgba(255,255,255,.3)}
+
+  main{padding:16px;max-width:1680px;margin:0 auto}
+  .grid{display:grid;gap:13px}
+  .c12{grid-template-columns:repeat(12,1fr)}
+  .span4{grid-column:span 4} .span6{grid-column:span 6} .span8{grid-column:span 8}
+  .span3{grid-column:span 3} .span5{grid-column:span 5} .span7{grid-column:span 7}
+  @media(max-width:1100px){.span8,.span7,.span6,.span5,.span4,.span3{grid-column:span 12}}
+
+  .panel{background:linear-gradient(180deg,rgba(16,22,33,.78),rgba(11,15,24,.78));border:1px solid var(--line);
+    border-radius:var(--radius);overflow:hidden;backdrop-filter:blur(10px);
+    box-shadow:var(--shadow),inset 0 1px 0 rgba(255,255,255,.028);transition:border-color .2s,transform .2s,box-shadow .2s}
+  .panel:hover{border-color:var(--line2);box-shadow:0 12px 34px rgba(0,0,0,.46),inset 0 1px 0 rgba(255,255,255,.045)}
+  .ph{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:11px 15px;border-bottom:1px solid var(--line);
+    background:linear-gradient(180deg,rgba(255,255,255,.022),transparent)}
+  .ph h3{margin:0;font-family:var(--mono);font-size:10.5px;letter-spacing:1.8px;text-transform:uppercase;color:#b1bfdb;font-weight:700;
+    display:flex;align-items:center;gap:9px}
+  .ph h3::before{content:"";width:3px;height:13px;border-radius:2px;
+    background:linear-gradient(180deg,var(--amber),var(--cyan));display:inline-block;box-shadow:0 0 6px rgba(67,189,214,.32)}
+  .ph .x{font-family:var(--mono);font-size:10.5px;color:var(--dim)}
+  .pb{padding:14px}
+
+  /* KPI tiles */
+  .kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:13px}
+  @media(max-width:1100px){.kpis{grid-template-columns:repeat(3,1fr)}}
+  @media(max-width:560px){.kpis{grid-template-columns:repeat(2,1fr)}}
+  .kpi{background:linear-gradient(160deg,rgba(20,27,41,.85),rgba(10,14,22,.85));border:1px solid var(--line2);
+    border-radius:13px;padding:13px 14px 12px;position:relative;overflow:hidden;
+    box-shadow:0 8px 24px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.03);transition:transform .2s,box-shadow .2s}
+  .kpi:hover{transform:translateY(-3px);box-shadow:0 16px 38px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.06)}
+  .kpi::before{content:"";position:absolute;top:0;left:0;right:0;height:1px;
+    background:linear-gradient(90deg,transparent,var(--accent,var(--amber)),transparent);opacity:.55}
+  .kpi::after{content:"";position:absolute;inset:0 auto 0 0;width:3px;
+    background:var(--accent,var(--amber));box-shadow:0 0 8px var(--accent,var(--amber));opacity:.7}
+  .kpi .l{font-family:var(--mono);font-size:9.5px;letter-spacing:1.3px;text-transform:uppercase;color:var(--mut)}
+  .kpi .v{font-family:var(--mono);font-size:23px;font-weight:700;margin-top:5px;letter-spacing:-.4px;
+    text-shadow:0 0 18px rgba(255,255,255,.05)}
+  .kpi .d{font-family:var(--mono);font-size:11px;margin-top:2px}
+  .kpi .spark{position:absolute;right:9px;bottom:8px;width:64px;height:26px;opacity:.85}
+
+  .row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid var(--line);font-size:12.5px}
+  .row:last-child{border-bottom:0}
+  .tag{font-family:var(--mono);font-size:10px;padding:2px 7px;border-radius:5px;background:rgba(255,255,255,.04);color:var(--mut);border:1px solid var(--line);letter-spacing:.5px;white-space:nowrap}
+  .tag.on{color:var(--up);border-color:rgba(52,227,168,.35);background:rgba(52,227,168,.07)} .tag.off{color:var(--down);border-color:rgba(255,92,108,.35);background:rgba(255,92,108,.07)}
+  .tag.amber{color:var(--amber);border-color:rgba(255,176,0,.35);background:rgba(255,176,0,.07)}
+
+  table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12px}
+  th,td{text-align:left;padding:7px 9px;border-bottom:1px solid var(--line);white-space:nowrap}
+  th{color:var(--dim);font-size:9.5px;text-transform:uppercase;letter-spacing:1px;font-weight:600;position:sticky;top:0;
+    background:rgba(11,15,24,.6)}
+  td.n,th.n{text-align:right}
+  tbody tr{transition:background .15s}
+  tbody tr:hover{background:linear-gradient(90deg,rgba(231,182,74,.05),rgba(67,189,214,.03))}
+  .scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+
+  /* council heatmap */
+  .heat{border-collapse:separate;border-spacing:3px;font-family:var(--mono);font-size:10px;width:100%}
+  .heat th{font-size:9px;color:var(--dim);text-align:center;padding:3px;font-weight:500}
+  .heat td{text-align:center;border:0;padding:0}
+  .cell{width:26px;height:24px;border-radius:5px;display:grid;place-items:center;font-size:9.5px;color:#04121a;font-weight:700;
+    transition:transform .12s,box-shadow .12s;cursor:default}
+  .cell:hover{transform:scale(1.18);box-shadow:0 0 12px rgba(255,255,255,.25);z-index:2;position:relative}
+  .sym{font-size:12px;font-weight:700;color:var(--txt);text-align:left!important;padding-right:8px!important}
+  /* council heatmap — compact per-symbol cards for small screens (no h-scroll) */
+  .heat-cards{display:none}
+  .hcard{background:linear-gradient(180deg,rgba(20,27,41,.7),rgba(10,14,22,.7));border:1px solid var(--line2);border-radius:11px;padding:11px 12px}
+  .hcard-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px;margin-bottom:9px}
+  .hchips{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:5px}
+  .hchip{font-family:var(--mono);font-size:9.5px;color:#04121a;font-weight:700;border-radius:6px;padding:4px 7px;display:flex;align-items:center;justify-content:space-between;gap:5px}
+  .hchip b{font-weight:800;opacity:.85}
+  @media(max-width:680px){.heat-wide{display:none}.heat-cards{display:grid;gap:10px}}
+  /* phones: legibility + comfortable touch targets so every device reads clearly */
+  @media(max-width:560px){
+    main{padding:11px}.pb{padding:11px}
+    table{font-size:12.5px} th,td{padding:7px 7px} th{font-size:10.5px}
+    /* Show EVERY column on phones — nothing hidden. Wide tables already sit in
+       horizontally-scrollable wrappers, so all data stays reachable on any screen. */
+    .scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:thin}
+    .scroll table{min-width:max-content}
+    /* lift the tiny 9–10.5px labels into a readable range on small screens */
+    body{font-size:14px}
+    .brand h1{font-size:16px}
+    .brand .sub{font-size:10.5px;letter-spacing:1.8px}
+    .badge{font-size:10.5px}
+    .stat,.mpill{font-size:12px}
+    .ph h3{font-size:12px;letter-spacing:1.1px} .ph .x{font-size:11px}
+    .kpi .l{font-size:11px} .kpi .v{font-size:21px} .kpi .d{font-size:12px}
+    .tag{font-size:11px} .pill{font-size:11px}
+    .feed{font-size:12.5px} .feed .k{min-width:72px}
+    .heat th{font-size:10.5px} footer{font-size:11px}
+    /* touch targets ≥44px (Apple/Material guidance) */
+    header{gap:9px;padding:11px 13px}
+    nav{gap:5px;padding:9px 11px}
+    nav button{padding:11px 14px;font-size:13px;min-height:44px}
+    .btn{padding:10px 13px;font-size:12px;min-height:42px}
+    .act,.ghost{padding:11px 15px;min-height:44px}
+    /* Controls/trade-ticket inputs: ignore desktop inline max-width caps, go full width */
+    input.f,select.f,input[style*="max-width"],select[style*="max-width"]{max-width:100%!important;width:100%!important}
+  }
+  /* very small phones (~360px): keep KPIs 2-up and trim the largest type */
+  @media(max-width:400px){
+    .kpis{grid-template-columns:repeat(2,1fr)}
+    .brand h1{font-size:15px} .kpi .v{font-size:19px}
+  }
+
+  .cb{display:flex;align-items:center;gap:10px;padding:11px 13px;border-radius:10px;border:1px solid var(--line2);font-size:12px;margin-bottom:11px}
+  .cb.ok{border-color:rgba(52,227,168,.35);background:linear-gradient(90deg,rgba(52,227,168,.09),transparent)}
+  .cb.halt{border-color:var(--down);background:linear-gradient(90deg,rgba(255,92,108,.12),transparent);color:#ffd7db}
+  .gauge{height:8px;border-radius:5px;background:rgba(255,255,255,.06);overflow:hidden}
+  .gauge>i{display:block;height:100%;background:linear-gradient(90deg,var(--amber),var(--amber2));box-shadow:0 0 10px rgba(255,176,0,.5)}
+  .ring{transform:rotate(-90deg)}
+  .ring circle{transition:stroke-dashoffset 1s cubic-bezier(.2,.8,.2,1)}
+
+  .commentary{font-size:13px;line-height:1.6;color:#cdd8ee}
+  .counsel{border-left:2px solid var(--cyan);padding:3px 0 3px 11px;margin:9px 0;font-size:12px;color:var(--mut)}
+  .pill{display:inline-block;font-family:var(--mono);font-size:10px;color:var(--mut);border:1px solid var(--line2);border-radius:999px;padding:3px 9px;margin:3px;transition:all .15s}
+  .pill:hover{border-color:var(--cyan);color:var(--cyan)}
+  .empty{color:var(--dim);font-size:12px;font-family:var(--mono);padding:14px 4px}
+  .feed{font-family:var(--mono);font-size:11.5px}
+  .feed .it{display:flex;gap:9px;padding:6px 0;border-bottom:1px solid var(--line)}
+  .feed .it:last-child{border-bottom:0}
+  .feed .k{color:var(--amber);min-width:96px}
+
+  input.f,select.f{width:100%;background:#05080d;border:1px solid var(--line2);color:var(--txt);border-radius:8px;
+    padding:9px 10px;font-family:var(--mono);font-size:12px;transition:border-color .15s,box-shadow .15s}
+  input.f:focus,select.f:focus{outline:none;border-color:var(--amber);box-shadow:0 0 0 3px rgba(255,176,0,.12)}
+  .act{background:linear-gradient(135deg,var(--amber),var(--amber2));color:#1a1200;border:0;border-radius:8px;padding:9px 14px;font-weight:700;cursor:pointer;font-family:var(--mono);font-size:12px;box-shadow:0 4px 16px rgba(255,176,0,.25)}
+  .act:hover{box-shadow:0 6px 22px rgba(255,176,0,.4)}
+  .danger{background:transparent;border:1px solid var(--down);color:var(--down)}
+  .ghost{background:transparent;border:1px solid var(--line2);color:var(--txt);border-radius:8px;padding:8px 13px;cursor:pointer;font-family:var(--mono);font-size:12px}
+
+  /* chart crosshair tooltip */
+  .chartwrap{position:relative}
+  .crosshair{position:absolute;top:0;bottom:0;width:1px;background:rgba(42,216,240,.5);pointer-events:none;display:none}
+  .chartwrap .tip{position:absolute;pointer-events:none;display:none;background:rgba(8,12,20,.96);border:1px solid var(--line2);
+    border-radius:7px;padding:6px 9px;font-family:var(--mono);font-size:11px;white-space:nowrap;transform:translate(-50%,-115%);
+    box-shadow:0 8px 24px rgba(0,0,0,.6);z-index:5}
+  .donutlabel{font-family:var(--mono)}
+
+  footer{display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap;
+    padding:8px 16px;border-top:1px solid var(--line2);background:var(--bg2);color:var(--dim);
+    font-family:var(--mono);font-size:10.5px;letter-spacing:.5px;position:sticky;bottom:0}
+  footer .keys span{border:1px solid var(--line2);border-radius:4px;padding:1px 5px;margin-right:6px;color:var(--mut)}
+
+  /* native voice control */
+  #voiceBtn.listening{border-color:var(--up);color:var(--up);box-shadow:0 0 16px rgba(52,227,168,.45);animation:pulse 1.4s infinite}
+  #voiceWake.on{border-color:var(--cyan);color:var(--cyan);box-shadow:0 0 16px rgba(42,216,240,.4)}
+  .treemap div{box-sizing:border-box}
+  .vpanel{position:fixed;right:14px;bottom:50px;z-index:60;width:290px;max-width:84vw;
+    background:linear-gradient(180deg,rgba(12,17,26,.98),rgba(8,11,18,.98));border:1px solid var(--line2);border-radius:14px;
+    padding:13px 15px;font-family:var(--mono);font-size:12px;box-shadow:0 18px 54px rgba(0,0,0,.7);backdrop-filter:blur(14px);display:none}
+  .vpanel .vh{display:flex;align-items:center;gap:8px;font-size:9px;letter-spacing:1.6px;text-transform:uppercase;color:var(--cyan);margin-bottom:8px}
+  .vpanel .vheard{color:var(--txt);min-height:16px;font-size:12.5px}
+  .vpanel .vreply{color:var(--mut);margin-top:7px;line-height:1.5}
+  .vpanel .vhint{color:var(--dim);margin-top:9px;font-size:10px;line-height:1.5;border-top:1px solid var(--line);padding-top:8px}
+  .vpanel #vdot{width:7px;height:7px;border-radius:50%;background:var(--up);box-shadow:0 0 8px var(--up);animation:pulse 1.4s infinite}
+  .vpanel #vclose{margin-left:auto;cursor:pointer;color:var(--dim);border:0;background:none;font-family:var(--mono);font-size:13px}
+  .vpanel #vclose:hover{color:var(--down)}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <div class="logo">S</div>
+    <div><h1 id="firm">SAHJONY CAPITAL</h1><div class="sub">Parquet</div></div>
+  </div>
+  <span class="deskSw" id="deskSw" role="tablist" aria-label="Desk switcher">
+    <button data-desk="live" class="active">LIVE · CRYPTO</button><button data-desk="trainer">TRAINER</button><button data-desk="stocks">STOCKS</button>
+  </span>
+  <span class="liveBadge" id="liveBadge" style="display:none">● REAL MONEY</span>
+  <span class="evalBadge" id="evalBadge" style="display:none" title="90-day out-of-sample evaluation window"></span>
+  <span class="spacer"></span>
+  <span class="stat"><span class="dot" id="dBroker"></span><span id="brokerTxt">—</span></span>
+  <span class="stat"><span class="dot" id="dMkt"></span>MKT <b id="mktTxt">—</b></span>
+  <span class="stat">CYC <b id="cycTxt">—</b></span>
+  <span class="stat"><span class="dot" id="dStream"></span><span id="streamTxt">STREAM</span></span>
+  <span class="stat mono" id="clock">--:--:-- UTC</span>
+  <span class="stat mono" id="freshStat" title="Data freshness — time since the desk last updated this snapshot" style="display:none"><span class="dot" id="dFresh"></span><span id="freshTxt">—</span></span>
+  <span class="badge" id="viewerBadge" style="display:none" title="Shareable read-only view — no changes can be made from here">◇ VIEW ONLY</span>
+  <span class="mpill" id="mode">—</span>
+  <button class="btn" id="killBtn" style="display:none" title="Kill switch — suspend all new orders instantly (exits still allowed)">⛔ STOP</button>
+  <a class="btn" id="account" href="./login.html">SIGN IN</a>
+  <button class="btn" id="voiceLang" title="Voice language — English / Español" aria-label="Toggle voice language, English or Spanish">🌐 EN</button>
+  <button class="btn" id="voiceWake" title="Hands-free — say “Hey Sahjony …” to command" aria-label="Toggle hands-free wake word">👂 WAKE</button>
+  <button class="btn" id="voiceBtn" title="Voice control — click and speak (English / Español)" aria-label="Voice control — click and speak">🎙️ VOICE</button>
+  <button class="btn" onclick="load()" title="Refresh data now" aria-label="Refresh data now">↻</button>
+</header>
+<div id="liveBanner" style="display:none">⚠ LIVE — REAL MONEY ARMED · orders use real funds on <b id="liveVenue">—</b> · hard risk ceilings enforced</div>
+<div id="haltBanner" style="display:none">⛔ TRADING HALTED · new risk suspended (kill switch) · exits still allowed · tap RESUME to trade again</div>
+
+<div class="tape"><div class="track" id="tape"></div></div>
+<nav id="nav"></nav>
+<main id="view"></main>
+<footer>
+  <div id="foot">booting…</div>
+  <div class="keys"><span>1</span>–<span>9</span> panels · <span>R</span> refresh</div>
+</footer>
+
+<script src="./config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const TABS = ["Parquet","Perf","Markets","Macro","News","Council","Book","Brain","War Room","Operations","Controls","Workforce","Env"];
+let DATA=null, TAB="Parquet", SESSION=null, DESK=null, CREDS=[];
+let MARKETS={list:[],err:null,ts:0};            // CoinGecko crypto (no key)
+let NEWS={list:[],err:null,ts:0,src:''};        // Finnhub (key) or GDELT (no key)
+const STREAM={connected:false,live:{},tries:0,started:false,chanFor:null,cryptoWS:null,stockWS:null};
+let INTEL={fng:null,global:null,trending:null,fx:null,indices:null,earnings:null,symNews:{},ts:0,err:{}};   // free macro intelligence
+
+const CFG=(window.SAHJONY_CONFIG||{});
+const FINNHUB=(CFG.FINNHUB_API_KEY||"").trim();
+// Owner-device gate: shared/public links show a clean view-only page with NO
+// sign-in entry point. A device proves ownership by visiting once with #owner
+// (or signing in) — that sets a persistent local flag. /login.html still works
+// directly for the owner; it is simply never advertised to visitors.
+function OWNER_DEVICE(){
+  try{
+    if(/[?#&]owner\b/.test(location.hash+location.search)) localStorage.setItem('sahjony_owner','1');
+    return localStorage.getItem('sahjony_owner')==='1';
+  }catch(_){return false;}
+}
+const LIVE_OK=!!(CFG.SUPABASE_URL && CFG.SUPABASE_ANON_KEY && window.supabase);
+const SB=LIVE_OK ? window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY) : null;
+
+const $=(h)=>{const t=document.createElement('template');t.innerHTML=String(h).trim();return t.content.firstElementChild;};
+const esc=(s)=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+// esc() alone is NOT enough for an href. It escapes & < > " — none of which appear
+// in `javascript:alert(1)`, so a hostile URL passes through untouched and runs in
+// THIS origin (the one holding the owner's Supabase session and the broker-key
+// fields) the moment a headline is clicked. Links in the news wire come from
+// third-party feeds (GDELT / Finnhub / CryptoPanic / Marketaux), so the scheme has
+// to be checked, not just the characters. Anything not http(s) degrades to a dead
+// link rather than being rendered as-is.
+const safeUrl=(u)=>{const raw=String(u==null?"":u).trim();if(!raw)return '#';
+  try{const p=new URL(raw,window.location.href);
+  return(p.protocol==='http:'||p.protocol==='https:')?esc(p.href):'#';}catch(_){return '#';}};
+const money=(n)=>"$"+Number(n||0).toLocaleString(undefined,{maximumFractionDigits:2});
+const pct=(n)=>(Number(n||0)>=0?"+":"")+Number(n||0).toFixed(2)+"%";
+const num=(n,d=2)=>Number(n||0).toLocaleString(undefined,{maximumFractionDigits:d});
+
+// ── clock ──
+// The clock keeps ticking even if the worker dies, so a frozen board can look
+// "live". updateFreshness() flags a stale snapshot (worker stopped / deploy frozen).
+function tsMs(ts){const d=ts?Date.parse(ts):NaN;return isNaN(d)?null:d;}
+function relAge(ms){const s=Math.max(0,Math.round(ms/1000));
+  if(s<60)return s+"s ago";const m=Math.round(s/60);
+  if(m<60)return m+"m ago";const h=Math.round(m/60);
+  if(h<48)return h+"h ago";return Math.round(h/24)+"d ago";}
+const FRESH_WARN_MS=20*60*1000, FRESH_STALE_MS=45*60*1000;  // snapshot cadence ~15min
+function snapshotAgeMs(){
+  const t=(typeof DATA!=='undefined'&&DATA&&DATA.ts)?tsMs(DATA.ts):null;
+  return t==null?Infinity:Math.max(0,Date.now()-t);
+}
+function snapshotIsFresh(){return snapshotAgeMs()<FRESH_STALE_MS;}
+function runtimeAgeMs(){
+  const t=(typeof RH!=='undefined'&&RH&&RH.updated)?tsMs(RH.updated):null;
+  return t==null?Infinity:Math.max(0,Date.now()-t);
+}
+function runtimeIsFresh(){return !!(RH&&RH.read_only&&RH.agentic&&RH.agentic.identity_verified&&runtimeAgeMs()<10*60*1000);}
+function runtimeAccount(){
+  if(!runtimeIsFresh())return null;
+  return {equity:+RH.total_value||+RH.agentic.equity||0,cash:+RH.cash||+RH.agentic.cash||0,
+    buying_power:+RH.buying_power||+RH.agentic.buying_power||0,
+    deployed:Math.max(0,(+RH.total_value||0)-(+RH.cash||0)),positions:RH.positions||[]};
+}
+function updateFreshness(){
+  const stat=document.getElementById('freshStat');if(!stat)return;
+  const live=runtimeIsFresh();
+  const t=live?tsMs(RH.updated):((typeof DATA!=='undefined'&&DATA&&DATA.ts)?tsMs(DATA.ts):null);
+  if(t==null){stat.style.display='none';return;}
+  stat.style.display='';
+  const age=Date.now()-t,dot=document.getElementById('dFresh'),txt=document.getElementById('freshTxt');
+  txt.textContent='updated '+relAge(age);
+  stat.classList.remove('warn','stale');
+  if(age>=FRESH_STALE_MS){stat.classList.add('stale');dot.className='dot r';stat.title='STALE — the desk has not updated this snapshot recently. The worker may be stopped.';}
+  else if(age>=FRESH_WARN_MS){stat.classList.add('warn');dot.className='dot a';stat.title='Aging — snapshot older than one update cycle.';}
+  else{dot.className='dot g';stat.title=live?'Fresh authenticated Robinhood runtime data.':'Fresh desk snapshot within the normal update cadence.';}
+}
+setInterval(()=>{const el=document.getElementById('clock');if(el)el.textContent=new Date().toISOString().slice(11,19)+" UTC";updateFreshness();},1000);
+
+// ── Supabase live-control plane ──
+async function refreshDesk(){
+  if(!LIVE_OK) return;
+  try{
+    const {data:{session}}=await SB.auth.getSession(); SESSION=session;
+    if(!session){DESK=null;return;}
+    const {data}=await SB.from('desks').select('*').order('created_at').limit(1);
+    DESK=(data&&data[0])||null;
+    await refreshCreds();
+  }catch(e){DESK=null;}
+}
+async function refreshCreds(){
+  CREDS=[]; if(!LIVE_OK||!SESSION||!DESK)return;
+  try{ const {data}=await SB.from('broker_credentials').select('name').eq('desk_id',DESK.id);
+    CREDS=(data||[]).map(r=>r.name); }catch(e){ CREDS=[]; }
+}
+// Prefer the snapshot shipped with this deployment. GitHub is only a fallback.
+const STATUS_REMOTE='https://raw.githubusercontent.com/SAHJONY/SAHJONY-AI-TRADING/master/public/status.json';
+// The firm is several desks: the LIVE Robinhood crypto desk plus the paper
+// sandboxes (Alpaca crypto trainer, Alpaca stock desk). Each publishes its own
+// status.json; all are readable via GitHub raw, so the switcher needs no deploy.
+const RAW='https://raw.githubusercontent.com/SAHJONY/SAHJONY-AI-TRADING/master/';
+const DESKS={
+  live:   {label:'LIVE · CRYPTO', remote:STATUS_REMOTE, local:'./status.json'},
+  trainer:{label:'TRAINER · PAPER', remote:RAW+'desks/paper/public/status.json', local:null},
+  stocks: {label:'STOCKS · PAPER', remote:RAW+'desks/stocks/public/status.json', local:null},
+};
+let ACTIVE_DESK='live';
+async function load(){
+  const d=DESKS[ACTIVE_DESK]||DESKS.live;
+  try{
+    if(ACTIVE_DESK==='live'){
+      await refreshDesk();
+      if(DESK && DESK.last_status){ DATA=DESK.last_status; }
+      else {
+        try{ const r=await fetch(d.remote+'?_='+Date.now(),{cache:'no-store'}); if(!r.ok)throw 0; DATA=await r.json(); }
+        catch(_){ const r=await fetch(d.local+'?_='+Date.now()); DATA=await r.json(); }
+      }
+    } else {
+      const r=await fetch(d.remote+'?_='+Date.now(),{cache:'no-store'});
+      if(!r.ok)throw new Error(d.label+' snapshot not published yet');
+      DATA=await r.json();
+    }
+  }catch(e){
+    if(ACTIVE_DESK==='live'){
+      try{const r=await fetch('./status.json?_='+Date.now());DATA=await r.json();}catch(_){DATA={_error:String(e)};}
+    } else { DATA={_error:String(e)}; }
+  }
+  await fetchRobinhood();                       // live real-money account (read-only)
+  buildNav(); render();
+  fetchMarkets(); fetchNews(); fetchIntel();   // free REST snapshots (self-cached)
+  startStreams(); subscribeRealtime();         // realtime: Binance/Finnhub WS + Supabase
+}
+
+// Live real-money Robinhood snapshot (managed via the Robinhood MCP, written to
+// public/robinhood.json). Read-only on the dashboard — displayed alongside, and
+// kept strictly separate from, the paper desk. Absent file = panel hidden.
+// Prefer the snapshot deployed with this dashboard, then fall back to GitHub.
+const RH_REMOTE='https://raw.githubusercontent.com/SAHJONY/SAHJONY-AI-TRADING/master/public/robinhood.json';
+const RH_RUNTIME='./api/runtime-status';
+let RH=null;
+async function fetchRobinhood(){
+  try{ const r=await fetch(RH_RUNTIME+'?_='+Date.now(),{cache:'no-store'}); if(!r.ok)throw 0; RH=await r.json(); return; }
+  catch(_){}
+  // Local files are useful for development only. In production they are static
+  // deployment artifacts and must never masquerade as current broker evidence.
+  if(/^(localhost|127\.0\.0\.1)$/.test(location.hostname)){
+    try{ const r=await fetch('./robinhood.json?_='+Date.now(),{cache:'no-store'}); if(!r.ok)throw 0; RH=await r.json(); return; }
+    catch(_){}
+  }
+  RH=null;
+}
+
+// ── free live market & news feeds (run in the browser) ──────────────────────
+const COINGECKO="https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=50&page=1&price_change_percentage=24h&sparkline=true";
+function fmtTs(ms){const d=new Date(ms);return isNaN(d)?'':d.toLocaleString();}
+function fmtGdelt(s){if(!s)return'';const d=new Date(String(s).replace(/(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z/,'$1-$2-$3T$4:$5:$6Z'));return isNaN(d)?'':d.toLocaleString();}
+
+async function fetchMarkets(force){
+  if(!force && Date.now()-MARKETS.ts<60000 && MARKETS.list.length) return;
+  try{ const r=await fetch(COINGECKO); if(!r.ok) throw new Error('HTTP '+r.status);
+    MARKETS={list:await r.json(), err:null, ts:Date.now()}; }
+  catch(e){ MARKETS={list:MARKETS.list, err:String(e&&e.message||e), ts:Date.now()}; }
+  buildTape(); if(TAB==='Markets')render();
+}
+
+// Multi-source financial wire — aggregates every configured provider in parallel,
+// merges + dedupes by headline, sorts newest-first. Free sources need no key;
+// optional keyed services (added in config.js) widen coverage. Each source is
+// fault-isolated: one failing never blocks the others.
+const MARKETAUX=(CFG.MARKETAUX_API_KEY||"").trim();   // free tier + paid (marketaux.com)
+const CRYPTOPANIC=(CFG.CRYPTOPANIC_API_KEY||"").trim(); // free crypto news (cryptopanic.com)
+async function fetchNews(force){
+  if(!force && Date.now()-NEWS.ts<300000 && NEWS.list.length) return;
+  const used=[];
+  const jobs=[];
+  // GDELT — free, no key, global financial coverage
+  jobs.push((async()=>{try{
+    const q=encodeURIComponent('(markets OR finance OR stocks OR economy OR earnings OR "Federal Reserve") sourcelang:english');
+    const r=await fetch(`https://api.gdeltproject.org/api/v2/doc/doc?query=${q}&mode=ArtList&maxrecords=40&sort=DateDesc&format=json`);
+    if(!r.ok)throw 0; const arts=(((await r.json())||{}).articles||[]);
+    used.push('GDELT'); return arts.map(a=>{const t=Date.parse(String(a.seendate||'').replace(/(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z/,'$1-$2-$3T$4:$5:$6Z'))||0;
+      return {title:a.title,url:a.url,source:a.domain,time:fmtGdelt(a.seendate),t};});
+  }catch(e){return [];}})());
+  // Finnhub — free key (already used elsewhere): general market headlines
+  if(FINNHUB) jobs.push((async()=>{try{
+    const r=await fetch(`https://finnhub.io/api/v1/news?category=general&token=${encodeURIComponent(FINNHUB)}`);
+    if(!r.ok)throw 0; const a=((await r.json())||[]).slice(0,40);
+    used.push('Finnhub'); return a.map(x=>({title:x.headline,url:x.url,source:x.source,time:fmtTs(x.datetime*1000),t:(x.datetime||0)*1000}));
+  }catch(e){return [];}})());
+  // Marketaux — free tier + paid: entity-tagged market news
+  if(MARKETAUX) jobs.push((async()=>{try{
+    const r=await fetch(`https://api.marketaux.com/v1/news/all?language=en&filter_entities=true&limit=25&api_token=${encodeURIComponent(MARKETAUX)}`);
+    if(!r.ok)throw 0; const a=(((await r.json())||{}).data||[]);
+    used.push('Marketaux'); return a.map(x=>{const t=Date.parse(x.published_at)||0;return {title:x.title,url:x.url,source:x.source,time:fmtTs(t),t};});
+  }catch(e){return [];}})());
+  // CryptoPanic — free crypto news
+  if(CRYPTOPANIC) jobs.push((async()=>{try{
+    const r=await fetch(`https://cryptopanic.com/api/v1/posts/?auth_token=${encodeURIComponent(CRYPTOPANIC)}&public=true&kind=news`);
+    if(!r.ok)throw 0; const a=(((await r.json())||{}).results||[]).slice(0,25);
+    used.push('CryptoPanic'); return a.map(x=>{const t=Date.parse(x.published_at)||0;return {title:x.title,url:x.url,source:(x.source&&x.source.title)||'CryptoPanic',time:fmtTs(t),t};});
+  }catch(e){return [];}})());
+  let lists=[]; try{ lists=await Promise.all(jobs); }catch(e){}
+  const seen=new Set(), merged=[];
+  lists.flat().forEach(it=>{ if(!it||!it.title)return; const k=String(it.title).toLowerCase().replace(/[^a-z0-9]+/g,' ').trim().slice(0,80);
+    if(!k||seen.has(k))return; seen.add(k); merged.push(it); });
+  merged.sort((a,b)=>(b.t||0)-(a.t||0));
+  NEWS={list:merged.slice(0,60), err:merged.length?null:'no news sources reachable (CORS or offline)', ts:Date.now(), src:used.join(' + ')||'free feed'};
+  if(TAB==='News')render();
+}
+
+async function fetchStockQuotes(syms){
+  const out=[]; for(const s of syms.slice(0,12)){
+    try{ const r=await fetch(`https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(s)}&token=${encodeURIComponent(FINNHUB)}`);
+      const q=await r.json(); out.push(Object.assign({sym:s}, q)); }catch(e){}
+  } return out;
+}
+async function fetchSymbolNews(sym){    // per-ticker headlines (Finnhub key, else GDELT)
+  if(INTEL.symNews[sym]) return;
+  INTEL.symNews[sym]={loading:true,items:[]};
+  try{
+    let items=[];
+    if(FINNHUB && !sym.includes('/')){
+      const to=new Date().toISOString().slice(0,10), from=new Date(Date.now()-10*864e5).toISOString().slice(0,10);
+      const j=await getJSON(`https://finnhub.io/api/v1/company-news?symbol=${encodeURIComponent(sym)}&from=${from}&to=${to}&token=${encodeURIComponent(FINNHUB)}`);
+      items=(j||[]).slice(0,5).map(a=>({title:a.headline,url:a.url,source:a.source,time:fmtTs(a.datetime*1000)}));
+    }else{
+      const j=await getJSON(`https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent('"'+sym+'" (stock OR shares OR earnings)')}&mode=ArtList&maxrecords=5&sort=DateDesc&format=json`);
+      items=((j||{}).articles||[]).map(a=>({title:a.title,url:a.url,source:a.domain,time:fmtGdelt(a.seendate)}));
+    }
+    INTEL.symNews[sym]={loading:false,items};
+  }catch(e){ INTEL.symNews[sym]={loading:false,items:[],err:String(e.message||e)}; }
+  if(TAB==='Council')render();
+}
+
+// ── realtime streaming over WebSocket ───────────────────────────────────────
+const BINANCE_SYMS=['btc','eth','sol','bnb','xrp','ada','doge','avax','link','dot','ltc','trx'];
+function setStreamDot(){
+  const d=document.getElementById('dStream'); if(d)d.className='dot '+(STREAM.connected?'live':'');
+  // Say what is actually streaming and how fresh it is — a green dot alone can
+  // stay lit while ticks have silently stopped arriving.
+  const el=document.getElementById('streamTxt'); if(!el)return;
+  const ts=Object.values(STREAM.live).map(v=>v.t||0);
+  const n=ts.length, age=n?Math.round((Date.now()-Math.max(...ts))/1000):null;
+  const srcName=(STREAM.src||'').toUpperCase();
+  el.textContent = !STREAM.connected ? 'STREAM' :
+    (n? `${srcName||'STREAM'} ${n}·${age<=2?'now':age+'s'}` : (srcName? srcName+' …' : 'STREAM …'));
+  el.title = n? `${n} symbol(s) live from ${srcName||'feed'} · last tick ${age}s ago · `
+               +`positions marked to market in realtime`
+              : 'connecting to live price feeds (Binance → Coinbase fallback)';
+}
+function cryptoRows(){
+  if((MARKETS.list||[]).length) return MARKETS.list.map(m=>({sym:(m.symbol||'').toUpperCase(),price:m.current_price,pct:m.price_change_percentage_24h}));
+  return Object.entries(STREAM.live).filter(([k,v])=>v.pct!=null).map(([k,v])=>({sym:k,price:v.price,pct:v.pct}));
+}
+// Realtime mark-to-market. Ticks used to feed only the Markets tab, so the
+// owner's positions, P&L and equity stayed frozen on the 15-minute snapshot
+// while live prices were already streaming. Overlay every tick on the snapshot
+// so the book moves continuously; load() re-baselines from the desk each cycle.
+function liveTick(sym){
+  const s=String(sym||'').toUpperCase();
+  const base=s.replace('/USD','').replace('-USD','').replace('USDT','').replace('/USDT','');
+  return STREAM.live[base]||STREAM.live[s]||null;
+}
+function applyLivePrices(){
+  const ps=DATA.positions||[]; let touched=0, signed=0;
+  ps.forEach(p=>{
+    const sh=+p.shares||0, t=liveTick(p.symbol);
+    if(t&&t.price>0&&sh){
+      p.price=t.price; p.market_value=sh*t.price;
+      p.unrealized=(t.price-(+p.cost_basis||0))*sh; p._liveTs=t.t; touched++;
+    }
+    signed+=(+p.market_value||0);
+  });
+  if(touched&&DATA.account){
+    DATA.account.deployed=signed;
+    DATA.account.equity=(+DATA.account.cash||0)+signed;
+  }
+  // council table prices track the same ticks
+  (DATA.council||[]).forEach(c=>{const t=liveTick(c.symbol); if(t&&t.price>0)c.price=t.price;});
+  return touched;
+}
+let _tick=null;
+function scheduleTick(){ if(_tick)return; _tick=setTimeout(()=>{ _tick=null;
+  (MARKETS.list||[]).forEach(m=>{const l=STREAM.live[(m.symbol||'').toUpperCase()]; if(l){m.current_price=l.price; if(l.pct!=null)m.price_change_percentage_24h=l.pct;}});
+  const touched=applyLivePrices();
+  buildTape(); setStreamDot();
+  // Re-render any tab whose numbers just moved (not just Markets).
+  if(TAB==='Markets'||(touched&&['Overview','Positions','Council','Risk'].includes(TAB))) render();
+}, 900); }
+// Crypto ticks: Binance first, Coinbase as the fallback. Binance's global feed
+// is unreachable from US networks, where this desk actually runs — without a
+// fallback the socket silently never delivers and every "live" number on the
+// page is really the 15-minute snapshot. Whichever source answers first wins,
+// and a watchdog fails over if ticks stop arriving.
+function cryptoUniverse(){
+  const fromDesk=((DATA&&DATA.council)||[]).map(c=>String(c.symbol||'').toUpperCase())
+    .filter(s=>s.includes('/')||s.includes('-')).map(s=>s.replace('/USD','').replace('-USD',''));
+  const base=fromDesk.length?fromDesk:BINANCE_SYMS.map(s=>s.toUpperCase());
+  return [...new Set(base)];
+}
+function noteTick(base, price, pct){
+  if(!base||!(price>0))return;
+  STREAM.live[base]={price:+price, pct:(pct==null?undefined:+pct), t:Date.now()};
+  STREAM.lastTick=Date.now(); scheduleTick();
+}
+function connectCrypto(){
+  if(!('WebSocket' in window)) return;
+  try{
+    const ws=new WebSocket('wss://stream.binance.com:9443/stream?streams='+BINANCE_SYMS.map(s=>s+'usdt@ticker').join('/'));
+    STREAM.cryptoWS=ws; STREAM.src='binance';
+    // If Binance is geo-blocked the socket may "open" yet never deliver: give it
+    // a short grace period, then fail over rather than sitting silently dead.
+    clearTimeout(STREAM.probe);
+    STREAM.probe=setTimeout(()=>{ if(!STREAM.lastTick) connectCoinbase(); }, 6000);
+    ws.onopen=()=>{STREAM.connected=true;STREAM.tries=0;setStreamDot();};
+    ws.onmessage=(ev)=>{try{const m=JSON.parse(ev.data);const d=m.data||m;if(!d||!d.s)return;
+      noteTick(d.s.replace('USDT',''), +d.c, +d.P);}catch(e){}};
+    ws.onclose=()=>{STREAM.connected=!!(STREAM.stockWS&&STREAM.stockWS.readyState===1);setStreamDot();
+      if(!STREAM.lastTick){ connectCoinbase(); return; }      // never worked → switch source
+      STREAM.tries++;setTimeout(connectCrypto,Math.min(30000,1000*Math.pow(2,STREAM.tries)));};
+    ws.onerror=()=>{try{ws.close();}catch(e){}};
+  }catch(e){ connectCoinbase(); }
+}
+function connectCoinbase(){
+  if(!('WebSocket' in window)) return;
+  if(STREAM.cbWS && STREAM.cbWS.readyState<=1) return;        // already connecting/open
+  try{ if(STREAM.cryptoWS) STREAM.cryptoWS.close(); }catch(e){}
+  const products=cryptoUniverse().map(b=>b+'-USD');
+  try{
+    const ws=new WebSocket('wss://ws-feed.exchange.coinbase.com');
+    STREAM.cbWS=ws; STREAM.src='coinbase';
+    ws.onopen=()=>{ STREAM.connected=true; STREAM.tries=0; setStreamDot();
+      ws.send(JSON.stringify({type:'subscribe', product_ids:products, channels:['ticker']})); };
+    ws.onmessage=(ev)=>{try{const m=JSON.parse(ev.data);
+      if(m.type!=='ticker'||!m.product_id)return;
+      const base=String(m.product_id).replace('-USD','');
+      const px=+m.price, open=+m.open_24h;
+      noteTick(base, px, (open>0? (px/open-1)*100 : null));
+    }catch(e){}};
+    ws.onclose=()=>{STREAM.connected=!!(STREAM.stockWS&&STREAM.stockWS.readyState===1);setStreamDot();
+      STREAM.tries++;setTimeout(connectCoinbase,Math.min(30000,1000*Math.pow(2,STREAM.tries)));};
+    ws.onerror=()=>{try{ws.close();}catch(e){}};
+  }catch(e){}
+}
+// Staleness watchdog: a socket can stay "open" while the feed dies. If no tick
+// has landed in 90s, tear down and reconnect (alternating source).
+setInterval(()=>{
+  if(!STREAM.started) return;
+  const age=STREAM.lastTick? Date.now()-STREAM.lastTick : null;
+  if(age!=null && age>90000){
+    STREAM.lastTick=0;
+    try{ if(STREAM.cbWS) STREAM.cbWS.close(); }catch(e){}
+    try{ if(STREAM.cryptoWS) STREAM.cryptoWS.close(); }catch(e){}
+    (STREAM.src==='coinbase'? connectCrypto : connectCoinbase)();
+  }
+}, 30000);
+function connectStocks(){
+  if(!FINNHUB||!('WebSocket' in window)) return;
+  const syms=((DATA&&DATA.council)||[]).map(c=>c.symbol).filter(s=>!String(s).includes('/'));
+  // Streams start before the first snapshot lands, so an empty council used to
+  // abort permanently — no stock stream for the whole session. Retry instead.
+  if(!syms.length){ clearTimeout(STREAM.stockRetry);
+    STREAM.stockRetry=setTimeout(connectStocks,5000); return; }
+  const key=syms.slice().sort().join(',');
+  if(STREAM.stockSyms===key && STREAM.stockWS && STREAM.stockWS.readyState<=1) return;
+  STREAM.stockSyms=key;
+  try{ if(STREAM.stockWS) STREAM.stockWS.close(); }catch(e){}
+  try{
+    const ws=new WebSocket('wss://ws.finnhub.io?token='+encodeURIComponent(FINNHUB)); STREAM.stockWS=ws;
+    ws.onopen=()=>{syms.forEach(s=>ws.send(JSON.stringify({type:'subscribe',symbol:s})));STREAM.connected=true;setStreamDot();};
+    ws.onmessage=(ev)=>{try{const m=JSON.parse(ev.data);if(m.type==='trade'&&m.data)m.data.forEach(t=>{STREAM.live[t.s]={price:t.p,t:Date.now()};});scheduleTick();}catch(e){}};
+    ws.onclose=()=>{setTimeout(connectStocks,5000);};
+    ws.onerror=()=>{try{ws.close();}catch(e){}};
+  }catch(e){}
+}
+function subscribeRealtime(){          // Supabase Realtime: worker writes → instant UI
+  if(!LIVE_OK || !DESK || STREAM.chanFor===DESK.id) return;
+  try{
+    if(STREAM.chan) SB.removeChannel(STREAM.chan);
+    STREAM.chanFor=DESK.id;
+    STREAM.chan=SB.channel('desk-'+DESK.id)
+      .on('postgres_changes',{event:'UPDATE',schema:'public',table:'desks',filter:'id=eq.'+DESK.id},
+        (payload)=>{ DESK=payload.new||DESK; if(DESK.last_status)DATA=DESK.last_status; setStatus(); buildTape(); render(); })
+      .subscribe();
+  }catch(e){}
+}
+function startStreams(){ if(STREAM.started)return; STREAM.started=true; connectCrypto(); connectStocks(); }
+
+// ── free macro intelligence (no key) ────────────────────────────────────────
+async function getJSON(u){const r=await fetch(u);if(!r.ok)throw new Error('HTTP '+r.status);return r.json();}
+const INDEX_PROXIES=[['SPY','S&P 500'],['QQQ','Nasdaq 100'],['DIA','Dow 30'],['IWM','Russell 2000']];
+async function fetchIntel(force){
+  if(!force && Date.now()-INTEL.ts<300000 && INTEL.global) return;
+  const nx={...INTEL, ts:Date.now(), err:{}};
+  const jobs=[
+    getJSON('https://api.alternative.me/fng/?limit=1').then(j=>{nx.fng=(j.data||[])[0]||null;}).catch(e=>{nx.err.fng=String(e.message||e);}),
+    getJSON('https://api.coingecko.com/api/v3/global').then(j=>{nx.global=j.data||null;}).catch(e=>{nx.err.global=String(e.message||e);}),
+    getJSON('https://api.coingecko.com/api/v3/search/trending').then(j=>{nx.trending=j.coins||[];}).catch(e=>{nx.err.trending=String(e.message||e);}),
+    getJSON('https://api.frankfurter.app/latest?from=USD&to=EUR,GBP,JPY,CAD,AUD,CHF,CNY').then(j=>{nx.fx=j.rates||null;}).catch(e=>{nx.err.fx=String(e.message||e);}),
+  ];
+  if(FINNHUB){   // indices (via liquid ETF proxies) + this week's earnings — free tier
+    jobs.push(Promise.all(INDEX_PROXIES.map(([s,label])=>
+      getJSON(`https://finnhub.io/api/v1/quote?symbol=${s}&token=${encodeURIComponent(FINNHUB)}`)
+        .then(q=>({sym:s,label,...q})).catch(()=>null)))
+      .then(rows=>{nx.indices=rows.filter(Boolean);}).catch(e=>{nx.err.indices=String(e.message||e);}));
+    const today=new Date().toISOString().slice(0,10);
+    const wk=new Date(Date.now()+7*864e5).toISOString().slice(0,10);
+    jobs.push(getJSON(`https://finnhub.io/api/v1/calendar/earnings?from=${today}&to=${wk}&token=${encodeURIComponent(FINNHUB)}`)
+      .then(j=>{nx.earnings=(j.earningsCalendar||[]).slice(0,25);}).catch(e=>{nx.err.earnings=String(e.message||e);}));
+  }
+  await Promise.all(jobs);
+  INTEL=nx; if(TAB==='Macro'||TAB==='Parquet')render();
+}
+
+function marketRead(){
+  const c=DATA.council||[], n=c.length||1;
+  const avgConv=c.reduce((s,x)=>s+(+x.conviction||0),0)/n;
+  const longs=c.filter(x=>x.direction==='long').length, shorts=c.filter(x=>x.direction==='short').length;
+  const brain=DATA.brain||{}, fng=INTEL.fng?+INTEL.fng.value:null;
+  const gch=INTEL.global?+INTEL.global.market_cap_change_percentage_24h_usd:null;
+  let score=(avgConv-0.5)*2 + (longs-shorts)/n;
+  if(fng!=null) score+=(fng-50)/50;
+  if(gch!=null) score+=Math.max(-1,Math.min(1,gch/5));
+  if(brain.posture==='risk_on') score+=0.5; else if(brain.posture==='risk_off') score-=0.5;
+  const posture = score>0.6?'RISK-ON' : score<-0.6?'RISK-OFF' : 'NEUTRAL';
+  const cls = posture==='RISK-ON'?'on' : posture==='RISK-OFF'?'off' : 'amber';
+  const bits=[`council ${longs}L / ${shorts}S · avg conviction ${(avgConv*100).toFixed(0)}%`];
+  if(fng!=null) bits.push(`Fear&Greed ${fng} (${esc(INTEL.fng.value_classification||'')})`);
+  if(gch!=null) bits.push(`crypto mkt ${pct(gch)} 24h`);
+  if(brain.posture) bits.push(`AI posture ${esc(brain.posture)}`);
+  return {posture,cls,text:bits.join(' · ')};
+}
+
+function Macro(v){
+  const g=$(`<div class="grid c12"></div>`);
+  // sentiment
+  let sb;
+  if(INTEL.fng){const val=+INTEL.fng.value;const col=val<25?'var(--down)':val<45?'var(--amber)':val<55?'var(--mut)':'var(--up)';
+    sb=`<div style="font-family:var(--mono);font-size:36px;font-weight:700;color:${col};line-height:1">${val}</div>
+      <div class="mut" style="text-transform:uppercase;letter-spacing:1.4px;font-size:11px;margin-top:4px">${esc(INTEL.fng.value_classification||'')}</div>
+      <div class="gauge" style="margin-top:11px"><i style="width:${val}%;background:${col}"></i></div>
+      <div class="mut mono" style="font-size:10px;margin-top:7px">Crypto Fear &amp; Greed Index</div>`;}
+  else sb=`<div class="empty">sentiment unavailable${INTEL.err.fng?` (${esc(INTEL.err.fng)})`:''}</div>`;
+  g.appendChild(panel('Market Sentiment', sb, 'alternative.me', 'span4'));
+  // global crypto
+  let gb;
+  if(INTEL.global){const G=INTEL.global;gb=$(`<div></div>`);
+    [['Total market cap','$'+num((G.total_market_cap||{}).usd,0)],
+     ['24h change',pct(G.market_cap_change_percentage_24h_usd)],
+     ['BTC dominance',((G.market_cap_percentage||{}).btc||0).toFixed(1)+'%'],
+     ['ETH dominance',((G.market_cap_percentage||{}).eth||0).toFixed(1)+'%'],
+     ['Active assets',num(G.active_cryptocurrencies,0)]].forEach(([k,val])=>gb.appendChild($(`<div class="row"><span class="mut">${k}</span><span class="mono">${val}</span></div>`)));}
+  else gb=`<div class="empty">global stats unavailable</div>`;
+  g.appendChild(panel('Global Crypto', gb, 'CoinGecko', 'span4'));
+  // FX majors
+  let fb;
+  if(INTEL.fx){fb=$(`<div></div>`);Object.entries(INTEL.fx).forEach(([k,val])=>fb.appendChild($(`<div class="row"><span class="mut">USD / ${esc(k)}</span><span class="mono">${num(val,4)}</span></div>`)));}
+  else fb=`<div class="empty">FX unavailable</div>`;
+  g.appendChild(panel('FX Majors', fb, 'frankfurter', 'span4'));
+  // equity indices (ETF proxies)
+  let ib;
+  if(INTEL.indices && INTEL.indices.length){ ib=$(`<div></div>`);
+    INTEL.indices.forEach(q=>{const up=(q.dp||0)>=0;
+      ib.appendChild($(`<div class="row"><span class="mut">${esc(q.label)} <span class="mono" style="font-size:9px">${esc(q.sym)}</span></span>
+        <span><span class="mono">${money(q.c)}</span> <span class="tag ${up?'on':'off'}">${pct(q.dp)}</span></span></div>`));});}
+  else ib = FINNHUB ? `<div class="empty">loading indices…</div>` : `<div class="empty">add FINNHUB_API_KEY for live indices</div>`;
+  g.appendChild(panel('Equity Indices', ib, 'Finnhub', 'span4'));
+  // earnings this week
+  let eb;
+  if(INTEL.earnings && INTEL.earnings.length){ const w=$(`<div class="scroll"></div>`);
+    const t=$(`<table><thead><tr><th>SYM</th><th>DATE</th><th class="opt">HOUR</th><th class="n">EPS EST</th></tr></thead><tbody></tbody></table>`);
+    INTEL.earnings.forEach(e=>t.querySelector('tbody').appendChild($(`<tr><td class="amber">${esc(e.symbol)}</td><td>${esc(e.date)}</td>
+      <td class="mut opt">${esc(e.hour||'')}</td><td class="n">${e.epsEstimate!=null?num(e.epsEstimate):'—'}</td></tr>`)));
+    w.appendChild(t); eb=w; }
+  else eb = FINNHUB ? `<div class="empty">no earnings in the next 7 days</div>` : `<div class="empty">add FINNHUB_API_KEY for the earnings calendar</div>`;
+  g.appendChild(panel('Earnings · Next 7 Days', eb, 'Finnhub', 'span8'));
+  // top movers
+  let mv;
+  if((MARKETS.list||[]).length){const s=[...MARKETS.list].sort((a,b)=>(b.price_change_percentage_24h||0)-(a.price_change_percentage_24h||0));
+    const mk=(arr)=>arr.map(m=>`<div class="row"><span><b class="amber">${esc((m.symbol||'').toUpperCase())}</b> <span class="mut">${money(m.current_price)}</span></span><span class="mono ${(m.price_change_percentage_24h||0)>=0?'up':'down'}">${pct(m.price_change_percentage_24h)}</span></div>`).join('');
+    mv=`<div class="mut mono" style="font-size:10px;margin-bottom:4px">▲ TOP GAINERS</div>${mk(s.slice(0,5))}<div class="mut mono" style="font-size:10px;margin:11px 0 4px">▼ TOP LOSERS</div>${mk(s.slice(-5).reverse())}`;}
+  else mv=`<div class="empty">loading movers…</div>`;
+  g.appendChild(panel('Top Movers · 24h', mv, 'live', 'span6'));
+  // trending
+  let tb;
+  if(INTEL.trending&&INTEL.trending.length){tb=$(`<div></div>`);INTEL.trending.slice(0,10).forEach((c,i)=>{const it=c.item||c;
+    tb.appendChild($(`<div class="row"><span><span class="mut">${i+1}</span> <b class="amber">${esc(it.symbol)}</b> <span class="mut">${esc(it.name)}</span></span><span class="tag">rank ${it.market_cap_rank||'—'}</span></div>`));});}
+  else tb=`<div class="empty">trending unavailable</div>`;
+  g.appendChild(panel('Trending', tb, 'CoinGecko', 'span6'));
+  v.appendChild(g);
+}
+
+function Markets(v){
+  const g=$(`<div class="grid c12"></div>`);
+  let cbody;
+  if(MARKETS.err && !(MARKETS.list||[]).length) cbody=`<div class="empty">crypto feed unavailable (${esc(MARKETS.err)}) — loads live from CoinGecko in your browser.</div>`;
+  else if(!(MARKETS.list||[]).length) cbody='<div class="empty">loading live crypto…</div>';
+  else{
+    const w=$(`<div class="scroll"></div>`);
+    const t=$(`<table><thead><tr><th>#</th><th>COIN</th><th class="n">PRICE</th><th class="n">24H</th><th class="opt">7D TREND</th><th class="n opt">MKT CAP</th><th class="n opt">VOL 24H</th></tr></thead><tbody></tbody></table>`);
+    MARKETS.list.forEach((m,i)=>{const up=(m.price_change_percentage_24h||0)>=0;
+      const spark=cellSpark((m.sparkline_in_7d||{}).price, up?'#34e3a8':'#ff5c6c');
+      t.querySelector('tbody').appendChild($(`<tr><td class="mut">${i+1}</td><td><b class="amber">${esc((m.symbol||'').toUpperCase())}</b> <span class="mut">${esc(m.name)}</span></td>
+        <td class="n">${money(m.current_price)}</td><td class="n ${up?'up':'down'}">${pct(m.price_change_percentage_24h)}</td>
+        <td class="opt">${spark}</td><td class="n opt">$${num(m.market_cap,0)}</td><td class="n opt">$${num(m.total_volume,0)}</td></tr>`));});
+    w.appendChild(t); cbody=w;
+  }
+  g.appendChild(panel('Crypto · Live (CoinGecko, no key)', cbody, (MARKETS.list||[]).length+' assets', 'span12'));
+
+  const syms=((DATA&&DATA.council)||[]).map(c=>c.symbol).filter(s=>!String(s).includes('/'));
+  if(FINNHUB && syms.length){
+    const sb=$(`<div class="empty">loading live quotes…</div>`);
+    g.appendChild(panel('Equities · Live (Finnhub)', sb, syms.length+' symbols', 'span12'));
+    fetchStockQuotes(syms).then(rows=>{
+      const valid=(rows||[]).filter(q=>q && q.c);   // drop empty/zero quotes (bad key / rate limit)
+      if(!valid.length){ sb.textContent='live quotes unavailable — check FINNHUB_API_KEY (free tier 60/min)'; return; }
+      const w=$(`<div class="scroll"></div>`);
+      const t=$(`<table><thead><tr><th>SYM</th><th class="n">PRICE</th><th class="n opt">CHG</th><th class="n">%</th><th class="n opt">HIGH</th><th class="n opt">LOW</th></tr></thead><tbody></tbody></table>`);
+      valid.forEach(q=>{const up=(q.dp||0)>=0; t.querySelector('tbody').appendChild($(`<tr><td class="amber">${esc(q.sym)}</td><td class="n">${money(q.c)}</td>
+        <td class="n opt ${up?'up':'down'}">${(q.d>=0?'+':'')}${num(q.d)}</td><td class="n ${up?'up':'down'}">${pct(q.dp)}</td><td class="n opt">${money(q.h)}</td><td class="n opt">${money(q.l)}</td></tr>`));});
+      w.appendChild(t);            // attach the table (was missing → panel rendered empty)
+      sb.replaceWith(w);
+    }).catch(()=>{ sb.textContent='live quotes unavailable'; });
+  } else {
+    g.appendChild(panel('Equities · Live',
+      `<div class="empty">Add a free <a class="amber" href="https://finnhub.io" target="_blank" rel="noopener">Finnhub</a> key as FINNHUB_API_KEY in config.js to stream live stock quotes (crypto above needs no key).</div>`,'', 'span12'));
+  }
+  v.appendChild(g);
+}
+
+function News(v){
+  const g=$(`<div class="grid c12"></div>`);
+  let body;
+  if(NEWS.err && !(NEWS.list||[]).length) body=`<div class="empty">news feed unavailable (${esc(NEWS.err)}). Some sources block cross-origin; add a free Finnhub key for a reliable wire.</div>`;
+  else if(!(NEWS.list||[]).length) body='<div class="empty">loading financial wire…</div>';
+  else{
+    const box=$(`<div></div>`);
+    NEWS.list.forEach(a=>box.appendChild($(`<a href="${safeUrl(a.url)}" target="_blank" rel="noopener" style="display:block;text-decoration:none;color:inherit;padding:9px 0;border-bottom:1px solid var(--line)">
+      <div style="font-size:13px;font-weight:600;line-height:1.4">${esc(a.title)}</div>
+      <div class="mono mut" style="font-size:10px;margin-top:3px">${esc(a.source||'')} · ${esc(a.time||'')}</div></a>`)));
+    body=box;
+  }
+  g.appendChild(panel('Financial Wire · Live', body, NEWS.src||'free feed', 'span12'));
+  v.appendChild(g);
+}
+async function sbUpdate(fields){ if(!DESK)return; const {error}=await SB.from('desks').update(fields).eq('id',DESK.id);
+  if(error){alert('Update failed: '+error.message);}else{await load();} }
+async function sbCommand(c){ await sbUpdate({command:c}); }
+async function sbLogin(email,password){ const {error}=await SB.auth.signInWithPassword({email,password});
+  if(error){alert('Login failed: '+error.message);}else{await load();} }
+async function sbLogout(){ await SB.auth.signOut(); DESK=null;SESSION=null;CREDS=[]; await load(); }
+// Self-service broker keys: encrypted server-side by the set-credential Edge Function
+// (AES-256-GCM). The browser never holds the encryption key — the value only travels
+// over TLS to the function, which stores the ciphertext per-desk under RLS.
+async function saveCredentials(creds){
+  if(!DESK||!SESSION){alert('Sign in first.');return false;}
+  try{
+    const r=await fetch(`${CFG.SUPABASE_URL}/functions/v1/set-credential`,{method:'POST',
+      headers:{'Content-Type':'application/json','apikey':CFG.SUPABASE_ANON_KEY,
+        'Authorization':'Bearer '+(SESSION.access_token||'')},
+      body:JSON.stringify({desk_id:DESK.id,credentials:creds})});
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok||j.error){alert('Save failed: '+(j.error||('HTTP '+r.status)));return false;}
+    alert('Saved & encrypted: '+((j.saved||[]).join(', ')||'nothing'));
+    await refreshCreds(); render(); return true;
+  }catch(e){ alert('Save failed: '+(e&&e.message||e)); return false; }
+}
+
+// ── nav ──
+// Owner-only tabs (live write controls) are hidden for logged-out family/friends —
+// the public link is a clean, read-only view. The owner reveals them by signing in.
+const OWNER_TABS=["Controls"];
+function visibleTabs(){ return SESSION ? TABS : TABS.filter(t=>!OWNER_TABS.includes(t)); }
+function buildNav(){
+  const nav=document.getElementById('nav'); nav.innerHTML="";
+  visibleTabs().forEach((t,i)=>{const b=$(`<button><span class="fk">${i+1}</span>${t.toUpperCase()}</button>`);
+    if(t===TAB)b.className="active"; b.onclick=()=>{TAB=t;render();buildNav();}; nav.appendChild(b);});
+}
+document.addEventListener('keydown',e=>{
+  if(/input|select|textarea/i.test((e.target.tagName||""))) return;
+  if(e.key>="1"&&e.key<="9"){const vt=visibleTabs();const t=vt[+e.key-1];if(t){TAB=t;render();buildNav();}}
+  if(e.key==="r"||e.key==="R")load();
+});
+
+// ── charts ──
+function areaChart(curve,H=200){
+  if(!curve||curve.length<2){const e=$(`<div class="empty">awaiting equity history…</div>`);return e;}
+  const ys=curve.map(p=>+p.equity||0), n=ys.length;
+  const min=Math.min(...ys), max=Math.max(...ys), span=(max-min)||1;
+  const W=1000, pL=2,pR=2,pT=12,pB=14;
+  const X=i=>pL+i*(W-pL-pR)/(n-1), Y=v=>pT+(1-(v-min)/span)*(H-pT-pB);
+  const pts=ys.map((v,i)=>`${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(' ');
+  const up=ys[n-1]>=ys[0], col=up?'#34e3a8':'#ff5c6c';
+  let grid='';
+  for(let g=0;g<=3;g++){const yy=pT+g*(H-pT-pB)/3; const gv=max-(g/3)*span;
+    grid+=`<line x1="0" y1="${yy}" x2="${W}" y2="${yy}" stroke="rgba(120,150,200,.07)" stroke-width="1"/>`;
+    grid+=`<text x="7" y="${(yy-3).toFixed(1)}" fill="#5a6783" font-size="9" font-family="monospace" opacity=".8">${money(gv)}</text>`;}
+  const uid='ag'+Math.random().toString(36).slice(2,7);
+  const svg=`<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" preserveAspectRatio="none" style="display:block">
+    <defs>
+      <linearGradient id="${uid}" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="${col}" stop-opacity=".34"/><stop offset="1" stop-color="${col}" stop-opacity="0"/></linearGradient>
+      <filter id="${uid}g" x="-20%" y="-20%" width="140%" height="140%">
+        <feDropShadow dx="0" dy="0" stdDeviation="3" flood-color="${col}" flood-opacity=".5"/></filter>
+    </defs>
+    ${grid}
+    <polygon fill="url(#${uid})" points="${pL},${H-pB} ${pts} ${W-pR},${H-pB}"/>
+    <polyline fill="none" stroke="${col}" stroke-width="2" points="${pts}" filter="url(#${uid}g)"/>
+    <circle cx="${X(n-1).toFixed(1)}" cy="${Y(ys[n-1]).toFixed(1)}" r="3.4" fill="${col}" filter="url(#${uid}g)"/></svg>`;
+  const wrap=$(`<div class="chartwrap">${svg}<div class="crosshair"></div><div class="tip"></div></div>`);
+  const cross=wrap.querySelector('.crosshair'), tip=wrap.querySelector('.tip');
+  wrap.addEventListener('mousemove',ev=>{
+    const r=wrap.getBoundingClientRect(); if(!r.width)return;
+    const frac=Math.max(0,Math.min(1,(ev.clientX-r.left)/r.width));
+    const i=Math.round(frac*(n-1)); const px=(X(i)/W)*r.width, py=(Y(ys[i])/H)*r.height;
+    cross.style.display='block'; cross.style.left=px.toFixed(1)+'px';
+    tip.style.display='block'; tip.style.left=px.toFixed(1)+'px'; tip.style.top=py.toFixed(1)+'px';
+    const p=curve[i]||{}; tip.innerHTML=`<b style="color:${col}">${money(ys[i])}</b> <span style="color:#8595b2">· cyc ${p.cycle!=null?p.cycle:i}</span>`;
+  });
+  wrap.addEventListener('mouseleave',()=>{cross.style.display='none';tip.style.display='none';});
+  return wrap;
+}
+function heatColor(s){const v=Math.max(-1,Math.min(1,+s||0));const a=(0.16+0.66*Math.abs(v)).toFixed(2);
+  return v>=0?`rgba(52,227,168,${a})`:`rgba(255,92,108,${a})`;}
+
+// ── animated KPI count-up (ticks from previous value on each refresh) ──
+const LASTKPI={};
+function fmtVal(type,n){return type==='pct'?pct(n):type==='text'?'UNAVAILABLE':type==='disabled'?'DISABLED':type==='count'?String(Math.round(n||0)):money(n);}
+function animateCounts(scope){
+  scope.querySelectorAll('[data-to]').forEach(el=>{
+    const key=el.getAttribute('data-key'),to=+el.getAttribute('data-to'),type=el.getAttribute('data-fmt')||'money';
+    const from=(key in LASTKPI)?LASTKPI[key]:0; LASTKPI[key]=to;
+    if(from===to){el.textContent=fmtVal(type,to);return;}
+    const dur=650,t0=performance.now();
+    (function step(t){const k=Math.min(1,(t-t0)/dur),e=1-Math.pow(1-k,3);
+      el.textContent=fmtVal(type,from+(to-from)*e); if(k<1)requestAnimationFrame(step);})(t0);
+  });
+}
+// ── mini sparkline for KPI tiles ──
+function miniSpark(vals,color){
+  if(!vals||vals.length<2) return '';
+  const n=vals.length,min=Math.min(...vals),max=Math.max(...vals),span=(max-min)||1,W=64,H=26;
+  const pts=vals.map((v,i)=>`${(i*W/(n-1)).toFixed(1)},${(H-2-((v-min)/span)*(H-4)).toFixed(1)}`).join(' ');
+  return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+    <polyline fill="none" stroke="${color}" stroke-width="1.6" stroke-linejoin="round" points="${pts}" opacity=".9"/></svg>`;
+}
+// ── allocation donut ──
+function donut(segs,centerBig,centerSmall){
+  const total=segs.reduce((s,x)=>s+Math.max(0,x.value),0)||1;
+  const R=52,C=64,SW=16,circ=2*Math.PI*R; let off=0;
+  const arcs=segs.map(s=>{const frac=Math.max(0,s.value)/total,len=frac*circ;
+    const seg=`<circle cx="${C}" cy="${C}" r="${R}" fill="none" stroke="${s.color}" stroke-width="${SW}"
+      stroke-dasharray="${len.toFixed(2)} ${(circ-len).toFixed(2)}" stroke-dashoffset="${(-off).toFixed(2)}"
+      stroke-linecap="butt"/>`; off+=len; return seg;}).join('');
+  const wrap=$(`<div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+    <svg class="ring" width="128" height="128" viewBox="0 0 128 128">
+      <circle cx="${C}" cy="${C}" r="${R}" fill="none" stroke="rgba(255,255,255,.05)" stroke-width="${SW}"/>${arcs}</svg>
+    <div style="flex:1;min-width:120px"></div></div>`);
+  const center=$(`<div style="position:absolute;width:128px;height:128px;display:grid;place-items:center;text-align:center;pointer-events:none">
+    <div><div class="donutlabel" style="font-size:17px;font-weight:700">${centerBig}</div>
+    <div class="donutlabel mut" style="font-size:9px;letter-spacing:1px;text-transform:uppercase">${centerSmall||''}</div></div></div>`);
+  const svgBox=$(`<div style="position:relative;width:128px;height:128px"></div>`);
+  svgBox.appendChild(wrap.querySelector('svg')); svgBox.appendChild(center);
+  wrap.insertBefore(svgBox,wrap.firstChild);
+  const legend=wrap.lastChild;
+  segs.forEach(s=>legend.appendChild($(`<div class="row" style="padding:5px 0">
+    <span><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${s.color};margin-right:7px;box-shadow:0 0 8px ${s.color}"></span>${esc(s.label)}</span>
+    <span class="mono">${money(s.value)} <span class="mut">${(100*Math.max(0,s.value)/total).toFixed(0)}%</span></span></div>`)));
+  return wrap;
+}
+// ── radial gauge (0..1) ──
+function ringGauge(frac,big,label,color){
+  frac=Math.max(0,Math.min(1,frac||0));
+  const R=46,C=60,SW=13,circ=2*Math.PI*R,len=frac*circ;
+  return $(`<div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+    <div style="position:relative;width:120px;height:120px">
+      <svg class="ring" width="120" height="120" viewBox="0 0 120 120">
+        <circle cx="${C}" cy="${C}" r="${R}" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="${SW}"/>
+        <circle cx="${C}" cy="${C}" r="${R}" fill="none" stroke="${color}" stroke-width="${SW}" stroke-linecap="round"
+          stroke-dasharray="${circ.toFixed(2)}" stroke-dashoffset="${(circ-len).toFixed(2)}" style="filter:drop-shadow(0 0 6px ${color})"/></svg>
+      <div style="position:absolute;inset:0;display:grid;place-items:center;text-align:center">
+        <div><div class="mono" style="font-size:21px;font-weight:700;color:${color}">${big}</div>
+        <div class="mono mut" style="font-size:8.5px;letter-spacing:1px;text-transform:uppercase">${esc(label||'')}</div></div></div>
+    </div></div>`);
+}
+
+// ── header status ──
+function setStatus(){
+  const h=(DATA&&DATA.health)||{};
+  const md=document.getElementById('mode'); const m=(DATA&&DATA.mode)||'—';
+  const rt=runtimeIsFresh(),venue=rt?'Robinhood':((DATA&&DATA.broker)||h.broker||'');
+  const mLabel = rt?'LIVE DATA · READ ONLY':(m==='LIVE'?'LIVE':(m==='paper'?'PAPER':(m==='offline-sim'?'SIM':(m==='live-data'?'LIVE DATA':m))));
+  md.textContent = venue ? `${venue.toUpperCase()} · ${mLabel}` : mLabel;
+  const c = rt?'var(--cyan)':(m==='LIVE'?'var(--down)':(m==='paper'?'var(--up)':(m==='live-data'?'var(--cyan)':'var(--amber)')));
+  md.style.color=c; md.style.borderColor=c;
+  // Honest real-money banner: only when a LIVE venue is deliberately armed.
+  const armed=!!h.live_armed;
+  const lb=document.getElementById('liveBanner');
+  if(lb){ lb.style.display=armed?'':'none';
+    const lv=document.getElementById('liveVenue'); if(lv)lv.textContent=(venue||'broker').toUpperCase(); }
+  // Always-visible kill switch (owner + Supabase desk): one tap from any device.
+  // Writes desk.halt → the worker turns it into TRADING_HALT next cycle.
+  const kb=document.getElementById('killBtn');
+  if(kb){
+    if(SESSION && DESK){
+      kb.style.display='';
+      if(DESK.halt){ kb.textContent='▶ RESUME'; kb.style.color='var(--up)'; kb.style.borderColor='var(--up)';
+        kb.onclick=()=>sbUpdate({halt:false}); }
+      else { kb.textContent='⛔ STOP'; kb.style.color='var(--down)'; kb.style.borderColor='var(--down)';
+        kb.onclick=()=>sbUpdate({halt:true}); }
+    } else { kb.style.display='none'; }
+  }
+  // Halt banner: owner's remote kill switch OR the engine's circuit breaker.
+  const halted=(DESK&&DESK.halt)||((h.circuit_breaker||{}).halted);
+  const hbn=document.getElementById('haltBanner'); if(hbn)hbn.style.display=halted?'':'none';
+  const db=document.getElementById('dBroker'), dm=document.getElementById('dMkt');
+  document.getElementById('brokerTxt').textContent =
+    (venue?venue.toUpperCase()+' ':'') + (rt?'AUTHENTICATED':(h.broker_online?'LIVE FEED':'OFFLINE SIM'));
+  db.className='dot '+(rt||h.broker_online?'g':'a');
+  document.getElementById('mktTxt').textContent = h.market_open?'OPEN':'CLOSED';
+  // 90-day evaluation countdown — the window is what makes the final number mean
+  // something, so keep it in sight rather than buried in a file.
+  const eb=document.getElementById('evalBadge');
+  const ev=(DATA.health||{}).evaluation||{};
+  if(eb){
+    const am=Array.isArray(ev.amendments)?ev.amendments:[];
+    if(ev.voided){ eb.style.display=''; eb.className='evalBadge off';
+      // A void window that still counts down would keep advertising a result it
+      // cannot produce. Say VOID, not "day 9 of 90".
+      eb.textContent='EVAL VOID';
+      eb.title=(ev.void_verdict||'This out-of-sample window has been voided.')
+        +`\nVoided at day ${ev.day}/${ev.days}. See public/evaluation.json for the reasoning and the restart preconditions.`;
+    }
+    else if(ev.days){ eb.style.display='';
+      // An amended window is still a valid window, but the reader has to know.
+      eb.textContent=`EVAL ${ev.day}/${ev.days}`+(am.length?` ·${am.length}Δ`:'');
+      eb.title=`Out-of-sample window ${ev.pct}% elapsed · frozen at ${ev.frozen_at_commit}`
+        +`\nDecision date: ${String(ev.ends_at||'').slice(0,10)}`
+        +(am.length?`\nAmended ${am.length}×: `+am.map(a=>`${String(a.at||'').slice(0,10)} ${a.change||''}`).join('; '):'')
+        +(ev.active?'':' · WINDOW CLOSED — time to judge the result'); }
+    else eb.style.display='none';
+  }
+  const liveBadge=document.getElementById('liveBadge');
+  if(liveBadge) liveBadge.style.display =
+    (String(DATA.mode||'').toUpperCase()==='LIVE' && ACTIVE_DESK==='live') ? '' : 'none';
+  dm.className='dot '+(h.market_open?'g':'r');
+  document.getElementById('cycTxt').textContent = (DATA&&DATA.cycle)||'0';
+  const acc=document.getElementById('account');
+  const vb=document.getElementById('viewerBadge');
+  if(SESSION&&SESSION.user){acc.style.display='';acc.textContent='⏻ '+String(SESSION.user.email).split('@')[0];acc.removeAttribute('href');acc.onclick=()=>sbLogout();
+    try{localStorage.setItem('sahjony_owner','1');}catch(_){}
+    if(vb)vb.style.display='none';}
+  else{
+    // Shared/public links get a clean view-only page: the owner entry point is
+    // hidden unless this device has proven ownership (signed in before, or
+    // visited once with #owner). Owner can always go to /login.html directly.
+    acc.style.display=OWNER_DEVICE()?'':'none';
+    acc.textContent='SIGN IN';acc.setAttribute('href','./login.html');acc.onclick=null;
+    if(vb)vb.style.display='';}
+  setStreamDot();
+}
+function buildTape(){
+  const t=document.getElementById('tape'); if(!t)return;
+  const parts=[];
+  const archive=!snapshotIsFresh();
+  ((DATA&&DATA.council)||[]).forEach(c=>{const upd=c.direction==='long';const col=upd?'var(--up)':(c.direction==='short'?'var(--down)':'var(--mut)');
+    const arr=upd?'▲':(c.direction==='short'?'▼':'■');
+    parts.push(`<span class="tk" title="${archive?'Archived simulation snapshot':'Current desk snapshot'}"><b>${archive?'ARCHIVE · ':''}${esc(c.symbol)}</b> ${money(c.price)} <span style="color:${col}">${arr} ${(c.conviction*100).toFixed(0)}%</span></span>`);});
+  cryptoRows().slice(0,14).forEach(m=>{const up=(m.pct||0)>=0;const col=up?'var(--up)':'var(--down)';
+    parts.push(`<span class="tk"><b>${esc(m.sym)}</b> ${money(m.price)} <span style="color:${col}">${up?'▲':'▼'} ${(m.pct||0).toFixed(2)}%</span></span>`);});
+  if(!parts.length){t.innerHTML='<span class="tk mut">awaiting market data…</span>';return;}
+  const one=parts.join(''); t.innerHTML=one+one;   // duplicate for seamless loop
+}
+
+function render(){
+  const v=document.getElementById('view');
+  if(!SESSION && OWNER_TABS.includes(TAB)) TAB="Parquet";   // viewers never land on owner tabs
+  if(!DATA||DATA._error){v.innerHTML=`<div class="panel"><div class="pb empty">No data feed. Run the desk or sign in. ${esc(DATA&&DATA._error||'')}</div></div>`;
+    document.getElementById('foot').textContent='no feed'; updateFreshness(); return;}
+  document.getElementById('firm').textContent=(DATA.firm||'SAHJONY CAPITAL').replace(/ LLC$/,'');
+  setStatus(); buildTape();
+  const _tms=tsMs(DATA.ts), _when=_tms!=null?`${new Date(_tms).toLocaleString()} (${relAge(Date.now()-_tms)})`:'time unknown';
+  const _fresh=snapshotIsFresh();
+  document.getElementById('foot').textContent =
+    runtimeIsFresh()?`Robinhood Agentic ••••${esc(RH.agentic.account_number_last4)} · authenticated ${relAge(runtimeAgeMs())} · read-only · auto-refresh 30s`:
+    `cycle ${DATA.cycle} · ${_when} · ${_fresh&&DESK?'LIVE via Supabase':(_fresh?'current snapshot':'ARCHIVED simulation snapshot')} · auto-refresh 30s`;
+  updateFreshness();
+  v.innerHTML="";
+  if(!_fresh&&!runtimeIsFresh()){
+    v.appendChild($(`<div class="cb span12" style="border-color:var(--amber);background:rgba(255,184,77,.08);color:var(--amber)">
+      ⚠ <b>ARCHIVED SIMULATION DATA</b> — equities, NAV, P&amp;L, council signals, positions, and activity below are ${esc(relAge(snapshotAgeMs()))} old and are not real-time broker truth. Live crypto/market widgets are labeled separately. Trading authority remains disabled.
+    </div>`));
+  } else if(runtimeIsFresh()&&!_fresh){
+    v.appendChild($(`<div class="cb span12" style="border-color:var(--cyan);background:rgba(42,216,240,.08);color:var(--cyan)">
+      ● <b>AUTHENTICATED ROBINHOOD DATA</b> — account balances and positions below are current read-only broker telemetry. Research analytics remain archived and are labeled separately. Trading authority remains disabled.
+    </div>`));
+  }
+  ({Parquet,Perf,Markets,Macro,News,Council,Book,Brain,"War Room":WarRoom,Operations,Controls,Workforce,Env}[TAB]||Parquet)(v);
+}
+
+// ── AI War Room: permanent shadow-learning leaderboard ──
+function WarRoom(v){
+  const wrap=$(`<div class="panel span12"></div>`);
+  wrap.innerHTML=`<div class="ph"><h3>AI War Room</h3><span class="x">shadow evaluation · no order authority</span></div>
+    <div class="pb" style="padding:0;overflow:hidden">
+      <div class="row" style="padding:10px 14px;border-bottom:1px solid var(--line2)">
+        <span class="commentary">Live model leaderboard, promotion gates, calibration, latency, and learning progress.</span>
+        <a class="btn" href="./ai-war-room" target="_blank" rel="noopener">OPEN FULL SCREEN ↗</a>
+      </div>
+      <iframe src="./ai-war-room.html" title="SAHJONY AI War Room" loading="eager"
+        style="display:block;width:100%;height:clamp(620px,78vh,1050px);border:0;background:#070a10"></iframe>
+    </div>`;
+  v.appendChild(wrap);
+}
+
+// ── Operations: account, broker, workforce, risk, and execution command center ──
+function Operations(v){
+  const wrap=$(`<div class="panel span12"></div>`);
+  wrap.innerHTML=`<div class="ph"><h3>Operations Command Center</h3><span class="x">read-only operational visibility</span></div>
+    <div class="pb" style="padding:0;overflow:hidden">
+      <div class="row" style="padding:10px 14px;border-bottom:1px solid var(--line2)">
+        <span class="commentary">Broker identity, funding readiness, AI workforce, risk controls, strategies, and execution pipeline.</span>
+        <a class="btn" href="./operations" target="_blank" rel="noopener">OPEN FULL SCREEN ↗</a>
+      </div>
+      <iframe src="./operations.html" title="SAHJONY Operations Command Center" loading="eager"
+        style="display:block;width:100%;height:clamp(680px,82vh,1150px);border:0;background:#070a10"></iframe>
+    </div>`;
+  v.appendChild(wrap);
+}
+
+// ── Performance: honest, data-driven scorecard (proves or disproves the desk) ──
+function Perf(v){
+  const cur=(DATA.equity_curve||[]), acc=DATA.account||{}, p=DATA.pnl||{}, b=DATA.benchmark||{};
+  const rets=[]; for(let i=1;i<cur.length;i++){const a=+cur[i-1].equity||0,c=+cur[i].equity||0; if(a>0)rets.push(c/a-1);}
+  const mean=rets.length?rets.reduce((s,x)=>s+x,0)/rets.length:0;
+  const sd=rets.length>1?Math.sqrt(rets.reduce((s,x)=>s+(x-mean)*(x-mean),0)/(rets.length-1)):0;
+  const sharpe=sd>0?mean/sd:0, wins=rets.filter(x=>x>0).length, winRate=rets.length?wins/rets.length*100:0;
+  const dd=ddSeries(cur), maxDD=dd.length?Math.min(...dd):0;
+  const totRet=(p.total_return_pct!=null)?p.total_return_pct:(acc.equity_start?((acc.equity/acc.equity_start-1)*100):0);
+  const g=$(`<div class="grid c12"></div>`);
+  const gp=goalPanel(cur,b,maxDD); if(gp) g.appendChild(gp);
+  if(cur.length<30) g.appendChild($(`<div class="span12"><div class="cb" style="border-color:var(--amber);background:linear-gradient(90deg,rgba(255,176,0,.12),transparent);color:#ffe9b0">⚠ Only ${cur.length} cycles of history — these numbers are <b>noise, not skill</b>. They mean little until ~30+ cycles across different market conditions. A few good cycles ≠ an edge.</div></div>`));
+  const kw=$(`<div class="span12"><div class="kpis"></div></div>`), k=kw.querySelector('.kpis');
+  const tile=(l,val,cls,acc2)=>k.appendChild($(`<div class="kpi" style="--accent:${acc2||'var(--amber)'}"><div class="l">${l}</div><div class="v ${cls||''}">${val}</div></div>`));
+  tile('Total Return',(totRet>=0?'+':'')+totRet.toFixed(2)+'%',totRet>=0?'up':'down');
+  if(b&&b.alpha_pct!=null){ tile('Alpha vs '+(b.symbol||'SPY'),(b.alpha_pct>=0?'+':'')+b.alpha_pct.toFixed(2)+'%',b.alpha_pct>=0?'up':'down','var(--cyan)');
+    tile((b.symbol||'SPY')+' buy&hold',(b.return_pct>=0?'+':'')+b.return_pct.toFixed(2)+'%',b.return_pct>=0?'up':'down'); }
+  else tile('Alpha vs SPY','— (gathering)','mut');
+  tile('Max Drawdown',maxDD.toFixed(2)+'%','down','var(--down)');
+  tile('Volatility / cycle',(sd*100).toFixed(2)+'%','');
+  tile('Sharpe / cycle',sharpe.toFixed(2),sharpe>=0?'up':'down','var(--violet)');
+  tile('Cycle Win Rate',winRate.toFixed(0)+'%','');
+  tile('Cycles Tracked',String(cur.length),'mut');
+  g.appendChild(kw);
+  g.appendChild(panel('Drawdown · Underwater',drawdownChart(cur,160),'peak-to-trough %','span12'));
+  g.appendChild(panel('Reality Check', `<div class="commentary"><b>Alpha vs SPY is the only number that matters.</b> It must stay positive across many cycles and different market regimes before it means anything — beating the market briefly is usually luck. The council uses transparent public-domain signals, not a proven edge; this panel exists to <b>prove or disprove</b> the desk with data, not to flatter it. Keep it on paper until the track record earns trust.</div>`,'','span12'));
+  v.appendChild(g);
+}
+
+// ── Goal · Progress: scores the live HERMES_GOAL against its measurable gates ──
+// (beat buy&hold / drawdown<15% / track-record toward 90 days) — honest north star.
+function goalPanel(cur,b,maxDD){
+  const goal=((((DATA.health||{}).hermes)||{}).goal)||'';
+  if(!goal) return null;
+  const alpha=(b&&b.alpha_pct!=null)?b.alpha_pct:null;
+  const DD_LIMIT=15, TARGET_DAYS=90;
+  const ddOk=Math.abs(maxDD)<DD_LIMIT, alphaOk=(alpha!=null&&alpha>0);
+  let days=0;
+  if(cur.length>=2){const t0=Date.parse(cur[0].ts||''),t1=Date.parse(cur[cur.length-1].ts||'');if(t1>t0)days=(t1-t0)/86400000;}
+  let verdict,vcls,vmsg;
+  if(alpha==null){verdict='GATHERING DATA';vcls='amber';vmsg='Alpha vs benchmark is still anchoring — no verdict yet.';}
+  else if(!ddOk){verdict='DRAWDOWN LIMIT HIT';vcls='off';vmsg='Max drawdown breached the 15% mandate — de-risk before anything else.';}
+  else if(!alphaOk){verdict='NO EDGE YET';vcls='off';vmsg='Not beating buy-and-hold. Stay on paper; do not scale live capital.';}
+  else if(days<TARGET_DAYS){verdict='PROMISING · BUILDING';vcls='amber';vmsg='Beating buy-and-hold within risk limits — keep compounding the track record before scaling.';}
+  else {verdict='EDGE HOLDING';vcls='on';vmsg='Positive alpha within risk limits over a meaningful window — candidate for a deliberate capital scale-up.';}
+  const gate=(label,val,ok,detail)=>`<div style="margin:7px 0">
+    <div class="row"><span class="mut">${label}</span><span class="tag ${ok?'on':'off'}">${val}</span></div>
+    <div class="mut mono" style="font-size:10px;margin-top:2px">${detail}</div></div>`;
+  const bh=(b&&b.return_pct!=null)?((b.return_pct>=0?'+':'')+b.return_pct.toFixed(1)+'%'):'—';
+  const body=`
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px">
+      <span class="tag ${vcls}" style="font-size:13px;padding:6px 13px;letter-spacing:1px">${verdict}</span>
+      <span class="commentary" style="flex:1;min-width:220px">${vmsg}</span></div>
+    ${gate('① Beat buy &amp; hold (alpha vs '+((b&&b.symbol)||'BTC')+')', alpha==null?'—':(alpha>=0?'+':'')+alpha.toFixed(2)+'%', alphaOk, 'goal: stay positive · '+((b&&b.symbol)||'BTC')+' buy&hold '+bh)}
+    ${gate('② Max drawdown under 15%', maxDD.toFixed(1)+'%', ddOk, 'mandate: keep shallower than -15% · currently using '+(Math.min(999,Math.abs(maxDD)/DD_LIMIT*100)).toFixed(0)+'% of the limit')}
+    ${gate('③ Track record toward 90 days', days.toFixed(1)+' days', days>=TARGET_DAYS, 'prove it is edge, not luck · '+(Math.min(100,days/TARGET_DAYS*100)).toFixed(0)+'% there')}
+    <div class="commentary" style="margin-top:9px;font-size:11px;opacity:.85"><b>Goal:</b> ${goal}</div>`;
+  return panel('🎯 Goal · Progress', body, 'north star', 'span12');
+}
+
+// ── panels helper ──
+function panel(title,bodyEl,extra="",span=""){
+  const p=$(`<div class="panel ${span}"><div class="ph"><h3>${title}</h3><span class="x">${extra}</span></div></div>`);
+  const b=$(`<div class="pb"></div>`); if(typeof bodyEl==='string')b.innerHTML=bodyEl; else b.appendChild(bodyEl); p.appendChild(b); return p;
+}
+
+// ── drawdown (underwater) series + chart ──
+function ddSeries(curve){let peak=-Infinity;return (curve||[]).map(p=>{const e=+p.equity||0;peak=Math.max(peak,e);return peak>0?((e-peak)/peak*100):0;});}
+function drawdownChart(curve,H=150){
+  if(!curve||curve.length<2)return $(`<div class="empty">awaiting history…</div>`);
+  const ys=ddSeries(curve),n=ys.length,min=Math.min(...ys,-0.0001),max=0,span=(max-min)||1;
+  const W=1000,pT=10,pB=14,pL=2,pR=2;
+  const X=i=>pL+i*(W-pL-pR)/(n-1),Y=v=>pT+(1-(v-min)/span)*(H-pT-pB);
+  const pts=ys.map((v,i)=>`${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(' ');
+  const col='#ff5c6c';let grid='';
+  for(let g=0;g<=2;g++){const yy=pT+g*(H-pT-pB)/2,gv=max-(g/2)*span;
+    grid+=`<line x1="0" y1="${yy}" x2="${W}" y2="${yy}" stroke="rgba(120,150,200,.07)"/>`;
+    grid+=`<text x="7" y="${(yy-3).toFixed(1)}" fill="#5a6783" font-size="9" font-family="monospace">${gv.toFixed(1)}%</text>`;}
+  const svg=`<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" preserveAspectRatio="none" style="display:block">
+    <defs><linearGradient id="ddg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${col}" stop-opacity="0"/><stop offset="1" stop-color="${col}" stop-opacity=".34"/></linearGradient></defs>
+    ${grid}<polygon fill="url(#ddg)" points="${pL},${Y(0).toFixed(1)} ${pts} ${(W-pR)},${Y(0).toFixed(1)}"/>
+    <polyline fill="none" stroke="${col}" stroke-width="2" points="${pts}"/></svg>`;
+  return $(`<div class="chartwrap">${svg}</div>`);
+}
+function perfStats(curve){
+  const e=(curve||[]).map(p=>+p.equity||0);const box=$(`<div></div>`);
+  if(e.length<2){box.innerHTML='<div class="empty">awaiting history…</div>';return box;}
+  let peak=e[0],maxDD=0;for(const x of e){peak=Math.max(peak,x);maxDD=Math.min(maxDD,(x-peak)/peak*100);}
+  const top=Math.max(...e),curDD=(e[e.length-1]-top)/top*100;
+  let best=-1e9,worst=1e9;for(let i=1;i<e.length;i++){const d=(e[i]-e[i-1])/(e[i-1]||1)*100;best=Math.max(best,d);worst=Math.min(worst,d);}
+  [['Peak equity',money(top),''],['Current drawdown',curDD.toFixed(2)+'%',curDD<-0.005?'down':'up'],
+   ['Max drawdown',maxDD.toFixed(2)+'%','down'],['Best cycle',(best>=0?'+':'')+best.toFixed(2)+'%','up'],
+   ['Worst cycle',worst.toFixed(2)+'%','down'],['Cycles tracked',String(e.length),'']]
+   .forEach(([k,v,cls])=>box.appendChild($(`<div class="row"><span class="mut">${k}</span><span class="mono ${cls||''}">${v}</span></div>`)));
+  return box;
+}
+function cellSpark(vals,color){if(!vals||vals.length<2)return'';
+  const n=vals.length,min=Math.min(...vals),max=Math.max(...vals),span=(max-min)||1,W=72,H=22;
+  const pts=vals.map((v,i)=>`${(i*W/(n-1)).toFixed(1)},${(H-2-((v-min)/span)*(H-4)).toFixed(1)}`).join(' ');
+  return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="display:block"><polyline fill="none" stroke="${color}" stroke-width="1.5" stroke-linejoin="round" points="${pts}"/></svg>`;}
+
+// ── positions treemap (area = market value, color = unrealized P&L) ──
+function treemap(positions,H=300){
+  const items=(positions||[]).filter(p=>(+p.market_value||0)>0).map(p=>({...p,v:+p.market_value||0})).sort((a,b)=>b.v-a.v);
+  if(!items.length)return $(`<div class="empty">flat — no open positions to map</div>`);
+  const wrap=$(`<div class="treemap" style="position:relative;width:100%;height:${H}px"></div>`);
+  function add(p,x,y,w,h){
+    const cb=+p.cost_basis||0,r=cb>0?(+p.unrealized||0)/cb:0,col=heatColor(Math.max(-1,Math.min(1,r*8)));
+    const big=(w>0.14&&h>0.16);
+    const t=$(`<div title="${esc(p.symbol)} · ${money(p.market_value)} · uPnL ${money(p.unrealized)}"
+      style="position:absolute;left:${(x*100).toFixed(2)}%;top:${(y*100).toFixed(2)}%;width:${(w*100).toFixed(2)}%;height:${(h*100).toFixed(2)}%;
+      padding:6px 8px;border:2px solid var(--bg);border-radius:7px;background:${col};overflow:hidden;cursor:default;transition:filter .15s"
+      onmouseover="this.style.filter='brightness(1.15)'" onmouseout="this.style.filter=''">
+      <div style="font-weight:800;color:#04121a;font-size:${big?13:11}px;letter-spacing:.3px">${esc(p.symbol)}</div>
+      ${big?`<div style="color:rgba(4,18,26,.78);font-family:var(--mono);font-size:10px;margin-top:2px">${money(p.market_value)}</div>
+      <div style="color:rgba(4,18,26,.78);font-family:var(--mono);font-size:10px">${p.unrealized>=0?'+':''}${money(p.unrealized)}</div>`:''}</div>`);
+    wrap.appendChild(t);
+  }
+  (function lay(list,x,y,w,h,horiz){
+    if(list.length===1){add(list[0],x,y,w,h);return;}
+    const sum=list.reduce((s,i)=>s+i.v,0)||1;let acc=0,split=1;
+    for(let i=0;i<list.length;i++){acc+=list[i].v;if(acc>=sum/2){split=i+1;break;}}
+    split=Math.max(1,Math.min(list.length-1,split));
+    const a=list.slice(0,split),b=list.slice(split),frac=a.reduce((s,i)=>s+i.v,0)/sum;
+    if(horiz){lay(a,x,y,w*frac,h,!horiz);lay(b,x+w*frac,y,w*(1-frac),h,!horiz);}
+    else{lay(a,x,y,w,h*frac,!horiz);lay(b,x,y+h*frac,w,h*(1-frac),!horiz);}
+  })(items,0,0,1,1,true);
+  return wrap;
+}
+
+function kpis(){
+  const live=runtimeAccount(),a=live||(DATA.account||{}),p=DATA.pnl||{}; const ret=p.total_return_pct||0;
+  const verified=p.broker_verified===true;
+  const CY='#2ad8f0',VI='#9b8cff',AM='#ffb000',UP='#34e3a8',DN='#ff5c6c';
+  const eqVals=(DATA.equity_curve||[]).map(x=>+x.equity||0);
+  // [label, numericValue, fmt, cssClass, accentColor, sparkSVG]
+  const tiles=[
+    [live?'Robinhood Account Value':'Equity / NAV',a.equity,'money','',CY, live?'':miniSpark(eqVals,CY)],
+    [live?'Broker Return':'Total Return',live?null:ret,live?'text':'pct',ret>=0?'up':'down', live?AM:(ret>=0?UP:DN), ''],
+    ['Cash',a.cash,'money','',VI,''],
+    ['Deployed',a.deployed,'money','',AM,''],
+    [live?'Authenticated Positions':'Simulated Realized P&L',live?a.positions.length:p.realized,live?'count':'money','',live?UP:((p.realized||0)>=0?UP:DN),''],
+    [live?'Execution Authority':'Premium',live?null:p.premium_collected,live?'disabled':'money','',AM,''],
+  ];
+  const g=$(`<div class="kpis"></div>`);
+  tiles.forEach(([l,val,fmt,c,accent,spark],i)=>g.appendChild($(
+    `<div class="kpi" style="--accent:${accent}">
+       <div class="l">${l}</div>
+       <div class="v ${c}" data-key="k${i}" data-to="${Number(val||0)}" data-fmt="${fmt}">${fmt==='text'?'UNAVAILABLE':fmt==='count'?String(val||0):fmt==='disabled'?'DISABLED':fmtVal(fmt,val||0)}</div>
+       ${spark}
+     </div>`)));
+  animateCounts(g);
+  return g;
+}
+
+function cbBanner(){
+  const cb=(DATA.health&&DATA.health.circuit_breaker)||{};
+  if(runtimeIsFresh()) return `<div class="cb ok">● <b>AUTHENTICATED READ-ONLY BROKER DATA</b> — Agentic ••••${esc(RH.agentic.account_number_last4)} · execution authority disabled · no order routes.</div>`;
+  if(DATA.mode!=='LIVE') return `<div class="cb" style="border-color:var(--amber);background:linear-gradient(90deg,rgba(255,176,0,.12),transparent);color:#ffe9b0">⚠ <b>SIMULATION / RESEARCH ACCOUNTING</b> — P&amp;L is not reconciled to Robinhood fills or statements.</div>`;
+  if(cb.halted) return `<div class="cb halt">⛔ <b>NEW RISK HALTED</b> — ${esc(cb.reason||'')}</div>`;
+  return `<div class="cb ok">● TRADING ACTIVE · day P&L ${pct((cb.day_return||0)*100)} · auto-halt at −${((cb.limit_pct||0)*100).toFixed(0)}%</div>`;
+}
+
+function Parquet(v){
+  const root=$(`<div></div>`);
+  root.appendChild($(cbBanner()));
+  root.appendChild(kpis());
+  if(runtimeIsFresh()){
+    const liveGrid=$(`<div class="grid c12" style="margin-top:12px"></div>`);
+    liveGrid.appendChild(robinhoodPanel());
+    liveGrid.appendChild(panel('Live Data Safety State',
+      `<div class="row"><span class="mut">Source</span><span class="tag on">ROBINHOOD MCP · AUTHENTICATED</span></div>
+       <div class="row"><span class="mut">Account</span><span class="mono">Agentic ••••${esc(RH.agentic.account_number_last4)}</span></div>
+       <div class="row"><span class="mut">Data age</span><span class="mono">${esc(relAge(runtimeAgeMs()))}</span></div>
+       <div class="row"><span class="mut">Execution authority</span><span class="tag off">DISABLED</span></div>
+       <div class="row"><span class="mut">Trading ready</span><span class="tag off">FALSE</span></div>`,
+      'broker truth only', 'span6'));
+    liveGrid.appendChild(panel('Research Archive',
+      `<div class="commentary">Simulation NAV, P&amp;L, council signals, and activity are ${esc(relAge(snapshotAgeMs()))} old and are intentionally excluded from this real-time account view. Use PERF or COUNCIL only as archived research context.</div>`,
+      'not broker truth', 'span6'));
+    root.appendChild(liveGrid); v.appendChild(root); return;
+  }
+  const g=$(`<div class="grid c12" style="margin-top:12px"></div>`);
+
+  // AI market read (synthesis of council + brain + macro intelligence)
+  const mr=marketRead();
+  g.appendChild(panel('AI Market Read',
+    `<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <span class="tag ${mr.cls}" style="font-size:13px;padding:6px 13px;letter-spacing:1px">${mr.posture}</span>
+      <span class="commentary">${mr.text}</span></div>`, 'synthesized', 'span12'));
+
+  // equity chart (interactive) + allocation donut
+  const eq=DATA.account||{},p=DATA.pnl||{};
+  g.appendChild(panel('Equity Curve · NAV', areaChart(DATA.equity_curve),
+    `start ${money(eq.equity_start)}`, 'span8'));
+
+  const compact=(n)=>{n=+n||0;const ab=Math.abs(n);return '$'+(ab>=1e6?(n/1e6).toFixed(2)+'M':ab>=1e3?(n/1e3).toFixed(1)+'k':n.toFixed(0));};
+  g.appendChild(panel('Capital Allocation',
+    donut([{label:'Cash',value:eq.cash,color:'#2ad8f0'},{label:'Deployed',value:eq.deployed,color:'#ffb000'}],
+      compact(eq.equity),'NAV'), 'cash vs deployed', 'span4'));
+
+  // drawdown (underwater) + performance analytics
+  g.appendChild(panel('Drawdown · Underwater', drawdownChart(DATA.equity_curve), 'peak-to-trough', 'span8'));
+  g.appendChild(panel('Performance Analytics', perfStats(DATA.equity_curve), 'since inception', 'span4'));
+
+  // market posture gauge
+  const council=DATA.council||[];
+  const avgConv=council.length?council.reduce((s,x)=>s+(+x.conviction||0),0)/council.length:0;
+  const longs=council.filter(x=>x.direction==='long').length, shorts=council.filter(x=>x.direction==='short').length;
+  const gcol=mr.cls==='on'?'#34e3a8':mr.cls==='off'?'#ff5c6c':'#ffb000';
+  const gbody=$(`<div style="display:flex;flex-direction:column;align-items:center;gap:11px"></div>`);
+  gbody.appendChild(ringGauge(avgConv,(avgConv*100).toFixed(0)+'%','conviction',gcol));
+  gbody.appendChild($(`<div style="text-align:center">
+    <span class="tag ${mr.cls}" style="font-size:12px;padding:4px 12px;letter-spacing:1px">${mr.posture}</span>
+    <div class="mut mono" style="font-size:10px;margin-top:8px">${longs}L · ${shorts}S · ${council.length} symbols</div></div>`));
+  g.appendChild(panel('Market Posture', gbody, 'synthesized', 'span4'));
+
+  // AI brain strip
+  const b=DATA.brain||{};
+  const brainBody=$(`<div></div>`);
+  brainBody.innerHTML=`<div class="row"><span class="mut">Chief Strategist</span><span class="tag ${b.used?'on':'off'}">Claude · ${b.used?'active':(b.enabled?'idle':'off')}</span></div>
+    <div class="row"><span class="mut">Posture</span><span class="tag ${b.posture==='risk_off'?'off':(b.posture==='risk_on'?'on':'amber')}">${esc(b.posture||'neutral')}</span></div>
+    <div class="row"><span class="mut">Global risk ×</span><span class="tag">${(b.global_risk_multiplier||1).toFixed(2)}</span></div>
+    <div class="commentary" style="margin-top:9px">${b.commentary?esc(b.commentary):'<span class="empty">AI overlay idle — set ANTHROPIC_API_KEY + AI_BRAIN_ENABLED.</span>'}</div>`;
+  g.appendChild(panel('AI Brain', brainBody, '', 'span4'));
+
+  // risk + circuit breaker
+  const rc=(DATA.health&&DATA.health.risk_caps)||{};
+  const riskBody=$(`<div></div>`);
+  riskBody.innerHTML=cbBanner();
+  [['Per-position cap',(rc.per_position_pct*100||0).toFixed(0)+'%'],
+   ['Total deployed cap',(rc.total_deployed_pct*100||0).toFixed(0)+'%'],
+   ['Min conviction',(rc.min_conviction*100||0).toFixed(0)+'%'],
+   ['Daily-loss halt',(rc.daily_drawdown_pct*100||0).toFixed(0)+'%']]
+   .forEach(([k,val])=>riskBody.appendChild($(`<div class="row"><span class="mut">${k}</span><span class="tag amber">${val}</span></div>`)));
+  g.appendChild(panel('Risk Gatekeeper', riskBody, '', 'span4'));
+
+  // broker/venue account (e.g. Robinhood) — the venue's own numbers
+  const bh=(DATA.broker_account&&DATA.broker_account.holdings||[]).length;
+  g.appendChild(panel('Venue Account', brokerPanel(),
+    ((DATA.broker_account&&DATA.broker_account.venue)||DATA.broker||'—').toUpperCase()+' · '+bh+' held', 'span4'));
+
+  // Robinhood account roster (masked ids from accounts.yaml)
+  g.appendChild(panel('Robinhood Accounts', accountsPanel(),
+    (((DATA.accounts||{}).accounts)||[]).length+' configured', 'span8'));
+
+  // positions blotter
+  const posBody=positionsTable();
+  g.appendChild(panel('Positions Blotter', posBody, (DATA.positions||[]).length+' open', 'span8'));
+
+  // activity feed
+  g.appendChild(panel('Activity', activityFeed(), '', 'span4'));
+
+  // council heatmap
+  g.appendChild(panel('Council Heatmap', councilHeat(), '12 agents', 'span12'));
+
+  root.appendChild(g); v.appendChild(root);
+}
+
+function positionsTable(){
+  const pos=DATA.positions||[];
+  if(!pos.length) return '<div class="empty">flat — no open positions</div>';
+  const wrap=$(`<div class="scroll"></div>`);
+  const t=$(`<table><thead><tr><th>SYM</th><th class="opt">DESK</th><th class="opt">STATE</th><th class="n">QTY</th><th class="n opt">COST</th><th class="n opt">LAST</th><th class="n">uPnL</th></tr></thead><tbody></tbody></table>`);
+  const tb=t.querySelector('tbody');
+  pos.forEach(p=>tb.appendChild($(`<tr><td class="amber">${esc(p.symbol)}</td><td class="mut opt">${esc(p.strategy)}</td><td class="mut opt">${esc(p.state)}</td>
+    <td class="n">${num(p.shares,6)}</td><td class="n opt">${money(p.cost_basis)}</td><td class="n opt">${money(p.price)}</td>
+    <td class="n ${p.unrealized>=0?'up':'down'}">${money(p.unrealized)}</td></tr>`)));
+  wrap.appendChild(t); return wrap;
+}
+
+function councilHeat(){
+  const c=DATA.council||[];
+  if(!c.length) return '<div class="empty">no council output</div>';
+  const agents=(c[0].agents||[]).map(a=>a.name);
+  const abbr=a=>String(a).split(/\s+/).map(w=>w[0]).join('').slice(0,3).toUpperCase();
+  const box=$(`<div></div>`);
+  box.appendChild($(`<div class="heat-wide mut mono" style="font-size:9.5px;letter-spacing:.4px;margin-bottom:6px">⇄ scroll sideways to see all ${agents.length} agents · the SYMBOL column stays pinned · hover a cell for the exact score</div>`));
+  // ── wide table (desktop) ──
+  const wrap=$(`<div class="scroll heat-wide"></div>`);
+  const t=$(`<table class="heat"></table>`);
+  const head=$(`<thead><tr>
+    <th class="sym" style="position:sticky;left:0;background:var(--panel2);z-index:3">SYMBOL</th>
+    <th>DIR</th><th>CONV</th></tr></thead>`);
+  agents.forEach(a=>head.querySelector('tr').appendChild($(`<th title="${esc(a)}">${esc(abbr(a))}</th>`)));
+  t.appendChild(head);
+  const tb=$(`<tbody></tbody>`);
+  c.forEach(r=>{
+    const tr=$(`<tr>
+      <td class="sym" style="position:sticky;left:0;background:var(--panel2);z-index:2">${esc(r.symbol)} <span class="mut" style="font-size:9px">${money(r.price)}</span></td>
+      <td><span class="tag ${r.direction==='long'?'on':(r.direction==='short'?'off':'')}">${esc(r.direction)}</span></td>
+      <td><span class="tag amber">${(r.conviction*100).toFixed(0)}%</span></td></tr>`);
+    (r.agents||[]).forEach(a=>{const td=$(`<td></td>`);
+      td.appendChild($(`<div class="cell" title="${esc(a.name)}: ${a.score>=0?'+':''}${a.score.toFixed(2)} (${(a.confidence*100).toFixed(0)}%)" style="background:${heatColor(a.score)}">${a.score>=0?'+':''}${(a.score).toFixed(1)}</div>`));
+      tr.appendChild(td);});
+    tb.appendChild(tr);
+  });
+  t.appendChild(tb); wrap.appendChild(t); box.appendChild(wrap);
+  // ── per-symbol cards (small screens) — no horizontal scrolling ──
+  const cards=$(`<div class="heat-cards"></div>`);
+  c.forEach(r=>{
+    const card=$(`<div class="hcard"></div>`);
+    card.appendChild($(`<div class="hcard-h"><b class="amber">${esc(r.symbol)}</b> <span class="mut mono" style="font-size:11px">${money(r.price)}</span>
+      <span class="tag ${r.direction==='long'?'on':(r.direction==='short'?'off':'')}">${esc(r.direction)}</span>
+      <span class="tag amber">${(r.conviction*100).toFixed(0)}% conv</span></div>`));
+    const chips=$(`<div class="hchips"></div>`);
+    (r.agents||[]).forEach(a=>chips.appendChild($(`<span class="hchip" title="${esc(a.name)}: ${a.score>=0?'+':''}${a.score.toFixed(2)} (${(a.confidence*100).toFixed(0)}%)" style="background:${heatColor(a.score)}"><b>${esc(abbr(a.name))}</b> ${a.score>=0?'+':''}${a.score.toFixed(1)}</span>`)));
+    card.appendChild(chips); cards.appendChild(card);
+  });
+  box.appendChild(cards);
+  // legend: abbreviation → full agent name (applies to both views)
+  box.appendChild($(`<div class="mut mono" style="font-size:9px;letter-spacing:1px;text-transform:uppercase;margin:11px 0 5px">Agent legend</div>`));
+  const leg=$(`<div style="display:flex;flex-wrap:wrap;gap:5px"></div>`);
+  agents.forEach(a=>leg.appendChild($(`<span class="pill" style="font-size:9px;padding:2px 7px"><b class="amber">${esc(abbr(a))}</b> ${esc(a)}</span>`)));
+  box.appendChild(leg);
+  return box;
+}
+
+function activityFeed(){
+  const ex=DATA.executed_this_cycle||[], dec=DATA.decisions||[];
+  const box=$(`<div class="feed"></div>`);
+  if(ex.length) ex.forEach(e=>box.appendChild($(`<div class="it"><span class="k">${esc(e.symbol)}</span><span>${esc(e.purpose)} · <span class="mut">${esc(e.reason)}</span></span></div>`)));
+  const recent=dec.slice(0,10);
+  if(!ex.length && !recent.length) return '<div class="empty">no activity this cycle</div>';
+  recent.forEach(d=>box.appendChild($(`<div class="it"><span class="k">${esc(d.kind)}</span><span class="mut">${d.symbol?esc(d.symbol)+' · ':''}${esc(d.reason||'')}</span></div>`)));
+  return box;
+}
+
+function Council(v){
+  const g=$(`<div class="grid c12"></div>`);
+  g.appendChild(panel('Intelligence Council · Heatmap', councilHeat(), 'score −1…+1', 'span12'));
+  // Advisory Board — the six-agent council (Buffett/Munger/Macro/Growth/Quant + risk gate)
+  const adv=DATA.advisors||[];
+  if(adv.length){
+    const w=$(`<div class="scroll"></div>`);
+    const t=$(`<table><thead><tr><th>SYM</th><th class="n">BUFFETT</th><th class="n">MUNGER</th><th class="n">MACRO</th><th class="n">GROWTH</th><th class="n">QUANT</th><th class="n">GATE</th><th class="n">TILT</th></tr></thead><tbody></tbody></table>`);
+    const tb=t.querySelector('tbody');
+    const cell=(x)=>`<td class="n ${x>=0?'up':'down'}">${x>=0?'+':''}${(+x).toFixed(2)}</td>`;
+    adv.forEach(a=>{const s=a.scores||{};
+      tb.appendChild($(`<tr title="${esc(Object.entries(a.rationale||{}).map(([k,r])=>`${k}: ${r}`).join('\n'))}">
+        <td><b>${esc(a.symbol)}</b></td>${cell(s.buffett||0)}${cell(s.munger||0)}${cell(s.macro||0)}${cell(s.growth||0)}${cell(s.quant||0)}
+        <td class="n ${a.gate>=.7?'up':(a.gate>=.35?'amber':'down')}">${(+a.gate).toFixed(2)}</td>${cell(a.tilt||0)}</tr>`));});
+    w.appendChild(t);
+    g.appendChild(panel('Advisory Board · Buffett / Munger / Macro / Growth / Quant', w,
+      'advisory tilt ±0.10 · risk gate 0–1 · hover for rationale', 'span12'));
+  }
+  (DATA.council||[]).forEach(c=>{
+    const body=$(`<div></div>`);
+    (c.agents||[]).forEach(a=>{const w=Math.min(100,Math.abs(a.score)*100), col=a.score>=0?'var(--up)':'var(--down)';
+      body.appendChild($(`<div style="padding:7px 0;border-bottom:1px solid var(--line)">
+        <div style="display:flex;justify-content:space-between;font-size:12px"><span><b>${esc(a.name)}</b> <span class="mut">${esc(a.persona)}</span></span>
+          <span class="mono ${a.score>=0?'up':'down'}">${a.score>=0?'+':''}${a.score.toFixed(2)} · ${(a.confidence*100).toFixed(0)}%</span></div>
+        <div class="mut mono" style="font-size:10.5px;margin-top:2px">${esc(a.rationale)}</div></div>`));});
+    // per-ticker headlines
+    const news=INTEL.symNews[c.symbol];
+    const nb=$(`<div style="margin-top:10px;border-top:1px solid var(--line2);padding-top:8px"></div>`);
+    nb.appendChild($(`<div class="mut mono" style="font-size:9.5px;letter-spacing:1px;margin-bottom:5px">HEADLINES</div>`));
+    if(!news){ fetchSymbolNews(c.symbol); nb.appendChild($(`<div class="empty">loading…</div>`)); }
+    else if(news.loading) nb.appendChild($(`<div class="empty">loading…</div>`));
+    else if(!news.items.length) nb.appendChild($(`<div class="empty">no recent headlines</div>`));
+    else news.items.forEach(a=>nb.appendChild($(`<a href="${safeUrl(a.url)}" target="_blank" rel="noopener" style="display:block;color:#cdd8ee;text-decoration:none;font-size:11.5px;padding:3px 0">• ${esc(a.title)} <span class="mut" style="font-size:9px">${esc(a.source||'')}</span></a>`)));
+    body.appendChild(nb);
+    g.appendChild(panel(`${esc(c.symbol)} · ${esc(c.direction)} · conv ${(c.conviction*100).toFixed(0)}%`, body,
+      money(c.price), 'span6'));
+  });
+  v.appendChild(g);
+}
+
+// ── broker/venue account + holdings (the venue's own numbers, e.g. Robinhood) ──
+function brokerPanel(){
+  const b=DATA.broker_account||{};
+  const venue=(b.venue||DATA.broker||'broker').toUpperCase();
+  const feed = b.online?(b.live_armed?'LIVE · REAL MONEY':'LIVE FEED'):'OFFLINE SIM';
+  const feedCol = b.online?(b.live_armed?'var(--down)':'var(--up)'):'var(--amber)';
+  const box=$(`<div></div>`);
+  box.appendChild($(`<div class="row" style="margin-bottom:9px">
+    <span class="mut">Venue</span><span><b>${esc(venue)}</b>
+    <span class="tag" style="color:${feedCol};border-color:${feedCol}">${feed}</span></span></div>`));
+  const stat=(k,val)=>`<div class="row"><span class="mut">${k}</span><span class="mono"><b>${val}</b></span></div>`;
+  box.appendChild($(`<div>${stat('Equity',money(b.equity))}${stat('Cash',money(b.cash))}${stat('Buying power',money(b.buying_power))}</div>`));
+  // Reconciliation: broker-reported equity vs the desk's internal book. A drift
+  // beyond ~1% flags an unaccounted fill or account activity outside the desk.
+  const deskEq=(DATA.account||{}).equity||0;
+  const drift=(+b.equity||0)-deskEq, driftPct=deskEq?drift/deskEq*100:0;
+  const ok=Math.abs(driftPct)<=1;
+  const dcol=ok?'var(--up)':'var(--down)';
+  box.appendChild($(`<div class="row" title="Broker-reported equity minus the desk's internal book equity">
+    <span class="mut">Recon vs desk</span>
+    <span class="mono"><b style="color:${dcol}">${drift>=0?'+':''}${money(drift)} · ${driftPct>=0?'+':''}${driftPct.toFixed(2)}%</b>
+    <span class="tag" style="color:${dcol};border-color:${dcol};margin-left:6px">${ok?'✓ IN SYNC':'⚠ DRIFT'}</span></span></div>`));
+  const hold=b.holdings||[];
+  if(!hold.length){ box.appendChild($(`<div class="empty" style="margin-top:9px">no broker-reported holdings ${b.online?'':'(run the desk on this venue to populate)'}</div>`)); }
+  else{
+    const wrap=$(`<div class="scroll" style="margin-top:9px"></div>`);
+    const t=$(`<table><thead><tr><th>ASSET</th><th class="n">QTY</th><th class="n">AVG</th><th class="n">MKT VALUE</th></tr></thead><tbody></tbody></table>`);
+    const tb=t.querySelector('tbody');
+    hold.slice().sort((a,b)=>(+b.market_value||0)-(+a.market_value||0)).forEach(h=>tb.appendChild($(`<tr>
+      <td class="amber">${esc(h.symbol)}</td><td class="n">${num(h.qty,8)}</td>
+      <td class="n">${h.avg_price?money(h.avg_price):'—'}</td><td class="n">${money(h.market_value)}</td></tr>`)));
+    wrap.appendChild(t); box.appendChild(wrap);
+  }
+  return box;
+}
+// ── Robinhood/venue account roster (accounts.yaml via AccountOrchestrator) ──
+// Masked identifiers only (***last4) — the snapshot is secret-free by design.
+function accountsPanel(){
+  const accs=((DATA.accounts||{}).accounts)||[];
+  if(!accs.length) return $(`<div class="empty">no accounts configured — add them to accounts.yaml</div>`);
+  const wrap=$(`<div class="scroll"></div>`);
+  const t=$(`<table><thead><tr><th>ACCOUNT</th><th>NUMBER</th><th>TYPE</th><th>ASSETS</th><th>EXECUTION</th><th>MODE</th></tr></thead><tbody></tbody></table>`);
+  const tb=t.querySelector('tbody');
+  accs.forEach(a=>{
+    const exec = a.execution_mode==='api'
+      ? (a.adapter_ready?'<span class="tag on">API · READY</span>':'<span class="tag amber">API · NOT READY</span>')
+      : '<span class="tag">MONITOR ONLY</span>';
+    const modeTag = a.paper?'<span class="tag on">PAPER</span>'
+      : '<span class="tag" style="color:var(--down);border-color:var(--down)">LIVE</span>';
+    tb.appendChild($(`<tr>
+      <td class="amber">${esc(a.display_name||a.id)}</td>
+      <td class="mono">${esc(a.account_number_masked||'—')}</td>
+      <td class="mut">${esc((a.institution||'')+' '+(a.account_type||''))}</td>
+      <td class="mut">${esc(a.asset_class||'')}${a.symbols&&a.symbols.length?' · '+esc(a.symbols.slice(0,4).join(', ')):''}</td>
+      <td>${exec}</td><td>${modeTag}</td></tr>`));
+  });
+  wrap.appendChild(t);
+  const box=$(`<div></div>`); box.appendChild(wrap);
+  box.appendChild($(`<div class="empty" style="margin-top:8px">Numbers are masked (***last4). The engine's live connection is the Venue Account panel; MONITOR ONLY accounts are tracked but never traded.</div>`));
+  return box;
+}
+// ── LIVE real-money Robinhood account (read-only mirror of the MCP account) ──
+function robinhoodPanel(){
+  const r=RH||{}, pos=r.positions||[], ord=r.orders||[];
+  const updTs=tsMs(r.updated), upd=updTs!=null?`${new Date(updTs).toLocaleString()} (${relAge(Date.now()-updTs)})`:'—';
+  const body=$(`<div></div>`);
+  body.innerHTML=`
+    <div class="cb" style="border-color:var(--down);background:linear-gradient(90deg,rgba(255,92,108,.13),transparent);color:#ffd0d5;margin-bottom:10px">
+      🔴 <b>REAL MONEY</b> — live ${esc(r.broker||'Robinhood')} account ${esc(r.account_mask||'')}${r.nickname?` · “${esc(r.nickname)}”`:''}.
+      Authenticated through the Robinhood MCP. This is <b>separate from the paper desk</b> above and is strictly read-only.
+    </div>
+    <div class="kpis" style="margin-bottom:10px">
+      <div class="kpi" style="--accent:var(--down)"><div class="l">Account Value</div><div class="v">${money(r.total_value)}</div></div>
+      <div class="kpi" style="--accent:var(--cyan)"><div class="l">Buying Power</div><div class="v">${money(r.buying_power)}</div></div>
+      <div class="kpi"><div class="l">Cash</div><div class="v">${money(r.cash)}</div></div>
+      <div class="kpi" style="--accent:var(--amber)"><div class="l">Robinhood Realized P&amp;L</div><div class="v">Unavailable</div></div>
+    </div>`;
+  // holdings
+  if(pos.length){
+    const w=$(`<div class="scroll" style="margin-bottom:8px"></div>`);
+    const t=$(`<table><thead><tr><th>SYM</th><th class="n">SHARES</th><th class="n">AVG</th><th class="n">PX</th><th class="n">VALUE</th><th class="n">P&L</th></tr></thead><tbody></tbody></table>`);
+    pos.forEach(p=>{const up=(p.unrealized||0)>=0;
+      t.querySelector('tbody').appendChild($(`<tr><td class="amber" title="${esc(p.name||'')}">${esc(p.symbol)}</td>
+        <td class="n">${num(p.shares,6)}</td><td class="n">${p.avg_cost!=null?money(p.avg_cost):'—'}</td>
+        <td class="n">${money(p.price)}</td><td class="n">${money(p.market_value)}</td>
+        <td class="n ${up?'up':'down'}">${p.shares?((up?'+':'')+money(p.unrealized)):'<span class="mut">'+esc(p.note||'—')+'</span>'}</td></tr>`));});
+    w.appendChild(t); body.appendChild(w);
+  }
+  // open / recent orders
+  if(ord.length){
+    const w=$(`<div class="scroll"></div>`);
+    const t=$(`<table><thead><tr><th>SYM</th><th>SIDE</th><th class="opt">TYPE</th><th class="n">AMOUNT</th><th>STATE</th><th class="opt">SRC</th></tr></thead><tbody></tbody></table>`);
+    ord.forEach(o=>{const amt=o.dollar_amount!=null?money(o.dollar_amount):num(o.qty,6);
+      const stCls=/fill/i.test(o.state)?'up':(/(cancel|reject|fail|void)/i.test(o.state)?'down':'amber');
+      t.querySelector('tbody').appendChild($(`<tr><td class="amber">${esc(o.symbol)}</td>
+        <td class="${/buy/i.test(o.side)?'up':'down'}">${esc(o.side)}</td><td class="mut opt">${esc(o.type)}</td>
+        <td class="n">${amt}</td><td><span class="tag ${stCls}">${esc(o.state)}</span></td>
+        <td class="mut opt">${esc(o.placed_agent||'')}</td></tr>`));});
+    w.appendChild(t); body.appendChild(w);
+  }
+  if(!pos.length&&!ord.length) body.appendChild($(`<div class="empty">no holdings or orders</div>`));
+  return panel('🔴 LIVE · Robinhood (real money)', body, 'updated '+upd, 'span12');
+}
+
+function Book(v){
+  const g=$(`<div class="grid c12"></div>`);
+  if(RH&&RH.live) g.appendChild(robinhoodPanel());
+  const bh=(DATA.broker_account&&DATA.broker_account.holdings||[]).length;
+  g.appendChild(panel('Robinhood Accounts · roster', accountsPanel(),
+    (((DATA.accounts||{}).accounts)||[]).length+' accounts', 'span12'));
+  g.appendChild(panel('Venue Account · broker-reported', brokerPanel(),
+    ((DATA.broker_account&&DATA.broker_account.venue)||DATA.broker||'—').toUpperCase()+' · '+bh+' holdings', 'span12'));
+  g.appendChild(panel('Positions Treemap · value × P&L', treemap(DATA.positions), (DATA.positions||[]).length+' holdings', 'span12'));
+  g.appendChild(panel('Positions Blotter', positionsTable(), (DATA.positions||[]).length+' open', 'span12'));
+  // recent trades
+  const tr=DATA.recent_trades||[]; let tbl;
+  if(!tr.length) tbl='<div class="empty">no trades yet</div>';
+  else{ const w=$(`<div class="scroll"></div>`);
+    const t=$(`<table><thead><tr><th>SYM</th><th>SIDE</th><th class="opt">PURPOSE</th><th class="n">QTY</th><th class="n">PX</th></tr></thead><tbody></tbody></table>`);
+    tr.forEach(x=>t.querySelector('tbody').appendChild($(`<tr><td class="amber">${esc(x.symbol)}</td><td class="${/buy/i.test(x.side)?'up':'down'}">${esc(x.side)}</td>
+      <td class="mut opt">${esc(x.purpose)}</td><td class="n">${num(x.qty,6)}</td><td class="n">${money(x.price)}</td></tr>`)));
+    w.appendChild(t); tbl=w; }
+  g.appendChild(panel('Recent Trades', tbl, '', 'span7'));
+  const crm=DATA.crm||{};
+  const cb=$(`<div></div>`);
+  [['AUM',money(crm.aum)],['Investors',crm.investors||0],['Contacts',crm.contacts||0]]
+    .forEach(([k,val])=>cb.appendChild($(`<div class="row"><span class="mut">${k}</span><span class="mono">${val}</span></div>`)));
+  g.appendChild(panel('Fund / CRM', cb, '', 'span5'));
+
+  // Treasury — capital you ADDED vs money the strategy MADE
+  const cap=DATA.capital||{}; const tb2=$(`<div></div>`);
+  const pnlUp=(cap.trading_pnl||0)>=0;
+  [['Net capital (deposits − withdrawals)', money(cap.net_capital), 'mono'],
+   ['Total deposits', money(cap.deposits), 'mono'],
+   ['Total withdrawals', money(cap.withdrawals), 'mono'],
+   ['Trading P&L (equity − net capital)', money(cap.trading_pnl), pnlUp?'up':'down'],
+   ['Trading return', (cap.trading_return_pct>=0?'+':'')+num(cap.trading_return_pct)+'%', pnlUp?'up':'down']]
+    .forEach(([k,val,cls])=>tb2.appendChild($(`<div class="row"><span class="mut">${k}</span><span class="mono ${cls||''}">${val}</span></div>`)));
+  tb2.appendChild($(`<div class="empty" style="margin-top:9px">Record real funding with <span class="mono">python -m treasury.treasury deposit --amount …</span> (withdraw too). Real cash moves in Alpaca — see FUNDING.md.</div>`));
+  g.appendChild(panel('Treasury · Capital Ledger', tb2, (cap.flows||0)+' flow(s)', 'span7'));
+
+  // capital flow history
+  const flows=DATA.capital_flows||[]; let fb;
+  if(!flows.length) fb='<div class="empty">no deposits/withdrawals recorded yet</div>';
+  else{ const w=$(`<div class="scroll"></div>`);
+    const t=$(`<table><thead><tr><th>DATE</th><th>TYPE</th><th class="n">AMOUNT</th><th class="opt">METHOD</th></tr></thead><tbody></tbody></table>`);
+    flows.forEach(f=>t.querySelector('tbody').appendChild($(`<tr><td class="mut">${esc((f.ts||'').slice(0,10))}</td>
+      <td class="${f.amount>=0?'up':'down'}">${esc(f.kind)}</td><td class="n ${f.amount>=0?'up':'down'}">${money(f.amount)}</td>
+      <td class="mut opt">${esc(f.method||'')}</td></tr>`)));
+    w.appendChild(t); fb=w; }
+  g.appendChild(panel('Capital Flows', fb, '', 'span5'));
+  v.appendChild(g);
+}
+
+function Brain(v){
+  const b=DATA.brain||{};
+  const g=$(`<div class="grid c12"></div>`);
+  const s=$(`<div></div>`);
+  s.innerHTML=`<div class="row"><span class="mut">Primary brain</span><span class="tag amber">Claude · ${esc(b.brain_model||'claude-fable-5')}</span></div>
+    <div class="row"><span class="mut">Status</span><span class="tag ${b.used?'on':'off'}">${b.used?'active this cycle':(b.enabled?'enabled (idle)':'disabled')}</span></div>
+    <div class="row"><span class="mut">Posture</span><span class="tag ${b.posture==='risk_off'?'off':(b.posture==='risk_on'?'on':'amber')}">${esc(b.posture||'neutral')}</span></div>
+    <div class="row"><span class="mut">Global risk multiplier</span><span class="tag">×${(b.global_risk_multiplier||1).toFixed(2)}</span></div>
+    <div class="row"><span class="mut">Alt-data (QuiverQuant)</span><span class="tag ${(((DATA.health||{}).alt_data||{}).enabled)?'on':'off'}">${(((DATA.health||{}).alt_data||{}).enabled)?'insider + congress · on':'off'}</span></div>`;
+  g.appendChild(panel('Chief Strategist', s, '', 'span5'));
+  // Hermes guardian — background agent: data integrity, honest scores, self-calibration
+  const hm=((DATA.health||{}).hermes)||{}; const sc=hm.scorecard||{};
+  const hs=$(`<div></div>`);
+  hs.innerHTML=`<div class="row"><span class="mut">Status</span><span class="tag ${hm.enabled?'on':'off'}">${hm.enabled?'guarding':'off'}</span></div>
+    <div class="row"><span class="mut">Goal</span><span class="tag amber" title="${esc(hm.goal||'')}">${esc((hm.goal||'—').split('—')[0].trim())}</span></div>
+    <div class="row"><span class="mut">Data quality (this cycle)</span><span class="tag ${(hm.data_ok_pct??1)>=1?'on':((hm.data_ok_pct??1)>=.8?'amber':'off')}">${Math.round((hm.data_ok_pct??1)*100)}% clean${(hm.quarantined||[]).length?` · ${hm.quarantined.length} quarantined`:''}</span></div>
+    <div class="row"><span class="mut">Sharpe (annualized est.)</span><span class="tag ${sc.sharpe>0?'on':(sc.sharpe<0?'off':'')}">${sc.sharpe!=null?sc.sharpe:'—'}</span></div>
+    <div class="row"><span class="mut">Sortino</span><span class="tag">${sc.sortino!=null?sc.sortino:'—'}</span></div>
+    <div class="row"><span class="mut">Max drawdown</span><span class="tag ${sc.max_drawdown_pct<-5?'off':''}">${sc.max_drawdown_pct!=null?sc.max_drawdown_pct+'%':'—'}</span></div>
+    ${(()=>{const vt=((DATA.health||{}).vol_targeting)||{};return vt.target_annual?`<div class="row"><span class="mut">Vol targeting (${Math.round(vt.target_annual*100)}% target)</span><span class="tag ${(vt.scale??1)>=1?'on':'amber'}">budgets ×${(vt.scale??1).toFixed(2)}</span></div>`:''})()}
+    ${Object.keys(hm.hit_rates||{}).length?`<div class="row"><span class="mut">Council hit-rate</span><span class="tag">${Object.entries(hm.hit_rates).map(([k,v])=>`${esc(k)} ${Math.round(v*100)}%`).join(' · ')}</span></div>`:''}
+    ${Object.keys(hm.strategy_weights||{}).length?`<div class="row"><span class="mut">Desk calibration (learned)</span><span class="tag">${Object.entries(hm.strategy_weights).map(([k,v])=>`${esc(k)} ×${v}`).join(' · ')}</span></div>`:''}`;
+  g.appendChild(panel('Hermes Guardian', hs, 'background agent', 'span7'));
+  // Market-data feed health — the real-time guard's verdict (utils/realtime.py).
+  // A degrading feed should be visible here BEFORE it shows up in the P&L.
+  const fd=(DATA.feed)||{};
+  if(fd.available){
+    const syms=fd.symbols||{};
+    const bad=Object.entries(syms).filter(([_,d])=>(d.rejected||0)>0||(d.frozen_flags||0)>0||(d.venue_stale_flags||0)>0);
+    const rr=fd.reject_rate||0;
+    const fs=$(`<div></div>`);
+    fs.innerHTML=`<div class="row"><span class="mut">Quote guard</span><span class="tag ${rr>0.05?'off':(rr>0?'amber':'on')}">${rr>0?`${(rr*100).toFixed(1)}% rejected`:'all quotes accepted'}</span></div>
+      <div class="row"><span class="mut">Ticks validated</span><span class="tag">${(fd.accepted||0).toLocaleString()} accepted · ${(fd.rejected||0).toLocaleString()} rejected</span></div>
+      <div class="row"><span class="mut">Venue timestamps</span><span class="tag ${fd.venue_timestamps?'on':'amber'}" title="${fd.venue_timestamps?'staleness measured from the exchange print':'venue does not report a print time — age measured from our fetch'}">${fd.venue_timestamps?'exchange print time':'fetch time only'}</span></div>
+      ${bad.length?bad.map(([k,d])=>`<div class="row"><span class="mut">${esc(k)}</span><span class="tag ${(d.rejected||0)?'off':'amber'}">${[(d.rejected||0)?`${d.rejected} rejected`:'',(d.frozen_flags||0)?`${d.frozen_flags}× frozen`:'',(d.venue_stale_flags||0)?`${d.venue_stale_flags}× stale print`:''].filter(Boolean).join(' · ')}</span></div>`).join(''):`<div class="row"><span class="mut">Per-symbol</span><span class="tag on">${Object.keys(syms).length} feed${Object.keys(syms).length===1?'':'s'} healthy</span></div>`}`;
+    g.appendChild(panel('Market Data Feed', fs, 'real-time guard', 'span5'));
+  }
+  // Per-position cap breaches. Loud on purpose: further adds are blocked
+  // automatically, but unwinding an over-cap position is the owner's decision,
+  // so it must not sit quietly in the position table looking like any other row.
+  const cb=(DATA.cap_breaches)||[];
+  if(cb.length){
+    const cbx=$(`<div></div>`);
+    cbx.innerHTML=cb.map(b=>`<div class="row"><span class="mut">${esc(b.symbol)}</span><span class="tag off" title="cap ${b.cap} at the configured per-position limit">$${(b.value||0).toLocaleString()} · ${b.over_pct}% over cap · ${b.pct_of_equity}% of equity</span></div>`).join('')
+      +`<div class="row"><span class="mut" style="font-size:11px">New adds to these names are blocked. Unwinding is an owner decision \u2014 the desk will not trade its way out on its own.</span></div>`;
+    g.appendChild(panel('\u26a0 Position Cap Breach', cbx, `${cb.length} position${cb.length===1?'':'s'} over the limit`, 'span12'));
+  }
+  // Recorded history — the desk turning its own live feed into backtestable bars.
+  // 'usable' (not 'bars') is the honest count: a single-tick bar has no range.
+  const rc0=(DATA.feed||{}).recorder||{};
+  if(rc0.enabled&&(rc0.series||[]).length){
+    const rs=$(`<div></div>`);
+    rs.innerHTML=`<div class="row"><span class="mut">Recording at</span><span class="tag on">${(rc0.intervals||[]).map(i=>i+'m').join(' · ')||'—'}</span></div>`
+      +rc0.series.map(s=>{
+        const pct=s.single_tick_pct||0, ok=pct<50;
+        return `<div class="row" title="${s.bars} bars stored; ${pct}% have open==high==low==close, so their range was never observed"><span class="mut">${esc(s.symbol)} ${s.interval_m}m</span><span class="tag ${ok?'on':'amber'}">${(s.usable||0).toLocaleString()} usable / ${(s.bars||0).toLocaleString()} · ${s.ticks_per_bar} ticks/bar · ${s.span_days}d</span></div>`;
+      }).join('');
+    g.appendChild(panel('Recorded History', rs, 'live feed → backtest bars', 'span5'));
+  }
+  // autonomous model updater — show the live model each provider is pinned to
+  const ai=((DATA.health||{}).ai_brain)||{}; const mdl=ai.models||{};
+  const ms=$(`<div></div>`);
+  ms.innerHTML=`<div class="row"><span class="mut">Auto-update models</span><span class="tag ${ai.auto_update_models?'on':'off'}">${ai.auto_update_models?'ON · always latest':'off (pinned)'}</span></div>
+    <div class="row"><span class="mut">Claude (brain)</span><span class="tag amber">${esc(mdl.brain||b.brain_model||'—')}</span></div>
+    <div class="row"><span class="mut">OpenAI (counsellor)</span><span class="tag">${esc(mdl.openai||'—')}</span></div>
+    <div class="row"><span class="mut">Grok (counsellor)</span><span class="tag">${esc(mdl.grok||'—')}</span></div>
+    <div class="row"><span class="mut">Gemini (counsellor)</span><span class="tag">${esc(mdl.gemini||'—')}</span></div>
+    <div class="row"><span class="mut">NVIDIA NIM (free · fallback)</span><span class="tag ${mdl.nvidia?'on':''}">${esc(mdl.nvidia||'—')}</span></div>`;
+  g.appendChild(panel('Live Models · auto-resolved', ms, 'refreshes daily', 'span7'));
+  g.appendChild(panel('Brain Commentary',
+    `<div class="commentary">${b.commentary?esc(b.commentary):'<span class="empty">AI brain advisory overlay. Set AI_BRAIN_ENABLED=true + ANTHROPIC_API_KEY.</span>'}</div>`, '', 'span7'));
+  const cs=b.counsellors||{}; const cc=$(`<div></div>`);
+  if(cs.openai)cc.appendChild($(`<div class="counsel"><b>OpenAI (GPT)</b> — ${esc(cs.openai)}</div>`));
+  if(cs.grok)cc.appendChild($(`<div class="counsel"><b>Grok (xAI)</b> — ${esc(cs.grok)}</div>`));
+  if(cs.gemini)cc.appendChild($(`<div class="counsel"><b>Gemini (Google)</b> — ${esc(cs.gemini)}</div>`));
+  if(cs.nvidia)cc.appendChild($(`<div class="counsel"><b>NVIDIA NIM</b> — ${esc(cs.nvidia)}</div>`));
+  if(!cs.openai&&!cs.grok&&!cs.gemini&&!cs.nvidia)cc.innerHTML='<div class="empty">Add OPENAI_API_KEY / XAI_API_KEY / GEMINI_API_KEY / NVIDIA_API_KEY to enlist counsellors.</div>';
+  g.appendChild(panel('Counsellors', cc, 'advisory', 'span12'));
+  v.appendChild(g);
+}
+
+function Workforce(v){
+  const g=$(`<div class="grid c12"></div>`);
+  const wf=$(`<div></div>`);
+  (DATA.workforce||[]).forEach(w=>wf.appendChild($(`<div class="row"><span><b>${esc(w.role)}</b></span><span class="mut" style="font-size:11px">${esc(w.mandate)}</span></div>`)));
+  g.appendChild(panel('Agentic Workforce', wf, '', 'span6'));
+  const rc=$(`<div></div>`);
+  (DATA.agents_roster||[]).forEach(a=>rc.appendChild($(`<span class="pill">${esc(a.name)} · ${esc(a.role)}</span>`)));
+  g.appendChild(panel('Council Roster · 12 personas', rc, '', 'span6'));
+  const dc=$(`<div class="feed"></div>`);
+  const dec=DATA.decisions||[];
+  if(!dec.length)dc.innerHTML='<div class="empty">no decisions recorded</div>';
+  dec.forEach(d=>dc.appendChild($(`<div class="it"><span class="k">${esc(d.kind)}</span><span class="mut">${d.symbol?esc(d.symbol)+' · ':''}${esc(d.reason||'')}</span></div>`)));
+  g.appendChild(panel('Memory · Recent Decisions', dc, dec.length+'', 'span12'));
+  v.appendChild(g);
+}
+
+function Env(v){
+  const cat={}; (DATA.env_catalog||[]).forEach(e=>{(cat[e.category]=cat[e.category]||[]).push(e);});
+  const g=$(`<div class="grid c12"></div>`);
+  Object.keys(cat).forEach(k=>{
+    const body=$(`<div></div>`);
+    cat[k].forEach(e=>body.appendChild($(`<div class="row"><span class="mono" style="font-size:11px">${esc(e.name)} <span class="mut">${esc(e.description||'')}</span></span>
+      <span class="tag ${e.set?'on':'off'}">${e.set?'set':'missing'}</span></div>`)));
+    g.appendChild(panel(k, body, '', 'span4'));
+  });
+  g.appendChild(panel('Note', '<div class="empty">Secret-free: the dashboard only knows which variables are set, never their values. Edit on the host or via the Controls tab.</div>','', 'span12'));
+  v.appendChild(g);
+}
+
+// ── Controls (live, Supabase) ──
+function Controls(v){
+  if(!LIVE_OK){
+    v.appendChild(panel('Live Controls — setup required',
+      `<div class="empty">Add your Supabase URL + anon key to <b>public/config.js</b> and run the worker, then sign in to control the desk
+      (kill switch, start/stop, flatten, config). RLS keeps it private to you.</div>`,'', 'span12'));
+    return;
+  }
+  if(!SESSION){
+    const c=panel('Owner Sign-in',
+      `<input class="f" id="lemail" type="email" placeholder="email" style="margin-bottom:9px">
+       <input class="f" id="lpw" type="password" placeholder="password" style="margin-bottom:11px">
+       <button class="act" id="lbtn">SIGN IN</button>
+       <div class="empty" style="margin-top:8px">or use the full-page <a class="amber" href="./login.html">/login</a></div>`,'', 'span4');
+    v.appendChild(c);
+    c.querySelector('#lbtn').onclick=()=>sbLogin(c.querySelector('#lemail').value.trim(),c.querySelector('#lpw').value);
+    return;
+  }
+  const d=DESK||{};
+  const g=$(`<div class="grid c12"></div>`);
+  // status
+  const st=$(`<div></div>`);
+  st.innerHTML=`<div class="row"><span class="mut">Desk</span><span><b>${esc(d.name||'My Desk')}</b> <span class="tag">${esc(d.mode||'sim')}</span></span></div>
+    <div class="row"><span class="mut">State</span><span>${d.active?'<span class="tag on">active</span>':'<span class="tag off">stopped</span>'} ${d.halt?'<span class="tag off">HALTED</span>':'<span class="tag on">trading</span>'}</span></div>
+    <div class="row"><span class="mut">Last worker run</span><span class="mono" style="font-size:11px">${d.last_run_at?new Date(d.last_run_at).toLocaleString():'never'}</span></div>
+    ${d.command?`<div class="row"><span class="mut">Pending</span><span class="tag amber">${esc(d.command)}</span></div>`:''}`;
+  g.appendChild(panel('Desk Status', st, esc((SESSION.user||{}).email||''), 'span5'));
+
+  // controls
+  const bar=$(`<div style="display:flex;gap:9px;flex-wrap:wrap"></div>`);
+  const mk=(label,cls,fn)=>{const b=$(`<button class="${cls}">${label}</button>`);b.onclick=fn;return b;};
+  if(d.halt) bar.appendChild(mk('▶ RESUME','act',()=>sbUpdate({halt:false})));
+  else bar.appendChild(mk('⛔ HALT NEW RISK','danger',()=>sbUpdate({halt:true})));
+  if(d.active) bar.appendChild(mk('⏸ STOP DESK','ghost',()=>{if(confirm('Pause this desk?'))sbUpdate({active:false});}));
+  else bar.appendChild(mk('▶ START DESK','act',()=>sbUpdate({active:true})));
+  bar.appendChild(mk('✕ FLATTEN ALL','danger',()=>{if(confirm('Sell ALL positions next cycle?'))sbCommand('flatten');}));
+  const dc=$(`<div></div>`); dc.appendChild(bar);
+  dc.appendChild($(`<div class="empty" style="margin-top:9px">Halt & flatten suspend NEW risk but always allow exits.</div>`));
+  g.appendChild(panel('Desk Controls', dc, '', 'span7'));
+
+  // config
+  const cfgc=$(`<div></div>`);
+  cfgc.innerHTML=`<div class="row"><span class="mut">Tickers</span><input class="f" id="ctk" style="max-width:300px" value="${esc((d.tickers||[]).join(','))}"></div>
+    <div class="row"><span class="mut">Per-position ≤0.15</span><input class="f" id="cmax" style="max-width:110px" value="${d.max_allocation_pct??0.1}"></div>
+    <div class="row"><span class="mut">Total deployed ≤0.80</span><input class="f" id="ctot" style="max-width:110px" value="${d.max_total_deployed_pct??0.6}"></div>
+    <div class="row"><span class="mut">Min conviction</span><input class="f" id="cmin" style="max-width:110px" value="${d.min_conviction??0.55}"></div>`;
+  const sv=$(`<button class="act" style="margin-top:11px">SAVE CONFIG</button>`);
+  sv.onclick=()=>sbUpdate({tickers:cfgc.querySelector('#ctk').value.split(',').map(s=>s.trim().toUpperCase()).filter(Boolean),
+    max_allocation_pct:parseFloat(cfgc.querySelector('#cmax').value)||0.1,
+    max_total_deployed_pct:parseFloat(cfgc.querySelector('#ctot').value)||0.6,
+    min_conviction:parseFloat(cfgc.querySelector('#cmin').value)||0.55});
+  cfgc.appendChild(sv);
+  g.appendChild(panel('Configuration', cfgc, '', 'span6'));
+
+  // mode
+  const md=$(`<div></div>`);
+  md.innerHTML=`<div class="row"><span class="mut">Mode</span><select class="f" id="cmode" style="max-width:170px">
+    <option value="sim">sim (offline)</option><option value="paper">paper</option><option value="live">LIVE (real money)</option></select></div>
+    <div class="empty" style="margin-top:8px">LIVE also needs broker keys on the desk + the deliberate opt-in. You'll be asked to confirm.</div>`;
+  const ms=$(`<button class="act" style="margin-top:11px">APPLY MODE</button>`);
+  g.appendChild(panel('Trading Mode', md, '', 'span6'));
+  md.appendChild(ms); md.querySelector('#cmode').value=d.mode||'sim';
+  ms.onclick=()=>{const m=md.querySelector('#cmode').value;
+    if(m==='live'&&!confirm('Arm LIVE real-money trading for this desk?'))return; sbUpdate({mode:m,live_ack:m==='live'});};
+
+  // broker keys — self-service onboarding (encrypted server-side, never shown back)
+  const bk=$(`<div></div>`);
+  const flag=(n)=>CREDS.includes(n)?'<span class="tag on">set</span>':'<span class="tag off">missing</span>';
+  bk.innerHTML=`<div class="row"><span class="mut">Alpaca API key ${flag('ALPACA_API_KEY')}</span><input class="f" id="kak" type="password" autocomplete="off" placeholder="PK… (leave blank to keep)" style="max-width:280px"></div>
+    <div class="row"><span class="mut">Alpaca secret ${flag('ALPACA_SECRET_KEY')}</span><input class="f" id="kas" type="password" autocomplete="off" placeholder="secret (leave blank to keep)" style="max-width:280px"></div>
+    <div class="row"><span class="mut">Anthropic key ${flag('ANTHROPIC_API_KEY')}</span><input class="f" id="kan" type="password" autocomplete="off" placeholder="sk-ant-… (optional)" style="max-width:280px"></div>`;
+  const bs=$(`<button class="act" style="margin-top:11px">SAVE KEYS (ENCRYPTED)</button>`);
+  bs.onclick=()=>{const c={};
+    const ak=bk.querySelector('#kak').value.trim(); if(ak)c.ALPACA_API_KEY=ak;
+    const as=bk.querySelector('#kas').value.trim(); if(as)c.ALPACA_SECRET_KEY=as;
+    const an=bk.querySelector('#kan').value.trim(); if(an)c.ANTHROPIC_API_KEY=an;
+    if(!Object.keys(c).length){alert('Enter at least one key to save.');return;}
+    saveCredentials(c);};
+  bk.appendChild(bs);
+  bk.appendChild($(`<div class="empty" style="margin-top:9px">Keys are encrypted server-side (AES-256-GCM) and stored per-desk — the dashboard only shows <b>set / missing</b>, never the value. Start with Alpaca <b>paper</b> keys; LIVE needs the deliberate opt-in above.</div>`));
+  g.appendChild(panel('Broker Keys · Self-service onboarding', bk, 'encrypted', 'span12'));
+
+  v.appendChild(g);
+}
+
+// ── Native bilingual voice control (Web Speech API — no keys, runs in-browser) ──
+// Navigation + spoken read-outs work for everyone (read-only family view included).
+// Desk controls (halt/start/stop/flatten) require owner sign-in; "flatten" needs a
+// spoken yes; LIVE money mode is intentionally NOT voice-actionable. English + Español.
+const VOICE={rec:null,mode:'off',awaiting:false,wakeTimer:null,pending:null,
+  lang:(String(navigator.language||'en').toLowerCase().startsWith('es')?'es':'en')};
+const WAKE=['hey sahjony','hi sahjony','ok sahjony','okay sahjony','hey sajony','hey sancho','oye sahjony','hola sahjony','sahjony','sajony'];
+const _SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+const VT={
+  en:{listening:'Listening…',tap:'Tap VOICE, then speak',
+    unsupported:'Voice isn’t supported in this browser. Try Chrome, Edge, or Safari.',
+    micdenied:'Microphone blocked. Allow mic access to use voice.',
+    signin:'Please sign in to control the desk.',
+    opening:t=>`Opening ${t}.`,halted:'New risk halted. Exits still allowed.',resumed:'Trading resumed.',
+    started:'Desk started.',stopped:'Desk paused.',refreshed:'Refreshed.',
+    confirmFlat:'Flatten all positions next cycle? Say yes to confirm, or no to cancel.',
+    flattened:'Understood. Flattening all positions next cycle.',cancelled:'Cancelled.',
+    notlive:'For safety, live trading can’t be switched on by voice.',
+    equity:v=>`Equity is ${v}.`,ret:v=>`Total return is ${v}.`,cash:v=>`Cash is ${v}.`,
+    deployed:v=>`Deployed capital is ${v}.`,positions:n=>`There ${n===1?'is':'are'} ${n} open position${n===1?'':'s'}.`,
+    posture:p=>`Market posture is ${p}.`,
+    summary:(e,r,p,n)=>`Equity ${e}. Total return ${r}. Market posture ${p}, with ${n} open position${n===1?'':'s'}.`,
+    help:'Try: go to markets, what is my equity, give me a summary, halt risk, start desk, stop desk, flatten all, or refresh.',
+    unknown:'Sorry, I didn’t catch that. Say "help" for what I can do.',langset:'Voice set to English.',hello:'I’m listening.',
+    yes:'Yes?',wakeon:'Hands-free on. Say “Hey Sahjony” and your command.',wakeoff:'Hands-free off.'},
+  es:{listening:'Escuchando…',tap:'Toca VOZ y habla',
+    unsupported:'La voz no funciona en este navegador. Usa Chrome, Edge o Safari.',
+    micdenied:'Micrófono bloqueado. Permite el acceso al micrófono para usar la voz.',
+    signin:'Por favor inicia sesión para controlar el escritorio.',
+    opening:t=>`Abriendo ${t}.`,halted:'Riesgo nuevo detenido. Las salidas siguen permitidas.',resumed:'Operación reanudada.',
+    started:'Escritorio iniciado.',stopped:'Escritorio en pausa.',refreshed:'Actualizado.',
+    confirmFlat:'¿Liquidar todas las posiciones el próximo ciclo? Di sí para confirmar o no para cancelar.',
+    flattened:'Entendido. Liquidando todas las posiciones el próximo ciclo.',cancelled:'Cancelado.',
+    notlive:'Por seguridad, la operación con dinero real no se puede activar por voz.',
+    equity:v=>`El capital es ${v}.`,ret:v=>`El rendimiento total es ${v}.`,cash:v=>`El efectivo es ${v}.`,
+    deployed:v=>`El capital desplegado es ${v}.`,positions:n=>`Hay ${n} posición${n===1?'':'es'} abierta${n===1?'':'s'}.`,
+    posture:p=>`La postura del mercado es ${p}.`,
+    summary:(e,r,p,n)=>`Capital ${e}. Rendimiento total ${r}. Postura del mercado ${p}, con ${n} posición${n===1?'':'es'} abierta${n===1?'':'s'}.`,
+    help:'Prueba: ve a mercados, cuál es mi capital, dame un resumen, detén el riesgo, inicia el escritorio, pausa el escritorio, liquida todo, o actualiza.',
+    unknown:'Perdón, no entendí. Di "ayuda" para ver qué puedo hacer.',langset:'Voz configurada en español.',hello:'Te escucho.',
+    yes:'¿Dime?',wakeon:'Manos libres activado. Di “Hey Sahjony” y tu comando.',wakeoff:'Manos libres desactivado.'}
+};
+const tr=()=>VT[VOICE.lang];
+function spokenMoney(n){n=Number(n||0);const neg=n<0?(VOICE.lang==='es'?'menos ':'minus '):'';const w=VOICE.lang==='es'?'dólares':'dollars';
+  return neg+Math.abs(n).toLocaleString('en-US',{maximumFractionDigits:0})+' '+w;}
+function spokenPct(n){n=Number(n||0);const w=VOICE.lang==='es'?'por ciento':'percent';
+  return (n>=0?(VOICE.lang==='es'?'más ':'plus '):(VOICE.lang==='es'?'menos ':'minus '))+Math.abs(n).toFixed(2)+' '+w;}
+function spokenPosture(){const p=(marketRead().posture);
+  if(VOICE.lang==='es')return p==='RISK-ON'?'riesgo activo':p==='RISK-OFF'?'riesgo reducido':'neutral';
+  return p==='RISK-ON'?'risk on':p==='RISK-OFF'?'risk off':'neutral';}
+function vSpeak(text){try{if(!('speechSynthesis'in window))return;speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(text);u.lang=VOICE.lang==='es'?'es-ES':'en-US';u.rate=1.03;
+  const vs=(speechSynthesis.getVoices()||[]).filter(v=>v.lang&&v.lang.toLowerCase().startsWith(VOICE.lang));
+  if(vs[0])u.voice=vs[0];speechSynthesis.speak(u);}catch(e){}}
+function vPanelEl(){let p=document.getElementById('vpanel');
+  if(!p){p=document.createElement('div');p.id='vpanel';p.className='vpanel';
+    p.innerHTML=`<div class="vh"><span id="vdot"></span><span id="vstate">—</span><button id="vclose" title="close">✕</button></div>
+      <div class="vheard" id="vheard"></div><div class="vreply" id="vreply"></div>
+      <div class="vhint">“go to markets” · “what’s my equity” · “summary” · “halt risk”<br>“ve a mercados” · “dame un resumen” · “liquida todo”</div>`;
+    document.body.appendChild(p); p.querySelector('#vclose').onclick=voiceStop;}
+  return p;}
+function vShow(state,heard,reply){const p=vPanelEl();p.style.display='block';
+  if(state!=null)p.querySelector('#vstate').textContent=state;
+  if(heard!=null)p.querySelector('#vheard').textContent=heard?('“'+heard+'”'):'';
+  if(reply!=null)p.querySelector('#vreply').textContent=reply||'';}
+function vReply(key,...args){const f=tr()[key];const msg=typeof f==='function'?f(...args):f;vShow(tr().listening,null,msg);vSpeak(msg);return msg;}
+function vNorm(t){return ' '+String(t).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim()+' ';}
+function vAny(t,arr){return arr.some(w=>t.includes(' '+w+' '));}
+const NAVMAP=[['Parquet',['parquet','home','dashboard','inicio','tablero','principal','panel']],
+  ['Markets',['markets','market','mercados','mercado']],['Macro',['macro','macroeconomics','macroeconomia']],
+  ['News',['news','headlines','noticias','noticia']],['Council',['council','agents','consejo','agentes']],
+  ['Book',['book','blotter','portfolio','libro','cartera']],['Brain',['brain','ai brain','cerebro']],
+  ['Controls',['controls','control','controles']],['Workforce',['workforce','team','roster','equipo','plantilla']],
+  ['Env',['environment','settings','entorno','ajustes','variables']]];
+function vNav(t){const intent=vAny(t,['go','open','show','take me','go to','ir','ve','vamos','abre','abrir','muestra','muestrame','ir a']);
+  for(const[tab,kw]of NAVMAP){if(vAny(t,kw)){if(!intent&&['Markets','Macro'].includes(tab))continue; // bare "market" → query, needs intent
+      if(OWNER_TABS.includes(tab)&&!SESSION){vReply('signin');return true;}
+      TAB=tab;render();buildNav();vReply('opening',tab);return true;}}
+  return false;}
+function vHandle(transcript){
+  const t=vNorm(transcript);
+  if(VOICE.pending){const yes=vAny(t,['yes','yeah','yep','confirm','do it','si','claro','confirmar','dale','hazlo']);
+    const act=VOICE.pending;VOICE.pending=null; if(yes)act(); else vReply('cancelled'); return;}
+  if(vAny(t,['speak english','english','in english','habla ingles','ingles'])){VOICE.lang='en';updateVoiceLangBtn();syncVoiceBtns();vReply('langset');return;}
+  if(vAny(t,['speak spanish','spanish','in spanish','habla espanol','espanol','en espanol'])){VOICE.lang='es';updateVoiceLangBtn();syncVoiceBtns();vReply('langset');return;}
+  if(vAny(t,['help','what can i say','options','ayuda','que puedo decir','opciones'])){vReply('help');return;}
+  // switch tab by number ("tab three" / "número 3")
+  const nm=t.match(/ (?:tab|panel|number|numero|pantalla|seccion) (one|two|three|four|five|six|seven|eight|nine|uno|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|[1-9]) /);
+  if(nm){const map={one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,uno:1,dos:2,tres:3,cuatro:4,cinco:5,seis:6,siete:7,ocho:8,nueve:9};
+    const idx=(map[nm[1]]||parseInt(nm[1],10))-1,vt=visibleTabs();
+    if(vt[idx]){TAB=vt[idx];render();buildNav();vReply('opening',TAB);return;}}
+  // scrolling
+  if(vAny(t,['scroll down','page down','baja','abajo','desplaza abajo'])){window.scrollBy({top:Math.round(innerHeight*.8),behavior:'smooth'});vShow(tr().listening,null,'↓');return;}
+  if(vAny(t,['scroll up','page up','sube','arriba','desplaza arriba'])){window.scrollBy({top:-Math.round(innerHeight*.8),behavior:'smooth'});vShow(tr().listening,null,'↑');return;}
+  if(vAny(t,['go to top','to the top','inicio de pagina','principio','hasta arriba'])){window.scrollTo({top:0,behavior:'smooth'});return;}
+  if(vAny(t,['go to bottom','to the bottom','hasta abajo','el final'])){window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'});return;}
+  // navigation with explicit intent first (avoids "market" vs "markets" clashes)
+  if(vAny(t,['go','open','show','take me','ir','ve','vamos','abre','abrir','muestra','muestrame'])&&vNav(t))return;
+  // desk controls (owner only)
+  const ctl=(cmd)=>{if(!SESSION){vReply('signin');return;}
+    if(cmd==='halt'){sbUpdate({halt:true});vReply('halted');}
+    else if(cmd==='resume'){sbUpdate({halt:false});vReply('resumed');}
+    else if(cmd==='start'){sbUpdate({active:true});vReply('started');}
+    else if(cmd==='stop'){sbUpdate({active:false});vReply('stopped');}
+    else if(cmd==='flatten'){VOICE.pending=()=>{sbCommand('flatten');vReply('flattened');};vReply('confirmFlat');}};
+  if(vAny(t,['flatten','flatten all','sell everything','sell all','liquida','liquidar','liquida todo','vende todo','cierra todo'])){ctl('flatten');return;}
+  if(vAny(t,['halt','halt risk','stop risk','kill switch','deten','detener','deten el riesgo','para el riesgo','detener riesgo'])){ctl('halt');return;}
+  if(vAny(t,['resume','resume trading','reanudar','reanuda','continuar'])){ctl('resume');return;}
+  if(vAny(t,['start desk','start the desk','start trading','inicia','iniciar','arranca','enciende','inicia el escritorio'])){ctl('start');return;}
+  if(vAny(t,['stop desk','stop the desk','pause desk','pausa','pausar','para el escritorio','pausa el escritorio'])){ctl('stop');return;}
+  if(vAny(t,['go live','live mode','en vivo','modo real','dinero real'])){vReply('notlive');return;}
+  if(vAny(t,['refresh','reload','update','actualiza','actualizar','recargar'])){load();vReply('refreshed');return;}
+  // spoken read-outs (everyone)
+  if(vAny(t,['read positions','list positions','read my positions','what do i hold','lee posiciones','lee mis posiciones','que tengo'])){vReadPositions();return;}
+  if(vAny(t,['top movers','movers','biggest movers','top gainers','top gainer','mayores subidas','que sube','que esta subiendo'])){vReadMovers();return;}
+  if(vAny(t,['summary','overview','status','resumen','estado','como vamos'])){
+    vReply('summary',spokenMoney((DATA.account||{}).equity),spokenPct((DATA.pnl||{}).total_return_pct),spokenPosture(),(DATA.positions||[]).length);return;}
+  if(vAny(t,['equity','net asset value','nav','capital','patrimonio'])){vReply('equity',spokenMoney((DATA.account||{}).equity));return;}
+  if(vAny(t,['return','performance','rendimiento','ganancia total'])){vReply('ret',spokenPct((DATA.pnl||{}).total_return_pct));return;}
+  if(vAny(t,['cash','efectivo','liquidez'])){vReply('cash',spokenMoney((DATA.account||{}).cash));return;}
+  if(vAny(t,['deployed','invested','desplegado','invertido'])){vReply('deployed',spokenMoney((DATA.account||{}).deployed));return;}
+  if(vAny(t,['positions','position','posiciones','posicion'])){vReply('positions',(DATA.positions||[]).length);return;}
+  if(vAny(t,['posture','market read','market','mercado','postura'])){vReply('posture',spokenPosture());return;}
+  // the desk's own AI analysis (instant, from the latest brain commentary)
+  if(vAny(t,['analysis','analyze','analyse','opinion','what do you think','your view','assessment','outlook','analisis','opinas','que opinas','que piensas','tu opinion','perspectiva'])){
+    const b=DATA.brain||{}; const c=(b.used&&b.commentary)?b.commentary:null;
+    const msg=c||((VOICE.lang==='es'?'Lectura del mercado: ':'Market read: ')+spokenPosture()+'. '+marketRead().text);
+    vShow(tr().listening,null,msg); vSpeak(msg); return;}
+  // bare navigation keyword (no intent word) as a final fallback
+  if(vNav(t))return;
+  // everything else → intelligent LLM assistant (free NVIDIA NIM via Edge Function)
+  vAsk(transcript);
+}
+// ── compact live-dashboard context for the assistant ──
+function vContext(){
+  const a=DATA.account||{},p=DATA.pnl||{},b=DATA.brain||{};
+  const council=(DATA.council||[]).map(c=>`${c.symbol} ${c.direction} conv ${Math.round((c.conviction||0)*100)}% $${(+c.price||0).toFixed(2)}`).join('; ');
+  const pos=(DATA.positions||[]).map(x=>`${x.symbol} ${num(x.shares,4)}sh uPnL ${money(x.unrealized)}`).join('; ')||'flat (no positions)';
+  const ml=Array.isArray(MARKETS.list)?MARKETS.list:[];
+  const mv=ml.slice(0,6).map(m=>`${(m.symbol||'').toUpperCase()} ${(m.price_change_percentage_24h||0).toFixed(1)}%`).join(', ');
+  return [
+    `Firm: ${DATA.firm||'SAHJONY CAPITAL'} — PAPER trading, mode ${DATA.mode||'?'}, cycle ${DATA.cycle||'?'}`,
+    `Equity ${money(a.equity)}, cash ${money(a.cash)}, deployed ${money(a.deployed)}, total return ${pct(p.total_return_pct)}, realized P&L ${money(p.realized)}`,
+    `Synthesized posture ${marketRead().posture}; AI brain posture ${b.posture||'n/a'}, risk x${(b.global_risk_multiplier||1).toFixed(2)}; brain commentary: ${(b.commentary||'n/a')}`,
+    `Council: ${council||'n/a'}`,
+    `Open positions: ${pos}`,
+    `Top crypto movers 24h: ${mv||'n/a'}`,
+    `Current tab: ${TAB}; user signed in: ${SESSION?'yes':'no'}; tabs: ${visibleTabs().join(', ')}`,
+  ].join('\n');
+}
+// ── ask the LLM assistant; speak the reply and run any safe nav action ──
+async function vAsk(text){
+  const base=(CFG.SUPABASE_URL||'').replace(/\/$/,'');
+  if(!base||!CFG.SUPABASE_ANON_KEY){ vReply('unknown'); return; }
+  vShow(tr().listening, text, VOICE.lang==='es'?'pensando…':'thinking…');
+  try{
+    const r=await fetch(base+'/functions/v1/voice-assistant',{method:'POST',
+      headers:{'Content-Type':'application/json','apikey':CFG.SUPABASE_ANON_KEY,
+        'Authorization':'Bearer '+((SESSION&&SESSION.access_token)||CFG.SUPABASE_ANON_KEY)},
+      body:JSON.stringify({text,lang:VOICE.lang,context:vContext()})});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const d=await r.json();
+    const reply=(d&&d.reply)||tr().unknown;
+    vShow(tr().listening,text,reply); vSpeak(reply);
+    const act=d&&d.action;
+    if(act&&act.type==='nav'&&act.tab&&TABS.includes(act.tab)&&!(OWNER_TABS.includes(act.tab)&&!SESSION)){
+      TAB=act.tab; render(); buildNav(); }
+  }catch(e){ vReply('unknown'); }
+}
+function updateVoiceLangBtn(){const b=document.getElementById('voiceLang');if(b)b.textContent='🌐 '+(VOICE.lang==='es'?'ES':'EN');
+  if(VOICE.rec)VOICE.rec.lang=VOICE.lang==='es'?'es-ES':'en-US';}
+function setVoiceBtn(){const b=document.getElementById('voiceBtn');if(!b)return;const on=VOICE.mode==='push';
+  b.classList.toggle('listening',on);b.innerHTML='🎙️ '+(on?(VOICE.lang==='es'?'ESCUCHANDO':'LISTENING'):(VOICE.lang==='es'?'VOZ':'VOICE'));}
+function setWakeBtn(){const b=document.getElementById('voiceWake');if(!b)return;const on=VOICE.mode==='wake';
+  b.classList.toggle('on',on);b.innerHTML='👂 '+(VOICE.lang==='es'?'MANOS LIBRES':'WAKE');}
+function syncVoiceBtns(){setVoiceBtn();setWakeBtn();}
+function vReadPositions(){const pos=DATA.positions||[];
+  if(!pos.length){vReply('positions',0);return;}
+  const top=pos.slice(0,5).map(p=>`${p.symbol}, ${spokenMoney(p.unrealized)}`).join('; ');
+  const msg=(VOICE.lang==='es'?`Tienes ${pos.length} posición${pos.length===1?'':'es'}. `:`You have ${pos.length} position${pos.length===1?'':'s'}. `)+top+'.';
+  vShow(tr().listening,null,msg);vSpeak(msg);}
+function vReadMovers(){const l=MARKETS.list||[];if(!l.length){vReply('unknown');return;}
+  const s=[...l].sort((a,b)=>(b.price_change_percentage_24h||0)-(a.price_change_percentage_24h||0)),g=s[0],b=s[s.length-1];
+  const msg=VOICE.lang==='es'
+    ?`Mayor subida: ${(g.symbol||'').toUpperCase()}, ${spokenPct(g.price_change_percentage_24h)}. Mayor bajada: ${(b.symbol||'').toUpperCase()}, ${spokenPct(b.price_change_percentage_24h)}.`
+    :`Top gainer: ${(g.symbol||'').toUpperCase()}, ${spokenPct(g.price_change_percentage_24h)}. Top loser: ${(b.symbol||'').toUpperCase()}, ${spokenPct(b.price_change_percentage_24h)}.`;
+  vShow(tr().listening,null,msg);vSpeak(msg);}
+function _ensureRec(){
+  if(VOICE.rec)return VOICE.rec;
+  const rec=new _SR();VOICE.rec=rec;rec.continuous=true;rec.interimResults=false;rec.maxAlternatives=1;
+  rec.lang=VOICE.lang==='es'?'es-ES':'en-US';
+  rec.onresult=(e)=>{const r=e.results[e.results.length-1];if(!r||!r.isFinal)return;
+    const txt=((r[0]&&r[0].transcript)||'').trim();if(!txt)return;
+    const n=vNorm(txt);
+    if(vAny(n,['stop listening','deja de escuchar','apaga el microfono','silencio','para de escuchar'])){voiceStop();return;}
+    if(VOICE.mode==='wake'){
+      let cmd=null;const hit=WAKE.find(w=>n.includes(' '+w+' '));
+      if(hit){cmd=n.slice(n.indexOf(' '+hit+' ')+hit.length+2).trim();}
+      else if(VOICE.awaiting){cmd=n.trim();}
+      if(cmd==null)return;                       // not addressed to the assistant — ignore
+      VOICE.awaiting=false;if(VOICE.wakeTimer){clearTimeout(VOICE.wakeTimer);VOICE.wakeTimer=null;}
+      vShow(tr().listening,txt,null);
+      if(!cmd){VOICE.awaiting=true;vReply('yes');VOICE.wakeTimer=setTimeout(()=>{VOICE.awaiting=false;},7000);return;}
+      try{vHandle(cmd);}catch(err){vReply('unknown');} return;
+    }
+    vShow(tr().listening,txt,null);
+    try{vHandle(txt);}catch(err){vReply('unknown');}};
+  rec.onerror=(e)=>{if(e&&(e.error==='not-allowed'||e.error==='service-not-allowed')){vShow(tr().micdenied,'','');vSpeak(tr().micdenied);voiceStop();}};
+  rec.onend=()=>{if(VOICE.mode!=='off'){try{rec.start();}catch(e){}}};
+  return rec;}
+function voiceRun(mode){
+  if(!_SR){vShow(tr().unsupported,'','');vSpeak(tr().unsupported);return;}
+  const rec=_ensureRec();rec.lang=VOICE.lang==='es'?'es-ES':'en-US';
+  const was=VOICE.mode;VOICE.mode=mode;syncVoiceBtns();
+  if(was==='off'){try{rec.start();}catch(e){}}
+  vShow(tr().listening,'','');vSpeak(mode==='wake'?tr().wakeon:tr().hello);}
+function voiceStop(){VOICE.mode='off';VOICE.awaiting=false;try{VOICE.rec&&VOICE.rec.stop();}catch(e){}syncVoiceBtns();
+  const p=document.getElementById('vpanel');if(p)p.querySelector('#vstate').textContent=tr().tap;}
+function voiceToggle(){VOICE.mode==='push'?voiceStop():voiceRun('push');}
+function voiceWakeToggle(){VOICE.mode==='wake'?voiceStop():voiceRun('wake');}
+(function initVoice(){
+  const vb=document.getElementById('voiceBtn'),lb=document.getElementById('voiceLang'),wb=document.getElementById('voiceWake');
+  if(lb){updateVoiceLangBtn();lb.onclick=()=>{VOICE.lang=VOICE.lang==='es'?'en':'es';updateVoiceLangBtn();syncVoiceBtns();vReply('langset');};}
+  if(vb){vb.onclick=voiceToggle;if(!_SR)vb.title=tr().unsupported;}
+  if(wb){wb.onclick=voiceWakeToggle;if(!_SR)wb.title=tr().unsupported;}
+})();
+
+load();
+// Desk switcher: swap the whole dashboard between the firm's desks.
+(function(){
+  const sw=document.getElementById('deskSw'); if(!sw)return;
+  sw.addEventListener('click',(e)=>{
+    const b=e.target.closest('button[data-desk]'); if(!b||b.dataset.desk===ACTIVE_DESK)return;
+    ACTIVE_DESK=b.dataset.desk;
+    sw.querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));
+    DATA={}; render(); load();
+  });
+})();
+setInterval(load,30000);
+if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));}
+</script>
+</body>
+</html>
