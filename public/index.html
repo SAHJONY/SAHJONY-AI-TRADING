@@ -338,6 +338,74 @@ footer .warn{color:var(--amber);font-weight:600}
       <button class="btn" id="newsBtn">↻</button></div>
     <div class="panel"><div class="news" id="newsList"><div class="empty">—</div></div></div>
   </section>
+
+  <!-- 09 · INTEL WORKFORCE -->
+  <section class="sec">
+    <div class="sec-h"><h2><span class="n">09</span><span data-i18n="intelWf">Workforce de Inteligencia</span></h2><div class="rule"></div>
+      <span class="mut mono" style="font-size:10.5px" id="intelMeta">—</span></div>
+    <div class="panel">
+      <div class="mut mono" style="font-size:10px;margin-bottom:10px" data-i18n="intelNote">Solo asesoría — no emiten órdenes ni tocan la operativa en vivo.</div>
+      <div class="grid g3" id="intelGrid" style="grid-template-columns:repeat(auto-fill,minmax(250px,1fr))"><div class="empty">—</div></div>
+    </div>
+  </section>
+
+  <!-- 10 · TOP TRADERS -->
+  <section class="sec">
+    <div class="sec-h"><h2><span class="n">10</span><span data-i18n="topTraders">Top Traders</span></h2><div class="rule"></div>
+      <span class="mut mono" style="font-size:10.5px" id="ttMeta">—</span></div>
+    <div class="grid g2" style="grid-template-columns:repeat(auto-fit,minmax(340px,1fr))">
+      <div class="panel">
+        <div class="sec-h" style="margin-bottom:6px"><h2 style="font-size:11px"><span data-i18n="lbTitle">Mejores traders · P&amp;L 30d</span></h2><div class="rule"></div></div>
+        <div class="scrollx"><table class="t" id="ttTbl"></table></div>
+        <div class="mut mono" style="font-size:10px;margin-top:6px" id="ttSrc">—</div>
+      </div>
+      <div class="panel">
+        <div class="sec-h" style="margin-bottom:6px"><h2 style="font-size:11px"><span data-i18n="posTitle">Posicionamiento agregado</span></h2><div class="rule"></div></div>
+        <div id="ttPos"></div>
+        <div class="sec-h" style="margin:10px 0 6px"><h2 style="font-size:11px"><span data-i18n="copyTitle">Señal de copia</span></h2><div class="rule"></div></div>
+        <div id="ttCopy"></div>
+      </div>
+    </div>
+    <div class="grid g2" style="grid-template-columns:repeat(auto-fit,minmax(340px,1fr));margin-top:12px">
+      <div class="panel">
+        <div class="sec-h" style="margin-bottom:6px"><h2 style="font-size:11px"><span data-i18n="whaleTitle">Alertas de ballenas BTC</span></h2><div class="rule"></div><span class="pill" id="whaleCount">0</span></div>
+        <div class="stream" id="whaleList"><div class="empty">—</div></div>
+      </div>
+      <div class="panel">
+        <div class="sec-h" style="margin-bottom:6px"><h2 style="font-size:11px"><span data-i18n="fundTitle">Fondos públicos · 13F</span></h2><div class="rule"></div></div>
+        <div class="scrollx"><table class="t" id="fundTbl"></table></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 11 · MORNING BRIEF & SYSTEM HEALTH -->
+  <section class="sec">
+    <div class="sec-h"><h2><span class="n">11</span><span data-i18n="briefTitle">Informe matutino y salud del sistema</span></h2><div class="rule"></div>
+      <span class="mut mono" style="font-size:10.5px" id="briefMeta">—</span></div>
+    <div class="grid g2" style="grid-template-columns:repeat(auto-fit,minmax(340px,1fr))">
+      <div class="panel">
+        <div class="sec-h" style="margin-bottom:6px"><h2 style="font-size:11px"><span data-i18n="briefMorning">Informe de la mañana</span></h2><div class="rule"></div>
+          <a class="linklike mono" style="font-size:10px" href="./daily_brief.md" data-i18n="briefFile">ver archivo</a></div>
+        <div id="briefBody"><div class="empty">—</div></div>
+      </div>
+      <div class="panel">
+        <div class="sec-h" style="margin-bottom:6px"><h2 style="font-size:11px"><span data-i18n="healthTitle">Salud del sistema · auto-recuperación</span></h2><div class="rule"></div><span class="pill" id="healthPill">—</span></div>
+        <div id="healthBody"><div class="empty">—</div></div>
+        <div class="sec-h" style="margin:10px 0 6px"><h2 style="font-size:11px"><span data-i18n="execQTitle">Calidad de ejecución</span></h2><div class="rule"></div></div>
+        <div id="execQBody"><div class="empty">—</div></div>
+      </div>
+    </div>
+    <div class="grid g2" style="grid-template-columns:repeat(auto-fit,minmax(340px,1fr));margin-top:12px">
+      <div class="panel">
+        <div class="sec-h" style="margin-bottom:6px"><h2 style="font-size:11px"><span data-i18n="corrTitle">Riesgo por correlación (asesoría)</span></h2><div class="rule"></div></div>
+        <div id="corrBody"><div class="empty">—</div></div>
+      </div>
+      <div class="panel">
+        <div class="sec-h" style="margin-bottom:6px"><h2 style="font-size:11px"><span data-i18n="brainUpTitle">Mejora continua del cerebro</span></h2><div class="rule"></div></div>
+        <div id="brainUpBody"><div class="empty">—</div></div>
+      </div>
+    </div>
+  </section>
 </main>
 
 <footer>
@@ -365,6 +433,17 @@ es:{
   strategyLab:"Laboratorio de estrategias", promotionPipeline:"Tubería de promoción",
   pipeNote:"research → backtest → walk_forward → paper → shadow → canary → production",
   news:"Cable financiero", conviction:"Convicción", direction:"Dirección", riskMult:"Multiplicador riesgo",
+  intelWf:"Workforce de Inteligencia", intelNote:"Solo asesoría — no emiten órdenes ni tocan la operativa en vivo.",
+  active:"Activo", abstained:"En pausa", delta:"Delta",
+  topTraders:"Top Traders", lbTitle:"Mejores traders · P&L 30d", lbRank:"#", lbTrader:"Trader", lbPnl:"P&L 30d", lbAcct:"Cuenta",
+  posTitle:"Posicionamiento agregado", copyTitle:"Señal de copia", whaleTitle:"Alertas de ballenas BTC",
+  fundTitle:"Fondos públicos · 13F", noWhales:"Sin alertas de ballenas en esta ventana", noFunds:"Sin datos 13F",
+  intelligenceOnly:"SOLO INTELIGENCIA — no es copia automática", mixed:"Mixto", sampled:"muestra",
+  filed:"presentado", holding:"Posición", value:"Valor", fund:"Fondo",
+  briefTitle:"Informe matutino y salud del sistema", briefMorning:"Informe de la mañana", briefFile:"ver archivo",
+  healthTitle:"Salud del sistema · auto-recuperación", execQTitle:"Calidad de ejecución",
+  corrTitle:"Riesgo por correlación (asesoría)", brainUpTitle:"Mejora continua del cerebro",
+  noBrief:"Sin informe aún — se genera al cerrar el primer ciclo.",
   confidence:"Confianza", long:"LARGO", short:"CORTO", flat:"PLANO",
   intelligence:"Inteligencia global", learningProgress:"Progreso de aprendizaje", modelAccuracy:"Precisión del modelo",
   observations:"Observaciones", knowledgeNodes:"Nodos de conocimiento", posture:"Postura", shadowProviders:"Proveedores sombra",
@@ -397,6 +476,17 @@ en:{
   strategyLab:"Strategy Lab", promotionPipeline:"Promotion Pipeline",
   pipeNote:"research → backtest → walk_forward → paper → shadow → canary → production",
   news:"Financial Wire", conviction:"Conviction", direction:"Direction", riskMult:"Risk multiplier",
+  intelWf:"Intelligence Workforce", intelNote:"Advisory only — they emit no orders and never touch live trading.",
+  active:"Active", abstained:"Abstained", delta:"Delta",
+  topTraders:"Top Traders", lbTitle:"Top traders · 30d P&L", lbRank:"#", lbTrader:"Trader", lbPnl:"30d P&L", lbAcct:"Account",
+  posTitle:"Aggregate positioning", copyTitle:"Copy signal", whaleTitle:"BTC whale alerts",
+  fundTitle:"Public funds · 13F", noWhales:"No whale alerts in this window", noFunds:"No 13F data",
+  intelligenceOnly:"INTELLIGENCE ONLY — not auto-copying", mixed:"Mixed", sampled:"sampled",
+  filed:"filed", holding:"Holding", value:"Value", fund:"Fund",
+  briefTitle:"Morning brief & system health", briefMorning:"Morning brief", briefFile:"view file",
+  healthTitle:"System health · self-healing", execQTitle:"Execution quality",
+  corrTitle:"Correlation risk (advisory)", brainUpTitle:"Brain self-improvement",
+  noBrief:"No brief yet — generated at the close of the first cycle.",
   confidence:"Confidence", long:"LONG", short:"SHORT", flat:"FLAT",
   intelligence:"Overall intelligence", learningProgress:"Learning progress", modelAccuracy:"Model accuracy",
   observations:"Observations", knowledgeNodes:"Knowledge nodes", posture:"Posture", shadowProviders:"Shadow providers",
@@ -443,7 +533,7 @@ function dirClass(d){ d=String(d||"").toLowerCase(); return d==="long"?"long":(d
 function dirLabel(d){ d=String(d||"").toLowerCase(); return d==="long"?t("long"):(d==="short"?t("short"):t("flat")); }
 
 /* ── state ── */
-let S=null, EVAL=null, KNOW=null, CATALOG=null;
+let S=null, EVAL=null, KNOW=null, CATALOG=null, TT=null;
 let CG={list:[],byId:{},ts:0};
 let NEWS={list:[],ts:0,src:""};
 let SYM=0;               // selected council symbol index
@@ -474,7 +564,8 @@ async function loadAll(){
     getJSON("./status.json"+q).then(function(j){S=j;}).catch(function(){S=S||{_error:true};}),
     getJSON("./evaluation.json"+q).then(function(j){EVAL=j;}).catch(function(){}),
     getJSON("./knowledge.json"+q).then(function(j){KNOW=j;}).catch(function(){}),
-    getJSON("./strategy_catalog.json"+q).then(function(j){CATALOG=j;}).catch(function(){})
+    getJSON("./strategy_catalog.json"+q).then(function(j){CATALOG=j;}).catch(function(){}),
+    getJSON("./top_traders.json"+q).then(function(j){TT=j;}).catch(function(){})
   ];
   await Promise.all(jobs);
 }
@@ -879,6 +970,190 @@ function renderLab(){
   }).join("");
 }
 
+/* ── render: intel workforce ── */
+function renderIntel(){
+  const wf=(S&&S.intel_workforce)||[];
+  const grid=$("#intelGrid"), meta=$("#intelMeta");
+  if(!grid) return;
+  if(!wf.length){ grid.innerHTML='<div class="empty">'+esc(t("awaitingData"))+"</div>"; if(meta) meta.textContent="—"; return; }
+  if(meta) meta.textContent=wf.length+" "+(LANG==="es"?"agentes":"agents")+" · "+(wf[0]&&wf[0].ts?timeAgo(wf[0].ts):"—");
+  grid.innerHTML=wf.map(function(f){
+    const d=num(f.conviction_delta), cf=num(f.confidence);
+    const abst=String(f.status||"")==="abstained";
+    const left=d!=null&&d<0?(50-Math.min(50,Math.abs(d)*50)):50;
+    const w=d!=null?Math.min(50,Math.abs(d)*50):0;
+    const col=abst?"var(--dim)":(d!=null&&d<0?"var(--down)":"var(--up)");
+    const body=abst?(f.abstain_reason||f.finding||""):(f.finding||"");
+    return '<div class="agent"><div class="top">'+
+      '<span class="pill'+(abst?"":" g")+'">'+esc(abst?t("abstained"):t("active"))+"</span>"+
+      '<div style="min-width:0"><div class="nm">'+esc(f.name||"—")+'</div><div class="rl">'+esc(f.role||"")+"</div></div></div>"+
+      '<div class="rt">'+esc(body)+"</div>"+
+      '<div class="cstat" style="margin:6px 0 0;gap:10px"><span>'+esc(t("delta"))+': <b class="'+cls(d)+'">'+(d!=null?(d>0?"+":"")+d.toFixed(2):"—")+"</b></span>"+
+      "<span>"+esc(t("confidence"))+': <b>'+(cf!=null?Math.round(cf*100)+"%":"—")+"</b></span></div>"+
+      '<div class="scorebar"><span class="zero"></span><i style="left:'+left+"%;width:"+w+"%;background:"+col+'"></i></div></div>';
+  }).join("");
+}
+
+/* ── render: top traders ── */
+function biasLabel(b){ b=String(b||"").toLowerCase(); return b==="long"?t("long"):(b==="short"?t("short"):t("mixed")); }
+function renderTopTraders(){
+  const box=$("#ttTbl"); if(!box) return;
+  const sum=(S&&S.top_traders)||{};
+  const ttTs=sum.ts||(TT&&TT.ts);
+  const meta=$("#ttMeta");
+  if(meta){
+    let mt="—";
+    if(sum.available||TT){ mt=(ttTs?timeAgo(ttTs):"—")+" · "+(sum.trader_count||((TT&&TT.traders)||[]).length||0)+" traders"; }
+    if(sum.stale||(TT&&TT.stale)) mt+=" · "+t("dataStale");
+    meta.textContent=mt;
+  }
+  /* leaderboard */
+  const traders=(TT&&TT.traders)||[];
+  if(!traders.length){ box.innerHTML='<tr><td><div class="empty">'+esc(t("awaitingData"))+"</div></td></tr>"; }
+  else{
+    box.innerHTML="<tr><th>"+esc(t("lbRank"))+"</th><th>"+esc(t("lbTrader"))+"</th><th>"+esc(t("lbPnl"))+"</th><th>"+esc(t("lbAcct"))+"</th></tr>"+
+      traders.slice(0,10).map(function(x){
+        const p=num(x.pnl);
+        return "<tr><td>"+(x.rank||"—")+"</td><td><b>"+esc(x.alias_or_wallet||"—")+'</b><div class="dim" style="font-size:9.5px">'+esc(x.venue||"")+"</div></td>"+
+          '<td class="'+cls(p)+'">'+fmtSigned(p,0)+"</td><td>"+fmtMoney(x.account_value,0)+"</td></tr>";
+      }).join("");
+  }
+  const src=$("#ttSrc");
+  if(src) src.textContent=((TT&&TT.sources)||[]).join(" · ")||"—";
+  /* aggregate positioning */
+  const pos=$("#ttPos");
+  if(pos){
+    const agg=(TT&&TT.aggregate_positioning)||{};
+    const smp=agg.sampled;
+    function assetRow(sym){
+      const a=agg[sym]||{};
+      const pl=num(a.pct_long), l=num(a.long)||0, s=num(a.short)||0, f=num(a.flat)||0;
+      const tot=l+s+f, lp=tot>0?Math.round(l/tot*100):0, sp=tot>0?Math.round(s/tot*100):0;
+      return '<div style="margin:8px 0"><div class="ctl" style="justify-content:space-between"><span><b>'+esc(sym)+"</b>"+
+        (pl!=null?' · <span class="mono">'+esc(pl.toFixed(0))+'% '+esc(t("long")).toLowerCase()+"</span>":"")+"</span>"+
+        '<span class="mono dim" style="font-size:10px">'+l+"L / "+s+"S / "+f+"F"+(smp!=null?" · "+smp+" "+esc(t("sampled")):"")+"</span></div>"+
+        '<div class="bar" style="margin-top:5px;display:flex;height:8px;border-radius:4px;overflow:hidden;background:#131b2a">'+
+        '<i style="width:'+lp+'%;background:var(--up)"></i><i style="width:'+sp+'%;background:var(--down)"></i></div></div>';
+    }
+    pos.innerHTML=assetRow("BTC")+assetRow("ETH");
+  }
+  /* copy signal */
+  const cp=$("#ttCopy");
+  if(cp){
+    const cs=(TT&&TT.copy_signal)||sum.copy_signal||{};
+    const bias=String(cs.net_bias||"").toLowerCase();
+    const bc=bias==="long"?"long":(bias==="short"?"short":"flat");
+    cp.innerHTML='<div class="ctl"><span class="dir '+bc+'">'+esc(biasLabel(bias))+"</span>"+
+      '<span class="pill gold">'+esc(t("intelligenceOnly"))+"</span></div>"+
+      '<div class="rt" style="margin-top:8px">'+esc(cs.label||"")+"</div>";
+  }
+  /* whale alerts */
+  const wl=$("#whaleList"), wc=$("#whaleCount");
+  if(wl){
+    const alerts=(TT&&TT.whale_alerts)||[];
+    if(wc) wc.textContent=alerts.length;
+    if(!alerts.length){ wl.innerHTML='<div class="empty">'+esc(t("noWhales"))+"</div>"; }
+    else wl.innerHTML=alerts.slice(0,10).map(function(a){
+      const usd=num(a.amount_usd), btc=num(a.amount_btc);
+      return '<div class="ev"><div class="tm">'+esc(timeAgo(a.ts))+"<br>"+esc(fmtTime(a.ts))+"</div>"+
+        '<div class="tx"><span class="kind">whale</span><b>'+(btc!=null?btc.toFixed(2)+" BTC":"BTC")+"</b>"+
+        '<div class="rs">'+fmtMoney(usd,0)+" · "+esc(a.source||"")+"</div></div></div>";
+    }).join("");
+  }
+  /* 13F funds */
+  const ft=$("#fundTbl");
+  if(ft){
+    const funds=(TT&&TT.fund_holdings)||[];
+    if(!funds.length){ ft.innerHTML='<tr><td><div class="empty">'+esc(t("noFunds"))+"</div></td></tr>"; }
+    else{
+      ft.innerHTML="<tr><th>"+esc(t("fund"))+"</th><th>"+esc(t("holding"))+"</th><th>"+esc(t("value"))+"</th><th>"+esc(t("filed"))+"</th></tr>"+
+        funds.map(function(f){
+          const top=(f.top_positions||[])[0]||{};
+          return "<tr><td><b>"+esc(f.fund||"—")+"</b></td><td>"+esc(top.issuer||"—")+"</td>"+
+            "<td>"+fmtMoney(top.value_usd,0)+"</td><td>"+esc(fmtTime(f.filing_date))+"</td></tr>";
+        }).join("");
+    }
+  }
+}
+
+/* ── render: morning brief & system health ── */
+function renderBrief(){
+  const brief=(S&&S.daily_brief)||{}, meta=$("#briefMeta");
+  if(meta) meta.textContent=brief.date?(brief.date+" · "+(brief.generated_at||"")):"—";
+  const bb=$("#briefBody");
+  if(bb){
+    const secs=brief.sections, lines=[];
+    if(secs){
+      if(Array.isArray(secs)){ lines.push.apply(lines,secs); }
+      else Object.keys(secs).forEach(function(k){
+        const v=secs[k];
+        if(Array.isArray(v)) v.forEach(function(l){lines.push("· "+l);});
+        else if(v!=null) lines.push("· "+String(v));
+      });
+    }
+    if(lines.length){
+      bb.innerHTML=lines.map(function(s){return '<div class="row"><span class="mono" style="font-size:11px">'+esc(s)+'</span></div>';}).join("");
+    }else bb.innerHTML='<div class="empty">'+esc(t("noBrief"))+"</div>";
+  }
+  /* health */
+  const heal=(S&&S.self_heal)||{}, health=heal.health||{};
+  const pill=$("#healthPill"), hb=$("#healthBody");
+  const subs=Object.keys(health);
+  const worst=subs.some(function(k){return health[k].state==="critical";})?"critical":
+              subs.some(function(k){return health[k].state==="degraded";})?"degraded":
+              subs.length?"healthy":"unknown";
+  if(pill){ pill.textContent=worst; pill.className="pill"+(worst==="critical"?" r":worst==="degraded"?" gold":worst==="healthy"?" g":""); }
+  if(hb){
+    let h="";
+    if(subs.length){
+      h=subs.map(function(k){
+        const st=health[k], cls=st.state==="critical"?"r":st.state==="degraded"?"gold":"g";
+        return '<div class="row"><span>'+esc(k)+'</span><span class="pill '+cls+'">'+esc(st.state)+'</span></div>'+
+               (st.note?'<div class="mut mono" style="font-size:10px;margin:-4px 0 6px">'+esc(st.note)+'</div>':"");
+      }).join("");
+    }
+    const cb=heal.breaker_tripped;
+    if(cb===true||cb===false) h+='<div class="row"><span>circuit breaker</span><span class="pill '+(cb?"r":"g")+'">'+(cb?"tripped":"ok")+'</span></div>';
+    if(heal.escalation) h+='<div class="row"><span>escalation</span><span>'+esc(heal.escalation.note||"")+'</span></div>';
+    const log=(heal.log||[]).slice(-4).reverse();
+    if(log.length) h+='<div class="mut mono" style="font-size:10px;margin-top:6px">'+log.map(function(e){return esc(e.ts)+" · "+esc(e.action)+" · "+esc(e.target)+" · "+esc(e.result);}).join("<br>")+"</div>";
+    hb.innerHTML=h||'<div class="empty">'+esc(t("awaitingData"))+"</div>";
+  }
+  /* execution quality */
+  const eq=(S&&S.execution_quality)||{}, eb=$("#execQBody");
+  if(eb){
+    const fills=num(eq.fills_measured), bps=num(eq.avg_slippage_bps);
+    eb.innerHTML=fills!=null&&fills>0?
+      '<div class="row"><span>'+esc(LANG==="es"?"ejecuciones":"fills")+'</span><span class="mono">'+Math.round(fills)+'</span></div>'+
+      '<div class="row"><span>slippage</span><span class="mono">'+(bps!=null?bps.toFixed(1)+" bps":"—")+'</span></div>'+
+      '<div class="row"><span>'+esc(LANG==="es"?"adverso":"adverse")+'</span><span class="mono">'+Math.round(num(eq.adverse_fills)||0)+'</span></div>'
+      :'<div class="empty">'+esc(t("awaitingData"))+"</div>";
+  }
+  /* correlation */
+  const corr=(S&&S.correlation)||{}, cb2=$("#corrBody");
+  if(cb2){
+    if(corr.status==="ok"&&corr.nominal!=null){
+      cb2.innerHTML='<div class="row"><span>'+esc(LANG==="es"?"nominal":"nominal")+'</span><span class="mono">$'+(num(corr.nominal)||0).toFixed(0)+'</span></div>'+
+        '<div class="row"><span>'+esc(LANG==="es"?"efectiva (ajustada)":"effective (adjusted)")+'</span><span class="mono">$'+(num(corr.effective)||0).toFixed(0)+'</span></div>'+
+        '<div class="row"><span>'+esc(LANG==="es"?"diversificación":"diversification")+'</span><span class="mono">'+(num(corr.diversification_ratio)||0).toFixed(2)+'×</span></div>'+
+        '<div class="mut mono" style="font-size:10px;margin-top:4px">'+esc(corr.advice||"")+'</div>';
+    }else cb2.innerHTML='<div class="empty">'+esc(t("awaitingData"))+"</div>";
+  }
+  /* brain self-improvement */
+  const bu=(S&&S.brain_upgrade)||{}, rev=(S&&S.self_review)||{}, tune=(S&&S.auto_tune)||{}, ub=$("#brainUpBody");
+  if(ub){
+    let h="";
+    const anom=bu.anomaly||{}, sd=(anom.stood_down||[]).length;
+    if(sd>0) h+='<div class="row"><span>'+esc(LANG==="es"?"pausas por anomalía":"anomaly stand-downs")+'</span><span class="pill gold">'+sd+'</span></div>';
+    const acc=bu.council_calibration_accuracy||{}, av=Object.values(acc);
+    if(av.length) h+='<div class="row"><span>'+esc(t("modelAccuracy"))+'</span><span class="mono">'+(av.reduce(function(a,b){return a+b;},0)/av.length*100).toFixed(1)+'%</span></div>';
+    if(rev.ran) h+='<div class="row"><span>'+esc(LANG==="es"?"auto-revisión":"self-review")+'</span><span class="mono">'+(rev.lessons||[]).length+' '+esc(LANG==="es"?"lecciones":"lessons")+' · '+(rev.demotions||[]).length+' '+esc(LANG==="es"?"degradaciones":"demotions")+'</span></div>';
+    const lastTune=tune.last_tuned_at;
+    if(lastTune) h+='<div class="row"><span>auto-tune</span><span class="mono">'+esc(lastTune)+'</span></div>';
+    ub.innerHTML=h||'<div class="empty">'+esc(t("awaitingData"))+"</div>";
+  }
+}
+
 /* ── render: news wire ── */
 function renderNews(){
   const box=$("#newsList");
@@ -905,6 +1180,7 @@ function render(){
   if(!S) return;
   renderHeader(); renderVenues(); renderCouncil(); renderStream(); renderBrain();
   renderEquity(); renderPositions(); renderRisk(); renderRegime(); renderLab(); renderNews();
+  renderIntel(); renderTopTraders(); renderBrief();
   Array.prototype.forEach.call(document.querySelectorAll("[data-i18n]"),function(el){
     if(!el.textContent||el.getAttribute("data-i18n-live")==="1") el.textContent=t(el.getAttribute("data-i18n"));
   });

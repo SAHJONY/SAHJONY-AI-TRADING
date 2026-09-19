@@ -257,6 +257,30 @@ def run_once(firm: Firm, state, force: bool) -> dict:
     _seed_shared_knowledge(firm, state)
     result = firm.run_cycle(state, trade=trade)
     _save_shared_knowledge(firm, state)
+    # Top-trader intelligence refresh (intel/top_traders.py) — runs AFTER the
+    # trading pipeline so it can never delay research or execution. CACHE-FIRST:
+    # when public/top_traders.json is younger than TOP_TRADERS_MAX_AGE_S (the
+    # payload is a 6h-cache product; the dashboard reads the file, not the
+    # network) the cycle skips the ~60s network rebuild entirely and serves the
+    # cache — sources must never block the trading desk. Fault-isolated: any
+    # failure skips with a warning and the desk keeps the previous payload.
+    # Placed BEFORE build_status so status.json carries this cycle's summary.
+    if getattr(firm.cfg, "intel_top_traders_enabled", False):
+        try:
+            from intel.top_traders import refresh as tt_refresh
+            import os as _os
+            _tt_path = _os.path.join(_os.path.dirname(status_path()),
+                                     "top_traders.json")
+            _tt_max_age = int(_os.getenv("TOP_TRADERS_MAX_AGE_S", "21600") or 21600)
+            _tt_age = (time.time() - _os.path.getmtime(_tt_path)
+                       if _os.path.exists(_tt_path) else float("inf"))
+            if _tt_age < _tt_max_age:
+                log.info("top-traders payload fresh (%.0fs old) — serving cache, "
+                         "skipping network refresh", _tt_age)
+            else:
+                tt_refresh()
+        except Exception as exc:
+            log.warning("top-traders refresh skipped: %s", exc)
     status = build_status(firm, firm.cfg, state, result)
     write_status(status, status_path())
     shared = write_investor_views(firm.db, status)  # token-keyed read-only investor snapshots

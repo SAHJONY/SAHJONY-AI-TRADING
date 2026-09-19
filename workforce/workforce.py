@@ -114,7 +114,7 @@ class ResearchDesk:
             feed_timestamp=hist.get("feed_timestamp"),
             exchange_timestamp=hist.get("exchange_timestamp"),
         )
-        return snap, self.council.deliberate(snap)
+        return snap, self.council.deliberate(snap, getattr(self, "cal_weights", None))
 
 
 class PortfolioManager:
@@ -134,10 +134,21 @@ class PortfolioManager:
         return "wheel" if idx % 2 == 0 else "ladder"
 
     def effective(self, council: CouncilVerdict, brain: BrainVerdict, equity: float,
-                  alt_tilt: float = 0.0):
+                  alt_tilt: float = 0.0, conviction_scale: float = 1.0):
         # Council conviction, nudged by the AI brain and the alt-data overlay (both
         # clamped small upstream so they can only tilt, never hijack, the quant signal).
         conviction = max(0.0, min(1.0, council.conviction + brain.adjust_for(council.symbol) + alt_tilt))
+        # Disagreement-based conviction scaling (intel/dispersion.py): the scale is
+        # clamped to [0, 1] here defensively and applied REDUCTION-ONLY — a divided
+        # council can shrink conviction, never grow it past the pipeline's output.
+        try:
+            scale = float(conviction_scale)
+        except (TypeError, ValueError):
+            scale = 1.0
+        if not math.isfinite(scale):
+            scale = 1.0
+        scale = max(0.0, min(1.0, scale))
+        conviction = min(conviction, conviction * scale)
         risk_mult = max(0.1, min(1.2, council.risk_multiplier * brain.global_risk_multiplier))
         budget = self.risk.position_budget(equity, conviction, risk_mult)
         return conviction, risk_mult, budget
@@ -155,6 +166,12 @@ class ExecutionTrader:
         # unit tests can construct ExecutionTrader without one; Firm always
         # injects a live governor unless PORTFOLIO_GOVERNOR=false.
         self.governor = governor
+        # Execution-quality ledger (intel/execution_quality.py): arrival price
+        # captured per intent, fill price matched on fill. Measurement only —
+        # never influences routing. Also picked up opportunistically by Firm.
+        self.trade_memory = None
+        self.exec_quality = None
+        self._last_fill: Dict[str, float] = {}
 
     def _governor_decision(self, equity: float, intent: OrderIntent,
                            dec, state: Dict[str, Any],
@@ -216,12 +233,46 @@ class ExecutionTrader:
     def _apply(self, intent: OrderIntent, state: Dict[str, Any]) -> None:
         positions = state.setdefault("positions", {})
         if intent.clear_position:
-            positions.pop(intent.symbol, None)
+            old = positions.pop(intent.symbol, None)
+            # Every closed trade gets a structured post-mortem (intel/trade_memory):
+            # entry rationale, regime at entry, what worked / what did not.
+            # Unknowns are recorded as "unknown" — never invented.
+            if old:
+                try:
+                    tm = getattr(self, "trade_memory", None)
+                    if tm is not None and tm.enabled:
+                        shares = float(old.get("shares", 0) or 0)
+                        entry_px = float(old.get("entry_price", 0)
+                                         or old.get("cost_basis", 0) or 0)
+                        fills = getattr(self, "_last_fill", None) or {}
+                        exit_px = float(fills.get(intent.symbol, 0) or 0)
+                        tm.record_close(
+                            symbol=intent.symbol,
+                            side="sell" if shares < 0 else "buy",
+                            qty=abs(shares),
+                            entry_price=entry_px, exit_price=exit_px,
+                            realized_pnl=float(intent.realized_delta or 0),
+                            strategy=str(old.get("strategy") or intent.strategy
+                                         or "unknown"),
+                            regime_at_entry=str(old.get("regime") or "unknown"),
+                            entry_rationale=str(old.get("entry_rationale") or ""),
+                            entry_ts=str(old.get("entry_ts") or ""),
+                            cycles_held=max(0, int(state.get("cycle", 0) or 0)
+                                            - int(old.get("entry_cycle", 0) or 0)),
+                            entry_conviction=old.get("entry_conviction"),
+                        )
+                except Exception as exc:
+                    log.warning("post-mortem record failed: %s", exc)
         elif intent.set_position is not None:
-            positions[intent.symbol] = intent.set_position
+            pos = dict(intent.set_position)
+            self._tag_entry(pos, intent, state)
+            positions[intent.symbol] = pos
         elif intent.merge_position is not None:
+            is_new = intent.symbol not in positions
             pos = positions.get(intent.symbol, {})
             pos.update(intent.merge_position)
+            if is_new:
+                self._tag_entry(pos, intent, state)
             positions[intent.symbol] = pos
         state["premium_collected"] = state.get("premium_collected", 0.0) + intent.premium_delta
         state["realized_pnl"] = state.get("realized_pnl", 0.0) + intent.realized_delta
@@ -233,6 +284,25 @@ class ExecutionTrader:
                            "realized": float(intent.realized_delta)})
             if len(events) > 400:
                 del events[:len(events) - 400]
+
+    @staticmethod
+    def _tag_entry(pos: Dict[str, Any], intent: OrderIntent,
+                   state: Dict[str, Any]) -> None:
+        """Stamp a newly opened position with the context the post-mortem will
+        need at close: entry rationale (the intent's reason), regime at entry,
+        entry conviction, entry cycle/ts. Advisory metadata only — it never
+        influences sizing or gating."""
+        try:
+            pos.setdefault("entry_rationale", str(intent.reason or ""))
+            pos.setdefault("regime",
+                           (state.get("_regime_now") or {}).get(intent.symbol, "unknown"))
+            pos.setdefault("entry_conviction",
+                           (state.get("_conviction_now") or {}).get(intent.symbol))
+            pos.setdefault("entry_cycle", int(state.get("cycle", 0) or 0))
+            from datetime import datetime, timezone
+            pos.setdefault("entry_ts", datetime.now(timezone.utc).isoformat())
+        except Exception:
+            pass
 
     @staticmethod
     def _adds_exposure(intent: OrderIntent) -> bool:
@@ -331,6 +401,20 @@ class ExecutionTrader:
                 })
                 continue
 
+            # Execution-quality: match the reconciled fill to its arrival, and
+            # stash the fill price BEFORE _apply so a closing post-mortem
+            # reads the real exit price.
+            try:
+                self._last_fill[symbol] = float(fill_price or 0)
+            except (TypeError, ValueError):
+                pass
+            try:
+                eq = getattr(self, "exec_quality", None)
+                if eq is not None and eq.enabled:
+                    eq.record_fill(intent_id, float(fill_price or 0),
+                                   (result or {}).get("filled_qty"))
+            except Exception as exc:
+                log.warning("reconciled fill quality record skipped: %s", exc)
             self._apply(recovered, state)
             transaction_cost = max(
                 0.0, float((result or {}).get("transaction_cost", 0.0) or 0.0)
@@ -464,6 +548,20 @@ class ExecutionTrader:
                     "cycle": cycle, "intent_id": intent_id, "payload": payload,
                 })
                 if intent.kind == "equity":
+                    # Arrival-price capture for execution-quality measurement:
+                    # the market price the moment the order is released.
+                    try:
+                        eq = getattr(self, "exec_quality", None)
+                        if eq is not None and eq.enabled:
+                            arrival = self.client.get_price(intent.symbol)
+                            mode_now = str(getattr(self.client, "mode", self.cfg.mode) or "")
+                            eq.record_intent(
+                                intent_id, symbol=intent.symbol, side=intent.side,
+                                qty=intent.qty, arrival_price=float(arrival or 0),
+                                provenance="live" if mode_now.upper() == "LIVE"
+                                else "simulated")
+                    except Exception as exc:
+                        log.warning("arrival capture skipped: %s", exc)
                     res = self.client.submit_equity_order(intent.symbol, intent.qty, intent.side)
                 else:
                     res = self.client.submit_option_order(intent.contract, intent.qty, intent.side, intent.premium)
@@ -516,6 +614,18 @@ class ExecutionTrader:
                 price = (res.get("fill_price") if res.get("fill_price") is not None
                          else self.client.get_price(intent.symbol)
                          if intent.kind == "equity" else intent.premium)
+                # Execution-quality: match the fill to its arrival; stash the
+                # fill price for the post-mortem hook in _apply (exit price).
+                try:
+                    self._last_fill[intent.symbol] = float(price or 0)
+                except (TypeError, ValueError):
+                    pass
+                try:
+                    eq = getattr(self, "exec_quality", None)
+                    if eq is not None and eq.enabled:
+                        eq.record_fill(intent_id, float(price or 0), intent.qty)
+                except Exception as exc:
+                    log.warning("fill quality record skipped: %s", exc)
                 # Transaction costs: charge the estimated round trip when a position
                 # is CLOSED, so realized P&L — and therefore the equity curve and
                 # Hermes' scorecard — are NET of spread rather than gross.
@@ -671,6 +781,53 @@ class Firm:
             log.info("promoted desks ENABLED: %s on symbols %s",
                      [a.strategy_id for a in self.promoted_adapters],
                      list(cfg.promoted_symbols or []))
+        # Intel workforce (intel/workforce/) — 9-agent advisory-only analyst
+        # team. Runs AFTER the research block; never emits orders, never
+        # touches risk caps or the arming chain. Import-guarded so the desk
+        # boots even if the module is absent.
+        self.intel_desk = None
+        try:
+            from intel.workforce.desk import IntelDesk
+            self.intel_desk = IntelDesk(cfg)
+        except Exception as exc:
+            log.warning("intel workforce unavailable: %s", exc)
+        # Brain-upgrade + self-healing/self-improving subsystems (intel/).
+        # All are advisory, de-risk-only, or measurement-only; import-guarded so
+        # the desk boots even if a module is absent. None of them can widen risk
+        # caps, emit orders, or touch credentials — the risk envelope is hard.
+        self.calibration = None
+        self.trade_memory = None
+        self.self_review = None
+        self.self_heal = None
+        self.exec_quality = None
+        self.auto_tune = None
+        try:
+            from intel.council_calibration import CouncilCalibration
+            from intel.trade_memory import TradeMemory
+            from intel.self_review import SelfReview
+            from intel.self_heal import SelfHeal
+            from intel.execution_quality import ExecutionQuality
+            from intel.auto_tune import AutoTune
+            self.calibration = CouncilCalibration(cfg)
+            self.trade_memory = TradeMemory()
+            self.self_review = SelfReview(cfg, self.trade_memory, None)
+            self.self_heal = SelfHeal(cfg)
+            self.exec_quality = ExecutionQuality()
+            self.auto_tune = AutoTune(cfg)
+            # ExecutionTrader picks these up opportunistically (getattr-guarded):
+            # post-mortems on closes, arrival-vs-fill slippage on fills.
+            self.execution.trade_memory = self.trade_memory
+            self.execution.exec_quality = self.exec_quality
+            # Promotion pipeline for the self-review's auto-demotion: demote()
+            # only moves a candidate's stage + audit log (no execution
+            # authority); with no registered candidates this is a no-op.
+            try:
+                from intelligence.promotion_pipeline import PromotionPipeline
+                self.self_review.promotion = PromotionPipeline(db)
+            except Exception as exc:
+                log.warning("promotion pipeline unavailable for self-review: %s", exc)
+        except Exception as exc:
+            log.warning("intel brain-upgrade modules unavailable: %s", exc)
         # Per-cycle stash for risk events that must page the owner (e.g. halt
         # flatten). Reset at the top of every run_cycle; drained by _maybe_notify.
         self._cycle_risk_events = []
@@ -1273,6 +1430,27 @@ class Firm:
         state["cycle"] = state.get("cycle", 0) + 1
         cycle = state["cycle"]
         self._cycle_risk_events = []   # drained by _maybe_notify at cycle end
+        # Brain-upgrade cycle prologue: re-apply persisted tuned params (non-risk
+        # only), reset per-cycle error tracking, and snapshot the per-agent
+        # council weights graded last cycle for the research block below.
+        if self.auto_tune is not None:
+            try:
+                self.auto_tune.load_into_cfg(state)
+            except Exception as exc:
+                log.warning("auto-tune load skipped: %s", exc)
+        state["_cycle_errors"] = []
+        state["_price_errors"] = {}
+        state["_conviction_now"] = {}
+        state["_regime_now"] = {}
+        state["_dispersion_scale"] = {}
+        try:
+            if self.calibration is not None and self.calibration.enabled:
+                self.research.cal_weights = self.calibration.weights(state)
+            else:
+                self.research.cal_weights = None
+        except Exception as exc:
+            log.warning("council weights snapshot skipped: %s", exc)
+            self.research.cal_weights = None
         if hasattr(self.client, "begin_cycle"):
             self.client.begin_cycle()  # fresh quotes; pinned for this cycle
         # Record this cycle's prices as bars (passive; see utils/bar_recorder.py).
@@ -1368,6 +1546,21 @@ class Firm:
                     "reason": f"{halt.get('reason')}; {reason}".strip("; ")}
             log.error("NEW RISK HALTED: %s", reason)
 
+        # Self-heal circuit breaker — a tripped breaker or an active 3-strike
+        # escalation stand-down suspends NEW risk before anything else is sized.
+        # Exits still flow (they bypass via risk_check=False / allow_new_risk).
+        if self.self_heal is not None and self.self_heal.enabled:
+            try:
+                heal_blocked, heal_reason = self.self_heal.trading_blocked(state)
+            except Exception as exc:
+                heal_blocked, heal_reason = False, ""
+                log.warning("self-heal gate check failed: %s", exc)
+            if heal_blocked and allow_new_risk:
+                allow_new_risk = False
+                halt = {**halt, "halted": True,
+                        "reason": f"{halt.get('reason')}; {heal_reason}".strip("; ")}
+                log.error("NEW RISK HALTED: %s", heal_reason)
+
         # Execution-cadence guard. Every protective rail (trailing stops, hard
         # floors, the daily breaker) only evaluates WHEN A CYCLE RUNS. Scheduled
         # runners throttle and skip, so cycles can be hours apart — and a position
@@ -1409,6 +1602,31 @@ class Firm:
                 research.append({"symbol": sym, "snap": snap, "verdict": verdict})
             except Exception as exc:
                 log.error("research failed %s: %s", sym, exc)
+                state["_price_errors"][sym] = type(exc).__name__
+                state["_cycle_errors"].append(f"research {sym}: {type(exc).__name__}")
+
+        # 1d) Intel workforce — the 9-agent advisory-only analyst team
+        # (intel/workforce/). Runs after the research block and reports
+        # plain-language findings to the dashboard. Fault-isolated: a dead
+        # data source makes that agent abstain; a dead module leaves an empty
+        # list. Never emits orders, never touches risk caps or the arming chain.
+        intel_findings: List[Dict[str, Any]] = []
+        try:
+            if getattr(self.cfg, "intel_workforce_enabled", True) \
+                    and self.intel_desk is not None:
+                intel_ctx = {
+                    "client": self.client,
+                    "db": self.db,
+                    "state": state,
+                    "cfg": self.cfg,
+                    "tickers": list(self.cfg.tickers or []),
+                    "research": research,
+                    "reconciliation": recon,
+                }
+                intel_findings = [f.as_dict() for f in self.intel_desk.run(intel_ctx)]
+        except Exception as exc:
+            log.error("intel workforce failed: %s", exc)
+            intel_findings = []
 
         # Cross-asset institutional research fabric. This is point-in-time and
         # advisory-only: it enriches AI/research context and can never invent an order.
@@ -1450,6 +1668,62 @@ class Firm:
         except Exception as exc:
             log.error("hermes review failed: %s", exc)
             hermes = HermesReport(used=False)
+
+        # 1c2) Brain upgrade — performance-weighted voting, anomaly stand-down,
+        # disagreement scaling, regime snapshots. All fault-isolated; every step
+        # degrades to neutral and none can widen risk.
+        anomaly_report: Dict[str, Any] = {"checked": 0, "stood_down": [], "details": []}
+        try:
+            if self.calibration is not None and self.calibration.enabled:
+                self.calibration.grade_and_record(state, research)
+        except Exception as exc:
+            log.warning("council calibration grading skipped: %s", exc)
+        try:
+            from intel import anomaly as anomaly_mod
+            from intel import dispersion as dispersion_mod
+            acc_snapshot = {}
+            try:
+                if self.calibration is not None:
+                    acc_snapshot = self.calibration.accuracy(state)
+            except Exception:
+                pass
+            cal_w = getattr(self.research, "cal_weights", None) or {}
+            detections = []
+            for r in research:
+                sym = r["symbol"]
+                snap, verdict = r["snap"], r["verdict"]
+                # anomaly stand-down: outside training range → conviction 0
+                det = {"symbol": sym, "anomaly": False}
+                if getattr(self.cfg, "anomaly_enabled", True):
+                    det = anomaly_mod.detect(sym, getattr(snap, "closes", []),
+                                             z_limit=getattr(self.cfg, "anomaly_z_limit", 6.0))
+                detections.append(det)
+                r["anomaly"] = det
+                # regime snapshot for post-mortems ("what happened last time we
+                # bought ETH in a high-vol regime?")
+                try:
+                    stressed = float((verdict.metrics or {}).get("stressed_prob", 0) or 0)
+                    vol = float(getattr(snap, "vol", 0) or 0)
+                    regime = ("stressed" if stressed > 0.5
+                              else "high_vol" if vol > 0.6 else "calm")
+                except Exception:
+                    regime = "unknown"
+                state["_regime_now"][sym] = regime
+                # disagreement-based conviction scaling (reduction-only)
+                if getattr(self.cfg, "dispersion_scaling_enabled", True):
+                    scale, detail = dispersion_mod.dispersion_scale(
+                        getattr(verdict, "verdicts", []), cal_w, acc_snapshot,
+                        k=getattr(self.cfg, "dispersion_k", 2.5))
+                else:
+                    scale, detail = 1.0, {"reason": "disabled"}
+                state["_dispersion_scale"][sym] = scale
+                r["dispersion"] = {"scale": scale, **detail}
+            anomaly_report = anomaly_mod.stand_down_report(detections)
+            if anomaly_report["stood_down"]:
+                log.warning("ANOMALY stand-down on %s — conviction forced to zero",
+                            ", ".join(anomaly_report["stood_down"]))
+        except Exception as exc:
+            log.warning("brain-upgrade block skipped: %s", exc)
 
         # 2) Chief Strategist — AI brain advisory overlay
         institutional_factors = institutional_intelligence.get("factors", {})
@@ -1568,7 +1842,19 @@ class Firm:
                 else:                        # advisory layers stack, but stay bounded
                     tilt = max(-0.20, min(0.20, alt_tilt + board_tilt + hermes_tilt
                                           + intraday_tilt))
-                conviction, risk_mult, budget = self.pm.effective(verdict, brain, equity, tilt)
+                # Anomaly stand-down: behavior outside the model's training range
+                # is treated like a quarantined feed — tilt -1.0 forces conviction
+                # to zero so the Risk Officer blocks new risk; exits still flow.
+                if r.get("anomaly", {}).get("anomaly"):
+                    tilt = -1.0
+                # Disagreement-based conviction scaling (reduction-only): a divided
+                # council shrinks conviction; it can never raise it past the tilt
+                # stack above or past any cap.
+                disp_scale = state.get("_dispersion_scale", {}).get(sym, 1.0)
+                conviction, risk_mult, budget = self.pm.effective(
+                    verdict, brain, equity, tilt, conviction_scale=disp_scale)
+                # Stash for post-mortems (entry conviction) and the dashboard.
+                state["_conviction_now"][sym] = conviction
                 # Hermes strategy calibration: budget leans toward desks with a proven
                 # realized edge (bounded 0.70–1.15; hard risk ceilings still apply).
                 budget *= hermes.strategy_weights.get(strat, 1.0) * vol_scale * institutional_risk
@@ -1613,6 +1899,7 @@ class Firm:
                                      shares * snap.price, 0.0)
             except Exception as exc:
                 log.error("cycle step failed %s: %s", sym, exc)
+                state["_cycle_errors"].append(f"strategy {sym}: {type(exc).__name__}")
 
         # 6b) Copy-trading desk — mirror external disclosure feed (risk-gated)
         if trade and self.cfg.copy_trading_enabled:
@@ -1866,12 +2153,98 @@ class Firm:
         except Exception as exc:
             log.error("owner notify step failed: %s", exc)
 
+        # 9) Brain-upgrade + self-healing end-of-cycle. Every step is
+        # fault-isolated; the reports ride the cycle result into status.json.
+        state["_last_halt"] = {"halted": bool(halt.get("halted")),
+                               "reason": str(halt.get("reason") or "")}
+        heal_snapshot: Dict[str, Any] = {}
+        review_report: Dict[str, Any] = {"ran": False}
+        brief_info: Dict[str, Any] = {}
+        corr_report: Dict[str, Any] = {}
+        tune_report: Dict[str, Any] = {"tuned": False}
+        try:
+            if self.self_heal is not None and self.self_heal.enabled:
+                heal_snapshot = self.self_heal.observe(state, {
+                    "account_ok": True, "account_error": None,
+                    "price_errors": state.get("_price_errors") or {},
+                    "price_symbols": len(self.cfg.tickers or []),
+                    "exceptions": state.get("_cycle_errors") or [],
+                    "feed_ok": not (list(getattr(hermes, "quarantined", None) or [])),
+                    "cycle": cycle,
+                })
+        except Exception as exc:
+            log.warning("self-heal observe skipped: %s", exc)
+        try:
+            if self.self_review is not None and self.self_review.due(state):
+                review_report = self.self_review.run(state, self.db)
+                if review_report.get("ran"):
+                    log.info("self-review: %d lessons, %d demotions, %d flags",
+                             len(review_report.get("lessons", [])),
+                             len(review_report.get("demotions", [])),
+                             len(review_report.get("flags", [])))
+        except Exception as exc:
+            log.warning("self-review skipped: %s", exc)
+        try:
+            if getattr(self.cfg, "correlation_enabled", True):
+                from intel import correlation as corr_mod
+                corr_report = corr_mod.effective_exposure(
+                    state.get("positions") or {},
+                    {r["symbol"]: getattr(r["snap"], "closes", []) for r in research},
+                    {r["symbol"]: float(getattr(r["snap"], "price", 0) or 0)
+                     for r in research})
+        except Exception as exc:
+            log.warning("correlation advisory skipped: %s", exc)
+        try:
+            if self.auto_tune is not None:
+                tune_report = self.auto_tune.maybe_tune(state, self.trade_memory)
+                if tune_report.get("tuned"):
+                    log.info("auto-tune applied: %s", tune_report)
+        except Exception as exc:
+            log.warning("auto-tune skipped: %s", exc)
+        try:
+            if getattr(self.cfg, "daily_brief_enabled", True):
+                from intel import daily_brief as brief_mod
+                if brief_mod.due(state):
+                    exec_sum: Dict[str, Any] = {}
+                    try:
+                        if self.exec_quality is not None:
+                            exec_sum = self.exec_quality.summary()
+                    except Exception:
+                        pass
+                    brief = brief_mod.build(
+                        state=state, db=self.db, hermes_report=hermes,
+                        healing={"health": (heal_snapshot or {}).get("health"),
+                                 "log": (heal_snapshot or {}).get("log"),
+                                 "escalation": (heal_snapshot or {}).get("escalation")},
+                        exec_quality=exec_sum, correlation=corr_report,
+                        trade_memory=self.trade_memory)
+                    brief_path = brief_mod.publish(brief, state)
+                    brief_info = {"date": brief["date"],
+                                  "generated_at": brief["generated_at"],
+                                  "path": "public/daily_brief.md" if brief_path else None,
+                                  "sections": brief["sections"]}
+                    log.info("daily brief published for %s", brief["date"])
+        except Exception as exc:
+            log.warning("daily brief skipped: %s", exc)
+
         return {"cycle": cycle, "equity": eq_now, "cash": cash_now,
                 "research": research, "brain": brain, "executed": executed,
-                "ai_shadow": learning,
+                "ai_shadow": learning, "intel_findings": intel_findings,
                 "deployed": self._position_value(state), "halt": halt,
                 "reconciliation": recon,
                 "execution_reconciliation": reconciliation,
                 "institutional_intelligence": institutional_intelligence,
                 "hermes": hermes, "board": board, "vol_scale": round(vol_scale, 3),
-                "cadence": cadence}
+                "cadence": cadence,
+                "anomaly": anomaly_report,
+                "calibration_accuracy": (self.calibration.accuracy(state)
+                                         if self.calibration is not None else {}),
+                "self_heal": heal_snapshot,
+                "self_review": review_report,
+                "daily_brief": brief_info,
+                "correlation": corr_report,
+                "execution_quality": (self.exec_quality.summary()
+                                      if self.exec_quality is not None else {}),
+                "auto_tune": tune_report,
+                "trade_memory": (self.trade_memory.stats()
+                                 if self.trade_memory is not None else {})}

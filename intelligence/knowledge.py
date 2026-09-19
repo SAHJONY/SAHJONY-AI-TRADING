@@ -72,8 +72,57 @@ def save(strat: Dict[str, Dict[str, float]], hit_rates: Dict[str, float],
             "cycle": cycle,
             "last_writer": role,
         }
+        # Preserve sidecar data written by append_lesson() (lessons) and any
+        # other keys we don't own: save() rebuilds its own fields, never
+        # erases the rest of the shared knowledge base.
+        try:
+            with open(_path(), "r", encoding="utf-8") as fh:
+                prior = json.load(fh)
+            if isinstance(prior, dict):
+                for k, v in prior.items():
+                    if k not in payload:
+                        payload[k] = v
+        except (OSError, json.JSONDecodeError, ValueError):
+            pass
         os.makedirs(os.path.dirname(_path()), exist_ok=True)
         with open(_path(), "w", encoding="utf-8") as fh:
             json.dump(payload, fh, indent=2)
     except OSError as exc:
         log.warning("could not write shared knowledge: %s", exc)
+
+
+_LESSON_CAP = 200
+
+
+def append_lesson(lesson: Dict[str, Any]) -> None:
+    """Append one evidence-based lesson to the shared knowledge base.
+
+    Lessons ride alongside (never overwrite) the strategy pool written by
+    save(). Secret-free, fault-isolated: any problem degrades to a no-op.
+    """
+    try:
+        path = _path()
+        try:
+            with open(path, "r", encoding="utf-8") as fh:
+                data = json.load(fh)
+        except (OSError, json.JSONDecodeError, ValueError):
+            data = {}
+        if not isinstance(data, dict):
+            data = {}
+        lessons = data.get("lessons")
+        if not isinstance(lessons, list):
+            lessons = []
+        text = str((lesson or {}).get("text") or "").strip()
+        if not text:
+            return
+        lessons.append({
+            "ts": str((lesson or {}).get("ts") or ""),
+            "source": str((lesson or {}).get("source") or "unknown"),
+            "text": text[:500],
+        })
+        data["lessons"] = lessons[-_LESSON_CAP:]
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w", encoding="utf-8") as fh:
+            json.dump(data, fh, indent=2)
+    except OSError as exc:
+        log.warning("could not append lesson: %s", exc)

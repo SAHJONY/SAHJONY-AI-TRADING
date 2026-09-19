@@ -304,7 +304,8 @@ class Council:
     def __init__(self, agents: Optional[List[Agent]] = None):
         self.agents = agents or ALL_AGENTS
 
-    def deliberate(self, snap: MarketSnapshot) -> CouncilVerdict:
+    def deliberate(self, snap: MarketSnapshot,
+                   weights: Optional[Dict[str, float]] = None) -> CouncilVerdict:
         verdicts: List[AgentVerdict] = []
         for agent in self.agents:
             try:
@@ -312,10 +313,25 @@ class Council:
             except Exception as exc:  # one bad agent never sinks the council
                 verdicts.append(AgentVerdict(agent.name, agent.persona, 0.0, 0.0,
                                              f"error: {exc}"))
-        wsum = sum(a.weight * v.confidence for a, v in zip(self.agents, verdicts))
+        # Performance-weighted voting: an optional per-agent weight map (from
+        # intel.council_calibration) rescales each agent's static weight. The map
+        # is bounded [0.5, 1.5] upstream; anything outside is clamped here again
+        # defensively, and missing/unknown names fall back to 1.0 (neutral).
+        cal = weights or {}
+
+        def _w(agent: Agent) -> float:
+            try:
+                w = float(cal.get(agent.name, 1.0))
+            except (TypeError, ValueError):
+                w = 1.0
+            if not math.isfinite(w):
+                w = 1.0
+            return agent.weight * max(0.5, min(1.5, w))
+
+        wsum = sum(_w(a) * v.confidence for a, v in zip(self.agents, verdicts))
         composite = 0.0
         if wsum > 0:
-            composite = sum(a.weight * v.confidence * v.score
+            composite = sum(_w(a) * v.confidence * v.score
                             for a, v in zip(self.agents, verdicts)) / wsum
         conviction = max(0.0, min(1.0, 0.5 + 0.5 * composite))
 
