@@ -212,7 +212,11 @@ class RobinhoodCryptoBroker:
                 continue
             px = float(self.get_price(f"{sym}-USD") or 0.0)
             if not math.isfinite(px) or px <= 0:
-                raise BrokerSnapshotError(f"Robinhood price unavailable for held asset {sym}")
+                # One unpriceable asset must not poison the whole snapshot
+                # (which would make get_account report $0 equity). Skip it with
+                # a loud warning; the position still exists at the broker.
+                log.warning("Skipping %s in position snapshot: no price available", sym)
+                continue
             out[f"{sym}-USD"] = {"qty": qty, "market_value": qty * px}
         return out
 
