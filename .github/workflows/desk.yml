@@ -467,6 +467,10 @@ jobs:
           git add desks/alpaca-live/public/status.json 2>/dev/null || true
           if ! git diff --cached --quiet; then
             git commit -m "Desk snapshot: cycle ${{ github.run_number }} update"
+            # Master moves often (CI merges, overlapping runs); a push without a
+            # rebase fails non-fast-forward and the snapshot commit dies with the
+            # runner. Rebase first so the final publish actually lands.
+            git pull --rebase -q origin master || git rebase --abort
             for i in 1 2 3 4; do git push && break || sleep $((2**i)); done
           else
             echo "No snapshot changes — nothing to commit."
