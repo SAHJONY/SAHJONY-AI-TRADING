@@ -42,6 +42,7 @@ from intelligence.alt_data import AltData
 from intelligence.autonomous_learning import AutonomousLearningPipeline
 from intelligence.hermes import Hermes, HermesReport
 from intelligence.intraday import IntradayOverlay
+from intelligence.regime import classify_regime, gate as regime_gate
 from intelligence.institutional_research import (
     PROMOTION_KEY,
     InstitutionalResearchFabric,
@@ -53,6 +54,7 @@ from strategies.copy_trading import CopyTrader
 from strategies.credit_spreads import CreditSpreads
 from strategies.day_trading import DayTrading
 from strategies.pairs_trading import PairsDesk
+from strategies.promoted import BacktestStrategyAdapter, enabled_strategy_ids
 from strategies.trailing_ladder import TrailingLadder
 from strategies.wheel_strategy import WheelStrategy
 from utils.logger import get_logger
@@ -655,6 +657,23 @@ class Firm:
         self.copy = CopyTrader(cfg)
         self.dayts = DayTrading(cfg)
         self.pairs_desk = PairsDesk(cfg)
+        # Promoted research desks (strategies/promoted.py): validated backtest
+        # strategies running as live desks. Double-gated
+        # (PROMOTED_DESKS_ENABLED + PROMOTED_STRATEGIES); empty by default so
+        # nothing validated in research reaches a broker by accident.
+        self.promoted_adapters = []
+        for sid in enabled_strategy_ids(cfg):
+            try:
+                self.promoted_adapters.append(BacktestStrategyAdapter(sid, db))
+            except Exception as exc:
+                log.error("promoted strategy %s init failed: %s", sid, exc)
+        if self.promoted_adapters:
+            log.info("promoted desks ENABLED: %s on symbols %s",
+                     [a.strategy_id for a in self.promoted_adapters],
+                     list(cfg.promoted_symbols or []))
+        # Per-cycle stash for risk events that must page the owner (e.g. halt
+        # flatten). Reset at the top of every run_cycle; drained by _maybe_notify.
+        self._cycle_risk_events = []
 
     def _position_value(self, state: Dict[str, Any]) -> float:
         """SIGNED market value (shorts negative) — correct for equity/P&L math."""
@@ -1029,6 +1048,174 @@ class Firm:
                          {"symbol": d.get("symbol"), "reason": "hard stop breached"})
         return done
 
+    def _regime_gate(self, verdict, strategy_id: str) -> tuple:
+        """Apply the regime gate (intelligence/regime.py) to one desk/symbol.
+
+        Returns (budget_scale, entries_allowed). Reduction-only: stressed blocks
+        new entries, bear/chop halve budgets and restrict desks. Exits always
+        flow — the caller ANDs entries_allowed into allow_new_risk, and
+        ExecutionTrader lets risk_check=False exits through during any halt.
+        Fail-closed: any classification problem denies new entries.
+        `verdict` may be a CouncilVerdict or a plain metrics dict.
+        """
+        if not getattr(self.cfg, "regime_gate_enabled", True):
+            return 1.0, True
+        try:
+            if hasattr(verdict, "metrics"):
+                regime = classify_regime(verdict.metrics,
+                                         getattr(verdict, "direction", ""),
+                                         getattr(verdict, "composite_score", 0.0))
+            elif isinstance(verdict, dict):
+                regime = classify_regime(verdict, "", 0.0)
+            else:
+                regime = classify_regime({}, "", 0.0)
+            scale, allowed = regime_gate(regime, strategy_id)
+            if not allowed or scale < 1.0:
+                log.info("REGIME gate: %s desk in %s regime — scale %.2f, entries %s",
+                         strategy_id, regime, scale, "allowed" if allowed else "BLOCKED")
+            return scale, allowed
+        except Exception as exc:      # fail-closed
+            log.error("regime gate failed for %s: %s — denying new entries",
+                      strategy_id, exc)
+            return 0.0, False
+
+    def _flatten_all_positions(self, state: Dict[str, Any], cycle: int,
+                               equity: float, reason: str) -> tuple:
+        """Emergency flatten: liquidate every equity/crypto position on halt.
+
+        A halt that only blocks new risk while a bleeding book stays open
+        protects nothing, so the kill switch and the daily circuit breaker now
+        FLATTEN instead of merely freezing. Edge-triggered by the caller (once
+        per halt episode via state["halt_flattened"]).
+
+        Equity/crypto shares only — option legs are NOT auto-closed: the desk
+        has never exercised an option close, and inventing one inside a
+        protective sweep is how accidents happen. Unflattened option legs are
+        returned separately so they can be paged for manual handling.
+
+        Exits emit risk_check=False so they flow during the halt. Never raises;
+        fault-isolated per symbol. Returns (flattened, open_option_legs).
+        """
+        intents: List[OrderIntent] = []
+        open_options: List[Dict] = []
+        for sym, pos in list((state.get("positions") or {}).items()):
+            try:
+                if not isinstance(pos, dict):
+                    continue
+                strat = str(pos.get("strategy") or "")
+                if strat in ("wheel_option", "spread") or pos.get("contract"):
+                    open_options.append({
+                        "symbol": sym, "strategy": strat,
+                        "contracts": pos.get("contracts"),
+                        "strike": pos.get("strike"),
+                        "note": "option leg NOT auto-closed — manual handling required",
+                    })
+                    log.warning("HALT FLATTEN skipped option leg %s (%s) — paging for manual close",
+                                sym, strat)
+                    continue
+                shares = float(pos.get("shares", 0) or 0)
+                if not shares or not math.isfinite(shares):
+                    continue
+                side = "sell" if shares > 0 else "buy"
+                intents.append(OrderIntent(
+                    symbol=sym, strategy="risk", kind="equity",
+                    purpose="halt_flatten",
+                    reason=f"halt flatten ({reason}): closing {shares:+.4g} {sym}",
+                    side=side, qty=abs(shares), est_notional=0.0,
+                    risk_check=False, clear_position=True,
+                ))
+                log.warning("HALT FLATTEN %s: closing %+.4g sh — %s", sym, shares, reason)
+            except Exception as exc:
+                log.error("halt flatten failed for %s: %s", sym, exc)
+        flattened: List[Dict] = []
+        if intents:
+            done, _ = self.execution.execute(intents, state, cycle, equity,
+                                            0.0, 0.0, allow_new_risk=True)
+            flattened = done
+            for d in done:
+                record_event(state, "halt_flatten",
+                             {"symbol": d.get("symbol"), "reason": reason})
+        return flattened, open_options
+
+    def _maybe_notify(self, state: Dict[str, Any], cycle: int, halt: Dict[str, Any],
+                      recon: Dict[str, Any], hermes, brain, executed: List[Dict],
+                      equity: float) -> None:
+        """Page the owner on risk events. Fault-isolated; silent without creds.
+
+        Wires up Notifier.maybe_risk_alert (circuit-breaker/kill-switch trips,
+        broker disconnects, data quarantine — de-duplicated per reason per day)
+        and Notifier.maybe_alert (cycle summary when something traded or the
+        brain turned risk-off). With no channel configured this is a no-op.
+        """
+        n = getattr(self, "notifier", None)
+        if n is None:
+            return
+        try:
+            if not (n.telegram_configured or n.whatsapp_configured or n.configured):
+                return
+        except Exception:
+            return
+        try:
+            base = float(state.get("equity_start") or 0.0)
+            total_ret = (equity / base - 1.0) * 100.0 if base > 0 else 0.0
+            health = {
+                "circuit_breaker": {
+                    "halted": bool(halt.get("halted")),
+                    "reason": str(halt.get("reason") or ""),
+                    "day_return": float(halt.get("day_return") or 0.0),
+                    "limit_pct": float(halt.get("limit_pct") or 0.10),
+                },
+                "broker_online": bool((recon or {}).get("ok", True)),
+                "hermes": {"quarantined":
+                           list(getattr(hermes, "quarantined", None) or [])},
+            }
+            status = {
+                "health": health,
+                "account": {"equity": equity},
+                "pnl": {"total_return_pct": total_ret},
+                "cycle": cycle,
+                "firm": self.cfg.firm_name,
+                "mode": state.get("mode", ""),
+                "executed_this_cycle": executed,
+                "brain": {"posture": getattr(brain, "posture", "neutral") or "neutral"},
+                "extra_risk_events": list(self._cycle_risk_events or []),
+            }
+            n.maybe_risk_alert(status, state)
+            n.maybe_alert(status)
+        except Exception as exc:
+            log.error("owner notify failed: %s", exc)
+
+    def _halt_flatten_step(self, state: Dict[str, Any], cycle: int,
+                            equity: float, halt: Dict[str, Any]) -> List[Dict]:
+        """Edge-triggered halt flatten (called once per run_cycle).
+
+        When the kill switch or daily circuit breaker trips, liquidate every
+        equity/crypto position instead of merely blocking new risk. Fires once
+        per halt episode (state["halt_flattened"]); re-arms when the halt
+        clears. Queues a page-worthy risk event for _maybe_notify.
+        """
+        if not (halt.get("halted") and self.cfg.flatten_on_halt
+                and not state.get("halt_flattened")):
+            if not halt.get("halted") and state.get("halt_flattened"):
+                state.pop("halt_flattened", None)   # halt cleared — re-arm
+            return []
+        flattened, open_options = self._flatten_all_positions(
+            state, cycle, equity, halt["reason"])
+        state["halt_flattened"] = {
+            "reason": halt["reason"], "cycle": cycle,
+            "flattened": [d.get("symbol") for d in flattened],
+            "open_options": open_options,
+        }
+        msg = (f"🔻 HALT FLATTEN — {halt['reason']}: liquidated "
+               f"{len(flattened)} position(s)")
+        if open_options:
+            msg += (f"; {len(open_options)} option leg(s) NOT auto-closed "
+                    f"({', '.join(o['symbol'] for o in open_options[:5])}) — "
+                    f"manual close required")
+        log.warning("%s", msg)
+        self._cycle_risk_events.append(("flatten", msg))
+        return flattened
+
     def _governor_cycle_gate(self, equity: float, state: Dict[str, Any]
                              ) -> tuple[float, bool, list]:
         """Once-per-cycle portfolio throttle for new-position budgets.
@@ -1085,6 +1272,7 @@ class Firm:
     def run_cycle(self, state: Dict[str, Any], trade: bool = True) -> Dict[str, Any]:
         state["cycle"] = state.get("cycle", 0) + 1
         cycle = state["cycle"]
+        self._cycle_risk_events = []   # drained by _maybe_notify at cycle end
         if hasattr(self.client, "begin_cycle"):
             self.client.begin_cycle()  # fresh quotes; pinned for this cycle
         # Record this cycle's prices as bars (passive; see utils/bar_recorder.py).
@@ -1387,6 +1575,12 @@ class Firm:
                 # Portfolio-governor throttle: smooth reduction-only scaling from
                 # the once-per-cycle portfolio gate (0 on hard stop).
                 budget *= gov_scale
+                # Regime gate: the council's regime read is a real gate now —
+                # stressed blocks new entries, bear/chop halve budgets and
+                # restrict which desks may open risk. Exits always flow.
+                regime_scale, regime_entries = self._regime_gate(verdict, strat)
+                budget *= regime_scale
+                ticker_allow_new_risk = allow_new_risk and regime_entries
                 if pairs_owned:
                     intents = []
                 elif strat == "wheel":
@@ -1406,7 +1600,7 @@ class Firm:
                         get_price=self.client.get_price))
                 if trade:
                     done, deployed = self.execution.execute(intents, state, cycle, equity,
-                                                            deployed, conviction, allow_new_risk)
+                                                            deployed, conviction, ticker_allow_new_risk)
                     executed += done
                 # log council + snapshot
                 self.db.log_council(cycle, sym, verdict.conviction, verdict.direction,
@@ -1438,13 +1632,61 @@ class Firm:
             try:
                 signals = self.copy.fetch_signals()
                 if signals:
-                    c_intents = self.copy.decide(signals, state, equity, self.client.get_price)
-                    conv = max(self.cfg.min_council_conviction, 0.6)
-                    done, deployed = self.execution.execute(c_intents, state, cycle, equity,
-                                                            deployed, conv, allow_new_risk)
-                    executed += done
-                    if done:
-                        log.info("COPY desk mirrored %d trade(s)", len(done))
+                    # Regime gate on copy ENTRIES: research each unique feed
+                    # symbol once (reusing core research when it coincides) and
+                    # mirror only symbols whose regime allows new entries.
+                    # Protective exits (above) and feed-driven exits stay
+                    # unconditional — the gate is entries-only.
+                    syms = []
+                    for s in signals:
+                        sm = str(s.get("symbol") or "")
+                        if sm and sm not in syms:
+                            syms.append(sm)
+                    sig_verdicts = {}
+                    for sm in syms:
+                        try:
+                            hit = next((r for r in research if r["symbol"] == sm), None)
+                            if hit is not None:
+                                sig_verdicts[sm] = hit["verdict"]
+                            else:
+                                snap, verdict = self.research.research(sm, bench)
+                                sig_verdicts[sm] = verdict
+                                self.db.log_council(
+                                    cycle, sm, verdict.conviction, verdict.direction,
+                                    verdict.composite_score, verdict.risk_multiplier,
+                                    verdict.metrics, snap.price)
+                        except Exception as exc:
+                            log.warning("copy desk research failed for %s: %s", sm, exc)
+                    allowed_syms, scales = set(), []
+                    for sm, ver in sig_verdicts.items():
+                        scale, entries = self._regime_gate(ver, "copy")
+                        if entries:
+                            allowed_syms.add(sm)
+                            scales.append(scale)
+                    # Entries (buys) are regime-gated; feed-driven sells are
+                    # exits and flow unconditionally.
+                    gated = [s for s in signals
+                             if s.get("side") != "buy"
+                             or s.get("symbol") in allowed_syms]
+                    blocked = sum(1 for s in signals
+                                  if s.get("side") == "buy"
+                                  and s.get("symbol") not in allowed_syms)
+                    if blocked:
+                        log.info("COPY desk: regime gate blocked %d signal(s)", blocked)
+                    if gated:
+                        # Conservative: the weakest allowed regime scales the
+                        # whole mirror budget (reduction-only).
+                        gate_scale = min(scales) if scales else 0.0
+                        c_intents = self.copy.decide(gated, state,
+                                                     equity * gate_scale,
+                                                     self.client.get_price)
+                        conv = max(self.cfg.min_council_conviction, 0.6)
+                        done, deployed = self.execution.execute(
+                            c_intents, state, cycle, equity, deployed, conv,
+                            allow_new_risk)
+                        executed += done
+                        if done:
+                            log.info("COPY desk mirrored %d trade(s)", len(done))
             except Exception as exc:
                 log.error("copy-trading step failed: %s", exc)
 
@@ -1460,13 +1702,20 @@ class Firm:
                 try:
                     snap, verdict = self.research.research(sym, bench)
                     pos = state.get("positions", {}).get(sym)
-                    conv = 0.70   # technical-signal desk; risk engine still gates size
+                    # Council conviction instead of a hardcoded 0.70 — the desk
+                    # already pays for the research; use it. Floored at the
+                    # council minimum so the RiskEngine gate still sees a valid
+                    # conviction, capped so a hot read cannot over-size.
+                    conv = max(self.cfg.min_council_conviction,
+                               min(0.95, float(getattr(verdict, "conviction", 0.0) or 0.0)))
+                    rscale, rentries = self._regime_gate(verdict, "day")
                     budget = self.risk.position_budget(equity, conv, 1.0) \
                         * hermes.strategy_weights.get("daytrade", 1.0) * vol_scale * institutional_risk \
-                        * gov_scale  # portfolio-governor throttle (0 on hard stop)
+                        * gov_scale * rscale  # governor throttle (0 on hard stop) × regime
                     intents = self.dayts.decide(sym, snap, pos, budget, today)
                     done, deployed = self.execution.execute(intents, state, cycle, equity,
-                                                            deployed, conv, allow_new_risk)
+                                                            deployed, conv,
+                                                            allow_new_risk and rentries)
                     executed += done
                     self.db.log_council(cycle, sym, verdict.conviction, verdict.direction,
                                         verdict.composite_score, verdict.risk_multiplier, verdict.metrics,
@@ -1487,30 +1736,96 @@ class Firm:
         if trade and self.cfg.pairs_enabled:
             from intelligence import engines
             snaps = {r["symbol"]: r["snap"] for r in research}
+            verdicts = {r["symbol"]: r["verdict"] for r in research}
             for pair in self.cfg.pairs:
                 try:
                     if ":" not in pair:
                         continue
                     sym_a, sym_b = (p.strip() for p in pair.split(":", 1))
-                    snap_a = snaps.get(sym_a) or self.research.research(sym_a, bench)[0]
-                    snap_b = snaps.get(sym_b) or self.research.research(sym_b, bench)[0]
+                    if sym_a in snaps:
+                        snap_a, ver_a = snaps[sym_a], verdicts.get(sym_a)
+                    else:
+                        snap_a, ver_a = self.research.research(sym_a, bench)
+                    if sym_b in snaps:
+                        snap_b, ver_b = snaps[sym_b], verdicts.get(sym_b)
+                    else:
+                        snap_b, ver_b = self.research.research(sym_b, bench)
                     coint = engines.cointegration(snap_a.closes, snap_b.closes)
                     pos_a = state.get("positions", {}).get(sym_a)
                     pos_b = state.get("positions", {}).get(sym_b)
-                    conv = 0.70   # signal desk; the Risk Officer still gates size
+                    # Council conviction from the stronger leg instead of a
+                    # hardcoded 0.70 (floored/capped like the day desk).
+                    leg_conv = max(float(getattr(ver_a, "conviction", 0.0) or 0.0),
+                                   float(getattr(ver_b, "conviction", 0.0) or 0.0))
+                    conv = max(self.cfg.min_council_conviction, min(0.95, leg_conv))
+                    # Regime gate per leg, conservative: the weaker regime wins
+                    # and both legs must allow entries.
+                    sa, ea = self._regime_gate(ver_a, "pairs")
+                    sb, eb = self._regime_gate(ver_b, "pairs")
+                    rscale, rentries = min(sa, sb), (ea and eb)
                     budget = self.risk.position_budget(equity, conv, 1.0) \
                         * hermes.strategy_weights.get("pairs", 1.0) * vol_scale * institutional_risk \
-                        * gov_scale  # portfolio-governor throttle (0 on hard stop)
+                        * gov_scale * rscale  # governor throttle (0 on hard stop) × regime
                     intents = self.pairs_desk.decide(sym_a, sym_b, snap_a.price, snap_b.price,
                                                      pos_a, pos_b, budget, coint)
                     done, deployed = self.execution.execute(intents, state, cycle, equity,
-                                                            deployed, conv, allow_new_risk)
+                                                            deployed, conv,
+                                                            allow_new_risk and rentries)
                     executed += done
                     if done:
                         log.info("PAIRS desk %s/%s: %d order(s), z=%+.2f",
                                  sym_a, sym_b, len(done), coint.get("spread_z", 0.0))
                 except Exception as exc:
                     log.error("pairs desk %s failed: %s", pair, exc)
+
+        # 6e2) Promoted research desks — validated backtest strategies (S1–S18)
+        # running as live desks via strategies/promoted.py. Double-gated
+        # (PROMOTED_DESKS_ENABLED + PROMOTED_STRATEGIES); empty by default.
+        # Promoted symbols are researched like core tickers so the council,
+        # the regime gate, and every risk rail apply to them identically.
+        # Symbols colliding with core tickers are skipped (no double-trading).
+        if trade and self.promoted_adapters:
+            core_syms = set(self.cfg.tickers or [])
+            promoted_syms = [s for s in (self.cfg.promoted_symbols or [])
+                             if s and s not in core_syms]
+            if promoted_syms:
+                for adapter in self.promoted_adapters:
+                    for sym in promoted_syms:
+                        try:
+                            hit = next((r for r in research if r["symbol"] == sym), None)
+                            if hit is not None:
+                                snap, verdict = hit["snap"], hit["verdict"]
+                            else:
+                                snap, verdict = self.research.research(sym, bench)
+                                self.db.log_council(
+                                    cycle, sym, verdict.conviction, verdict.direction,
+                                    verdict.composite_score, verdict.risk_multiplier,
+                                    verdict.metrics, snap.price)
+                            # Council conviction (floored/capped like day/pairs).
+                            pconv = max(self.cfg.min_council_conviction,
+                                        min(0.95, float(getattr(
+                                            verdict, "conviction", 0.0) or 0.0)))
+                            rscale, rentries = self._regime_gate(verdict, "promoted")
+                            budget = self.risk.position_budget(
+                                equity, pconv, 1.0) \
+                                * hermes.strategy_weights.get("promoted", 1.0) \
+                                * vol_scale * institutional_risk * gov_scale * rscale
+                            intents = adapter.decide(StrategyContext(
+                                symbol=sym, snap=snap,
+                                position=state.get("positions", {}).get(sym),
+                                council=verdict, budget=budget, state=state,
+                                get_price=self.client.get_price,
+                                extras={"allow_fractional": self.cfg.allow_fractional}))
+                            done, deployed = self.execution.execute(
+                                intents, state, cycle, equity, deployed,
+                                pconv, allow_new_risk and rentries)
+                            executed += done
+                            if done:
+                                log.info("PROMOTED %s %s: %d order(s)",
+                                         adapter.strategy_id, sym, len(done))
+                        except Exception as exc:
+                            log.error("promoted desk %s %s failed: %s",
+                                      adapter.strategy_id, sym, exc)
 
         # 6e) Catastrophic per-position hard stop — central backstop wiring up
         # RiskEngine.hard_stop_breached(). Exits only; flows even during halts.
@@ -1523,6 +1838,15 @@ class Firm:
         except Exception as exc:
             log.error("catastrophic stop sweep failed: %s", exc)
 
+        # 6g) Halt flatten — a halt that leaves the book open protects nothing.
+        # Edge-triggered via _halt_flatten_step (once per halt episode).
+        try:
+            flattened = self._halt_flatten_step(state, cycle, equity, halt)
+            if flattened:
+                executed += flattened
+        except Exception as exc:
+            log.error("halt flatten failed: %s", exc)
+
         # 7) Treasurer — equity curve
         acct = self.client.get_account()
         if self.cfg.trading_capital and self.cfg.trading_capital > 0:
@@ -1531,6 +1855,16 @@ class Firm:
             eq_now, cash_now = acct["equity"], acct["cash"]
         self.db.log_equity(cycle, eq_now, cash_now, self._position_value(state),
                            state.get("realized_pnl", 0.0), state.get("premium_collected", 0.0), mode)
+
+        # 8) Owner alerting — risk pages go out even when nothing traded.
+        # Wires up Notifier.maybe_risk_alert (breaker/kill-switch trips, broker
+        # disconnects, quarantine — de-duplicated per reason per day) and
+        # Notifier.maybe_alert. Silent without configured channels.
+        try:
+            self._maybe_notify(state, cycle, halt, recon, hermes, brain,
+                               executed, eq_now)
+        except Exception as exc:
+            log.error("owner notify step failed: %s", exc)
 
         return {"cycle": cycle, "equity": eq_now, "cash": cash_now,
                 "research": research, "brain": brain, "executed": executed,

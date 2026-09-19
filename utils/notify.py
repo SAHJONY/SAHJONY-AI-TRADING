@@ -210,6 +210,14 @@ class Notifier:
             events.append(("quarantine",
                            f"🧪 Data quarantined: {', '.join(map(str, quarantined[:5]))} "
                            f"— no new risk on those symbols"))
+        # Caller-supplied risk events (e.g. halt flatten). Same per-day dedup.
+        for item in (status.get("extra_risk_events") or []):
+            try:
+                k, m = str(item[0]), str(item[1])
+            except (TypeError, IndexError):
+                continue
+            if k and m:
+                events.append((k, m))
         if not events:
             return None
         from datetime import datetime, timezone

@@ -40,6 +40,7 @@ import math
 from dataclasses import dataclass
 from typing import Dict, Optional
 
+from utils.bar_recorder import MIN_TICKS_MEASURED_RANGE
 from utils.logger import get_logger
 
 log = get_logger("intraday")
@@ -50,8 +51,8 @@ MAX_TILT = 0.05
 # A bar whose volume (a TICK COUNT on this recorder, not traded size) is below
 # this was observed once, so its high equals its low and its range is assumed
 # rather than measured. backtest.data.load_desk_db uses the same threshold for
-# the same reason.
-MIN_TICKS_PER_BAR = 2
+# the same reason. Single source of truth: utils.bar_recorder.
+MIN_TICKS_PER_BAR = MIN_TICKS_MEASURED_RANGE
 
 # Usable bars required before this says anything at all. Below this the standard
 # deviation in the denominator is noise and the score is not meaningful.
