@@ -277,6 +277,40 @@ def _integrity_block(firm, state: Dict[str, Any]) -> list:
         return []
 
 
+def _venues_block(client, broker_account: Dict[str, Any]) -> list:
+    """Per-venue roster for the dashboard. Fault-isolated like all telemetry.
+
+    Multi-venue clients expose describe_venues(); legacy single-broker clients
+    don't, so we synthesize one entry from the broker_account block. Either
+    way the dashboard's Venues strip always has something to render."""
+    try:
+        describe = getattr(client, "describe_venues", None)
+        if callable(describe):
+            venues = describe() or []
+            if venues:
+                return venues
+    except Exception:
+        pass
+    try:
+        return [{
+            "id": str(broker_account.get("venue", "broker") or "broker"),
+            "kind": "crypto" if "robinhood" in str(broker_account.get("venue", "")) else "multi",
+            "mode": "LIVE" if str(broker_account.get("mode", "")).upper() == "LIVE" else "paper",
+            "detail": str(broker_account.get("mode", "") or ""),
+            "online": bool(broker_account.get("online", False)),
+            "live_armed": bool(broker_account.get("live_armed", False)),
+            "equity": float(broker_account.get("equity", 0.0) or 0.0),
+            "cash": float(broker_account.get("cash", 0.0) or 0.0),
+            "buying_power": float(broker_account.get("buying_power", 0.0) or 0.0),
+            "symbols": [],
+            "symbol_count": 0,
+            "max_order_usd": 0.0,
+            "live_requested": False,
+        }]
+    except Exception:
+        return []
+
+
 def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[str, Any]) -> Dict[str, Any]:
     db = firm.db
     client = firm.client
@@ -481,6 +515,10 @@ def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[st
         "brain": brain_block,
         "positions": positions,
         "broker_account": broker_account,
+        # Multi-venue roster for the dashboard's Venues strip. Legacy
+        # single-broker clients have no describe_venues() → synthesize one
+        # entry from the broker_account block so the strip always renders.
+        "venues": _venues_block(client, broker_account),
         "reconciliation": cycle_result.get("reconciliation") or {
             "status": "unavailable", "reconciled": False,
             "execution_blocked": True, "error": "no reconciliation evidence",

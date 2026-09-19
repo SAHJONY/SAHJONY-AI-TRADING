@@ -77,7 +77,35 @@ def _verify(adapter) -> object:
 def get_broker(cfg: Config):
     """Return the broker adapter selected by cfg.broker (default 'alpaca').
 
-    To add a venue: implement BrokerAdapter and add a branch here."""
+    Multi-venue mode: when VENUES is set (e.g.
+    "robinhood_crypto:live,alpaca:paper,simulator:paper"), returns a
+    VenueRouter implementing this same contract, routing each symbol to the
+    venue that supports it. When VENUES is unset, behavior is EXACTLY the
+    legacy single-broker path below.
+
+    To add a venue: implement BrokerAdapter and register it in
+    venues/registry.py."""
+    venue_specs = _venue_specs(cfg)
+    if venue_specs:
+        from venues.router import VenueRouter
+        return _verify(VenueRouter(venue_specs))
+    return _legacy_broker(cfg)
+
+
+def _venue_specs(cfg: Config):
+    """Build venue specs when VENUES is configured, else [].
+
+    A broken VENUES value raises loudly here (fail fast at boot) — never a
+    silent single-broker fallback that could misroute real money."""
+    raw = (getattr(cfg, "venues", "") or "").strip()
+    if not raw:
+        return []
+    from venues.registry import build_venue_specs
+    return build_venue_specs(cfg)
+
+
+def _legacy_broker(cfg: Config):
+    """The original single-broker factory — byte-for-byte the old behavior."""
     name = (getattr(cfg, "broker", "alpaca") or "alpaca").lower()
     if name == "alpaca":
         from utils.alpaca_client import AlpacaClient
