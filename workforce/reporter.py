@@ -355,6 +355,43 @@ def _congress_block() -> Dict[str, Any]:
         return {"available": False, "error": type(exc).__name__}
 
 
+def _signal_attribution_block() -> Dict[str, Any]:
+    """Signal-attribution snapshot for the dashboard — the per-engine realized
+    attribution ledger (intel/signal_attribution.py). Measurement only:
+    decayed per-engine hit-rate and mean signed return in bps at fixed 1h/4h/
+    24h horizons, ranked only after 20 graded observations. Correlational,
+    never a trade signal, never a reason to widen risk. Secret-free and
+    fault-isolated: a missing module or an unreadable payload yields a
+    marked-down unavailable block, never a crash."""
+    try:
+        from intel.signal_attribution import load_payload, summary_for_status
+        return summary_for_status(load_payload())
+    except Exception as exc:
+        return {"available": False, "error": type(exc).__name__}
+
+
+def _latency_block(cycle_result: Dict[str, Any]) -> Dict[str, Any]:
+    """Segmented cycle-latency telemetry for the dashboard
+    (telemetry/latency.py): rolling p50/p95/p99 per desk-cycle segment, a
+    staleness flag, and p99-trend degradation flags. MEASUREMENT ONLY: it
+    cannot make the desk faster — its value is operational (catching
+    degradation early) and epistemic (quantifying why latency-sensitive
+    alphas are off-limits on 15-minute GitHub Actions cycles). Secret-free
+    and fault-isolated: prefers the summary attached to this cycle's result,
+    falls back to reading the persisted store, and otherwise reports
+    telemetry unavailable — never a crash, never invented data."""
+    try:
+        snap = (cycle_result or {}).get("latency")
+        if isinstance(snap, dict) and snap:
+            return snap
+        from telemetry.latency import get_summary
+        return get_summary()
+    except Exception as exc:
+        return {"enabled": False, "unavailable": True, "stale": True,
+                "cycles_recorded": 0, "segments": {},
+                "notes": [f"latency block failed: {type(exc).__name__}"]}
+
+
 def _venues_block(client, broker_account: Dict[str, Any]) -> list:
     """Per-venue roster for the dashboard. Fault-isolated like all telemetry.
 
@@ -617,6 +654,18 @@ def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[st
         # disclosure activity, report-level, advisory only. Unavailable when
         # the sibling module or its cached payload is missing.
         "congress": _congress_block(),
+        # Signal-attribution ledger (intel/signal_attribution.py) — which
+        # intelligence engine actually earned what: decayed per-engine
+        # hit-rate and mean signed return (bps) at fixed 1h/4h/24h horizons,
+        # ranked only after 20 graded observations. MEASUREMENT ONLY:
+        # correlational, never a trade signal, never a reason to widen risk.
+        "signal_attribution": _signal_attribution_block(),
+        # Segmented cycle-latency telemetry (telemetry/latency.py) — rolling
+        # p50/p95/p99 per desk-cycle segment + staleness flag. This will NOT
+        # make the desk faster; it exists to catch degradation early and to
+        # quantify why latency-sensitive alphas are off-limits on 15-minute
+        # GitHub Actions cycles. MEASUREMENT ONLY.
+        "latency": _latency_block(cycle_result),
         # Brain upgrade (intel/) — performance-weighted voting accuracy,
         # anomaly stand-downs, disagreement scaling, trade post-mortems.
         # All advisory or de-risk-only; none can widen risk caps.

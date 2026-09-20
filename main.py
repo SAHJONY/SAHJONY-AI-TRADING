@@ -243,6 +243,28 @@ def _save_shared_knowledge(firm: Firm, state) -> None:
         log.warning("shared knowledge save skipped: %s", exc)
 
 
+def _maybe_signal_attribution(firm: Firm, result: dict) -> None:
+    """Signal-attribution ledger hook (intel/signal_attribution.py).
+
+    MEASUREMENT ONLY, fault-isolated: snapshots this cycle's engine inputs
+    from the research verdicts already produced in ``result`` and settles
+    matured horizons against the desk's own price observations. Never raises,
+    never delays trading, never emits orders, never touches credentials or
+    risk caps — the $10/order, 12%, 70%, 10%-halt envelope is frozen and
+    untouched. Called AFTER build_status so it cannot affect the cycle.
+    """
+    try:
+        if not getattr(getattr(firm, "cfg", None), "signal_attribution_enabled",
+                       False):
+            return
+        from intel import signal_attribution as sa
+        res = result if isinstance(result, dict) else {}
+        sa.refresh(research=res.get("research"), cycle_id=res.get("cycle"),
+                   board=res.get("board"))
+    except Exception as exc:  # the hook must never break the desk
+        log.warning("signal-attribution skipped: %s", exc)
+
+
 def run_once(firm: Firm, state, force: bool) -> dict:
     # Remote kill switch (opt-in via REMOTE_HALT_URL): let a dashboard STOP on any
     # device reach this local desk by toggling the HALT file before we evaluate risk.
@@ -396,6 +418,7 @@ def run_once(firm: Firm, state, force: bool) -> dict:
         except Exception as exc:
             log.warning("congress refresh skipped: %s", exc)
     status = build_status(firm, firm.cfg, state, result)
+    _maybe_signal_attribution(firm, result)  # measurement only, fault-isolated
     write_status(status, status_path())
     shared = write_investor_views(firm.db, status)  # token-keyed read-only investor snapshots
     if shared:

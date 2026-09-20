@@ -11,6 +11,12 @@
 * ``intel.congress`` — cached congressional trading intelligence feed
   (STOCK Act PTR disclosure activity, report-level), refreshed once per
   cycle from main.py.
+* ``intel.signal_attribution`` — per-engine signal attribution ledger:
+  snapshots every intelligence engine's directional input per symbol each
+  cycle and grades it against realized signed moves at fixed 1h/4h/24h
+  horizons from the desk's own price observations (JSONL, decayed rankings,
+  20-observation gating). Measurement only — correlational, never a reason
+  to widen risk.
 * ``intel.workforce`` — the 9-agent advisory-only Intel Workforce that runs
   after the research block each cycle and reports plain-language findings to
   the dashboard.

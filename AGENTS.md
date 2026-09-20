@@ -93,6 +93,10 @@ All advisory or de-risk-only; none widen risk caps, emit orders, or touch creden
 - `congress.py` — keyless STOCK Act PTR disclosure-activity feed (House Clerk
   search + degradable Senate EFD leg); report-level granularity, advisory only.
 >>>>>>> origin/feat/congress-intel
+- `signal_attribution.py` — per-engine signal attribution ledger: snapshots
+  every engine's directional input per symbol and grades it against realized
+  signed moves at fixed 1h/4h/24h horizons (decayed rankings, 20-observation
+  gating). Measurement only — correlational, never a reason to widen risk.
 - `correlation.py` — correlation-adjusted exposure reporting, advisory only.
 - `execution_quality.py` — arrival-price vs fill-price slippage JSONL,
   measurement only (maker routing intentionally deferred).
