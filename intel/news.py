@@ -13,7 +13,9 @@ Keyless sources (verified live 2026-09-19):
      ``errors`` — never invented numbers.
 
 Design notes:
-  * Every HTTP call carries an explicit timeout; stdlib + ``requests`` only.
+  * HTTP goes through ``intel.keyless_http.KeylessHttpClient`` — per-host
+    token-bucket pacing + exponential backoff with jitter on 429/5xx;
+    stdlib + ``requests`` only.
   * No secrets, no API keys anywhere.
   * No invented data: fields a source does not provide are ``None``.
   * ``refresh()`` never raises on source failure — failures are recorded in
@@ -30,15 +32,21 @@ import json
 import logging
 import os
 import tempfile
-import time
 from datetime import datetime, timezone
 from pathlib import Path
 
-import requests
+import requests  # noqa: F401  (kept: tests and tooling may reference the module)
+
+from intel.keyless_http import KeylessHttpClient
 
 log = logging.getLogger(__name__)
 
 SCHEMA_VERSION = 1
+
+# Shared keyless HTTP client: per-host token-bucket pacing (CoinGecko 1 req/2s,
+# GDELT 1 req/2s) + exponential backoff with jitter on 429/5xx. The GDELT
+# hand-rolled time.sleep pacing is gone — the bucket enforces spacing.
+_HTTP = KeylessHttpClient()
 
 # ---------------------------------------------------------------------------
 # Source endpoints / constants
@@ -109,9 +117,12 @@ def _atomic_write_json(path: Path, payload: dict) -> None:
 
 def _http_get_json(url: str, timeout: float, headers: dict | None = None,
                    params: dict | None = None) -> object:
-    resp = requests.get(url, timeout=timeout, headers=headers or {}, params=params or {})
-    resp.raise_for_status()
-    return resp.json()
+    """Fetch + parse JSON via the shared keyless client. Raises on failure
+    (``refresh()`` isolates per source and records the structured error)."""
+    res = _HTTP.get_json(url, timeout=timeout, headers=headers, params=params)
+    if not res.ok:
+        raise RuntimeError(res.error)
+    return res.payload
 
 
 # ---------------------------------------------------------------------------
@@ -302,8 +313,8 @@ def refresh(
                       "history": []}
 
     for i, query in enumerate(GDELT_QUERIES):
-        if i:
-            time.sleep(2.0)  # courtesy pacing for the keyless GDELT endpoint
+        # Courtesy pacing is handled by the shared client's token bucket
+        # (1 req/2s for api.gdelt.org); no manual sleep here.
         try:
             news_volume.append(fetch_news_volume(query))
         except Exception as exc:
