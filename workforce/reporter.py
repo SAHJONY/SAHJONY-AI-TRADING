@@ -669,6 +669,10 @@ def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[st
         # (bias–variance–covariance) + Meucci effective bets. Measurement only —
         # it never changes votes, weights, or gates.
         "diversity": cycle_result.get("diversity") or {"status": "unavailable"},
+        # Component VaR / Expected Shortfall attribution (advisory only):
+        # per-position tail-risk decomposition, the VaR hog, and an optional
+        # historical-simulation ES. Never gates anything.
+        "risk_attribution": cycle_result.get("risk_attribution") or {},
         # Execution quality: arrival-vs-fill slippage measurement + reporting.
         "execution_quality": cycle_result.get("execution_quality") or {},
         # Pre-trade market-impact estimates (intel/impact_model.py) —
