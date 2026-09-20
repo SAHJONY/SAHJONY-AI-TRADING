@@ -318,6 +318,9 @@ class Config:
     # gold / oil backdrop, keyless Yahoo chart data; advisory only,
     # INTELLIGENCE ONLY
     intel_macro_enabled: bool = True
+    # congress intelligence feed (intel/congress.py) — STOCK Act disclosure
+    # activity, report-level, advisory only
+    intel_congress_enabled: bool = True
 
     # brain upgrade — all advisory / de-risk-only / measurement-only; none can
     # widen risk caps, emit orders, or touch credentials. Each has its own
@@ -573,6 +576,7 @@ def load_config() -> Config:
         intel_options_flow_enabled=_b("INTEL_OPTIONS_FLOW_ENABLED", True),
         intel_onchain_enabled=_b("INTEL_ONCHAIN_ENABLED", True),
         intel_macro_enabled=_b("INTEL_MACRO_ENABLED", True),
+        intel_congress_enabled=_b("INTEL_CONGRESS_ENABLED", True),
         council_calibration_enabled=_b("COUNCIL_CALIBRATION_ENABLED", True),
         council_regime_calibration_enabled=_b("COUNCIL_REGIME_CALIBRATION_ENABLED", True),
         dispersion_scaling_enabled=_b("DISPERSION_SCALING_ENABLED", True),

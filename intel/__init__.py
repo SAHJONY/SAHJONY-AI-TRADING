@@ -8,6 +8,9 @@
 * ``intel.macro`` — MACRO PULSE: keyless macro backdrop (dollar, 10y yield,
   gold, WTI) with a bounded risk-on/risk-off read, refreshed once per
   cycle from main.py. INTELLIGENCE ONLY.
+* ``intel.congress`` — cached congressional trading intelligence feed
+  (STOCK Act PTR disclosure activity, report-level), refreshed once per
+  cycle from main.py.
 * ``intel.workforce`` — the 9-agent advisory-only Intel Workforce that runs
   after the research block each cycle and reports plain-language findings to
   the dashboard.
