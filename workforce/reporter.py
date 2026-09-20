@@ -561,6 +561,10 @@ def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[st
         "correlation": cycle_result.get("correlation") or {},
         # Execution quality: arrival-vs-fill slippage measurement + reporting.
         "execution_quality": cycle_result.get("execution_quality") or {},
+        # TCA: Perold implementation-shortfall decomposition per order
+        # (delay / market impact / timing / opportunity / fees) + pre-trade
+        # vs realized cost-model honesty tracking.
+        "tca": cycle_result.get("tca") or {},
         # Daily brief (also committed to public/daily_brief.md).
         "daily_brief": cycle_result.get("daily_brief") or {},
         "council": council,

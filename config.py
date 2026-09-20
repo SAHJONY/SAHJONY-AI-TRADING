@@ -316,6 +316,7 @@ class Config:
     auto_demote_enabled: bool = True           # AUTO_DEMOTE_ENABLED
     correlation_enabled: bool = True           # CORRELATION_ENABLED
     execution_quality_enabled: bool = True     # EXECUTION_QUALITY_ENABLED
+    tca_enabled: bool = True                   # TCA_ENABLED
     daily_brief_enabled: bool = True           # DAILY_BRIEF_ENABLED
     self_heal_enabled: bool = True             # SELF_HEAL_ENABLED
     auto_tune_enabled: bool = True             # AUTO_TUNE_ENABLED
@@ -562,6 +563,7 @@ def load_config() -> Config:
         auto_demote_enabled=_b("AUTO_DEMOTE_ENABLED", True),
         correlation_enabled=_b("CORRELATION_ENABLED", True),
         execution_quality_enabled=_b("EXECUTION_QUALITY_ENABLED", True),
+        tca_enabled=_b("TCA_ENABLED", True),
         daily_brief_enabled=_b("DAILY_BRIEF_ENABLED", True),
         self_heal_enabled=_b("SELF_HEAL_ENABLED", True),
         auto_tune_enabled=_b("AUTO_TUNE_ENABLED", True),
