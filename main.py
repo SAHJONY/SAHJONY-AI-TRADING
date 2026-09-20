@@ -395,6 +395,37 @@ def run_once(firm: Firm, state, force: bool) -> dict:
                 cg_refresh()
         except Exception as exc:
             log.warning("congress refresh skipped: %s", exc)
+    # Council + portfolio diversity diagnostics (intel/diversity.py) — runs
+    # AFTER the trading pipeline (the council has deliberated and execution
+    # is done), so it can never delay research or execution; fault-isolated.
+    # Advisory/measurement ONLY: reports vote crowding (bias–variance–
+    # covariance decomposition) and Effective Number of Bets (Meucci); never
+    # emits orders, never changes votes/weights/gates, never touches
+    # credentials or the $10/order, 12%, 70%, 10%-halt envelope. The Risk
+    # Officer may READ result["diversity"] via risk_officer_read(); nothing
+    # wires it into any gate. Placed BEFORE build_status so status.json
+    # carries this cycle's summary.
+    if getattr(firm.cfg, "diversity_enabled", True):
+        try:
+            from intel import diversity as div_mod
+            _div_research = result.get("research") or []
+            _div_positions = state.get("positions") or {}
+            _div_snaps = {r.get("symbol"): r.get("snap") for r in _div_research}
+            div_report = div_mod.diversity_report(
+                state, _div_research, _div_positions,
+                {s: getattr(snap, "closes", []) for s, snap in _div_snaps.items()},
+                {s: float(getattr(snap, "price", 0) or 0) for s, snap in _div_snaps.items()},
+                enabled=True)
+            div_report["cycle"] = int(state.get("cycle", 0) or 0)
+            result["diversity"] = div_report
+            # read-only snapshot for the Risk Officer (measurement only —
+            # never fed back into gates by any caller).
+            state["_diversity_last"] = div_report
+            if div_report.get("flags"):
+                for _f in div_report["flags"]:
+                    log.warning("DIVERSITY: %s", _f)
+        except Exception as exc:
+            log.warning("diversity report skipped: %s", exc)
     status = build_status(firm, firm.cfg, state, result)
     write_status(status, status_path())
     shared = write_investor_views(firm.db, status)  # token-keyed read-only investor snapshots
