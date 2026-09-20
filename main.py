@@ -257,6 +257,30 @@ def run_once(firm: Firm, state, force: bool) -> dict:
     _seed_shared_knowledge(firm, state)
     result = firm.run_cycle(state, trade=trade)
     _save_shared_knowledge(firm, state)
+    # BTC options-flow refresh (intel/options_flow.py) — same placement and
+    # guarantees as the top-traders feed: AFTER the trading pipeline, never
+    # delaying research or execution; cache-first via OPTIONS_FLOW_MAX_AGE_S
+    # (the book summary is a 15-min-cache product; the dashboard reads the
+    # file, not the network); fault-isolated. Placed BEFORE build_status so
+    # status.json carries this cycle's summary. INTELLIGENCE ONLY — the read
+    # never emits orders, never changes risk caps, never touches the arming
+    # chain; the $10/order, 12%, 70%, 10%-halt envelope is frozen and untouched.
+    if getattr(firm.cfg, "intel_options_flow_enabled", False):
+        try:
+            from intel.options_flow import refresh as of_refresh
+            import os as _os_of
+            _of_path = _os_of.path.join(_os_of.path.dirname(status_path()),
+                                        "options_flow.json")
+            _of_max_age = int(_os_of.getenv("OPTIONS_FLOW_MAX_AGE_S", "900") or 900)
+            _of_age = (time.time() - _os_of.path.getmtime(_of_path)
+                       if _os_of.path.exists(_of_path) else float("inf"))
+            if _of_age < _of_max_age:
+                log.info("options-flow payload fresh (%.0fs old) — serving cache, "
+                         "skipping network refresh", _of_age)
+            else:
+                of_refresh()
+        except Exception as exc:
+            log.warning("options-flow refresh skipped: %s", exc)
     # Top-trader intelligence refresh (intel/top_traders.py) — runs AFTER the
     # trading pipeline so it can never delay research or execution. CACHE-FIRST:
     # when public/top_traders.json is younger than TOP_TRADERS_MAX_AGE_S (the

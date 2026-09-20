@@ -287,6 +287,18 @@ def _integrity_block(firm, state: Dict[str, Any]) -> list:
         return []
 
 
+def _options_flow_block() -> Dict[str, Any]:
+    """BTC options-flow intelligence snapshot for the dashboard — the sibling
+    feed (intel/options_flow.py). Secret-free and fault-isolated: a missing
+    module or an unreadable payload yields a marked-down unavailable block,
+    never a crash. INTELLIGENCE ONLY, never a trade signal."""
+    try:
+        from intel.options_flow import load_payload, summary_for_status
+        return summary_for_status(load_payload())
+    except Exception as exc:
+        return {"available": False, "error": type(exc).__name__}
+
+
 def _top_traders_block() -> Dict[str, Any]:
     """Top-trader intelligence snapshot for the dashboard — the sibling feed
     (intel/top_traders.py). Secret-free and fault-isolated: a missing module or
@@ -535,6 +547,10 @@ def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[st
         # Intel Workforce (intel/workforce/) — 9 advisory-only analysts, one
         # plain-language finding each. Advisory only: never orders, never caps.
         "intel_workforce": cycle_result.get("intel_findings") or [],
+        # BTC options-flow intelligence feed (intel/options_flow.py) — Deribit
+        # options skew / put-call OI crash-risk read, advisory only.
+        # Unavailable when the sibling module or its cached payload is missing.
+        "options_flow": _options_flow_block(),
         # Top-trader intelligence feed (intel/top_traders.py) — whale alerts and
         # copy signals as context, never auto-copied. Unavailable when the
         # sibling module or its cached payload is missing.
