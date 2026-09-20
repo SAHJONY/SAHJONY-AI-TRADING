@@ -204,6 +204,28 @@ class SelfHeal:
                     _log(sub, "escalation cleared — subsystem healthy", "ok")
 
             mem["last_check"] = _now()
+            # Latency telemetry (telemetry/latency.py) — INFORMATIONAL ONLY.
+            # The watchdog reads this so degradation is visible (dashboard +
+            # escalation context); it never grades, never heals, never touches
+            # the breaker, and never changes risk behavior based on latency.
+            # Advisory/measurement only: never emits orders, never credentials.
+            try:
+                lat = (obs or {}).get("latency_summary") or {}
+                segs = lat.get("segments") if isinstance(
+                    lat.get("segments"), dict) else {}
+                ranked = sorted(
+                    ((n, (s or {}).get("p99")) for n, s in segs.items()),
+                    key=lambda kv: kv[1] or 0, reverse=True)[:3]
+                mem["latency_watch"] = {
+                    "stale": bool(lat.get("stale")),
+                    "unavailable": bool(lat.get("unavailable")),
+                    "cycles_recorded": lat.get("cycles_recorded", 0),
+                    "degraded_segments": list(lat.get("degraded_segments") or []),
+                    "slowest_p99": {n: p for n, p in ranked},
+                    "notes": list(lat.get("notes") or [])[:3],
+                }
+            except Exception:
+                mem["latency_watch"] = {"unavailable": True}
             return self.snapshot(state)
         except Exception as exc:  # the healer never breaks the desk
             log.warning("self-heal observe failed: %s", exc)
@@ -311,6 +333,9 @@ class SelfHeal:
                 "escalation": mem.get("escalation"),
                 "log": (mem.get("log") or [])[-10:],
                 "last_check": mem.get("last_check"),
+                # Segmented cycle-latency telemetry (telemetry/latency.py) —
+                # informational only; the watchdog never acts on it.
+                "latency_watch": mem.get("latency_watch") or {},
             }
         except Exception:
             return {"enabled": self.enabled, "health": {}}
