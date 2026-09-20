@@ -378,9 +378,27 @@ footer .warn{color:var(--amber);font-weight:600}
     </div>
   </section>
 
-  <!-- 11 · MORNING BRIEF & SYSTEM HEALTH -->
+  <!-- 11 · CONGRESS -->
   <section class="sec">
-    <div class="sec-h"><h2><span class="n">11</span><span data-i18n="briefTitle">Informe matutino y salud del sistema</span></h2><div class="rule"></div>
+    <div class="sec-h"><h2><span class="n">11</span><span data-i18n="congressTitle">Congreso · STOCK Act</span></h2><div class="rule"></div>
+      <span class="mut mono" style="font-size:10.5px" id="cgMeta">—</span></div>
+    <div class="grid g2" style="grid-template-columns:repeat(auto-fit,minmax(340px,1fr))">
+      <div class="panel">
+        <div class="sec-h" style="margin-bottom:6px"><h2 style="font-size:11px"><span data-i18n="cgActive">Miembros más activos</span></h2><div class="rule"></div></div>
+        <div class="scrollx"><table class="t" id="cgTbl"></table></div>
+        <div class="mut mono" style="font-size:10px;margin-top:6px" id="cgSrc">—</div>
+      </div>
+      <div class="panel">
+        <div class="sec-h" style="margin-bottom:6px"><h2 style="font-size:11px"><span data-i18n="cgRecent">Declaraciones recientes</span></h2><div class="rule"></div></div>
+        <div class="stream" id="cgList"><div class="empty">—</div></div>
+        <div class="mut mono" style="font-size:10px;margin-top:6px" data-i18n="cgLag">Las declaraciones se presentan 30–45 días después de la operación.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 12 · MORNING BRIEF & SYSTEM HEALTH -->
+  <section class="sec">
+    <div class="sec-h"><h2><span class="n">12</span><span data-i18n="briefTitle">Informe matutino y salud del sistema</span></h2><div class="rule"></div>
       <span class="mut mono" style="font-size:10.5px" id="briefMeta">—</span></div>
     <div class="grid g2" style="grid-template-columns:repeat(auto-fit,minmax(340px,1fr))">
       <div class="panel">
@@ -438,6 +456,9 @@ es:{
   topTraders:"Top Traders", lbTitle:"Mejores traders · P&L 30d", lbRank:"#", lbTrader:"Trader", lbPnl:"P&L 30d", lbAcct:"Cuenta",
   posTitle:"Posicionamiento agregado", copyTitle:"Señal de copia", whaleTitle:"Alertas de ballenas BTC",
   fundTitle:"Fondos públicos · 13F", noWhales:"Sin alertas de ballenas en esta ventana", noFunds:"Sin datos 13F",
+  congressTitle:"Congreso · STOCK Act", cgActive:"Miembros más activos", cgRecent:"Declaraciones recientes",
+  cgMember:"Miembro", cgFilings:"Declaraciones",
+  cgLag:"Las declaraciones se presentan 30–45 días después de la operación.",
   intelligenceOnly:"SOLO INTELIGENCIA — no es copia automática", mixed:"Mixto", sampled:"muestra",
   filed:"presentado", holding:"Posición", value:"Valor", fund:"Fondo",
   briefTitle:"Informe matutino y salud del sistema", briefMorning:"Informe de la mañana", briefFile:"ver archivo",
@@ -481,6 +502,9 @@ en:{
   topTraders:"Top Traders", lbTitle:"Top traders · 30d P&L", lbRank:"#", lbTrader:"Trader", lbPnl:"30d P&L", lbAcct:"Account",
   posTitle:"Aggregate positioning", copyTitle:"Copy signal", whaleTitle:"BTC whale alerts",
   fundTitle:"Public funds · 13F", noWhales:"No whale alerts in this window", noFunds:"No 13F data",
+  congressTitle:"Congress · STOCK Act", cgActive:"Most active members", cgRecent:"Recent filings",
+  cgMember:"Member", cgFilings:"Filings",
+  cgLag:"Disclosures are filed 30–45 days after the trade.",
   intelligenceOnly:"INTELLIGENCE ONLY — not auto-copying", mixed:"Mixed", sampled:"sampled",
   filed:"filed", holding:"Holding", value:"Value", fund:"Fund",
   briefTitle:"Morning brief & system health", briefMorning:"Morning brief", briefFile:"view file",
@@ -533,7 +557,7 @@ function dirClass(d){ d=String(d||"").toLowerCase(); return d==="long"?"long":(d
 function dirLabel(d){ d=String(d||"").toLowerCase(); return d==="long"?t("long"):(d==="short"?t("short"):t("flat")); }
 
 /* ── state ── */
-let S=null, EVAL=null, KNOW=null, CATALOG=null, TT=null;
+let S=null, EVAL=null, KNOW=null, CATALOG=null, TT=null, CGT=null;
 let CG={list:[],byId:{},ts:0};
 let NEWS={list:[],ts:0,src:""};
 let SYM=0;               // selected council symbol index
@@ -565,7 +589,8 @@ async function loadAll(){
     getJSON("./evaluation.json"+q).then(function(j){EVAL=j;}).catch(function(){}),
     getJSON("./knowledge.json"+q).then(function(j){KNOW=j;}).catch(function(){}),
     getJSON("./strategy_catalog.json"+q).then(function(j){CATALOG=j;}).catch(function(){}),
-    getJSON("./top_traders.json"+q).then(function(j){TT=j;}).catch(function(){})
+    getJSON("./top_traders.json"+q).then(function(j){TT=j;}).catch(function(){}),
+    getJSON("./congress_trades.json"+q).then(function(j){CGT=j;}).catch(function(){})
   ];
   await Promise.all(jobs);
 }
@@ -1076,6 +1101,43 @@ function renderTopTraders(){
   }
 }
 
+/* ── render: congress ── */
+function renderCongress(){
+  const box=$("#cgTbl"); if(!box) return;
+  const sum=(S&&S.congress)||{};
+  const cgTs=sum.ts||(CGT&&CGT.ts);
+  const meta=$("#cgMeta");
+  if(meta){
+    let mt="—";
+    if(sum.available||CGT){ mt=(cgTs?timeAgo(cgTs):"—")+" · "+(sum.filing_count||(((CGT&&CGT.aggregates)||{}).filing_count)||0)+" PTR"; }
+    if(sum.stale||(CGT&&CGT.stale)) mt+=" · "+t("dataStale");
+    meta.textContent=mt;
+  }
+  const agg=(CGT&&CGT.aggregates)||{};
+  const members=agg.most_active_members||[];
+  if(!members.length){ box.innerHTML='<tr><td><div class="empty">'+esc(t("awaitingData"))+"</div></td></tr>"; }
+  else{
+    box.innerHTML="<tr><th>"+esc(t("cgMember"))+"</th><th>"+esc(t("cgFilings"))+"</th></tr>"+
+      members.slice(0,10).map(function(m){
+        return "<tr><td><b>"+esc(m.member_name||"—")+'</b><div class="dim" style="font-size:9.5px">'+esc(m.chamber||"")+"</div></td>"+
+          "<td>"+(m.filings||0)+"</td></tr>";
+      }).join("");
+  }
+  const src=$("#cgSrc");
+  if(src) src.textContent=((CGT&&CGT.sources)||[]).join(" · ")||"—";
+  const list=$("#cgList");
+  if(list){
+    const recent=agg.recent_notable||[];
+    if(!recent.length){ list.innerHTML='<div class="empty">'+esc(t("awaitingData"))+"</div>"; }
+    else list.innerHTML=recent.slice(0,8).map(function(f){
+      const link=f.report_url?'<a class="linklike mono" style="font-size:10px" href="'+esc(f.report_url)+'" target="_blank" rel="noopener">PDF</a>':"";
+      return '<div class="ev"><div class="tx"><span class="kind">ptr</span><b>'+esc(f.member_name||"—")+"</b>"+
+        '<div class="rs">'+esc((f.chamber||"")+" "+(f.office||""))+" · "+esc(f.filing_type||"")+"</div></div>"+
+        '<div class="tm">'+link+"</div></div>";
+    }).join("");
+  }
+}
+
 /* ── render: morning brief & system health ── */
 function renderBrief(){
   const brief=(S&&S.daily_brief)||{}, meta=$("#briefMeta");
@@ -1180,7 +1242,7 @@ function render(){
   if(!S) return;
   renderHeader(); renderVenues(); renderCouncil(); renderStream(); renderBrain();
   renderEquity(); renderPositions(); renderRisk(); renderRegime(); renderLab(); renderNews();
-  renderIntel(); renderTopTraders(); renderBrief();
+  renderIntel(); renderTopTraders(); renderCongress(); renderBrief();
   Array.prototype.forEach.call(document.querySelectorAll("[data-i18n]"),function(el){
     if(!el.textContent||el.getAttribute("data-i18n-live")==="1") el.textContent=t(el.getAttribute("data-i18n"));
   });
