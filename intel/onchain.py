@@ -15,7 +15,9 @@ Keyless sources (verified live 2026-09-19):
      ?timespan=30days&format=json (network difficulty, daily points).
 
 Design notes:
-  * Every HTTP call carries an explicit timeout; stdlib + ``requests`` only.
+  * HTTP goes through ``intel.keyless_http.KeylessHttpClient`` — per-host
+    token-bucket pacing + exponential backoff with jitter on 429/5xx;
+    stdlib + ``requests`` only.
   * No secrets, no API keys anywhere.
   * No invented data: fields a source does not provide are ``None``.
   * ``refresh()`` never raises on source failure — failures are recorded in
@@ -42,11 +44,17 @@ import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
-import requests
+import requests  # noqa: F401  (kept: tooling/tests may reference the module)
+
+from intel.keyless_http import KeylessHttpClient
 
 log = logging.getLogger(__name__)
 
 SCHEMA_VERSION = 1
+
+# Shared keyless HTTP client: per-host token-bucket pacing (mempool.space and
+# blockchain.info at 1 req/s) + exponential backoff with jitter on 429/5xx.
+_HTTP = KeylessHttpClient()
 
 # ---------------------------------------------------------------------------
 # Source endpoints / constants
@@ -118,15 +126,19 @@ def _atomic_write_json(path: Path, payload: dict) -> None:
 
 
 def _http_get_json(url: str, timeout: float) -> object:
-    resp = requests.get(url, timeout=timeout)
-    resp.raise_for_status()
-    return resp.json()
+    """Fetch + parse JSON via the shared keyless client. Raises on failure
+    (``refresh()`` isolates per source and records the structured error)."""
+    res = _HTTP.get_json(url, timeout=timeout)
+    if not res.ok:
+        raise RuntimeError(res.error)
+    return res.payload
 
 
 def _http_get_text(url: str, timeout: float) -> str:
-    resp = requests.get(url, timeout=timeout)
-    resp.raise_for_status()
-    return resp.text.strip()
+    res = _HTTP.get_text(url, timeout=timeout)
+    if not res.ok:
+        raise RuntimeError(res.error)
+    return (res.text or "").strip()
 
 
 # ---------------------------------------------------------------------------

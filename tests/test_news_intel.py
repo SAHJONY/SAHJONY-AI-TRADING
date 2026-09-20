@@ -190,7 +190,9 @@ def _patch_fetchers(monkeypatch, gdelt_fail=False, fng_fail=False,
         lambda timeout=10: (_ for _ in ()).throw(RuntimeError("429"))
         if trend_fail else [{"name": "Firo", "symbol": "FIRO", "id": "zcoin",
                              "market_cap_rank": 812}])
-    monkeypatch.setattr(news.time, "sleep", lambda s: None)
+    # NOTE: the engine's manual GDELT time.sleep pacing was replaced by the
+    # shared client's token bucket (intel/keyless_http.py), so there is no
+    # sleep to patch out here anymore.
 
 
 def _refresh_to(tmp_path, monkeypatch, **fail):

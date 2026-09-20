@@ -14,6 +14,10 @@
 * ``intel.workforce`` — the 9-agent advisory-only Intel Workforce that runs
   after the research block each cycle and reports plain-language findings to
   the dashboard.
+* ``intel.keyless_http`` — shared keyless HTTP client (per-host token-bucket
+  rate limiting + exponential backoff with jitter on 429/5xx, structured
+  errors, thread-safe). ``intel.news`` and ``intel.onchain`` are migrated
+  onto it; other engines follow the ADOPTION note in its docstring.
 
 Everything under this package is advisory-only: it never emits orders, never
 changes risk caps, and never touches the live-trading arming chain.
