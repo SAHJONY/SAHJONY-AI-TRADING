@@ -637,6 +637,10 @@ def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[st
         "auto_tune": cycle_result.get("auto_tune") or {"tuned": False},
         # Correlation-aware risk (advisory): nominal vs effective exposure.
         "correlation": cycle_result.get("correlation") or {},
+        # Component VaR / Expected Shortfall attribution (advisory only):
+        # per-position tail-risk decomposition, the VaR hog, and an optional
+        # historical-simulation ES. Never gates anything.
+        "risk_attribution": cycle_result.get("risk_attribution") or {},
         # Execution quality: arrival-vs-fill slippage measurement + reporting.
         "execution_quality": cycle_result.get("execution_quality") or {},
         # Daily brief (also committed to public/daily_brief.md).

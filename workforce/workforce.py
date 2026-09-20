@@ -2218,6 +2218,7 @@ class Firm:
         review_report: Dict[str, Any] = {"ran": False}
         brief_info: Dict[str, Any] = {}
         corr_report: Dict[str, Any] = {}
+        risk_attrib_report: Dict[str, Any] = {}
         tune_report: Dict[str, Any] = {"tuned": False}
         try:
             if self.self_heal is not None and self.self_heal.enabled:
@@ -2251,6 +2252,23 @@ class Firm:
                      for r in research})
         except Exception as exc:
             log.warning("correlation advisory skipped: %s", exc)
+        # Component VaR / Expected Shortfall attribution (risk/risk_attribution.py)
+        # — advisory only, read-only. Decomposes the portfolio tail risk the
+        # desk already holds into per-position contributions so the owner can
+        # see the VaR hog. Runs after the portfolio state is known, is
+        # fault-isolated, and never delays trading: it touches no gate, emits
+        # no order, and cannot change any risk cap.
+        try:
+            if getattr(self.cfg, "risk_attribution_enabled", True):
+                from risk import risk_attribution as ra_mod
+                risk_attrib_report = ra_mod.attribution_report(
+                    state.get("positions") or {},
+                    {r["symbol"]: getattr(r["snap"], "closes", []) for r in research},
+                    {r["symbol"]: float(getattr(r["snap"], "price", 0) or 0)
+                     for r in research},
+                    eq_now)
+        except Exception as exc:
+            log.warning("risk attribution advisory skipped: %s", exc)
         try:
             if self.auto_tune is not None:
                 tune_report = self.auto_tune.maybe_tune(state, self.trade_memory)
@@ -2300,6 +2318,12 @@ class Firm:
                 "self_review": review_report,
                 "daily_brief": brief_info,
                 "correlation": corr_report,
+                # Component VaR / Expected Shortfall attribution (advisory only):
+                # per-position tail-risk decomposition + the VaR hog. No gate
+                # reads this; the Risk Officer can call
+                # risk_attribution.incremental_trade_check as a pure advisory
+                # function. See risk/risk_attribution.py.
+                "risk_attribution": risk_attrib_report,
                 "execution_quality": (self.exec_quality.summary()
                                       if self.exec_quality is not None else {}),
                 "auto_tune": tune_report,

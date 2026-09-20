@@ -332,6 +332,7 @@ class Config:
     self_review_enabled: bool = True           # SELF_REVIEW_ENABLED
     auto_demote_enabled: bool = True           # AUTO_DEMOTE_ENABLED
     correlation_enabled: bool = True           # CORRELATION_ENABLED
+    risk_attribution_enabled: bool = True      # RISK_ATTRIBUTION_ENABLED
     execution_quality_enabled: bool = True     # EXECUTION_QUALITY_ENABLED
     daily_brief_enabled: bool = True           # DAILY_BRIEF_ENABLED
     self_heal_enabled: bool = True             # SELF_HEAL_ENABLED
@@ -584,6 +585,7 @@ def load_config() -> Config:
         self_review_enabled=_b("SELF_REVIEW_ENABLED", True),
         auto_demote_enabled=_b("AUTO_DEMOTE_ENABLED", True),
         correlation_enabled=_b("CORRELATION_ENABLED", True),
+        risk_attribution_enabled=_b("RISK_ATTRIBUTION_ENABLED", True),
         execution_quality_enabled=_b("EXECUTION_QUALITY_ENABLED", True),
         daily_brief_enabled=_b("DAILY_BRIEF_ENABLED", True),
         self_heal_enabled=_b("SELF_HEAL_ENABLED", True),
