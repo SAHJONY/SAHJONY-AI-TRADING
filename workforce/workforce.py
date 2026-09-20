@@ -1178,6 +1178,25 @@ class Firm:
         return {"halted": halted, "reason": reason, "day_return": round(day_return, 4),
                 "day_start": round(day_start, 2), "limit_pct": self.cfg.max_daily_drawdown_pct}
 
+    def _snapshot_fail_closed_gate(self, halt: Dict[str, Any],
+                                   allow_new_risk: bool):
+        """Strict snapshot policy gate (owner decision 2026-09-20).
+
+        If the broker's last account read failed closed on an unpriceable
+        holding (see RobinhoodCryptoBroker.snapshot_error), the desk does not
+        know what it owns — so new risk halts with a loud alert. Exits still
+        flow. Venues without the accessor (sim/paper/alpaca) are unaffected.
+        """
+        err = getattr(self.client, "snapshot_error", lambda: "")()
+        if err and allow_new_risk:
+            allow_new_risk = False
+            reason = (f"broker snapshot failed closed — {err}; new risk halted "
+                      f"until every holding prices")
+            halt = {**halt, "halted": True,
+                    "reason": f"{halt.get('reason')}; {reason}".strip("; ")}
+            log.error("NEW RISK HALTED: %s", reason)
+        return halt, allow_new_risk
+
     def _reconcile_broker(self, state: Dict[str, Any]) -> Dict[str, Any]:
         """Make the broker the source of truth for WHAT WE OWN.
 
@@ -1726,6 +1745,11 @@ class Firm:
                 halt = {**halt, "halted": True,
                         "reason": f"{halt.get('reason')}; {reason}".strip("; ")}
                 log.error("NEW RISK HALTED: %s", reason)
+
+            # Strict snapshot fail-closed (owner decision 2026-09-20): if the
+            # broker could not price every holding, the snapshot failed closed —
+            # halt new risk with a loud alert. Never omit-and-continue.
+            halt, allow_new_risk = self._snapshot_fail_closed_gate(halt, allow_new_risk)
 
             if mode == "LIVE" and not recon["ok"]:
                 allow_new_risk = False

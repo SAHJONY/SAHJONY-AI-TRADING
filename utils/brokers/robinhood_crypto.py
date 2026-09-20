@@ -63,6 +63,29 @@ _CG_IDS = {
     "USDC": "usd-coin", "USDT": "tether",
 }
 
+# Keyless spot/history failover after CoinGecko (documented chain:
+# venue → CoinGecko → Kraken → Coinbase). Both are public, no-key, and
+# US-accessible. Kraken's Ticker/OHLC endpoints resolve alt names ("BTCUSD"),
+# so we pass "{BASE}USD" and read the first (only) result entry — robust to
+# Kraken's canonical "XXBTZUSD"-style naming.
+_KRAKEN_BASE = "https://api.kraken.com/0/public"
+_KRAKEN_SPECIAL = {"BTC": "XXBTZUSD"}  # Kraken's canonical BTC pair name
+_COINBASE_BASE = "https://api.coinbase.com/v2"
+
+
+def _kraken_pair(symbol: str) -> str:
+    """Base asset → Kraken pair query string ('' if the base isn't mapped)."""
+    base = _rh_symbol(symbol).split("-")[0]
+    if base not in _CG_IDS:
+        return ""
+    return _KRAKEN_SPECIAL.get(base, f"{base}USD")
+
+
+def _coinbase_pair(symbol: str) -> str:
+    """Base asset → Coinbase 'BASE-USD' spot pair ('' if unmapped)."""
+    base = _rh_symbol(symbol).split("-")[0]
+    return f"{base}-USD" if base in _CG_IDS else ""
+
 
 def _rh_symbol(sym: str) -> str:
     """Normalize a desk symbol to Robinhood's 'BTC-USD' form ('BTC/USD' or 'BTC')."""
@@ -131,6 +154,12 @@ class RobinhoodCryptoBroker:
         except (TypeError, ValueError):
             self.max_order_usd = 25.0
         self._price_cache: Dict[str, float] = {}
+        # Which feed last priced each symbol ("venue"|"coingecko"|"kraken"|
+        # "coinbase"|"cache") — observability for the feed-health grading.
+        self._price_source: Dict[str, str] = {}
+        # Last strict fail-closed snapshot failure ("" when the last read was
+        # clean). Read by the desk's halt gate via snapshot_error().
+        self._last_snapshot_error: str = ""
         # Fail loudly at boot rather than silently forever — see unmapped_symbols.
         stranded = unmapped_symbols(getattr(cfg, "tickers", []) or [])
         if stranded:
@@ -184,10 +213,24 @@ class RobinhoodCryptoBroker:
             hv = 0.0
             for h in self.get_broker_positions().values():
                 hv += float(h.get("market_value", 0.0) or 0.0)
+            self._last_snapshot_error = ""
             return {"equity": bp + hv, "cash": bp, "buying_power": bp}
+        except BrokerSnapshotError as exc:
+            # Strict fail-closed: the snapshot refused to price a holding.
+            # Numbers go to zero AND the failure is stashed for the desk's halt
+            # gate (snapshot_error()) — the bot halts with a loud alert instead
+            # of trading against a $0-equity mirage.
+            self._last_snapshot_error = str(exc)
+            log.error("get_account: %s", exc)
+            return {"equity": 0.0, "cash": 0.0, "buying_power": 0.0}
         except Exception as exc:
             log.error("get_account failed: %s", exc)
             return {"equity": 0.0, "cash": 0.0, "buying_power": 0.0}
+
+    def snapshot_error(self) -> str:
+        """Non-empty when the last account read failed closed on an unpriceable
+        holding. The desk's halt gate turns this into a hard halt + owner alert."""
+        return self._last_snapshot_error
 
     def get_broker_positions(self) -> Dict[str, Dict[str, float]]:
         try:
@@ -212,11 +255,12 @@ class RobinhoodCryptoBroker:
                 continue
             px = float(self.get_price(f"{sym}-USD") or 0.0)
             if not math.isfinite(px) or px <= 0:
-                # One unpriceable asset must not poison the whole snapshot
-                # (which would make get_account report $0 equity). Skip it with
-                # a loud warning; the position still exists at the broker.
-                log.warning("Skipping %s in position snapshot: no price available", sym)
-                continue
+                # STRICT fail-closed (owner decision 2026-09-20): one unpriceable
+                # held asset fails the ENTIRE snapshot — never skip-and-continue.
+                # A desk that cannot price what it owns must halt, not trade blind.
+                raise BrokerSnapshotError(
+                    f"Robinhood holding {sym} has no valid price — snapshot "
+                    f"failed closed (refusing to trade blind)")
             out[f"{sym}-USD"] = {"qty": qty, "market_value": qty * px}
         return out
 
@@ -230,16 +274,30 @@ class RobinhoodCryptoBroker:
             mid = (bid + ask) / 2 if (bid and ask) else (bid or ask)
             if mid > 0:
                 self._price_cache[rh] = mid
+                self._price_source[rh] = "venue"
                 return mid
         except Exception as exc:
             log.warning("get_price(%s) via Robinhood failed: %s — trying CoinGecko", symbol, exc)
-        # Fallback: CoinGecko spot (public, no key). RH's v1 quote endpoint 403s
-        # on some credentials; the venue's own bid/ask stays preferred when up.
-        cg = self._coingecko_spot(symbol)
-        if cg > 0:
-            self._price_cache[rh] = cg
-            return cg
+        # Fallback chain (all public, no key): CoinGecko → Kraken → Coinbase.
+        # RH's v1 quote endpoint 403s on some credentials; CoinGecko's free tier
+        # 429s aggressively on shared egress IPs — the extra legs keep the desk
+        # priced when any single keyless source is down. First success wins.
+        for source, fn in (("coingecko", self._coingecko_spot),
+                           ("kraken", self._kraken_spot),
+                           ("coinbase", self._coinbase_spot)):
+            px = fn(symbol)
+            if px > 0:
+                if source != "coingecko":
+                    log.info("get_price(%s) served by %s (CoinGecko down/missing)", symbol, source)
+                self._price_cache[rh] = px
+                self._price_source[rh] = source
+                return px
+        self._price_source[rh] = "cache"
         return self._price_cache.get(rh, 0.0)
+
+    def price_source(self, symbol: str) -> str:
+        """Which feed last priced this symbol (observability; '' if never)."""
+        return self._price_source.get(_rh_symbol(symbol), "")
 
     def _coingecko_spot(self, symbol: str) -> float:
         """Free spot price from CoinGecko. Returns 0.0 on any issue (never raises).
@@ -271,12 +329,57 @@ class RobinhoodCryptoBroker:
             return px if math.isfinite(px) and px > 0 else 0.0
         return 0.0
 
+    def _kraken_spot(self, symbol: str) -> float:
+        """Free spot price from Kraken's public Ticker. Returns 0.0 on any
+        issue (never raises). Kraken resolves alt names, so 'SOLUSD' works;
+        we read the first result entry's last-trade close `c[0]`."""
+        pair = _kraken_pair(symbol)
+        if not pair:
+            return 0.0
+        import requests
+        try:
+            r = requests.get(f"{_KRAKEN_BASE}/Ticker", params={"pair": pair}, timeout=15)
+            if not r.ok:
+                log.warning("Kraken spot(%s) → HTTP %s", symbol, r.status_code)
+                return 0.0
+            result = (r.json() or {}).get("result") or {}
+            if not result:
+                return 0.0
+            entry = next(iter(result.values()))
+            px = float((entry.get("c") or [0])[0] or 0.0)
+        except Exception as exc:
+            log.warning("Kraken spot(%s) failed: %s", symbol, exc)
+            return 0.0
+        return px if math.isfinite(px) and px > 0 else 0.0
+
+    def _coinbase_spot(self, symbol: str) -> float:
+        """Free spot price from Coinbase's public API. Returns 0.0 on any
+        issue (never raises)."""
+        pair = _coinbase_pair(symbol)
+        if not pair:
+            return 0.0
+        import requests
+        try:
+            r = requests.get(f"{_COINBASE_BASE}/prices/{pair}/spot", timeout=15)
+            if not r.ok:
+                log.warning("Coinbase spot(%s) → HTTP %s", symbol, r.status_code)
+                return 0.0
+            px = float(((r.json() or {}).get("data") or {}).get("amount", 0.0) or 0.0)
+        except Exception as exc:
+            log.warning("Coinbase spot(%s) failed: %s", symbol, exc)
+            return 0.0
+        return px if math.isfinite(px) and px > 0 else 0.0
     def get_history(self, symbol: str, days: int = 120) -> Dict[str, np.ndarray]:
         """Daily closes+volumes for the council. RH's trading API has no candles,
-        so backfill from CoinGecko; fall back to the flat live-price series on any
-        failure (unmapped asset, network, rate-limit) so the loop never breaks."""
+        so backfill from CoinGecko, then Kraken OHLC; fall back to the flat
+        live-price series on any failure (unmapped asset, network, rate-limit)
+        so the loop never breaks."""
         hist = self._coingecko_history(symbol, days)
         if hist is not None and hist["closes"].size >= 2:
+            return hist
+        hist = self._kraken_history(symbol, days)
+        if hist is not None and hist["closes"].size >= 2:
+            log.info("get_history(%s) served by Kraken OHLC (CoinGecko down/missing)", symbol)
             return hist
         # Fallback: council degrades safely on a short series (neutral — agents.clamp).
         px = self.get_price(symbol)
@@ -312,6 +415,51 @@ class RobinhoodCryptoBroker:
                     "feed_timestamp": timestamps[-1] if timestamps.size else None}
         except Exception as exc:  # network / parse / rate-limit — degrade, don't crash
             log.warning("CoinGecko history(%s) failed: %s — using flat fallback", symbol, exc)
+            return None
+
+    def _kraken_history(self, symbol: str, days: int):
+        """Free daily OHLC history from Kraken's public endpoint. Returns None
+        on any issue (never raises) so get_history's flat-series fallback
+        takes over. Rows: [time, open, high, low, close, vwap, volume, count]."""
+        pair = _kraken_pair(symbol)
+        if not pair:
+            return None
+        try:
+            import requests
+            r = requests.get(f"{_KRAKEN_BASE}/OHLC",
+                             params={"pair": pair, "interval": 1440}, timeout=15)
+            if not r.ok:
+                log.warning("Kraken OHLC(%s) → HTTP %s", symbol, r.status_code)
+                return None
+            result = (r.json() or {}).get("result") or {}
+            rows = []
+            for key, val in result.items():
+                if key == "last":
+                    continue
+                rows = val if isinstance(val, list) else []
+                break
+            candles = []
+            for row in rows:
+                try:
+                    ts = int(float(row[0]))
+                    close = float(row[4])
+                    vol = float(row[6])
+                except (TypeError, ValueError, IndexError):
+                    continue
+                if math.isfinite(close) and close > 0:
+                    candles.append((ts, close, vol if math.isfinite(vol) else 0.0))
+            if len(candles) < 2:
+                return None
+            candles = candles[-max(2, int(days)):]
+            closes = np.array([c[1] for c in candles], dtype=float)
+            vols = np.array([c[2] for c in candles], dtype=float)
+            timestamps = np.array([c[0] for c in candles], dtype=object)
+            return {"closes": closes, "volumes": vols,
+                    "timestamps": timestamps,
+                    "retrieved_at": datetime.now(timezone.utc).isoformat(),
+                    "feed_timestamp": timestamps[-1] if timestamps.size else None}
+        except Exception as exc:  # network / parse / rate-limit — degrade, don't crash
+            log.warning("Kraken OHLC history(%s) failed: %s", symbol, exc)
             return None
 
     def is_market_open(self) -> bool:

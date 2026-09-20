@@ -132,6 +132,7 @@ def test_history_falls_back_when_feed_unavailable():
     rh = RobinhoodCryptoBroker(load_config())
     rh.get_price = lambda s: 250.0                       # avoid network on the fallback
     rh._coingecko_history = lambda symbol, days: None    # simulate feed down / unmapped
+    rh._kraken_history = lambda symbol, days: None       # all history feeds down
     h = rh.get_history("BTC-USD", days=120)
     _check(h["closes"].size == 2 and float(h["closes"][0]) == 250.0,
            "feed down → flat 2-point live-price series (safe degrade, no crash)")

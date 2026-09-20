@@ -170,7 +170,12 @@ def test_router_fail_closed_unknown_symbol():
 
 def test_router_sim_order_fills_paper():
     r = _sim_router()
-    res = r.submit_equity_order("AAPL", 0.1, "buy")  # small qty: under the $25 venue cap
+    px = r.get_price("AAPL")
+    _check(px > 0, "sim prices AAPL")
+    # $10 notional: safely under the $25 venue cap whatever the sim's
+    # synthetic price level is (hard-coding qty broke when AAPL's sim
+    # price drifted above $250).
+    res = r.submit_equity_order("AAPL", 10.0 / px, "buy")
     _check(res["status"] == "filled", "sim order fills")
     _check(res.get("simulated") is True, "sim fill marked simulated")
     _check(res.get("venue") == "simulator", "fill tagged with venue")
