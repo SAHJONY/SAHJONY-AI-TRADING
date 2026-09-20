@@ -314,6 +314,22 @@ def run_once(firm: Firm, state, force: bool) -> dict:
         _seed_shared_knowledge(firm, state)
         result = firm.run_cycle(state, trade=trade)
         _save_shared_knowledge(firm, state)
+        # Shadow-learning grading (intel/shadow_learning.py) — learn while halted:
+        # grade the paper decisions recorded when halts suppressed orders against
+        # realized moves, AFTER the trading pipeline so grading never delays
+        # research or execution. Fault-isolated; measurement only — it cannot emit
+        # orders, change risk caps, or alter the halt/dry-run decision.
+        if getattr(firm.cfg, "shadow_learning_enabled", False):
+            try:
+                _sl = getattr(firm, "shadow_learning", None)
+                if _sl is not None and _sl.enabled:
+                    _sl_grade = _sl.grade_pending(
+                        state, firm.client.get_price, int(state.get("cycle", 0) or 0))
+                    if _sl_grade.get("graded"):
+                        log.info("shadow-learning: graded %d paper decision(s)",
+                                 len(_sl_grade["graded"]))
+            except Exception as exc:
+                log.warning("shadow-learning grading skipped: %s", exc)
         # BTC options-flow refresh (intel/options_flow.py) — same placement and
         # guarantees as the top-traders feed: AFTER the trading pipeline, never
         # delaying research or execution; cache-first via OPTIONS_FLOW_MAX_AGE_S

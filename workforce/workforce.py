@@ -226,6 +226,10 @@ class ExecutionTrader:
         # never influences routing. Also picked up opportunistically by Firm.
         self.trade_memory = None
         self.exec_quality = None
+        # Shadow-learning ledger (intel/shadow_learning.py): records suppressed
+        # entry intents as paper decisions at the HALT BLOCK branch. Picked up
+        # opportunistically by Firm; measurement only, never emits orders.
+        self.shadow_learning = None
         self._last_fill: Dict[str, float] = {}
 
     def _governor_decision(self, equity: float, intent: OrderIntent,
@@ -567,6 +571,25 @@ class ExecutionTrader:
                                  {"symbol": intent.symbol, "purpose": intent.purpose})
                     self.db.append_audit("risk_block", {"cycle": cycle, "symbol": intent.symbol,
                                          "purpose": intent.purpose, "reason": "new risk suspended"})
+                    # Learn-while-halted (intel/shadow_learning.py): the order
+                    # WOULD have been emitted here but the halt suppressed it —
+                    # record the full intended action as a paper decision so the
+                    # desk can grade it against realized moves later. This path
+                    # CANNOT emit a real order: it only appends to the shadow
+                    # ledger, and this branch ends with `continue` below —
+                    # order submission is unreachable from here. Fault-isolated.
+                    try:
+                        _sl = getattr(self, "shadow_learning", None)
+                        if _sl is not None and _sl.enabled:
+                            _sl.record_shadow(
+                                intent=intent, state=state, cycle=cycle,
+                                conviction=conviction,
+                                halt=state.get("_shadow_halt") or {},
+                                get_price=getattr(self.client, "get_price", None),
+                                mode=str(getattr(self.client, "mode",
+                                                 getattr(self.cfg, "mode", "")) or ""))
+                    except Exception as _sl_exc:
+                        log.warning("shadow decision record skipped: %s", _sl_exc)
                     continue
                 if intent.risk_check:
                     dec = self.risk.approve(equity, deployed, intent.est_notional,
@@ -856,6 +879,7 @@ class Firm:
         self.self_heal = None
         self.exec_quality = None
         self.auto_tune = None
+        self.shadow_learning = None
         try:
             from intel.council_calibration import CouncilCalibration
             from intel.trade_memory import TradeMemory
@@ -879,10 +903,22 @@ class Firm:
             self.self_heal = SelfHeal(cfg)
             self.exec_quality = ExecutionQuality()
             self.auto_tune = AutoTune(cfg)
+            # Shadow learning (intel/shadow_learning.py): learn-while-halted
+            # ledger. Constructed only when the cfg flag is on (env
+            # SHADOW_LEARNING_ENABLED is the second gate, read by the module).
+            # Advisory/measurement only — never emits orders, never touches
+            # risk caps or the halt/dry-run decision.
+            if getattr(cfg, "shadow_learning_enabled", True):
+                try:
+                    from intel.shadow_learning import ShadowLearning
+                    self.shadow_learning = ShadowLearning(cfg)
+                except Exception as exc:
+                    log.warning("shadow learning unavailable: %s", exc)
             # ExecutionTrader picks these up opportunistically (getattr-guarded):
             # post-mortems on closes, arrival-vs-fill slippage on fills.
             self.execution.trade_memory = self.trade_memory
             self.execution.exec_quality = self.exec_quality
+            self.execution.shadow_learning = self.shadow_learning
             # Promotion pipeline for the self-review's auto-demotion: demote()
             # only moves a candidate's stage + audit log (no execution
             # authority); with no registered candidates this is a no-op.
@@ -1666,6 +1702,12 @@ class Firm:
                 log.warning("NEW RISK PAUSED — %s", cadence["reason"])
                 allow_new_risk = False
 
+            # Learn-while-halted: freeze this cycle's suppression context for the
+            # shadow-decision recorder (read by ExecutionTrader at the HALT BLOCK
+            # branch). Advisory scratch only — changes nothing about the halt.
+            state["_shadow_halt"] = {"halted": bool(halt.get("halted")),
+                                     "reason": str(halt.get("reason") or "")}
+
             # Volatility targeting — realized portfolio vol above target scales every
             # new-position budget down ([0.5, 1.0]); fault-isolated, neutral on failure.
             try:
@@ -1953,6 +1995,29 @@ class Firm:
                         verdict, brain, equity, tilt, conviction_scale=disp_scale)
                     # Stash for post-mortems (entry conviction) and the dashboard.
                     state["_conviction_now"][sym] = conviction
+                    # Shadow-learning context: contributing engine scores for this
+                    # symbol's entry decision, consumed by the shadow recorder if
+                    # the order is suppressed by a halt. Fault-isolated, additive.
+                    try:
+                        state.setdefault("_shadow_ctx", {})[sym] = {
+                            "conviction": float(conviction),
+                            "risk_mult": float(risk_mult or 0.0),
+                            "budget": float(budget or 0.0),
+                            "tilts": {"alt": float(alt_tilt),
+                                      "board": float(board_tilt),
+                                      "hermes": float(hermes_tilt),
+                                      "stacked": float(tilt),
+                                      "intraday": float(intraday_tilt)},
+                            "dispersion_scale": float(disp_scale),
+                            "composite": float(getattr(
+                                verdict, "composite_score", 0.0) or 0.0),
+                            "direction": str(getattr(verdict, "direction", "") or ""),
+                            "strategy": str(strat),
+                            "regime": str(state.get("_regime_now", {}).get(
+                                sym, "unknown")),
+                        }
+                    except Exception:
+                        pass
                     # Hermes strategy calibration: budget leans toward desks with a proven
                     # realized edge (bounded 0.70–1.15; hard risk ceilings still apply).
                     budget *= hermes.strategy_weights.get(strat, 1.0) * vol_scale * institutional_risk

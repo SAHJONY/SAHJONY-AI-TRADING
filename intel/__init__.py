@@ -24,6 +24,9 @@
   rate limiting + exponential backoff with jitter on 429/5xx, structured
   errors, thread-safe). ``intel.news`` and ``intel.onchain`` are migrated
   onto it; other engines follow the ADOPTION note in its docstring.
+* ``intel.shadow_learning`` — learn-while-halted: suppressed entry intents are
+  recorded as paper decisions to a JSONL ledger and graded against realized
+  moves. Measurement only; never emits orders, never touches risk caps.
 
 Everything under this package is advisory-only: it never emits orders, never
 changes risk caps, and never touches the live-trading arming chain.
