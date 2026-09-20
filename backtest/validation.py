@@ -8,7 +8,9 @@ deterministic, testable decisions:
 * a purge gap and post-test embargo to reduce temporal leakage;
 * a final untouched holdout that is never part of model selection;
 * cost-stress, fold-stability and drawdown gates;
-* a multiple-testing-adjusted Sharpe hurdle.
+* a multiple-testing-adjusted Sharpe hurdle;
+* an advisory Deflated Sharpe Ratio (Bailey & López de Prado 2014) reported
+  alongside the hurdle — measurement only, never a gate.
 
 The functions consume return arrays only.  They cannot submit orders and do not
 change live strategy weights.
@@ -18,9 +20,11 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 from math import sqrt
 from statistics import NormalDist
-from typing import Sequence
+from typing import Optional, Sequence
 
 import numpy as np
+
+from backtest.deflated_sharpe import deflated_sharpe_report
 
 
 @dataclass(frozen=True)
@@ -99,12 +103,43 @@ def multiple_testing_sharpe_hurdle(
     return float(z * sqrt(periods_per_year / observations))
 
 
+def honest_trial_count(hypothesis_id: Optional[str], trials_declared: int,
+                       max_trials: int) -> tuple[int, str]:
+    """Trial count for the DSR, with import-guarded registry wiring.
+
+    The research-hypothesis registry (``intel/research_registry.py``) lives on
+    a not-yet-merged branch.  When it is importable AND knows the hypothesis,
+    its honest logged count wins.  Otherwise the hand-passed number is used,
+    exactly as the Bonferroni hurdle does.  Never raises, never invents a
+    count: an unknown/unimportable registry degrades to the declared number.
+
+    Returns (trials_used, source) where source is "research_registry" or
+    "declared".
+    """
+    if hypothesis_id:
+        counted: Optional[int] = None
+        try:
+            from intel.research_registry import default_registry
+            counted = default_registry().get_trial_count(hypothesis_id)
+        except Exception:
+            counted = None
+        try:
+            counted_int = int(counted) if counted is not None else None
+        except (TypeError, ValueError):
+            counted_int = None
+        if counted_int is not None and counted_int >= 1:
+            return min(counted_int, max(1, int(max_trials))), "research_registry"
+    declared = max(1, int(trials_declared))
+    return min(declared, max(1, int(max_trials))), "declared"
+
+
 def validate_candidate(
     returns: Sequence[float],
     stressed_returns: Sequence[float],
     policy: ValidationPolicy | None = None,
     trials: int = 1,
     benchmark_returns: Sequence[float] | None = None,
+    hypothesis_id: Optional[str] = None,
 ) -> dict:
     """Evaluate already-frozen candidate returns and return an auditable verdict.
 
@@ -136,6 +171,21 @@ def validate_candidate(
         p.familywise_alpha,
     )
 
+    # ── Deflated Sharpe Ratio: advisory measurement only ──────────────────
+    # Bailey & López de Prado (2014).  Computed on the untouched holdout
+    # slice and reported alongside the Bonferroni hurdle above.  This block
+    # is strictly additive: it never feeds `checks`, never changes
+    # `promoted`, and leaves every existing key's semantics untouched.  The
+    # trial count is the registry's honest logged count when a hypothesis id
+    # is supplied and the (not-yet-merged) registry module is importable;
+    # otherwise the hand-passed `trials`, exactly as the hurdle uses.
+    dsr_trials, dsr_source = honest_trial_count(hypothesis_id, trials,
+                                                p.max_trials)
+    dsr_report = deflated_sharpe_report(
+        r[holdout_start:], trials=dsr_trials,
+        periods_per_year=p.periods_per_year,
+        min_observations=p.min_observations)
+
     checks = {
         "enough_folds": len(folds) >= p.min_folds,
         "enough_holdout_observations": holdout["n"] >= p.min_observations,
@@ -160,6 +210,15 @@ def validate_candidate(
         "stressed_holdout": stressed,
         "benchmark_holdout": benchmark,
         "adjusted_sharpe_hurdle": hurdle,
+        # Deflated Sharpe Ratio (Bailey & López de Prado 2014) — advisory
+        # only.  Strictly additive: no gate reads these fields.
+        "dsr": dsr_report["dsr"],
+        "dsr_reliable": dsr_report["reliable"],
+        "dsr_expected_sharpe_null": dsr_report["expected_sharpe_null"],
+        "dsr_expected_sharpe_null_annualized": (
+            dsr_report["expected_sharpe_null_annualized"]),
+        "dsr_trials_used": dsr_report["trials"],
+        "dsr_trials_source": dsr_source,
         "checks": checks,
         "failed_checks": [name for name, passed in checks.items() if not passed],
     }
