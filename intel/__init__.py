@@ -5,6 +5,9 @@
 * ``intel.onchain`` — keyless Bitcoin on-chain network intelligence
   (fee market, mempool congestion, hashrate/difficulty gauges), refreshed
   once per cycle from main.py.
+* ``intel.macro`` — MACRO PULSE: keyless macro backdrop (dollar, 10y yield,
+  gold, WTI) with a bounded risk-on/risk-off read, refreshed once per
+  cycle from main.py. INTELLIGENCE ONLY.
 * ``intel.workforce`` — the 9-agent advisory-only Intel Workforce that runs
   after the research block each cycle and reports plain-language findings to
   the dashboard.

@@ -353,6 +353,27 @@ def run_once(firm: Firm, state, force: bool) -> dict:
                 oc_refresh()
         except Exception as exc:
             log.warning("on-chain refresh skipped: %s", exc)
+    # MACRO PULSE intelligence refresh (intel/macro.py) — same placement and
+    # guarantees as the top-traders feed: AFTER the trading pipeline, never
+    # delaying research or execution; cache-first via MACRO_MAX_AGE_S (macro
+    # moves on a daily cadence; default 6h); fault-isolated. Advisory only.
+    # Placed BEFORE build_status so status.json carries this cycle's summary.
+    if getattr(firm.cfg, "intel_macro_enabled", False):
+        try:
+            from intel.macro import refresh as macro_refresh
+            import os as _os2
+            _mp_path = _os2.path.join(_os2.path.dirname(status_path()),
+                                      "macro_pulse.json")
+            _mp_max_age = int(_os2.getenv("MACRO_MAX_AGE_S", "21600") or 21600)
+            _mp_age = (time.time() - _os2.path.getmtime(_mp_path)
+                       if _os2.path.exists(_mp_path) else float("inf"))
+            if _mp_age < _mp_max_age:
+                log.info("macro-pulse payload fresh (%.0fs old) — serving cache, "
+                         "skipping network refresh", _mp_age)
+            else:
+                macro_refresh()
+        except Exception as exc:
+            log.warning("macro-pulse refresh skipped: %s", exc)
     status = build_status(firm, firm.cfg, state, result)
     write_status(status, status_path())
     shared = write_investor_views(firm.db, status)  # token-keyed read-only investor snapshots
