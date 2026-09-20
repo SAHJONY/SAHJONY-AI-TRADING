@@ -91,6 +91,14 @@ All advisory or de-risk-only; none widen risk caps, emit orders, or touch creden
 - `congress.py` — keyless STOCK Act PTR disclosure-activity feed (House Clerk
   search + degradable Senate EFD leg); report-level granularity, advisory only.
 - `correlation.py` — correlation-adjusted exposure reporting, advisory only.
+- `diversity.py` — council + portfolio diversity diagnostics, advisory/measurement
+  only: bias–variance–covariance decomposition of the 12 persona votes (crowding
+  that dispersion.py cannot see — 12 personas agreeing on the same signal are
+  one bet), Meucci Effective Number of Bets on the book, decayed pairwise
+  vote-correlation matrix, plain-language crowding flags. The Risk Officer may
+  READ the effective-bets number; it is never wired into any gate. Short
+  decaying vote window and noisy correlation estimates are documented limits —
+  it diagnoses crowding, never fixes it.
 - `execution_quality.py` — arrival-price vs fill-price slippage JSONL,
   measurement only (maker routing intentionally deferred).
 - `daily_brief.py` — real-data morning brief → `public/daily_brief.md` +

@@ -332,6 +332,7 @@ class Config:
     self_review_enabled: bool = True           # SELF_REVIEW_ENABLED
     auto_demote_enabled: bool = True           # AUTO_DEMOTE_ENABLED
     correlation_enabled: bool = True           # CORRELATION_ENABLED
+    diversity_enabled: bool = True             # DIVERSITY_ENABLED
     execution_quality_enabled: bool = True     # EXECUTION_QUALITY_ENABLED
     impact_model_enabled: bool = True          # IMPACT_MODEL_ENABLED
     daily_brief_enabled: bool = True           # DAILY_BRIEF_ENABLED
@@ -585,6 +586,7 @@ def load_config() -> Config:
         self_review_enabled=_b("SELF_REVIEW_ENABLED", True),
         auto_demote_enabled=_b("AUTO_DEMOTE_ENABLED", True),
         correlation_enabled=_b("CORRELATION_ENABLED", True),
+        diversity_enabled=_b("DIVERSITY_ENABLED", True),
         execution_quality_enabled=_b("EXECUTION_QUALITY_ENABLED", True),
         impact_model_enabled=_b("IMPACT_MODEL_ENABLED", True),
         daily_brief_enabled=_b("DAILY_BRIEF_ENABLED", True),

@@ -665,6 +665,10 @@ def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[st
         "auto_tune": cycle_result.get("auto_tune") or {"tuned": False},
         # Correlation-aware risk (advisory): nominal vs effective exposure.
         "correlation": cycle_result.get("correlation") or {},
+        # Council + portfolio diversity (intel/diversity.py): vote crowding
+        # (bias–variance–covariance) + Meucci effective bets. Measurement only —
+        # it never changes votes, weights, or gates.
+        "diversity": cycle_result.get("diversity") or {"status": "unavailable"},
         # Execution quality: arrival-vs-fill slippage measurement + reporting.
         "execution_quality": cycle_result.get("execution_quality") or {},
         # Pre-trade market-impact estimates (intel/impact_model.py) —
