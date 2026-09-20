@@ -639,6 +639,10 @@ def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[st
         "correlation": cycle_result.get("correlation") or {},
         # Execution quality: arrival-vs-fill slippage measurement + reporting.
         "execution_quality": cycle_result.get("execution_quality") or {},
+        # Pre-trade market-impact estimates (intel/impact_model.py) —
+        # square-root-law advisory numbers per symbol; populated only when
+        # the pipeline supplies real inputs. Advisory only, never sizing.
+        "impact_model": cycle_result.get("impact_model") or {},
         # Daily brief (also committed to public/daily_brief.md).
         "daily_brief": cycle_result.get("daily_brief") or {},
         "council": council,
