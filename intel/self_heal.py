@@ -6,7 +6,7 @@ healthy / degraded / critical.
 
 Recovery ladder (automatic, with backoff):
 - price feeds: retry, then FAIL OVER sources
-  (venue → CoinGecko → Kraken → Coinbase public feeds)
+  (venue → Coinbase → Kraken → CoinGecko public feeds)
 - single bad symbols: skip-and-continue (extends the existing per-symbol guard)
 - cycle exceptions: count, back off, keep the desk observing
 
@@ -279,7 +279,7 @@ class SelfHeal:
     def _recover(sub: str, grade: Dict[str, str], state: Dict[str, Any]) -> str:
         detail = grade.get("detail", "")
         if sub == "price_feeds":
-            return ("backoff + failover: venue → CoinGecko → Kraken → Coinbase; "
+            return ("backoff + failover: venue → Coinbase → Kraken → CoinGecko; "
                     f"single bad symbols skipped ({detail})")
         if sub == "broker_api":
             # HARD LINE: never attempt to fix credentials. Only report.
