@@ -2,6 +2,9 @@
 
 * ``intel.top_traders`` — cached top-trader / whale intelligence feed
   (whale alerts + copy signals), refreshed once per cycle from main.py.
+* ``intel.onchain`` — keyless Bitcoin on-chain network intelligence
+  (fee market, mempool congestion, hashrate/difficulty gauges), refreshed
+  once per cycle from main.py.
 * ``intel.workforce`` — the 9-agent advisory-only Intel Workforce that runs
   after the research block each cycle and reports plain-language findings to
   the dashboard.
