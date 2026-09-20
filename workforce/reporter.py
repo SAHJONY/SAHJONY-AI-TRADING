@@ -116,6 +116,7 @@ ENV_CATALOG = [
     ("LOG_LEVEL", "Ops", False, "INFO / DEBUG"),
     ("INTEL_WORKFORCE_ENABLED", "Intel", False, "9-agent advisory intel team (default on)"),
     ("INTEL_TOP_TRADERS_ENABLED", "Intel", False, "top-trader intel feed refresh (default on)"),
+    ("RESEARCH_REGISTRY_ENABLED", "Intel", False, "hypothesis registry + trial accounting (default on)"),
 ]
 
 
@@ -285,6 +286,21 @@ def _integrity_block(firm, state: Dict[str, Any]) -> list:
         return fn(state) if callable(fn) else []
     except Exception:               # telemetry never breaks the report
         return []
+
+
+def _research_registry_block() -> Dict[str, Any]:
+    """Research-hypothesis registry snapshot for the dashboard — the sibling
+    feed (intel/research_registry.py). Secret-free and fault-isolated: a
+    missing module or an unreadable ledger yields a marked-down unavailable
+    block, never a crash."""
+    try:
+        from intel.research_registry import default_registry, _enabled
+        reg = default_registry()
+        block = reg.summary_for_status()
+        block["flag_enabled"] = _enabled()
+        return block
+    except Exception as exc:
+        return {"available": False, "error": type(exc).__name__}
 
 
 def _top_traders_block() -> Dict[str, Any]:
@@ -539,6 +555,10 @@ def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[st
         # copy signals as context, never auto-copied. Unavailable when the
         # sibling module or its cached payload is missing.
         "top_traders": _top_traders_block(),
+        # Research-hypothesis registry (intel/research_registry.py) —
+        # pre-registered hypotheses, honest trial accounting, budget-overrun
+        # flags. Measurement only; never emits orders or changes risk.
+        "research_registry": _research_registry_block(),
         # Brain upgrade (intel/) — performance-weighted voting accuracy,
         # anomaly stand-downs, disagreement scaling, trade post-mortems.
         # All advisory or de-risk-only; none can widen risk caps.
@@ -706,5 +726,11 @@ def console_board(status: Dict[str, Any]) -> str:
     crm = status["crm"]
     lines.append(f" CRM: {crm['investors']} investors / {crm['contacts']} contacts · "
                  f"AUM ${crm['aum']:,.0f}")
+    rr = status.get("research_registry") or {}
+    if rr.get("available") and (rr.get("budget_overrun_count") or rr.get("unregistered_runs")):
+        lines.append(f" Research registry: {rr.get('open', 0)} open hypotheses · "
+                     f"{rr.get('trials_consumed_total', 0)} trials logged · "
+                     f"overruns {rr.get('budget_overrun_count', 0)} · "
+                     f"unregistered runs {rr.get('unregistered_runs', 0)}")
     lines.append("═" * 64)
     return "\n".join(lines)
