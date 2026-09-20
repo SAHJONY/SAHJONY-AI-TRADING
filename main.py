@@ -281,6 +281,28 @@ def run_once(firm: Firm, state, force: bool) -> dict:
                 tt_refresh()
         except Exception as exc:
             log.warning("top-traders refresh skipped: %s", exc)
+    # News/sentiment intelligence refresh (intel/news.py) — same placement and
+    # guarantees as the top-traders feed: AFTER the trading pipeline, never
+    # delaying research or execution; cache-first via NEWS_MAX_AGE_S (the
+    # payload is a 6h-cache product; the dashboard reads the file, not the
+    # network) — sources must never block the trading desk. Fault-isolated.
+    # Placed BEFORE build_status so status.json carries this cycle's summary.
+    if getattr(firm.cfg, "intel_news_enabled", False):
+        try:
+            from intel.news import refresh as news_refresh
+            import os as _os3
+            _nw_path = _os3.path.join(_os3.path.dirname(status_path()),
+                                      "news_intel.json")
+            _nw_max_age = int(_os3.getenv("NEWS_MAX_AGE_S", "21600") or 21600)
+            _nw_age = (time.time() - _os3.path.getmtime(_nw_path)
+                       if _os3.path.exists(_nw_path) else float("inf"))
+            if _nw_age < _nw_max_age:
+                log.info("news-intel payload fresh (%.0fs old) — serving cache, "
+                         "skipping network refresh", _nw_age)
+            else:
+                news_refresh()
+        except Exception as exc:
+            log.warning("news-intel refresh skipped: %s", exc)
     status = build_status(firm, firm.cfg, state, result)
     write_status(status, status_path())
     shared = write_investor_views(firm.db, status)  # token-keyed read-only investor snapshots

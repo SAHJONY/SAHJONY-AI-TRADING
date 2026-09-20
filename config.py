@@ -305,6 +305,9 @@ class Config:
     # top-trader intelligence feed (intel/top_traders.py) feeding the intel
     # workforce's whale/copy-signal agents
     intel_top_traders_enabled: bool = True
+    # news/sentiment intelligence feed (intel/news.py) — Fear & Greed, GDELT
+    # article volume, CoinGecko trending; advisory only, INTELLIGENCE ONLY
+    intel_news_enabled: bool = True
 
     # brain upgrade — all advisory / de-risk-only / measurement-only; none can
     # widen risk caps, emit orders, or touch credentials. Each has its own
@@ -555,6 +558,7 @@ def load_config() -> Config:
         copy_trading_enabled=_b("COPY_TRADING_ENABLED", False),
         intel_workforce_enabled=_b("INTEL_WORKFORCE_ENABLED", True),
         intel_top_traders_enabled=_b("INTEL_TOP_TRADERS_ENABLED", True),
+        intel_news_enabled=_b("INTEL_NEWS_ENABLED", True),
         council_calibration_enabled=_b("COUNCIL_CALIBRATION_ENABLED", True),
         dispersion_scaling_enabled=_b("DISPERSION_SCALING_ENABLED", True),
         anomaly_enabled=_b("ANOMALY_ENABLED", True),
