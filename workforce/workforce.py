@@ -104,6 +104,27 @@ class ResearchDesk:
         self.client = client
         self.council = council
 
+    def _cal_weights_for(self, snap) -> "Optional[Dict[str, float]]":
+        """Calibration weights for this snapshot's regime.
+
+        Regime-aware when the regime is known: picks the calm/stressed weight
+        map snapshotted in the cycle prologue. Falls back EXACTLY to the global
+        weights when the regime is unknown or the maps are unavailable — no
+        behavior change vs the pre-regime path. Never raises.
+        """
+        global_w = getattr(self, "cal_weights", None)
+        try:
+            by_regime = getattr(self, "cal_weights_by_regime", None) or {}
+            if not by_regime:
+                return global_w
+            from intel.regime_calibration import current_regime
+            regime = current_regime(snap)
+            if regime in by_regime:
+                return by_regime[regime]
+            return global_w
+        except Exception:
+            return global_w
+
     def research(self, symbol: str, bench_closes) -> (MarketSnapshot, CouncilVerdict):
         hist = self.client.get_history(symbol, 250)
         price = self.client.get_price(symbol)
@@ -114,7 +135,7 @@ class ResearchDesk:
             feed_timestamp=hist.get("feed_timestamp"),
             exchange_timestamp=hist.get("exchange_timestamp"),
         )
-        return snap, self.council.deliberate(snap, getattr(self, "cal_weights", None))
+        return snap, self.council.deliberate(snap, self._cal_weights_for(snap))
 
 
 class PortfolioManager:
@@ -809,6 +830,16 @@ class Firm:
             from intel.execution_quality import ExecutionQuality
             from intel.auto_tune import AutoTune
             self.calibration = CouncilCalibration(cfg)
+            # Regime-aware calibration wraps the global tracker: per-regime
+            # (calm/stressed) accuracy memories + weights_for_regime. The
+            # global memory/weights are graded unchanged, so the fallback is
+            # identical to CouncilCalibration alone. Import-guarded: a failure
+            # here only loses the regime split, never the global calibration.
+            try:
+                from intel.regime_calibration import RegimeCalibration
+                self.calibration = RegimeCalibration(cfg, base=self.calibration)
+            except Exception as exc:
+                log.warning("regime-aware calibration unavailable (global only): %s", exc)
             self.trade_memory = TradeMemory()
             self.self_review = SelfReview(cfg, self.trade_memory, None)
             self.self_heal = SelfHeal(cfg)
@@ -1461,11 +1492,22 @@ class Firm:
         try:
             if self.calibration is not None and self.calibration.enabled:
                 self.research.cal_weights = self.calibration.weights(state)
+                # Regime-conditional maps for the research block: ResearchDesk
+                # picks calm/stressed per symbol when the regime is known and
+                # falls back exactly to cal_weights when it isn't.
+                try:
+                    by_regime = getattr(self.calibration, "weights_by_regime", None)
+                    self.research.cal_weights_by_regime = (
+                        by_regime(state) if callable(by_regime) else None)
+                except Exception:
+                    self.research.cal_weights_by_regime = None
             else:
                 self.research.cal_weights = None
+                self.research.cal_weights_by_regime = None
         except Exception as exc:
             log.warning("council weights snapshot skipped: %s", exc)
             self.research.cal_weights = None
+            self.research.cal_weights_by_regime = None
         if hasattr(self.client, "begin_cycle"):
             self.client.begin_cycle()  # fresh quotes; pinned for this cycle
         # Record this cycle's prices as bars (passive; see utils/bar_recorder.py).

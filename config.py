@@ -305,11 +305,15 @@ class Config:
     # top-trader intelligence feed (intel/top_traders.py) feeding the intel
     # workforce's whale/copy-signal agents
     intel_top_traders_enabled: bool = True
+    # news/sentiment intelligence feed (intel/news.py) — Fear & Greed, GDELT
+    # article volume, CoinGecko trending; advisory only, INTELLIGENCE ONLY
+    intel_news_enabled: bool = True
 
     # brain upgrade — all advisory / de-risk-only / measurement-only; none can
     # widen risk caps, emit orders, or touch credentials. Each has its own
     # kill-switch env var (default ON per the owner's explicit instruction).
     council_calibration_enabled: bool = True   # COUNCIL_CALIBRATION_ENABLED
+    council_regime_calibration_enabled: bool = True   # COUNCIL_REGIME_CALIBRATION_ENABLED
     dispersion_scaling_enabled: bool = True    # DISPERSION_SCALING_ENABLED
     anomaly_enabled: bool = True               # ANOMALY_ENABLED
     self_review_enabled: bool = True           # SELF_REVIEW_ENABLED
@@ -555,7 +559,9 @@ def load_config() -> Config:
         copy_trading_enabled=_b("COPY_TRADING_ENABLED", False),
         intel_workforce_enabled=_b("INTEL_WORKFORCE_ENABLED", True),
         intel_top_traders_enabled=_b("INTEL_TOP_TRADERS_ENABLED", True),
+        intel_news_enabled=_b("INTEL_NEWS_ENABLED", True),
         council_calibration_enabled=_b("COUNCIL_CALIBRATION_ENABLED", True),
+        council_regime_calibration_enabled=_b("COUNCIL_REGIME_CALIBRATION_ENABLED", True),
         dispersion_scaling_enabled=_b("DISPERSION_SCALING_ENABLED", True),
         anomaly_enabled=_b("ANOMALY_ENABLED", True),
         self_review_enabled=_b("SELF_REVIEW_ENABLED", True),
