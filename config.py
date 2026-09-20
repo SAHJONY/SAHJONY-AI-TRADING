@@ -321,6 +321,12 @@ class Config:
     # congress intelligence feed (intel/congress.py) — STOCK Act disclosure
     # activity, report-level, advisory only
     intel_congress_enabled: bool = True
+    # shadow learning (intel/shadow_learning.py) — when the desk is halted or
+    # stood down to dry-run, suppressed entry intents are recorded as paper
+    # decisions to a JSONL ledger and graded against realized moves.
+    # Measurement only: never emits orders, never touches risk caps or the
+    # halt/dry-run decision itself. DEFAULT ON.
+    shadow_learning_enabled: bool = True
 
     # brain upgrade — all advisory / de-risk-only / measurement-only; none can
     # widen risk caps, emit orders, or touch credentials. Each has its own
@@ -577,6 +583,7 @@ def load_config() -> Config:
         intel_onchain_enabled=_b("INTEL_ONCHAIN_ENABLED", True),
         intel_macro_enabled=_b("INTEL_MACRO_ENABLED", True),
         intel_congress_enabled=_b("INTEL_CONGRESS_ENABLED", True),
+        shadow_learning_enabled=_b("SHADOW_LEARNING_ENABLED", True),
         council_calibration_enabled=_b("COUNCIL_CALIBRATION_ENABLED", True),
         council_regime_calibration_enabled=_b("COUNCIL_REGIME_CALIBRATION_ENABLED", True),
         dispersion_scaling_enabled=_b("DISPERSION_SCALING_ENABLED", True),

@@ -14,6 +14,9 @@
 * ``intel.workforce`` — the 9-agent advisory-only Intel Workforce that runs
   after the research block each cycle and reports plain-language findings to
   the dashboard.
+* ``intel.shadow_learning`` — learn-while-halted: suppressed entry intents are
+  recorded as paper decisions to a JSONL ledger and graded against realized
+  moves. Measurement only; never emits orders, never touches risk caps.
 
 Everything under this package is advisory-only: it never emits orders, never
 changes risk caps, and never touches the live-trading arming chain.
