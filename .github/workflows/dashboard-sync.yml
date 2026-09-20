@@ -7,6 +7,11 @@ on:
     branches: [master]
     paths:
       - 'public/**'
+  # Desk snapshots are committed by desk.yml with GITHUB_TOKEN, whose pushes
+  # do NOT trigger other workflows — so the push trigger alone leaves gh-pages
+  # frozen. The schedule below keeps the mirror self-healing every 15 min.
+  schedule:
+    - cron: '*/15 * * * *'
 
 permissions:
   contents: write
