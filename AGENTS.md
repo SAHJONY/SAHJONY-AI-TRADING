@@ -85,6 +85,9 @@ All advisory or de-risk-only; none widen risk caps, emit orders, or touch creden
   envelope is hard-excluded and unchangeable by the tuner.
 - `funding_intel.py` — keyless Hyperliquid (+ Binance fallback) funding/OI;
   9th workforce agent; contrarian advisory tilt bounded ±0.15.
+- `options_flow.py` — keyless Deribit BTC options book summary: put/call OI
+  ratios, per-expiry put-IV skew, term-structure slope; bounded
+  defensive/neutral read, advisory only.
 - `correlation.py` — correlation-adjusted exposure reporting, advisory only.
 - `execution_quality.py` — arrival-price vs fill-price slippage JSONL,
   measurement only (maker routing intentionally deferred).
