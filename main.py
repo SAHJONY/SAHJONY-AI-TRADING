@@ -327,6 +327,32 @@ def run_once(firm: Firm, state, force: bool) -> dict:
                 news_refresh()
         except Exception as exc:
             log.warning("news-intel refresh skipped: %s", exc)
+    # On-chain network intelligence refresh (intel/onchain.py) — runs AFTER
+    # the trading pipeline so it can never delay research or execution.
+    # CACHE-FIRST: when public/onchain_intel.json is younger than
+    # ONCHAIN_MAX_AGE_S (default 1h; the payload is a light gauge product and
+    # the dashboard reads the file, not the network) the cycle skips the
+    # network rebuild and serves the cache — sources must never block the
+    # trading desk. Fault-isolated: any failure skips with a warning and the
+    # desk keeps the previous payload. Placed BEFORE build_status so
+    # status.json carries this cycle's summary. Advisory only: never emits
+    # orders, never changes risk caps, never touches the arming chain.
+    if getattr(firm.cfg, "intel_onchain_enabled", False):
+        try:
+            from intel.onchain import refresh as oc_refresh
+            import os as _os
+            _oc_path = _os.path.join(_os.path.dirname(status_path()),
+                                     "onchain_intel.json")
+            _oc_max_age = int(_os.getenv("ONCHAIN_MAX_AGE_S", "3600") or 3600)
+            _oc_age = (time.time() - _os.path.getmtime(_oc_path)
+                       if _os.path.exists(_oc_path) else float("inf"))
+            if _oc_age < _oc_max_age:
+                log.info("on-chain payload fresh (%.0fs old) — serving cache, "
+                         "skipping network refresh", _oc_age)
+            else:
+                oc_refresh()
+        except Exception as exc:
+            log.warning("on-chain refresh skipped: %s", exc)
     status = build_status(firm, firm.cfg, state, result)
     write_status(status, status_path())
     shared = write_investor_views(firm.db, status)  # token-keyed read-only investor snapshots

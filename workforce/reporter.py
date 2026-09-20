@@ -321,6 +321,18 @@ def _news_block() -> Dict[str, Any]:
         return {"available": False, "error": type(exc).__name__}
 
 
+def _onchain_block() -> Dict[str, Any]:
+    """On-chain network-intelligence snapshot for the dashboard — the sibling
+    feed (intel/onchain.py). Secret-free and fault-isolated: a missing module
+    or an unreadable payload yields a marked-down unavailable block, never a
+    crash."""
+    try:
+        from intel.onchain import load_payload, summary_for_status
+        return summary_for_status(load_payload())
+    except Exception as exc:
+        return {"available": False, "error": type(exc).__name__}
+
+
 def _venues_block(client, broker_account: Dict[str, Any]) -> list:
     """Per-venue roster for the dashboard. Fault-isolated like all telemetry.
 
@@ -570,6 +582,11 @@ def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[st
         # GDELT article volume, CoinGecko trending; INTELLIGENCE ONLY.
         # Unavailable when the sibling module or its cached payload is missing.
         "news": _news_block(),
+        # On-chain network intelligence (intel/onchain.py) — BTC fee market,
+        # mempool congestion, hashrate/difficulty gauges as context.
+        # Advisory only; unavailable when the sibling module or its cached
+        # payload is missing.
+        "onchain": _onchain_block(),
         # Brain upgrade (intel/) — performance-weighted voting accuracy,
         # anomaly stand-downs, disagreement scaling, trade post-mortems.
         # All advisory or de-risk-only; none can widen risk caps.
