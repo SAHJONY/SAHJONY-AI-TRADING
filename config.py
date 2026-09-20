@@ -321,6 +321,10 @@ class Config:
     # congress intelligence feed (intel/congress.py) — STOCK Act disclosure
     # activity, report-level, advisory only
     intel_congress_enabled: bool = True
+    # signal attribution ledger (intel/signal_attribution.py) — per-engine
+    # realized directional attribution at fixed horizons; measurement only,
+    # advisory only, never emits orders or touches risk
+    signal_attribution_enabled: bool = True
 
     # brain upgrade — all advisory / de-risk-only / measurement-only; none can
     # widen risk caps, emit orders, or touch credentials. Each has its own
@@ -580,6 +584,7 @@ def load_config() -> Config:
         intel_onchain_enabled=_b("INTEL_ONCHAIN_ENABLED", True),
         intel_macro_enabled=_b("INTEL_MACRO_ENABLED", True),
         intel_congress_enabled=_b("INTEL_CONGRESS_ENABLED", True),
+        signal_attribution_enabled=_b("SIGNAL_ATTRIBUTION_ENABLED", True),
         council_calibration_enabled=_b("COUNCIL_CALIBRATION_ENABLED", True),
         council_regime_calibration_enabled=_b("COUNCIL_REGIME_CALIBRATION_ENABLED", True),
         dispersion_scaling_enabled=_b("DISPERSION_SCALING_ENABLED", True),
