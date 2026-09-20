@@ -63,14 +63,17 @@ _CG_IDS = {
     "USDC": "usd-coin", "USDT": "tether",
 }
 
-# Keyless spot/history failover after CoinGecko (documented chain:
-# venue → CoinGecko → Kraken → Coinbase). Both are public, no-key, and
-# US-accessible. Kraken's Ticker/OHLC endpoints resolve alt names ("BTCUSD"),
-# so we pass "{BASE}USD" and read the first (only) result entry — robust to
-# Kraken's canonical "XXBTZUSD"-style naming.
+# Keyless spot failover (documented chain: venue → Coinbase → Kraken →
+# CoinGecko). All three are public, no-key, and US-accessible. Coinbase
+# Exchange's ticker is first because it is a REAL-TIME two-sided quote
+# (bid/ask, millisecond timestamp) — the desk prices off live exchange
+# quotes, not a cached aggregator. Kraken's Ticker/OHLC endpoints resolve
+# alt names ("BTCUSD"), so we pass "{BASE}USD" and read the first (only)
+# result entry — robust to Kraken's canonical "XXBTZUSD"-style naming.
+# CoinGecko is last resort only (free tier 429s aggressively on shared IPs).
 _KRAKEN_BASE = "https://api.kraken.com/0/public"
 _KRAKEN_SPECIAL = {"BTC": "XXBTZUSD"}  # Kraken's canonical BTC pair name
-_COINBASE_BASE = "https://api.coinbase.com/v2"
+_COINBASE_EX_BASE = "https://api.exchange.coinbase.com"
 
 
 def _kraken_pair(symbol: str) -> str:
@@ -277,18 +280,20 @@ class RobinhoodCryptoBroker:
                 self._price_source[rh] = "venue"
                 return mid
         except Exception as exc:
-            log.warning("get_price(%s) via Robinhood failed: %s — trying CoinGecko", symbol, exc)
-        # Fallback chain (all public, no key): CoinGecko → Kraken → Coinbase.
-        # RH's v1 quote endpoint 403s on some credentials; CoinGecko's free tier
-        # 429s aggressively on shared egress IPs — the extra legs keep the desk
-        # priced when any single keyless source is down. First success wins.
-        for source, fn in (("coingecko", self._coingecko_spot),
+            log.warning("get_price(%s) via Robinhood failed: %s — trying Coinbase", symbol, exc)
+        # Fallback chain (all public, no key): Coinbase → Kraken → CoinGecko.
+        # RH's v1 quote endpoint 403s on some credentials; the desk prices off
+        # live exchange quotes now — Coinbase Exchange ticker (real-time
+        # bid/ask) first, Kraken's public ticker second, CoinGecko's aggregator
+        # last resort (free tier 429s aggressively on shared egress IPs).
+        # First success wins.
+        for source, fn in (("coinbase", self._coinbase_spot),
                            ("kraken", self._kraken_spot),
-                           ("coinbase", self._coinbase_spot)):
+                           ("coingecko", self._coingecko_spot)):
             px = fn(symbol)
             if px > 0:
-                if source != "coingecko":
-                    log.info("get_price(%s) served by %s (CoinGecko down/missing)", symbol, source)
+                if source != "coinbase":
+                    log.info("get_price(%s) served by %s (Coinbase down/missing)", symbol, source)
                 self._price_cache[rh] = px
                 self._price_source[rh] = source
                 return px
@@ -353,18 +358,24 @@ class RobinhoodCryptoBroker:
         return px if math.isfinite(px) and px > 0 else 0.0
 
     def _coinbase_spot(self, symbol: str) -> float:
-        """Free spot price from Coinbase's public API. Returns 0.0 on any
-        issue (never raises)."""
+        """Free REAL-TIME spot price from Coinbase Exchange's public ticker.
+        Returns 0.0 on any issue (never raises). Prices off the live bid/ask
+        mid — a two-sided exchange quote with a millisecond timestamp — instead
+        of a cached aggregator value."""
         pair = _coinbase_pair(symbol)
         if not pair:
             return 0.0
         import requests
         try:
-            r = requests.get(f"{_COINBASE_BASE}/prices/{pair}/spot", timeout=15)
+            r = requests.get(f"{_COINBASE_EX_BASE}/products/{pair}/ticker", timeout=15)
             if not r.ok:
                 log.warning("Coinbase spot(%s) → HTTP %s", symbol, r.status_code)
                 return 0.0
-            px = float(((r.json() or {}).get("data") or {}).get("amount", 0.0) or 0.0)
+            tick = r.json() or {}
+            bid = float(tick.get("bid") or 0.0)
+            ask = float(tick.get("ask") or 0.0)
+            mid = (bid + ask) / 2 if (bid and ask) else (bid or ask)
+            px = mid or float(tick.get("price") or 0.0)
         except Exception as exc:
             log.warning("Coinbase spot(%s) failed: %s", symbol, exc)
             return 0.0

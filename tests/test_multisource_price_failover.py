@@ -1,6 +1,6 @@
 """Multi-source price failover for the Robinhood crypto venue.
 
-Verifies the documented keyless chain venue → CoinGecko → Kraken → Coinbase
+Verifies the documented keyless chain venue → Coinbase → Kraken → CoinGecko
 is actually wired in the live price path (robinhood_crypto.py), plus the
 Kraken OHLC history leg in get_history. All helpers must never raise and
 unmapped symbols must never touch the network.
@@ -66,7 +66,9 @@ _KRAKEN_OHLC = {"error": [], "result": {"XXBTZUSD": [
     [1720086400, "67500.0", "69000.0", "67000.0", "68500.0", "68000.0", "110.2", 1300],
     [1720172800, "68500.0", "70000.0", "68000.0", "69500.0", "69000.0", "120.8", 1400],
 ], "last": 1720172800}}
-_COINBASE_SPOT = {"data": {"base": "BTC", "currency": "USD", "amount": "67600.25"}}
+_COINBASE_EX_TICKER = {"bid": "67600.10", "ask": "67600.40", "price": "67600.25",
+                       "time": "2026-09-20T23:04:36.823632190Z"}
+_CG_PRICE = {"bitcoin": {"usd": 67400.75}}
 
 
 def _fake_get(url, params=None, timeout=None):
@@ -74,8 +76,8 @@ def _fake_get(url, params=None, timeout=None):
         return _FakeResp(_KRAKEN_TICKER)
     if "kraken.com" in url and "/OHLC" in url:
         return _FakeResp(_KRAKEN_OHLC)
-    if "coinbase.com" in url:
-        return _FakeResp(_COINBASE_SPOT)
+    if "api.exchange.coinbase.com" in url:
+        return _FakeResp(_COINBASE_EX_TICKER)
     if "coingecko.com" in url:
         return _FakeResp({}, status=429)  # CoinGecko down: rate-limited
     raise AssertionError(f"unexpected URL in test: {url}")
@@ -89,23 +91,36 @@ def test_pair_mapping_guards_unmapped():
     assert _coinbase_pair("ZZZ-USD") == ""
 
 
-def test_spot_failover_kraken_then_coinbase(monkeypatch):
+def test_spot_failover_coinbase_first(monkeypatch):
     monkeypatch.setattr("requests.get", _fake_get)
     rh = _broker()
-    # CoinGecko 429s → Kraken serves
+    # CoinGecko 429s → Coinbase Exchange ticker serves the bid/ask mid
+    assert rh.get_price("BTC-USD") == pytest.approx(67600.25)
+    assert rh.price_source("BTC-USD") == "coinbase"
+
+
+def test_spot_failover_kraken_when_coinbase_down(monkeypatch):
+    def no_coinbase(url, params=None, timeout=None):
+        if "api.exchange.coinbase.com" in url:
+            return _FakeResp({}, status=500)
+        return _fake_get(url, params=params, timeout=timeout)
+    monkeypatch.setattr("requests.get", no_coinbase)
+    rh = _broker()
     assert rh.get_price("BTC-USD") == 67500.50
     assert rh.price_source("BTC-USD") == "kraken"
 
 
-def test_spot_failover_coinbase_when_kraken_down(monkeypatch):
-    def no_kraken(url, params=None, timeout=None):
-        if "kraken.com" in url:
+def test_spot_failover_coingecko_last_resort(monkeypatch):
+    def only_coingecko(url, params=None, timeout=None):
+        if "api.exchange.coinbase.com" in url or "kraken.com" in url:
             return _FakeResp({}, status=500)
-        return _fake_get(url, params=params, timeout=timeout)
-    monkeypatch.setattr("requests.get", no_kraken)
+        if "coingecko.com" in url:
+            return _FakeResp(_CG_PRICE)  # CoinGecko up this time
+        raise AssertionError(f"unexpected URL in test: {url}")
+    monkeypatch.setattr("requests.get", only_coingecko)
     rh = _broker()
-    assert rh.get_price("BTC-USD") == 67600.25
-    assert rh.price_source("BTC-USD") == "coinbase"
+    assert rh.get_price("BTC-USD") == 67400.75
+    assert rh.price_source("BTC-USD") == "coingecko"
 
 
 def test_spot_all_feeds_down_returns_zero_never_raises(monkeypatch):
