@@ -346,6 +346,7 @@ class Config:
     risk_attribution_enabled: bool = True      # RISK_ATTRIBUTION_ENABLED
     execution_quality_enabled: bool = True     # EXECUTION_QUALITY_ENABLED
     impact_model_enabled: bool = True          # IMPACT_MODEL_ENABLED
+    tca_enabled: bool = True                   # TCA_ENABLED
     daily_brief_enabled: bool = True           # DAILY_BRIEF_ENABLED
     self_heal_enabled: bool = True             # SELF_HEAL_ENABLED
     auto_tune_enabled: bool = True             # AUTO_TUNE_ENABLED
@@ -610,6 +611,7 @@ def load_config() -> Config:
         risk_attribution_enabled=_b("RISK_ATTRIBUTION_ENABLED", True),
         execution_quality_enabled=_b("EXECUTION_QUALITY_ENABLED", True),
         impact_model_enabled=_b("IMPACT_MODEL_ENABLED", True),
+        tca_enabled=_b("TCA_ENABLED", True),
         daily_brief_enabled=_b("DAILY_BRIEF_ENABLED", True),
         self_heal_enabled=_b("SELF_HEAL_ENABLED", True),
         auto_tune_enabled=_b("AUTO_TUNE_ENABLED", True),

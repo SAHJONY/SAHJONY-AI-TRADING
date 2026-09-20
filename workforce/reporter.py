@@ -755,6 +755,10 @@ def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[st
         # square-root-law advisory numbers per symbol; populated only when
         # the pipeline supplies real inputs. Advisory only, never sizing.
         "impact_model": cycle_result.get("impact_model") or {},
+        # TCA: Perold implementation-shortfall decomposition per order
+        # (delay / market impact / timing / opportunity / fees) + pre-trade
+        # vs realized cost-model honesty tracking.
+        "tca": cycle_result.get("tca") or {},
         # Daily brief (also committed to public/daily_brief.md).
         "daily_brief": cycle_result.get("daily_brief") or {},
         "council": council,

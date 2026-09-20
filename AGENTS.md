@@ -105,6 +105,12 @@ All advisory or de-risk-only; none widen risk caps, emit orders, or touch creden
   it diagnoses crowding, never fixes it.
 - `execution_quality.py` — arrival-price vs fill-price slippage JSONL,
   measurement only (maker routing intentionally deferred).
+- `tca.py` — Perold implementation-shortfall decomposition per order
+  (delay / market impact / timing / opportunity / fees) into a JSONL ledger,
+  plus pre-trade vs realized impact-estimate honesty tracking for the
+  backtest cost model. Measurement only — it cannot design a better execution
+  schedule at $10/order; most legs will print ≈ 0 except opportunity and
+  fees, and that is the point.
 - `daily_brief.py` — real-data morning brief → `public/daily_brief.md` +
   dashboard panel; never invents figures, marks gaps explicitly.
 - `self_heal.py` — watchdog: health states per subsystem, keyless fallback

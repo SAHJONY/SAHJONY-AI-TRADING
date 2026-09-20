@@ -230,6 +230,7 @@ class ExecutionTrader:
         # entry intents as paper decisions at the HALT BLOCK branch. Picked up
         # opportunistically by Firm; measurement only, never emits orders.
         self.shadow_learning = None
+        self.tca = None
         self._last_fill: Dict[str, float] = {}
 
     def _governor_decision(self, equity: float, intent: OrderIntent,
@@ -474,6 +475,18 @@ class ExecutionTrader:
                                    (result or {}).get("filled_qty"))
             except Exception as exc:
                 log.warning("reconciled fill quality record skipped: %s", exc)
+            # TCA (intel/tca.py): same decomposition hook for the reconciled
+            # (previously "submitted") fill path. Fault-isolated, post-fill.
+            try:
+                tca = getattr(self, "tca", None)
+                if tca is not None and tca.enabled:
+                    tca.record_fill(intent_id, float(fill_price or 0),
+                                    (result or {}).get("filled_qty"),
+                                    fees_usd=0.0)
+                    tca.finalize_order(intent_id,
+                                       reference_price_after=float(fill_price or 0))
+            except Exception as exc:
+                log.warning("reconciled tca fill record skipped: %s", exc)
             self._apply(recovered, state)
             transaction_cost = max(
                 0.0, float((result or {}).get("transaction_cost", 0.0) or 0.0)
@@ -628,18 +641,45 @@ class ExecutionTrader:
                 if intent.kind == "equity":
                     # Arrival-price capture for execution-quality measurement:
                     # the market price the moment the order is released.
+                    # A single quote serves both the execution-quality ledger
+                    # and the TCA ledger (intel/tca.py) below.
+                    arrival_quote: float = 0.0
+                    try:
+                        eq_probe = getattr(self, "exec_quality", None)
+                        tca_probe = getattr(self, "tca", None)
+                        if ((eq_probe is not None and eq_probe.enabled)
+                                or (tca_probe is not None and tca_probe.enabled)):
+                            arrival_quote = float(self.client.get_price(intent.symbol) or 0)
+                    except Exception as exc:
+                        log.warning("arrival quote failed: %s", exc)
                     try:
                         eq = getattr(self, "exec_quality", None)
                         if eq is not None and eq.enabled:
-                            arrival = self.client.get_price(intent.symbol)
                             mode_now = str(getattr(self.client, "mode", self.cfg.mode) or "")
                             eq.record_intent(
                                 intent_id, symbol=intent.symbol, side=intent.side,
-                                qty=intent.qty, arrival_price=float(arrival or 0),
+                                qty=intent.qty, arrival_price=arrival_quote,
                                 provenance="live" if mode_now.upper() == "LIVE"
                                 else "simulated")
                     except Exception as exc:
                         log.warning("arrival capture skipped: %s", exc)
+                    # TCA (intel/tca.py): open the decision record and capture
+                    # arrival for the Perold decomposition. The live path
+                    # records the decision at release, so the delay leg
+                    # degrades to None-with-reason rather than being guessed.
+                    # Measurement only — never delays or alters the submit.
+                    try:
+                        tca = getattr(self, "tca", None)
+                        if tca is not None and tca.enabled:
+                            mode_now = str(getattr(self.client, "mode", self.cfg.mode) or "")
+                            tca.record_decision(
+                                intent_id, symbol=intent.symbol, side=intent.side,
+                                qty=intent.qty,
+                                provenance="live" if mode_now.upper() == "LIVE"
+                                else "simulated")
+                            tca.record_arrival(intent_id, arrival_quote)
+                    except Exception as exc:
+                        log.warning("tca decision/arrival record skipped: %s", exc)
                     res = self.client.submit_equity_order(intent.symbol, intent.qty, intent.side)
                 else:
                     res = self.client.submit_option_order(intent.contract, intent.qty, intent.side, intent.premium)
@@ -704,6 +744,19 @@ class ExecutionTrader:
                         eq.record_fill(intent_id, float(price or 0), intent.qty)
                 except Exception as exc:
                     log.warning("fill quality record skipped: %s", exc)
+                # TCA (intel/tca.py): accumulate the fill and finalize the
+                # Perold decomposition. Fault-isolated and after execution —
+                # it never delays trading. Fees: the venue reports no explicit
+                # fee on fills, so the leg records 0.0 with its reason stated.
+                try:
+                    tca = getattr(self, "tca", None)
+                    if tca is not None and tca.enabled:
+                        tca.record_fill(intent_id, float(price or 0), intent.qty,
+                                        fees_usd=0.0)
+                        tca.finalize_order(intent_id,
+                                           reference_price_after=float(price or 0))
+                except Exception as exc:
+                    log.warning("tca fill record skipped: %s", exc)
                 # Transaction costs: charge the estimated round trip when a position
                 # is CLOSED, so realized P&L — and therefore the equity curve and
                 # Hermes' scorecard — are NET of spread rather than gross.
@@ -878,6 +931,7 @@ class Firm:
         self.self_review = None
         self.self_heal = None
         self.exec_quality = None
+        self.tca = None
         self.auto_tune = None
         self.shadow_learning = None
         try:
@@ -886,6 +940,7 @@ class Firm:
             from intel.self_review import SelfReview
             from intel.self_heal import SelfHeal
             from intel.execution_quality import ExecutionQuality
+            from intel.tca import TCALedger
             from intel.auto_tune import AutoTune
             self.calibration = CouncilCalibration(cfg)
             # Regime-aware calibration wraps the global tracker: per-regime
@@ -902,6 +957,7 @@ class Firm:
             self.self_review = SelfReview(cfg, self.trade_memory, None)
             self.self_heal = SelfHeal(cfg)
             self.exec_quality = ExecutionQuality()
+            self.tca = TCALedger()
             self.auto_tune = AutoTune(cfg)
             # Shadow learning (intel/shadow_learning.py): learn-while-halted
             # ledger. Constructed only when the cfg flag is on (env
@@ -915,10 +971,12 @@ class Firm:
                 except Exception as exc:
                     log.warning("shadow learning unavailable: %s", exc)
             # ExecutionTrader picks these up opportunistically (getattr-guarded):
-            # post-mortems on closes, arrival-vs-fill slippage on fills.
+            # post-mortems on closes, arrival-vs-fill slippage on fills, and
+            # Perold implementation-shortfall decomposition on fills.
             self.execution.trade_memory = self.trade_memory
             self.execution.exec_quality = self.exec_quality
             self.execution.shadow_learning = self.shadow_learning
+            self.execution.tca = self.tca
             # Promotion pipeline for the self-review's auto-demotion: demote()
             # only moves a candidate's stage + audit log (no execution
             # authority); with no registered candidates this is a no-op.
@@ -2434,6 +2492,8 @@ class Firm:
                     "risk_attribution": risk_attrib_report,
                     "execution_quality": (self.exec_quality.summary()
                                           if self.exec_quality is not None else {}),
+                    "tca": (self.tca.summary_for_status()
+                            if self.tca is not None else {}),
                     "auto_tune": tune_report,
                     "trade_memory": (self.trade_memory.stats()
                                      if self.trade_memory is not None else {})}
