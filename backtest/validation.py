@@ -99,18 +99,58 @@ def multiple_testing_sharpe_hurdle(
     return float(z * sqrt(periods_per_year / observations))
 
 
+def _resolve_registry_trials(hypothesis_id, trials):
+    """Fault-isolated trial-count sourcing for the multiple-testing hurdle.
+
+    Returns (effective_trials, source, consumed, overrun, unregistered_run).
+    On ANY registry failure the hand-passed ``trials`` is used unchanged and the
+    failure is recorded in ``source`` — validation math and gates never break
+    because of trial accounting.
+    """
+    if hypothesis_id is None:
+        try:
+            from intel.research_registry import default_registry
+            default_registry().record_trial(None, note="validate_candidate")
+        except Exception:
+            pass
+        return int(trials), "hand-passed", None, None, True
+    try:
+        from intel.research_registry import default_registry
+        reg = default_registry()
+        if reg.get_hypothesis(hypothesis_id) is None:
+            reg.record_trial(hypothesis_id, note="validate_candidate: unknown hypothesis")
+            return int(trials), "hand-passed", None, None, True
+        ev = reg.record_trial(hypothesis_id, note="validate_candidate")
+        consumed = reg.get_trial_count(hypothesis_id)
+        overrun = bool(ev.get("budget_overrun")) if ev else None
+        return (int(consumed) if consumed else int(trials), "registry",
+                consumed, overrun, False)
+    except Exception:
+        return int(trials), "hand-passed (registry error)", None, None, True
+
+
 def validate_candidate(
     returns: Sequence[float],
     stressed_returns: Sequence[float],
     policy: ValidationPolicy | None = None,
     trials: int = 1,
     benchmark_returns: Sequence[float] | None = None,
+    hypothesis_id: str | None = None,
 ) -> dict:
     """Evaluate already-frozen candidate returns and return an auditable verdict.
 
     Model fitting belongs outside this function.  The caller must supply returns
     produced without look-ahead.  The final holdout is evaluated once and is not
     used to select parameters.
+
+    ``hypothesis_id`` optionally names a pre-registered hypothesis in
+    ``intel/research_registry.py``.  When given, this validation run is logged
+    against the hypothesis (consuming one trial) and the multiple-testing hurdle
+    below uses the registry's honest consumed-trial count instead of the
+    hand-passed ``trials``.  Without it, the run is logged as unregistered and
+    the hand-passed ``trials`` is used exactly as before.  The registry is
+    measurement-only: it never changes the math of the checks or gates, only
+    which trial count feeds the hurdle.
     """
     p = policy or ValidationPolicy()
     r = np.asarray(returns, dtype=float)
@@ -119,6 +159,9 @@ def validate_candidate(
         raise ValueError("returns and stressed_returns must have the same shape")
     if benchmark_returns is not None and np.asarray(benchmark_returns).shape != r.shape:
         raise ValueError("benchmark_returns must have the same shape as returns")
+
+    (trials_effective, trials_source, trials_consumed, budget_overrun,
+     unregistered_run) = _resolve_registry_trials(hypothesis_id, trials)
 
     folds = walk_forward_folds(len(r), p)
     fold_stats = [performance(r[f.test_start:f.test_end], p.periods_per_year)
@@ -132,7 +175,7 @@ def validate_candidate(
     positive_fraction = (sum(x["return"] > 0.0 for x in fold_stats) / len(fold_stats)
                          if fold_stats else 0.0)
     hurdle = multiple_testing_sharpe_hurdle(
-        min(max(1, trials), p.max_trials), holdout["n"], p.periods_per_year,
+        min(max(1, trials_effective), p.max_trials), holdout["n"], p.periods_per_year,
         p.familywise_alpha,
     )
 
@@ -152,6 +195,12 @@ def validate_candidate(
         "research_only": True,
         "policy": asdict(p),
         "trials_declared": int(trials),
+        "trials_effective": int(trials_effective),
+        "trials_source": trials_source,
+        "hypothesis_id": hypothesis_id,
+        "trials_consumed": trials_consumed,
+        "budget_overrun": budget_overrun,
+        "unregistered_run": bool(unregistered_run),
         "folds": [asdict(f) for f in folds],
         "fold_results": fold_stats,
         "positive_fold_fraction": positive_fraction,
