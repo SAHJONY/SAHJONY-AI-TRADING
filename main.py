@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import time
+from contextlib import contextmanager
 
 from dotenv import load_dotenv
 load_dotenv(".env")
@@ -28,6 +29,39 @@ from utils.state_store import load_state, save_state
 from workforce import Firm
 from paths import halt_path, status_path
 from workforce.reporter import build_status, console_board, write_investor_views, write_status
+
+
+# ── Segmented latency telemetry (telemetry/latency.py) ───────────────────────
+# Advisory/measurement ONLY: wall-clock timing of the desk cycle's named
+# segments. Fault-isolated and additive — if telemetry fails, is disabled, or
+# the import breaks, everything below degrades to a no-op and the cycle runs
+# exactly as before. It never emits orders, never touches credentials, never
+# clears the breaker, and never changes the $10/order, 12%, 70%,
+# 10%-halt risk envelope.
+try:
+    from telemetry import latency as _latency_mod
+except Exception:  # telemetry must never break the desk at import time
+    _latency_mod = None
+
+
+@contextmanager
+def _cycle_telemetry():
+    """Wrap one desk cycle in a latency recorder; no-op when unavailable."""
+    if _latency_mod is None:
+        yield None
+    else:
+        with _latency_mod.cycle() as rec:
+            yield rec
+
+
+def _seg(name):
+    """Time one cycle segment; no-op when telemetry is unavailable."""
+    if _latency_mod is None:
+        @contextmanager
+        def _noop():
+            yield None
+        return _noop()
+    return _latency_mod.segment(name)
 
 log = get_logger("main")
 
@@ -250,173 +284,187 @@ def run_once(firm: Firm, state, force: bool) -> dict:
     rc = sync_remote_halt(firm.cfg)
     if rc not in ("disabled", "trading"):
         log.info("remote control: %s", rc)
-    market_open = (not firm.client.online) or firm.client.is_market_open()
-    trade = market_open or force
-    if not trade:
-        log.info("Market closed — research/report only (use --force to override).")
-    _seed_shared_knowledge(firm, state)
-    result = firm.run_cycle(state, trade=trade)
-    _save_shared_knowledge(firm, state)
-    # BTC options-flow refresh (intel/options_flow.py) — same placement and
-    # guarantees as the top-traders feed: AFTER the trading pipeline, never
-    # delaying research or execution; cache-first via OPTIONS_FLOW_MAX_AGE_S
-    # (the book summary is a 15-min-cache product; the dashboard reads the
-    # file, not the network); fault-isolated. Placed BEFORE build_status so
-    # status.json carries this cycle's summary. INTELLIGENCE ONLY — the read
-    # never emits orders, never changes risk caps, never touches the arming
-    # chain; the $10/order, 12%, 70%, 10%-halt envelope is frozen and untouched.
-    if getattr(firm.cfg, "intel_options_flow_enabled", False):
-        try:
-            from intel.options_flow import refresh as of_refresh
-            import os as _os_of
-            _of_path = _os_of.path.join(_os_of.path.dirname(status_path()),
-                                        "options_flow.json")
-            _of_max_age = int(_os_of.getenv("OPTIONS_FLOW_MAX_AGE_S", "900") or 900)
-            _of_age = (time.time() - _os_of.path.getmtime(_of_path)
-                       if _os_of.path.exists(_of_path) else float("inf"))
-            if _of_age < _of_max_age:
-                log.info("options-flow payload fresh (%.0fs old) — serving cache, "
-                         "skipping network refresh", _of_age)
-            else:
-                of_refresh()
-        except Exception as exc:
-            log.warning("options-flow refresh skipped: %s", exc)
-    # Top-trader intelligence refresh (intel/top_traders.py) — runs AFTER the
-    # trading pipeline so it can never delay research or execution. CACHE-FIRST:
-    # when public/top_traders.json is younger than TOP_TRADERS_MAX_AGE_S (the
-    # payload is a 6h-cache product; the dashboard reads the file, not the
-    # network) the cycle skips the ~60s network rebuild entirely and serves the
-    # cache — sources must never block the trading desk. Fault-isolated: any
-    # failure skips with a warning and the desk keeps the previous payload.
-    # Placed BEFORE build_status so status.json carries this cycle's summary.
-    if getattr(firm.cfg, "intel_top_traders_enabled", False):
-        try:
-            from intel.top_traders import refresh as tt_refresh
-            import os as _os
-            _tt_path = _os.path.join(_os.path.dirname(status_path()),
-                                     "top_traders.json")
-            _tt_max_age = int(_os.getenv("TOP_TRADERS_MAX_AGE_S", "21600") or 21600)
-            _tt_age = (time.time() - _os.path.getmtime(_tt_path)
-                       if _os.path.exists(_tt_path) else float("inf"))
-            if _tt_age < _tt_max_age:
-                log.info("top-traders payload fresh (%.0fs old) — serving cache, "
-                         "skipping network refresh", _tt_age)
-            else:
-                tt_refresh()
-        except Exception as exc:
-            log.warning("top-traders refresh skipped: %s", exc)
-    # News/sentiment intelligence refresh (intel/news.py) — same placement and
-    # guarantees as the top-traders feed: AFTER the trading pipeline, never
-    # delaying research or execution; cache-first via NEWS_MAX_AGE_S (the
-    # payload is a 6h-cache product; the dashboard reads the file, not the
-    # network) — sources must never block the trading desk. Fault-isolated.
-    # Placed BEFORE build_status so status.json carries this cycle's summary.
-    if getattr(firm.cfg, "intel_news_enabled", False):
-        try:
-            from intel.news import refresh as news_refresh
-            import os as _os3
-            _nw_path = _os3.path.join(_os3.path.dirname(status_path()),
-                                      "news_intel.json")
-            _nw_max_age = int(_os3.getenv("NEWS_MAX_AGE_S", "21600") or 21600)
-            _nw_age = (time.time() - _os3.path.getmtime(_nw_path)
-                       if _os3.path.exists(_nw_path) else float("inf"))
-            if _nw_age < _nw_max_age:
-                log.info("news-intel payload fresh (%.0fs old) — serving cache, "
-                         "skipping network refresh", _nw_age)
-            else:
-                news_refresh()
-        except Exception as exc:
-            log.warning("news-intel refresh skipped: %s", exc)
-    # On-chain network intelligence refresh (intel/onchain.py) — runs AFTER
-    # the trading pipeline so it can never delay research or execution.
-    # CACHE-FIRST: when public/onchain_intel.json is younger than
-    # ONCHAIN_MAX_AGE_S (default 1h; the payload is a light gauge product and
-    # the dashboard reads the file, not the network) the cycle skips the
-    # network rebuild and serves the cache — sources must never block the
-    # trading desk. Fault-isolated: any failure skips with a warning and the
-    # desk keeps the previous payload. Placed BEFORE build_status so
-    # status.json carries this cycle's summary. Advisory only: never emits
-    # orders, never changes risk caps, never touches the arming chain.
-    if getattr(firm.cfg, "intel_onchain_enabled", False):
-        try:
-            from intel.onchain import refresh as oc_refresh
-            import os as _os
-            _oc_path = _os.path.join(_os.path.dirname(status_path()),
-                                     "onchain_intel.json")
-            _oc_max_age = int(_os.getenv("ONCHAIN_MAX_AGE_S", "3600") or 3600)
-            _oc_age = (time.time() - _os.path.getmtime(_oc_path)
-                       if _os.path.exists(_oc_path) else float("inf"))
-            if _oc_age < _oc_max_age:
-                log.info("on-chain payload fresh (%.0fs old) — serving cache, "
-                         "skipping network refresh", _oc_age)
-            else:
-                oc_refresh()
-        except Exception as exc:
-            log.warning("on-chain refresh skipped: %s", exc)
-    # MACRO PULSE intelligence refresh (intel/macro.py) — same placement and
-    # guarantees as the top-traders feed: AFTER the trading pipeline, never
-    # delaying research or execution; cache-first via MACRO_MAX_AGE_S (macro
-    # moves on a daily cadence; default 6h); fault-isolated. Advisory only.
-    # Placed BEFORE build_status so status.json carries this cycle's summary.
-    if getattr(firm.cfg, "intel_macro_enabled", False):
-        try:
-            from intel.macro import refresh as macro_refresh
-            import os as _os2
-            _mp_path = _os2.path.join(_os2.path.dirname(status_path()),
-                                      "macro_pulse.json")
-            _mp_max_age = int(_os2.getenv("MACRO_MAX_AGE_S", "21600") or 21600)
-            _mp_age = (time.time() - _os2.path.getmtime(_mp_path)
-                       if _os2.path.exists(_mp_path) else float("inf"))
-            if _mp_age < _mp_max_age:
-                log.info("macro-pulse payload fresh (%.0fs old) — serving cache, "
-                         "skipping network refresh", _mp_age)
-            else:
-                macro_refresh()
-        except Exception as exc:
-            log.warning("macro-pulse refresh skipped: %s", exc)
-    # Congress intelligence refresh (intel/congress.py) — same placement and
-    # guarantees as the top-traders feed: AFTER the trading pipeline, never
-    # delaying research or execution; cache-first via CONGRESS_MAX_AGE_S
-    # (disclosure filings move slowly; default 24h); fault-isolated.
-    # Placed BEFORE build_status so status.json carries this cycle's summary.
-    if getattr(firm.cfg, "intel_congress_enabled", False):
-        try:
-            from intel.congress import refresh as cg_refresh
-            import os as _os2
-            _cg_path = _os2.path.join(_os2.path.dirname(status_path()),
-                                      "congress_trades.json")
-            _cg_max_age = int(_os2.getenv("CONGRESS_MAX_AGE_S", "86400") or 86400)
-            _cg_age = (time.time() - _os2.path.getmtime(_cg_path)
-                       if _os2.path.exists(_cg_path) else float("inf"))
-            if _cg_age < _cg_max_age:
-                log.info("congress payload fresh (%.0fs old) — serving cache, "
-                         "skipping network refresh", _cg_age)
-            else:
-                cg_refresh()
-        except Exception as exc:
-            log.warning("congress refresh skipped: %s", exc)
-    status = build_status(firm, firm.cfg, state, result)
-    write_status(status, status_path())
-    shared = write_investor_views(firm.db, status)  # token-keyed read-only investor snapshots
-    if shared:
-        log.info("Refreshed %d investor share view(s).", shared)
-    alert = firm.notifier.maybe_alert(status)
-    if alert:
-        log.info("Alert sent: %s", alert)
-    # Risk alerts fire even on a silent cycle: a halted or bleeding desk is
-    # exactly what the owner must hear about, and the trade alert above stays mute.
-    try:
-        risk_alert = firm.notifier.maybe_risk_alert(status, state)
-        if risk_alert:
-            log.warning("RISK ALERT sent: %s", risk_alert.get("events"))
-    except Exception as exc:
-        log.error("risk alert failed: %s", exc)
-    weekly = firm.notifier.maybe_weekly_summary(status, state)  # self-gates to once/7 days
-    if weekly:
-        log.info("Weekly performance summary sent to Telegram.")
-    save_state(state)   # after weekly so last_weekly_report persists
-    print(console_board(status))
-    return result
+    with _cycle_telemetry() as _lat_rec:  # one latency cycle; commits on exit, never raises
+        market_open = (not firm.client.online) or firm.client.is_market_open()
+        trade = market_open or force
+        if not trade:
+            log.info("Market closed — research/report only (use --force to override).")
+        _seed_shared_knowledge(firm, state)
+        result = firm.run_cycle(state, trade=trade)
+        _save_shared_knowledge(firm, state)
+        # BTC options-flow refresh (intel/options_flow.py) — same placement and
+        # guarantees as the top-traders feed: AFTER the trading pipeline, never
+        # delaying research or execution; cache-first via OPTIONS_FLOW_MAX_AGE_S
+        # (the book summary is a 15-min-cache product; the dashboard reads the
+        # file, not the network); fault-isolated. Placed BEFORE build_status so
+        # status.json carries this cycle's summary. INTELLIGENCE ONLY — the read
+        # never emits orders, never changes risk caps, never touches the arming
+        # chain; the $10/order, 12%, 70%, 10%-halt envelope is frozen and untouched.
+        with _seg("intel_options_flow"):  # latency telemetry (telemetry/latency.py) — advisory/measurement only; never raises, never alters trading
+            if getattr(firm.cfg, "intel_options_flow_enabled", False):
+                try:
+                    from intel.options_flow import refresh as of_refresh
+                    import os as _os_of
+                    _of_path = _os_of.path.join(_os_of.path.dirname(status_path()),
+                                                "options_flow.json")
+                    _of_max_age = int(_os_of.getenv("OPTIONS_FLOW_MAX_AGE_S", "900") or 900)
+                    _of_age = (time.time() - _os_of.path.getmtime(_of_path)
+                               if _os_of.path.exists(_of_path) else float("inf"))
+                    if _of_age < _of_max_age:
+                        log.info("options-flow payload fresh (%.0fs old) — serving cache, "
+                                 "skipping network refresh", _of_age)
+                    else:
+                        of_refresh()
+                except Exception as exc:
+                    log.warning("options-flow refresh skipped: %s", exc)
+        # Top-trader intelligence refresh (intel/top_traders.py) — runs AFTER the
+        # trading pipeline so it can never delay research or execution. CACHE-FIRST:
+        # when public/top_traders.json is younger than TOP_TRADERS_MAX_AGE_S (the
+        # payload is a 6h-cache product; the dashboard reads the file, not the
+        # network) the cycle skips the ~60s network rebuild entirely and serves the
+        # cache — sources must never block the trading desk. Fault-isolated: any
+        # failure skips with a warning and the desk keeps the previous payload.
+        # Placed BEFORE build_status so status.json carries this cycle's summary.
+        with _seg("intel_top_traders"):  # latency telemetry (telemetry/latency.py) — advisory/measurement only; never raises, never alters trading
+            if getattr(firm.cfg, "intel_top_traders_enabled", False):
+                try:
+                    from intel.top_traders import refresh as tt_refresh
+                    import os as _os
+                    _tt_path = _os.path.join(_os.path.dirname(status_path()),
+                                             "top_traders.json")
+                    _tt_max_age = int(_os.getenv("TOP_TRADERS_MAX_AGE_S", "21600") or 21600)
+                    _tt_age = (time.time() - _os.path.getmtime(_tt_path)
+                               if _os.path.exists(_tt_path) else float("inf"))
+                    if _tt_age < _tt_max_age:
+                        log.info("top-traders payload fresh (%.0fs old) — serving cache, "
+                                 "skipping network refresh", _tt_age)
+                    else:
+                        tt_refresh()
+                except Exception as exc:
+                    log.warning("top-traders refresh skipped: %s", exc)
+        # News/sentiment intelligence refresh (intel/news.py) — same placement and
+        # guarantees as the top-traders feed: AFTER the trading pipeline, never
+        # delaying research or execution; cache-first via NEWS_MAX_AGE_S (the
+        # payload is a 6h-cache product; the dashboard reads the file, not the
+        # network) — sources must never block the trading desk. Fault-isolated.
+        # Placed BEFORE build_status so status.json carries this cycle's summary.
+        with _seg("intel_news"):  # latency telemetry (telemetry/latency.py) — advisory/measurement only; never raises, never alters trading
+            if getattr(firm.cfg, "intel_news_enabled", False):
+                try:
+                    from intel.news import refresh as news_refresh
+                    import os as _os3
+                    _nw_path = _os3.path.join(_os3.path.dirname(status_path()),
+                                              "news_intel.json")
+                    _nw_max_age = int(_os3.getenv("NEWS_MAX_AGE_S", "21600") or 21600)
+                    _nw_age = (time.time() - _os3.path.getmtime(_nw_path)
+                               if _os3.path.exists(_nw_path) else float("inf"))
+                    if _nw_age < _nw_max_age:
+                        log.info("news-intel payload fresh (%.0fs old) — serving cache, "
+                                 "skipping network refresh", _nw_age)
+                    else:
+                        news_refresh()
+                except Exception as exc:
+                    log.warning("news-intel refresh skipped: %s", exc)
+        # On-chain network intelligence refresh (intel/onchain.py) — runs AFTER
+        # the trading pipeline so it can never delay research or execution.
+        # CACHE-FIRST: when public/onchain_intel.json is younger than
+        # ONCHAIN_MAX_AGE_S (default 1h; the payload is a light gauge product and
+        # the dashboard reads the file, not the network) the cycle skips the
+        # network rebuild and serves the cache — sources must never block the
+        # trading desk. Fault-isolated: any failure skips with a warning and the
+        # desk keeps the previous payload. Placed BEFORE build_status so
+        # status.json carries this cycle's summary. Advisory only: never emits
+        # orders, never changes risk caps, never touches the arming chain.
+        with _seg("intel_onchain"):  # latency telemetry (telemetry/latency.py) — advisory/measurement only; never raises, never alters trading
+            if getattr(firm.cfg, "intel_onchain_enabled", False):
+                try:
+                    from intel.onchain import refresh as oc_refresh
+                    import os as _os
+                    _oc_path = _os.path.join(_os.path.dirname(status_path()),
+                                             "onchain_intel.json")
+                    _oc_max_age = int(_os.getenv("ONCHAIN_MAX_AGE_S", "3600") or 3600)
+                    _oc_age = (time.time() - _os.path.getmtime(_oc_path)
+                               if _os.path.exists(_oc_path) else float("inf"))
+                    if _oc_age < _oc_max_age:
+                        log.info("on-chain payload fresh (%.0fs old) — serving cache, "
+                                 "skipping network refresh", _oc_age)
+                    else:
+                        oc_refresh()
+                except Exception as exc:
+                    log.warning("on-chain refresh skipped: %s", exc)
+        # MACRO PULSE intelligence refresh (intel/macro.py) — same placement and
+        # guarantees as the top-traders feed: AFTER the trading pipeline, never
+        # delaying research or execution; cache-first via MACRO_MAX_AGE_S (macro
+        # moves on a daily cadence; default 6h); fault-isolated. Advisory only.
+        # Placed BEFORE build_status so status.json carries this cycle's summary.
+        with _seg("intel_macro"):  # latency telemetry (telemetry/latency.py) — advisory/measurement only; never raises, never alters trading
+            if getattr(firm.cfg, "intel_macro_enabled", False):
+                try:
+                    from intel.macro import refresh as macro_refresh
+                    import os as _os2
+                    _mp_path = _os2.path.join(_os2.path.dirname(status_path()),
+                                              "macro_pulse.json")
+                    _mp_max_age = int(_os2.getenv("MACRO_MAX_AGE_S", "21600") or 21600)
+                    _mp_age = (time.time() - _os2.path.getmtime(_mp_path)
+                               if _os2.path.exists(_mp_path) else float("inf"))
+                    if _mp_age < _mp_max_age:
+                        log.info("macro-pulse payload fresh (%.0fs old) — serving cache, "
+                                 "skipping network refresh", _mp_age)
+                    else:
+                        macro_refresh()
+                except Exception as exc:
+                    log.warning("macro-pulse refresh skipped: %s", exc)
+        # Congress intelligence refresh (intel/congress.py) — same placement and
+        # guarantees as the top-traders feed: AFTER the trading pipeline, never
+        # delaying research or execution; cache-first via CONGRESS_MAX_AGE_S
+        # (disclosure filings move slowly; default 24h); fault-isolated.
+        # Placed BEFORE build_status so status.json carries this cycle's summary.
+        with _seg("intel_congress"):  # latency telemetry (telemetry/latency.py) — advisory/measurement only; never raises, never alters trading
+            if getattr(firm.cfg, "intel_congress_enabled", False):
+                try:
+                    from intel.congress import refresh as cg_refresh
+                    import os as _os2
+                    _cg_path = _os2.path.join(_os2.path.dirname(status_path()),
+                                              "congress_trades.json")
+                    _cg_max_age = int(_os2.getenv("CONGRESS_MAX_AGE_S", "86400") or 86400)
+                    _cg_age = (time.time() - _os2.path.getmtime(_cg_path)
+                               if _os2.path.exists(_cg_path) else float("inf"))
+                    if _cg_age < _cg_max_age:
+                        log.info("congress payload fresh (%.0fs old) — serving cache, "
+                                 "skipping network refresh", _cg_age)
+                    else:
+                        cg_refresh()
+                except Exception as exc:
+                    log.warning("congress refresh skipped: %s", exc)
+        # Latency summary for the dashboard: rolling p50/p95/p99 per
+        # segment + staleness flag (telemetry/latency.py, advisory only).
+        # Attached before reporting so status.json carries this cycle.
+        # (The final reporting tail is committed to the store on cycle exit.)
+        if _lat_rec is not None:
+            result["latency"] = _lat_rec.summary()
+        with _seg("reporting"):  # latency telemetry (telemetry/latency.py) — advisory/measurement only; never raises, never alters trading
+            status = build_status(firm, firm.cfg, state, result)
+            write_status(status, status_path())
+            shared = write_investor_views(firm.db, status)  # token-keyed read-only investor snapshots
+            if shared:
+                log.info("Refreshed %d investor share view(s).", shared)
+            alert = firm.notifier.maybe_alert(status)
+            if alert:
+                log.info("Alert sent: %s", alert)
+            # Risk alerts fire even on a silent cycle: a halted or bleeding desk is
+            # exactly what the owner must hear about, and the trade alert above stays mute.
+            try:
+                risk_alert = firm.notifier.maybe_risk_alert(status, state)
+                if risk_alert:
+                    log.warning("RISK ALERT sent: %s", risk_alert.get("events"))
+            except Exception as exc:
+                log.error("risk alert failed: %s", exc)
+            weekly = firm.notifier.maybe_weekly_summary(status, state)  # self-gates to once/7 days
+            if weekly:
+                log.info("Weekly performance summary sent to Telegram.")
+            save_state(state)   # after weekly so last_weekly_report persists
+            print(console_board(status))
+        return result
 
 
 def main(argv=None) -> int:

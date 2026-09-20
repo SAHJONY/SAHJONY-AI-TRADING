@@ -355,6 +355,28 @@ def _congress_block() -> Dict[str, Any]:
         return {"available": False, "error": type(exc).__name__}
 
 
+def _latency_block(cycle_result: Dict[str, Any]) -> Dict[str, Any]:
+    """Segmented cycle-latency telemetry for the dashboard
+    (telemetry/latency.py): rolling p50/p95/p99 per desk-cycle segment, a
+    staleness flag, and p99-trend degradation flags. MEASUREMENT ONLY: it
+    cannot make the desk faster — its value is operational (catching
+    degradation early) and epistemic (quantifying why latency-sensitive
+    alphas are off-limits on 15-minute GitHub Actions cycles). Secret-free
+    and fault-isolated: prefers the summary attached to this cycle's result,
+    falls back to reading the persisted store, and otherwise reports
+    telemetry unavailable — never a crash, never invented data."""
+    try:
+        snap = (cycle_result or {}).get("latency")
+        if isinstance(snap, dict) and snap:
+            return snap
+        from telemetry.latency import get_summary
+        return get_summary()
+    except Exception as exc:
+        return {"enabled": False, "unavailable": True, "stale": True,
+                "cycles_recorded": 0, "segments": {},
+                "notes": [f"latency block failed: {type(exc).__name__}"]}
+
+
 def _venues_block(client, broker_account: Dict[str, Any]) -> list:
     """Per-venue roster for the dashboard. Fault-isolated like all telemetry.
 
@@ -617,6 +639,12 @@ def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[st
         # disclosure activity, report-level, advisory only. Unavailable when
         # the sibling module or its cached payload is missing.
         "congress": _congress_block(),
+        # Segmented cycle-latency telemetry (telemetry/latency.py) — rolling
+        # p50/p95/p99 per desk-cycle segment + staleness flag. This will NOT
+        # make the desk faster; it exists to catch degradation early and to
+        # quantify why latency-sensitive alphas are off-limits on 15-minute
+        # GitHub Actions cycles. MEASUREMENT ONLY.
+        "latency": _latency_block(cycle_result),
         # Brain upgrade (intel/) — performance-weighted voting accuracy,
         # anomaly stand-downs, disagreement scaling, trade post-mortems.
         # All advisory or de-risk-only; none can widen risk caps.
@@ -769,6 +797,20 @@ def console_board(status: Dict[str, Any]) -> str:
     cb = status["health"].get("circuit_breaker", {})
     if cb.get("halted"):
         lines.append(f" ⛔ NEW RISK HALTED — {cb.get('reason', '')}")
+    # Segmented latency telemetry (advisory only): slowest segment p99 + flags.
+    try:
+        lat = status.get("latency") or {}
+        lat_segs = lat.get("segments") or {}
+        if lat_segs:
+            slow_name, slow = max(lat_segs.items(),
+                                  key=lambda kv: (kv[1] or {}).get("p99") or 0)
+            flags = (" — STALE" if lat.get("stale") else "") + \
+                    (" — UNAVAILABLE" if lat.get("unavailable") else "")
+            lines.append(f" Latency p99 slowest: {slow_name} "
+                         f"{(slow or {}).get('p99', 0):.2f}s "
+                         f"(n={(slow or {}).get('n', 0)}){flags}")
+    except Exception:
+        pass
     lines += ["─" * 64, " Council:"]
     for c in status["council"]:
         lines.append(f"   {c['symbol']:<6} conv {c['conviction']:.0%} {c['direction']:<5} "
