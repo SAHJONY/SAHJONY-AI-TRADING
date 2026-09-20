@@ -282,7 +282,12 @@ class TCALedger:
         if window_s <= 0:
             return None, "non-positive decision→arrival window"
         try:
-            import telemetry.latency as tl  # import-guarded: branch may be absent
+            # importlib respects a test fake in sys.modules; the plain
+            # "import telemetry.latency as tl" form would resolve via the
+            # parent package attribute and miss the fake once the real
+            # module has been imported elsewhere in the process.
+            import importlib
+            tl = importlib.import_module("telemetry.latency")
             rec = tl._active()
             durations = dict(getattr(rec, "durations", None) or {})
         except Exception:

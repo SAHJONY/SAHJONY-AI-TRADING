@@ -90,7 +90,7 @@ def test_sell_side_sign_convention(monkeypatch):
     #   delay  = -1 * 10 * (49.80-50.00) = 2.00  (bps: -1*(-0.20)/50*1e4 = 40)
     #   timing = -1 * 10 * (49.70-49.80) = 1.00
     #   total = 3.00, legs incomplete (impact unknown)
-    monkeypatch.delitem(sys.modules, "intel.impact_model", raising=False)
+    monkeypatch.setitem(sys.modules, "intel.impact_model", None)
     led, _ = make_ledger(monkeypatch)  # default: guarded import finds nothing
     assert led._impact_fn is None
     led.record_decision("s1", symbol="ETH", side="sell", qty=10,
@@ -217,7 +217,7 @@ def test_impact_model_present_via_guarded_import(monkeypatch):
 
 
 def test_impact_model_absent_reason_recorded(monkeypatch):
-    monkeypatch.delitem(sys.modules, "intel.impact_model", raising=False)
+    monkeypatch.setitem(sys.modules, "intel.impact_model", None)
     led, _ = make_ledger(monkeypatch)
     assert led._impact_fn is None
     led.record_decision("p2", symbol="BTC", side="buy", qty=10,
@@ -272,7 +272,7 @@ def test_latency_attribution_pro_rata(monkeypatch):
 
 
 def test_latency_attribution_absent(monkeypatch):
-    monkeypatch.delitem(sys.modules, "telemetry.latency", raising=False)
+    monkeypatch.setitem(sys.modules, "telemetry.latency", None)
     led, _ = make_ledger(monkeypatch, impact_fn=None)
     led.record_decision("l2", symbol="BTC", side="buy", qty=10,
                         decision_price=100.00)
