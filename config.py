@@ -353,6 +353,9 @@ class Config:
     # hypotheses + honest trial accounting for validation runs; advisory /
     # measurement only, never emits orders, never changes the risk envelope.
     research_registry_enabled: bool = True     # RESEARCH_REGISTRY_ENABLED
+    # Deflated Sharpe Ratio (backtest/deflated_sharpe.py) — advisory
+    # measurement reported alongside the Bonferroni hurdle; never a gate.
+    deflated_sharpe_enabled: bool = True       # DEFLATED_SHARPE_ENABLED
     # auto-tune allowlist lives in intel/auto_tune.py (TUNABLE_BOUNDS); the
     # risk envelope below is NEVER self-tunable (hard-coded exclusion there).
 
@@ -611,6 +614,7 @@ def load_config() -> Config:
         self_heal_enabled=_b("SELF_HEAL_ENABLED", True),
         auto_tune_enabled=_b("AUTO_TUNE_ENABLED", True),
         research_registry_enabled=_b("RESEARCH_REGISTRY_ENABLED", True),
+        deflated_sharpe_enabled=_b("DEFLATED_SHARPE_ENABLED", True),
         copy_trading_source_url=(os.getenv("COPY_TRADING_SOURCE_URL", "") or "").strip(),
         copy_trading_api_key=os.getenv("COPY_TRADING_API_KEY", "").strip(),
         copy_trading_max_symbols=max(1, _i("COPY_TRADING_MAX_SYMBOLS", 10)),

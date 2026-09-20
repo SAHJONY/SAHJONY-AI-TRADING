@@ -117,6 +117,7 @@ ENV_CATALOG = [
     ("INTEL_WORKFORCE_ENABLED", "Intel", False, "9-agent advisory intel team (default on)"),
     ("INTEL_TOP_TRADERS_ENABLED", "Intel", False, "top-trader intel feed refresh (default on)"),
     ("RESEARCH_REGISTRY_ENABLED", "Intel", False, "hypothesis registry + trial accounting (default on)"),
+    ("DEFLATED_SHARPE_ENABLED", "Validation", False, "deflated Sharpe reporting (default on)"),
 ]
 
 
@@ -382,6 +383,35 @@ def _signal_attribution_block() -> Dict[str, Any]:
     try:
         from intel.signal_attribution import load_payload, summary_for_status
         return summary_for_status(load_payload())
+    except Exception as exc:
+        return {"available": False, "error": type(exc).__name__}
+
+
+def _deflated_sharpe_block() -> Dict[str, Any]:
+    """Deflated Sharpe Ratio capability snapshot for the dashboard.
+
+    Measurement only (backtest/deflated_sharpe.py, Bailey & López de Prado
+    2014): reports whether the DSR module is importable/enabled and how it
+    sources trial counts (research registry when wired, else the declared
+    number).  Per-candidate DSR values are computed inside
+    backtest/validation.py runs, not here — this block carries no invented
+    figures.  Secret-free and fault-isolated: a missing module yields a
+    marked-down unavailable block, never a crash."""
+    try:
+        from backtest import deflated_sharpe as dsr_mod
+        try:
+            from intel.research_registry import default_registry  # noqa: F401
+            registry_wired = True
+        except Exception:
+            registry_wired = False
+        return {"available": True,
+                "enabled": bool(dsr_mod.deflated_sharpe_enabled()),
+                "registry_wired": registry_wired,
+                "trials_source": ("research_registry" if registry_wired
+                                  else "declared"),
+                "min_observations": int(dsr_mod.MIN_OBSERVATIONS),
+                "note": ("advisory only; reported alongside the Bonferroni "
+                         "hurdle, never a promotion gate")}
     except Exception as exc:
         return {"available": False, "error": type(exc).__name__}
 
@@ -686,6 +716,11 @@ def build_status(firm, cfg: Config, state: Dict[str, Any], cycle_result: Dict[st
         # pre-registered hypotheses, honest trial accounting, budget-overrun
         # flags. Measurement only; never emits orders or changes risk.
         "research_registry": _research_registry_block(),
+        # Deflated Sharpe Ratio (backtest/deflated_sharpe.py) — Bailey &
+        # López de Prado selection-bias + non-normality correction, reported
+        # alongside the Bonferroni hurdle. Advisory measurement only; never
+        # a promotion gate. Unavailable when the module is missing.
+        "deflated_sharpe": _deflated_sharpe_block(),
         # Brain upgrade (intel/) — performance-weighted voting accuracy,
         # anomaly stand-downs, disagreement scaling, trade post-mortems.
         # All advisory or de-risk-only; none can widen risk caps.
