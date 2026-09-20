@@ -85,6 +85,8 @@ All advisory or de-risk-only; none widen risk caps, emit orders, or touch creden
   envelope is hard-excluded and unchangeable by the tuner.
 - `funding_intel.py` — keyless Hyperliquid (+ Binance fallback) funding/OI;
   9th workforce agent; contrarian advisory tilt bounded ±0.15.
+- `congress.py` — keyless STOCK Act PTR disclosure-activity feed (House Clerk
+  search + degradable Senate EFD leg); report-level granularity, advisory only.
 - `correlation.py` — correlation-adjusted exposure reporting, advisory only.
 - `execution_quality.py` — arrival-price vs fill-price slippage JSONL,
   measurement only (maker routing intentionally deferred).

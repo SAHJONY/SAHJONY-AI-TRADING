@@ -281,6 +281,27 @@ def run_once(firm: Firm, state, force: bool) -> dict:
                 tt_refresh()
         except Exception as exc:
             log.warning("top-traders refresh skipped: %s", exc)
+    # Congress intelligence refresh (intel/congress.py) — same placement and
+    # guarantees as the top-traders feed: AFTER the trading pipeline, never
+    # delaying research or execution; cache-first via CONGRESS_MAX_AGE_S
+    # (disclosure filings move slowly; default 24h); fault-isolated.
+    # Placed BEFORE build_status so status.json carries this cycle's summary.
+    if getattr(firm.cfg, "intel_congress_enabled", False):
+        try:
+            from intel.congress import refresh as cg_refresh
+            import os as _os2
+            _cg_path = _os2.path.join(_os2.path.dirname(status_path()),
+                                      "congress_trades.json")
+            _cg_max_age = int(_os2.getenv("CONGRESS_MAX_AGE_S", "86400") or 86400)
+            _cg_age = (time.time() - _os2.path.getmtime(_cg_path)
+                       if _os2.path.exists(_cg_path) else float("inf"))
+            if _cg_age < _cg_max_age:
+                log.info("congress payload fresh (%.0fs old) — serving cache, "
+                         "skipping network refresh", _cg_age)
+            else:
+                cg_refresh()
+        except Exception as exc:
+            log.warning("congress refresh skipped: %s", exc)
     status = build_status(firm, firm.cfg, state, result)
     write_status(status, status_path())
     shared = write_investor_views(firm.db, status)  # token-keyed read-only investor snapshots
