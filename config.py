@@ -316,6 +316,7 @@ class Config:
     # widen risk caps, emit orders, or touch credentials. Each has its own
     # kill-switch env var (default ON per the owner's explicit instruction).
     council_calibration_enabled: bool = True   # COUNCIL_CALIBRATION_ENABLED
+    council_regime_calibration_enabled: bool = True   # COUNCIL_REGIME_CALIBRATION_ENABLED
     dispersion_scaling_enabled: bool = True    # DISPERSION_SCALING_ENABLED
     anomaly_enabled: bool = True               # ANOMALY_ENABLED
     self_review_enabled: bool = True           # SELF_REVIEW_ENABLED
@@ -564,6 +565,7 @@ def load_config() -> Config:
         intel_news_enabled=_b("INTEL_NEWS_ENABLED", True),
         intel_options_flow_enabled=_b("INTEL_OPTIONS_FLOW_ENABLED", True),
         council_calibration_enabled=_b("COUNCIL_CALIBRATION_ENABLED", True),
+        council_regime_calibration_enabled=_b("COUNCIL_REGIME_CALIBRATION_ENABLED", True),
         dispersion_scaling_enabled=_b("DISPERSION_SCALING_ENABLED", True),
         anomaly_enabled=_b("ANOMALY_ENABLED", True),
         self_review_enabled=_b("SELF_REVIEW_ENABLED", True),
