@@ -214,11 +214,15 @@ def main() -> int:
         del sys.modules["intel.research_registry"]
 
     print("\n── additive-only: existing validation outputs unchanged ──")
+    # Integration baseline: feat/research-registry merged before this branch,
+    # so its six additive keys are part of "old" for the DSR additive check.
     old_keys = {"promoted", "research_only", "policy", "trials_declared",
                 "folds", "fold_results", "positive_fold_fraction",
                 "holdout_start", "holdout", "stressed_holdout",
                 "benchmark_holdout", "adjusted_sharpe_hurdle", "checks",
-                "failed_checks"}
+                "failed_checks",
+                "budget_overrun", "hypothesis_id", "trials_consumed",
+                "trials_effective", "trials_source", "unregistered_run"}
     new_keys = {"dsr", "dsr_reliable", "dsr_expected_sharpe_null",
                 "dsr_expected_sharpe_null_annualized", "dsr_trials_used",
                 "dsr_trials_source"}
@@ -284,10 +288,10 @@ def main() -> int:
     from workforce.reporter import _deflated_sharpe_block
     block = _deflated_sharpe_block()
     _check(block.get("available") is True, "DSR block available")
-    _check(block.get("registry_wired") is False,
-           "registry not merged → honestly reports unwired")
-    _check(block.get("trials_source") == "declared",
-           "dashboard shows declared trial source until registry merges")
+    _check(block.get("registry_wired") is True,
+           "registry merged → honestly reports wired")
+    _check(block.get("trials_source") == "research_registry",
+           "dashboard shows registry trial source now that it is merged")
 
     print()
     if FAILURES:
