@@ -357,7 +357,12 @@ jobs:
               echo "cycle $n — staged, publishing every ${PUB} cycle(s)"
             elif ! git diff --cached --quiet; then
               git commit -q -m "Desk snapshot: live cycle ${{ github.run_number }}.$n"
-              git pull --rebase -q origin master || git rebase --abort
+              # The desk loop leaves runtime files dirty that the snapshot commit
+              # intentionally does not stage; `git pull --rebase` refuses a dirty
+              # tree, so stash them first and restore right after.
+              git stash push -q -m "desk autopublish worktree" || true
+              git pull --rebase -q origin master || git rebase --abort || true
+              git stash pop -q || true
               git push -q origin HEAD:master || echo "push deferred to the final commit step"
             fi
             [ $SECONDS -ge $END ] && break
@@ -470,7 +475,11 @@ jobs:
             # Master moves often (CI merges, overlapping runs); a push without a
             # rebase fails non-fast-forward and the snapshot commit dies with the
             # runner. Rebase first so the final publish actually lands.
-            git pull --rebase -q origin master || git rebase --abort
+            # Stash first: the desk leaves runtime files dirty that this commit
+            # does not stage, and rebase refuses a dirty tree.
+            git stash push -q -m "desk autopublish worktree" || true
+            git pull --rebase -q origin master || git rebase --abort || true
+            git stash pop -q || true
             for i in 1 2 3 4; do git push && break || sleep $((2**i)); done
           else
             echo "No snapshot changes — nothing to commit."
