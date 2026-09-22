@@ -502,7 +502,7 @@ es:{
   symbols:"símbolos", venues:"Mercados",
   vs:"vs", benchmark:"Referencia", perOrderCap:"Tope por orden", haltLevel:"Nivel de halt",
   paperLabTitle:"Paper Trading Lab · Alpaca", paperLastRun:"Última prueba", paperConfig:"Configuración",
-  paperSignal:"Señal", paperSide:"Lado", paperOrders:"Órdenes", paperBlocked:"Bloqueadas",
+  paperSignal:"Señal", paperSide:"Lado", paperOrders:"Órdenes enviadas", paperOrdersSim:"Órdenes simuladas", paperBlocked:"Bloqueadas",
   paperErrors:"Errores", paperIters:"Iteraciones", paperRun:"Ejecución", paperViewLog:"ver log",
   paperSymbol:"Símbolo", paperNotional:"Nocional máx.", paperDryRun:"Simulación", paperInterval:"Intervalo",
   yes:"sí", no:"no",
@@ -553,7 +553,7 @@ en:{
   symbols:"symbols", venues:"Venues",
   vs:"vs", benchmark:"Benchmark", perOrderCap:"Per-order cap", haltLevel:"Halt level",
   paperLabTitle:"Paper Trading Lab · Alpaca", paperLastRun:"Last test run", paperConfig:"Configuration",
-  paperSignal:"Signal", paperSide:"Side", paperOrders:"Orders", paperBlocked:"Blocked",
+  paperSignal:"Signal", paperSide:"Side", paperOrders:"Orders sent", paperOrdersSim:"Orders simulated", paperBlocked:"Blocked",
   paperErrors:"Errors", paperIters:"Iterations", paperRun:"Run", paperViewLog:"view log",
   paperSymbol:"Symbol", paperNotional:"Max notional", paperDryRun:"Dry-run", paperInterval:"Interval",
   yes:"yes", no:"no",
@@ -1262,7 +1262,14 @@ function renderPaper(){
   let h="";
   h+='<div class="row"><span>'+esc(t("paperSignal"))+'</span><span class="mono '+sigCls+'"><b>'+sigTxt+"</b></span></div>";
   h+='<div class="row"><span>'+esc(t("paperSide"))+'</span><span class="mono '+sideCls+'"><b>'+esc(sideTxt)+"</b></span></div>";
-  h+='<div class="row"><span>'+esc(t("paperOrders"))+'</span><span class="mono">'+r.orders_submitted+" / "+c.max_orders+"</span></div>";
+  // orders_submitted = REAL venue submissions only; in dry-run the runner
+  // reports simulated intents as orders_simulated so the panel can never
+  // mistake a dry-run for a real order.
+  if(c.dry_run===false){
+    h+='<div class="row"><span>'+esc(t("paperOrders"))+'</span><span class="mono">'+(r.orders_submitted||0)+" / "+c.max_orders+"</span></div>";
+  }else{
+    h+='<div class="row"><span>'+esc(t("paperOrdersSim"))+'</span><span class="mono">'+(r.orders_simulated||0)+" / "+c.max_orders+"</span></div>";
+  }
   h+='<div class="row"><span>'+esc(t("paperBlocked"))+'</span><span class="mono">'+r.blocked+"</span></div>";
   h+='<div class="row"><span>'+esc(t("paperErrors"))+'</span><span class="mono '+(r.errors?"down":"")+'">'+r.errors+"</span></div>";
   h+='<div class="row"><span>'+esc(t("paperIters"))+'</span><span class="mono">'+r.iterations+"</span></div>";

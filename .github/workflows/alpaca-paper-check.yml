@@ -110,21 +110,21 @@ jobs:
           git config user.name "sahjony-paper-test[bot]"
           git config user.email "sahjony-paper-test[bot]@users.noreply.github.com"
           git fetch origin master -q
-          git checkout -q origin/master -- public 2>/dev/null || mkdir -p public
-          mkdir -p public
-          cp paper_test_summary.json public/paper_test.json
-          git add public/paper_test.json
-          # Commit on top of master without switching branches fully.
-          git stash push -q -m "paper-test summary worktree" --include-untracked --keep-index || true
-          git fetch origin master -q
-          git checkout -q -B tmp-paper-publish origin/master
-          cp paper_test_summary.json public/paper_test.json
+          # Publish via a throwaway worktree of master: the main checkout
+          # stays on hft/lab-v2 untouched (no stash/checkout dance — an
+          # earlier version stashed the untracked summary file away and the
+          # subsequent cp failed, breaking the whole step).
+          PUBDIR="$(mktemp -d)"
+          git worktree add --detach "$PUBDIR" origin/master -q
+          mkdir -p "$PUBDIR/public"
+          cp paper_test_summary.json "$PUBDIR/public/paper_test.json"
+          cd "$PUBDIR"
           git add public/paper_test.json
           if git diff --cached --quiet; then
             echo "no summary changes"
           else
             git commit -q -m "Paper test summary: run ${{ github.run_id }}"
-            git push -q origin tmp-paper-publish:master
+            git push -q origin HEAD:master
           fi
-          git checkout -q hft/lab-v2 2>/dev/null || true
-          git stash pop -q || true
+          cd "$GITHUB_WORKSPACE"
+          git worktree remove --force "$PUBDIR"
