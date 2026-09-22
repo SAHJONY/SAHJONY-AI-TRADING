@@ -403,6 +403,10 @@ class PaperRunner:
                            {"client_order_id": cid, "reason": decision.reason})
             return False
         if self.dry_run:
+            # Count the simulated intent so a dry-run terminates: the audit
+            # log records dry_run=True on the order_intent event, so the
+            # counter here means "intents processed", not "orders placed".
+            self.orders_submitted += 1
             return False  # logged above; nothing submitted
         order = IncomingOrder(client_order_id=cid, owner="self",
                               side=intent.side, qty=qty,

@@ -135,6 +135,23 @@ class TestDryRun(unittest.TestCase):
         runner.audit.close()
         os.unlink(path)
 
+    def test_dry_run_counts_intent_so_loop_terminates(self):
+        # Regression: dry-run intents must advance orders_submitted, or the
+        # trade loop (which exits on orders_submitted >= max_orders) never
+        # stops in dry-run mode.
+        runner, venue, path = _runner(dry_run=True, max_notional=10_000.0,
+                                      max_orders=2)
+        runner._submit_intent(_intent(), 60000.0, 0, 1_000_000)
+        runner._submit_intent(_intent(), 60000.0, 0, 2_000_000)
+        self.assertEqual(runner.orders_submitted, 2)
+        self.assertEqual(venue.submits, [])
+        with open(path) as fh:
+            intents = [json.loads(line) for line in fh
+                       if json.loads(line)["event"] == "order_intent"]
+        self.assertTrue(all(e["dry_run"] for e in intents))
+        runner.audit.close()
+        os.unlink(path)
+
     def test_live_mode_submits_after_risk_approval(self):
         runner, venue, path = _runner(dry_run=False, max_notional=10_000.0)
         ok = runner._submit_intent(_intent(), 60000.0, 0, 1_000_000)
