@@ -128,8 +128,18 @@ class AlpacaPaperVenue(Venue):
         req = urllib.request.Request(
             self._base_url + path, data=data, headers=self._headers(),
             method=method)
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            return json.loads(resp.read().decode())
+        try:
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                return json.loads(resp.read().decode())
+        except urllib.error.HTTPError as exc:
+            # Surface Alpaca's JSON error body (it explains 4xx rejections)
+            try:
+                detail = exc.read().decode()[:500]
+            except Exception:
+                detail = ""
+            raise RuntimeError(
+                f"alpaca {method} {path} -> HTTP {exc.code}: {detail}"
+            ) from exc
 
     def submit(self, order: IncomingOrder, symbol: str = "") -> OrderResult:
         """Route one order to the Alpaca paper endpoint.
