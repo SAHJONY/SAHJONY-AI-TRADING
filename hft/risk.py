@@ -188,8 +188,8 @@ class RiskGateway:
             return self._record(client_order_id, self._no("empty client_order_id"))
         if side not in (BUY, SELL):
             return self._record(client_order_id, self._no("invalid side"))
-        if not isinstance(qty, int) or qty <= 0:
-            return self._record(client_order_id, self._no("qty must be a positive integer"))
+        if not isinstance(qty, (int, float)) or qty <= 0:
+            return self._record(client_order_id, self._no("qty must be a positive number"))
         if price_ticks is not None and (
             not isinstance(price_ticks, int) or price_ticks <= 0
         ):

@@ -234,6 +234,7 @@ class PaperRunner:
                  max_notional: float = 25.0, bars: int = 60,
                  dry_run: bool = True, daily_loss: float = 50.0,
                  max_iterations: Optional[int] = None,
+                 entry_threshold: float = 0.35,
                  audit: Optional[AuditLog] = None,
                  audit_path: str = "hft/paper-run-audit.jsonl",
                  venue=None, strategy=None, risk=None) -> None:
@@ -253,8 +254,8 @@ class PaperRunner:
         self.audit = audit or AuditLog(audit_path)
         self.venue = venue
         self.strategy = strategy or MultiLevelFlowStrategy(
-            window=60, entry_threshold=0.35, max_position=4, order_size=1,
-            tick_size=TICK)
+            window=60, entry_threshold=entry_threshold, max_position=4,
+            order_size=1, tick_size=TICK)
         self.risk = risk or RiskGateway(
             RiskLimits(max_order_notional=self.max_notional,
                        max_notional_per_minute=self.max_notional * 4,
@@ -408,9 +409,16 @@ class PaperRunner:
                 "reason": "paper runner uses limit orders only (no price)"})
             return False
         px_dollars = price_ticks * TICK
-        qty = min(intent.qty, int(self.max_notional // px_dollars)) \
-            if px_dollars > 0 else 0
-        if qty < 1:
+        # Whole shares first; fall back to fractional (Alpaca paper accepts
+        # fractional limit orders) so a small notional cap stays executable
+        # on high-priced symbols. Rounds to 4 decimals (Alpaca precision).
+        whole = int(self.max_notional // px_dollars) if px_dollars > 0 else 0
+        if whole >= 1:
+            qty: float = min(intent.qty, whole)
+        else:
+            qty = round(self.max_notional / px_dollars, 4) \
+                if px_dollars > 0 else 0.0
+        if qty <= 0:
             self.audit.log("order_skipped", {
                 "tag": intent.tag, "side": intent.side,
                 "reason": (f"notional cap: {intent.qty} sh @ ${px_dollars:.2f} "
@@ -483,6 +491,9 @@ def build_parser() -> argparse.ArgumentParser:
                    help="max signal polls per run; the loop also stops after "
                         "this many iterations even if no signal fires "
                         "(default None = unbounded).")
+    p.add_argument("--entry-threshold", type=float, default=0.35,
+                   help="strategy signal threshold to fire an intent "
+                        "(default 0.35; lower for noisier test conditions).")
     p.add_argument("--max-notional", type=float, default=25.0,
                    help="max dollars per paper order (default 25).")
     p.add_argument("--bars", type=int, default=60,
@@ -527,6 +538,7 @@ def main(argv=None) -> int:
                          max_notional=args.max_notional, bars=args.bars,
                          dry_run=args.dry_run, daily_loss=args.daily_loss,
                          max_iterations=args.max_iterations,
+                         entry_threshold=args.entry_threshold,
                          audit=audit, venue=venue)
     return runner.run_trade()
 

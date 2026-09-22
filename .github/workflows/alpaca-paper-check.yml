@@ -39,6 +39,14 @@ on:
         description: "Trade mode: max signal polls per run; stops even with no signals (empty = unbounded)"
         required: false
         default: ""
+      entry_threshold:
+        description: "Trade mode: strategy signal threshold (default 0.35; lower = fires on weaker signals)"
+        required: false
+        default: "0.35"
+      allow_submit:
+        description: "DANGER: pass --dry-run=false so intents SUBMIT real paper orders (default false = dry-run only)"
+        required: false
+        default: "false"
 
 permissions:
   contents: read
@@ -68,8 +76,12 @@ jobs:
 
       - name: Run paper runner (account = read-only, trade = dry-run, no orders submitted)
         run: |
-          ARGS="--mode ${{ inputs.mode }} --max-orders ${{ inputs.max_orders }} --interval ${{ inputs.interval }}"
+          ARGS="--mode ${{ inputs.mode }} --max-orders ${{ inputs.max_orders }} --interval ${{ inputs.interval }} --entry-threshold ${{ inputs.entry_threshold }}"
           if [ -n "${{ inputs.max_iterations }}" ]; then
             ARGS="$ARGS --max-iterations ${{ inputs.max_iterations }}"
+          fi
+          if [ "${{ inputs.allow_submit }}" = "true" ]; then
+            echo "SUBMIT MODE: passing --dry-run=false; real paper orders will be placed"
+            ARGS="$ARGS --dry-run=false"
           fi
           python -u -m hft.paper_run $ARGS

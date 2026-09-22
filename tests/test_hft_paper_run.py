@@ -193,11 +193,25 @@ class TestFailClosed(unittest.TestCase):
         runner.audit.close()
         os.unlink(path)
 
-    def test_notional_cap_skips_oversize_intent(self):
+    def test_notional_cap_fractionally_sizes_oversize_intent(self):
         runner, venue, path = _runner(dry_run=False, max_notional=25.0)
-        # 1 share @ $600 > $25 cap -> skipped, never submitted
+        # 1 share @ $600 > $25 cap -> fractionally sized to $25 worth,
+        # then submitted (fractional limit orders are valid on Alpaca paper)
         ok = runner._submit_intent(_intent(qty=1, price_ticks=60000),
                                    60000.0, 0, 1_000_000)
+        self.assertTrue(ok)
+        self.assertEqual(len(venue.submits), 1)
+        order, symbol = venue.submits[0]
+        self.assertAlmostEqual(order.qty, 25.0 / 600.0, places=4)
+        self.assertEqual(symbol, "SPY")
+        runner.audit.close()
+        os.unlink(path)
+
+    def test_notional_cap_skips_when_price_unknown(self):
+        runner, venue, path = _runner(dry_run=False, max_notional=25.0)
+        # no usable price -> cannot size -> skipped, never submitted
+        ok = runner._submit_intent(_intent(qty=1, price_ticks=0),
+                                   0.0, 0, 1_000_000)
         self.assertFalse(ok)
         self.assertEqual(venue.submits, [])
         with open(path) as fh:
