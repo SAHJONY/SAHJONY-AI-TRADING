@@ -49,7 +49,7 @@ on:
         default: "false"
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   check:
@@ -84,4 +84,47 @@ jobs:
             echo "SUBMIT MODE: passing --dry-run=false; real paper orders will be placed"
             ARGS="$ARGS --dry-run=false"
           fi
+          if [ "${{ inputs.mode }}" = "trade" ]; then
+            ARGS="$ARGS --summary-path paper_test_summary.json"
+          fi
           python -u -m hft.paper_run $ARGS
+
+      - name: Publish dashboard summary
+        if: inputs.mode == 'trade'
+        run: |
+          # Copy the run summary to public/paper_test.json on master so the
+          # dashboard-sync workflow mirrors it to gh-pages.
+          if [ ! -f paper_test_summary.json ]; then
+            echo "no summary file; skipping dashboard publish"
+            exit 0
+          fi
+          # Stamp the GitHub run URL into the summary for the dashboard link.
+          python3 -c "
+          import json
+          p = 'paper_test_summary.json'
+          d = json.load(open(p))
+          d['run_url'] = 'https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}'
+          d['run_id'] = '${{ github.run_id }}'
+          json.dump(d, open(p, 'w'), indent=2)
+          "
+          git config user.name "sahjony-paper-test[bot]"
+          git config user.email "sahjony-paper-test[bot]@users.noreply.github.com"
+          git fetch origin master -q
+          git checkout -q origin/master -- public 2>/dev/null || mkdir -p public
+          mkdir -p public
+          cp paper_test_summary.json public/paper_test.json
+          git add public/paper_test.json
+          # Commit on top of master without switching branches fully.
+          git stash push -q -m "paper-test summary worktree" --include-untracked --keep-index || true
+          git fetch origin master -q
+          git checkout -q -B tmp-paper-publish origin/master
+          cp paper_test_summary.json public/paper_test.json
+          git add public/paper_test.json
+          if git diff --cached --quiet; then
+            echo "no summary changes"
+          else
+            git commit -q -m "Paper test summary: run ${{ github.run_id }}"
+            git push -q origin tmp-paper-publish:master
+          fi
+          git checkout -q hft/lab-v2 2>/dev/null || true
+          git stash pop -q || true
