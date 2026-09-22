@@ -237,6 +237,7 @@ class PaperRunner:
                  entry_threshold: float = 0.35,
                  audit: Optional[AuditLog] = None,
                  audit_path: str = "hft/paper-run-audit.jsonl",
+                 summary_path: Optional[str] = None,
                  venue=None, strategy=None, risk=None) -> None:
         self.symbol = symbol
         self._key_id = key_id
@@ -267,6 +268,14 @@ class PaperRunner:
         self._seq = 0
         self._stop = False
         self._interrupted = False
+        # dashboard summary tracking
+        self.summary_path = summary_path
+        self._stat_intents = 0
+        self._stat_blocked = 0
+        self._stat_errors = 0
+        self._last_signal = None
+        self._last_side = None
+        self._stop_reason = None
 
     # -- read-only ------------------------------------------------------
     def run_account(self) -> int:
@@ -306,6 +315,7 @@ class PaperRunner:
                 self._trade_iteration()
                 iterations += 1
                 if self.orders_submitted >= self.max_orders:
+                    self._stop_reason = "max_orders_reached"
                     self.audit.log("run_stop",
                                    {"reason": "max_orders_reached",
                                     "orders_submitted": self.orders_submitted,
@@ -315,6 +325,7 @@ class PaperRunner:
                     break
                 if (self.max_iterations is not None
                         and iterations >= self.max_iterations):
+                    self._stop_reason = "max_iterations_reached"
                     self.audit.log("run_stop",
                                    {"reason": "max_iterations_reached",
                                     "orders_submitted": self.orders_submitted,
@@ -324,21 +335,65 @@ class PaperRunner:
                     break
                 self._sleep()
         except PaperRunnerError as exc:
+            self._stop_reason = f"error: {exc}"
             print(f"paper_run: stopped ({exc})", file=sys.stderr)
             self.audit.log("run_stop", {"reason": str(exc)})
+            self._write_summary(iterations)
             return 1
         finally:
             if self._interrupted or self.risk.kill_switch:
+                if self._stop_reason is None:
+                    self._stop_reason = ("interrupted" if self._interrupted
+                                         else "kill_switch")
                 self._cancel_all_open(
                     "SIGINT" if self._interrupted else "kill switch")
             self.audit.close()
             if self.venue is not None:
                 self.venue.close()
+        if self._stop_reason is None:
+            self._stop_reason = "completed"
+        self._write_summary(iterations)
         return 0
 
     def _on_sigint(self, signum, frame) -> None:  # noqa: ARG002
         self._stop = True
         self._interrupted = True
+
+    def _write_summary(self, iterations: int) -> None:
+        """Write a JSON summary for the dashboard panel (if configured)."""
+        if not self.summary_path:
+            return
+        summary = {
+            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
+            "symbol": self.symbol,
+            "config": {
+                "mode": "trade",
+                "dry_run": self.dry_run,
+                "max_orders": self.max_orders,
+                "max_notional": self.max_notional,
+                "max_iterations": self.max_iterations,
+                "interval_s": self.interval,
+            },
+            "results": {
+                "iterations": iterations,
+                "intents": self._stat_intents,
+                "orders_submitted": self.orders_submitted,
+                "blocked": self._stat_blocked,
+                "errors": self._stat_errors,
+                "last_signal": self._last_signal,
+                "last_side": self._last_side,
+                "stop_reason": self._stop_reason,
+                "kill_switch": self.risk.kill_switch,
+            },
+        }
+        try:
+            with open(self.summary_path, "w") as f:
+                json.dump(summary, f, indent=2)
+            print(f"paper_run: summary written to {self.summary_path}",
+                  flush=True)
+        except Exception as exc:
+            print(f"paper_run: summary write failed: {exc}",
+                  file=sys.stderr, flush=True)
 
     def _sleep(self) -> None:
         deadline = time.time() + self.interval
@@ -389,18 +444,23 @@ class PaperRunner:
         ref_mid = snap.mid if snap.mid is not None else 0.0
         n_intents = 0
         sig_dbg = ""
+        sig_val = None
         try:
-            sig_dbg = f" signal={self.strategy._signal():+.3f}"
+            sig_val = self.strategy._signal()
+            sig_dbg = f" signal={sig_val:+.3f}"
         except Exception:
             pass
         for intent in intents:
             if self._stop or self.orders_submitted >= self.max_orders:
                 break
             if n_intents == 0:
-                sig_dbg += (f" intent_side="
-                            f"{'BUY' if intent.side == 1 else 'SELL'}")
+                side_str = 'BUY' if intent.side == 1 else 'SELL'
+                sig_dbg += f" intent_side={side_str}"
+                self._last_signal = sig_val
+                self._last_side = side_str
             self._submit_intent(intent, ref_mid, position, ts_ns)
             n_intents += 1
+            self._stat_intents += 1
         print(f"paper_run: iter done mid={ref_mid:.2f} "
               f"imbalance={snap.imbalance:+.2f} position={position} "
               f"intents={n_intents} submitted={self.orders_submitted}"
@@ -448,6 +508,7 @@ class PaperRunner:
                            {"client_order_id": cid, "reason": decision.reason})
             print(f"paper_run: order BLOCKED by risk: {decision.reason}",
                   flush=True)
+            self._stat_blocked += 1
             return False
         if self.dry_run:
             # Count the simulated intent so a dry-run terminates: the audit
@@ -468,6 +529,7 @@ class PaperRunner:
             print(f"paper_run: submit ERROR {type(exc).__name__}: "
                   f"{str(exc)[:200]}", flush=True)
             self.risk.note_order_closed(cid)
+            self._stat_errors += 1
             return False
         self.audit.log("order_submitted", {
             "client_order_id": cid, "status": result.status,
@@ -523,6 +585,9 @@ def build_parser() -> argparse.ArgumentParser:
                         "Use --dry-run=false to actually submit to Alpaca PAPER.")
     p.add_argument("--audit-path", default="hft/paper-run-audit.jsonl",
                    help="JSONL audit log path (default hft/paper-run-audit.jsonl).")
+    p.add_argument("--summary-path", default=None,
+                   help="Write a JSON run summary for the dashboard panel "
+                        "(default None = no summary file).")
     return p
 
 
@@ -555,7 +620,8 @@ def main(argv=None) -> int:
                          dry_run=args.dry_run, daily_loss=args.daily_loss,
                          max_iterations=args.max_iterations,
                          entry_threshold=args.entry_threshold,
-                         audit=audit, venue=venue)
+                         audit=audit, venue=venue,
+                         summary_path=args.summary_path)
     return runner.run_trade()
 
 
