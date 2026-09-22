@@ -261,7 +261,7 @@ class PaperRunner:
                        max_notional_per_minute=self.max_notional * 4,
                        max_position=10, max_orders_per_sec=2,
                        max_orders_per_sec_per_symbol=2,
-                       daily_loss_limit=daily_loss, allow_shorts=True),
+                       daily_loss_limit=daily_loss, allow_shorts=False),
             tick_size=TICK, audit=self.audit)
         self.orders_submitted = 0
         self._seq = 0
