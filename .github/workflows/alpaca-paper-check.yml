@@ -1,10 +1,14 @@
-# Alpaca Paper — READ-ONLY account check (manual trigger only).
+# Alpaca Paper — account check + dry-run trade loop (manual trigger only).
 #
-# Verifies the APCA_API_KEY_ID / APCA_API_SECRET_KEY secrets by running the
-# paper runner in --mode account: fetches account info, places NO orders and
-# CANNOT place any. The venue adapter hard-refuses every endpoint except
+# --mode account: fetches account info, places NO orders and CANNOT place any.
+# --mode trade: runs the signal loop in DRY-RUN ONLY. This workflow never
+#   passes --dry-run=false, so the trade mode performs only GET requests
+#   (account, positions, bars) and logs intents without submitting anything.
+#   Submitting a real paper order requires a separate explicit workflow change
+#   and Juan's express approval of the exact order plan.
+# The venue adapter hard-refuses every endpoint except
 # https://paper-api.alpaca.markets (live is refused at construction AND at
-# request time), and --mode account performs only GET requests.
+# request time).
 #
 # Keys are read from the environment only and are never printed, logged, or
 # embedded in error messages or the audit log. The run log prints account
@@ -14,6 +18,15 @@ name: Alpaca Paper — account check
 
 on:
   workflow_dispatch:
+    inputs:
+      mode:
+        description: "Runner mode: account (read-only) or trade (dry-run, submits nothing)"
+        required: true
+        default: "account"
+        type: choice
+        options:
+          - account
+          - trade
 
 permissions:
   contents: read
@@ -21,7 +34,7 @@ permissions:
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     env:
       APCA_API_KEY_ID: ${{ secrets.APCA_API_KEY_ID }}
       APCA_API_SECRET_KEY: ${{ secrets.APCA_API_SECRET_KEY }}
@@ -41,5 +54,5 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Read-only account check (no orders, paper only)
-        run: python -m hft.paper_run --mode account
+      - name: Run paper runner (account = read-only, trade = dry-run, no orders submitted)
+        run: python -m hft.paper_run --mode ${{ inputs.mode }}
