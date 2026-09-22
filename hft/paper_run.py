@@ -388,14 +388,23 @@ class PaperRunner:
         intents = self.strategy.decide(ts_ns)
         ref_mid = snap.mid if snap.mid is not None else 0.0
         n_intents = 0
+        sig_dbg = ""
+        try:
+            sig_dbg = f" signal={self.strategy._signal():+.3f}"
+        except Exception:
+            pass
         for intent in intents:
             if self._stop or self.orders_submitted >= self.max_orders:
                 break
+            if n_intents == 0:
+                sig_dbg += (f" intent_side="
+                            f"{'BUY' if intent.side == 1 else 'SELL'}")
             self._submit_intent(intent, ref_mid, position, ts_ns)
             n_intents += 1
         print(f"paper_run: iter done mid={ref_mid:.2f} "
               f"imbalance={snap.imbalance:+.2f} position={position} "
-              f"intents={n_intents} submitted={self.orders_submitted}",
+              f"intents={n_intents} submitted={self.orders_submitted}"
+              f"{sig_dbg}",
               flush=True)
 
     def _submit_intent(self, intent: OrderIntent, ref_mid_ticks: float,
