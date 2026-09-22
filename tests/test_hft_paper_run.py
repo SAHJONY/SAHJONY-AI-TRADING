@@ -182,6 +182,58 @@ class TestDryRun(unittest.TestCase):
         os.unlink(path)
 
 
+class TestSummaryRealVsSimulated(unittest.TestCase):
+    """The dashboard summary must never confuse dry-run intents with real
+    venue submissions. orders_submitted counts REAL submissions only;
+    dry-run activity is reported as orders_simulated."""
+
+    def _summary_runner(self, **kw):
+        audit, path = _audit()
+        venue = StubVenue()
+        risk = RiskGateway(RiskLimits(), tick_size=paper_run.TICK, audit=audit)
+        tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".json")
+        tmp.close()
+        defaults = dict(symbol="SPY", key_id=_SENTINEL_ID,
+                        secret=_SENTINEL_SECRET, dry_run=True, audit=audit,
+                        venue=venue, risk=risk, summary_path=tmp.name)
+        defaults.update(kw)
+        return (paper_run.PaperRunner(**defaults), venue, path, tmp.name)
+
+    def test_dry_run_summary_reports_simulated_not_submitted(self):
+        runner, venue, path, spath = self._summary_runner(
+            dry_run=True, max_notional=10_000.0)
+        runner._submit_intent(_intent(), 60000.0, 0, 1_000_000)
+        runner._submit_intent(_intent(), 60000.0, 0, 2_000_000)
+        runner._write_summary(3)
+        with open(spath) as fh:
+            s = json.load(fh)
+        r = s["results"]
+        self.assertEqual(r["orders_submitted"], 0)
+        self.assertEqual(r["orders_simulated"], 2)
+        self.assertTrue(s["config"]["dry_run"])
+        self.assertEqual(venue.submits, [])
+        runner.audit.close()
+        os.unlink(path)
+        os.unlink(spath)
+
+    def test_real_run_summary_reports_submitted(self):
+        runner, venue, path, spath = self._summary_runner(
+            dry_run=False, max_notional=10_000.0)
+        ok = runner._submit_intent(_intent(), 60000.0, 0, 1_000_000)
+        self.assertTrue(ok)
+        runner._write_summary(1)
+        with open(spath) as fh:
+            s = json.load(fh)
+        r = s["results"]
+        self.assertEqual(r["orders_submitted"], 1)
+        self.assertEqual(r["orders_simulated"], 0)
+        self.assertFalse(s["config"]["dry_run"])
+        self.assertEqual(len(venue.submits), 1)
+        runner.audit.close()
+        os.unlink(path)
+        os.unlink(spath)
+
+
 class TestFailClosed(unittest.TestCase):
     def test_data_fetch_failure_places_no_orders(self):
         runner, venue, path = _runner(dry_run=False)

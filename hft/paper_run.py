@@ -265,6 +265,10 @@ class PaperRunner:
                        daily_loss_limit=daily_loss, allow_shorts=False),
             tick_size=TICK, audit=self.audit)
         self.orders_submitted = 0
+        # Real venue submissions only (excludes dry-run simulated intents).
+        # The dashboard summary reports this as orders_submitted so the
+        # panel can never mistake a dry-run for a real order.
+        self._orders_placed_real = 0
         self._seq = 0
         self._stop = False
         self._interrupted = False
@@ -377,7 +381,12 @@ class PaperRunner:
             "results": {
                 "iterations": iterations,
                 "intents": self._stat_intents,
-                "orders_submitted": self.orders_submitted,
+                # Real venue submissions ONLY. In dry-run mode this is always
+                # 0; simulated intents are reported separately so the panel
+                # can never mistake a dry-run for a real order.
+                "orders_submitted": self._orders_placed_real,
+                "orders_simulated": (self.orders_submitted
+                                     if self.dry_run else 0),
                 "blocked": self._stat_blocked,
                 "errors": self._stat_errors,
                 "last_signal": self._last_signal,
@@ -540,6 +549,7 @@ class PaperRunner:
             self.risk.note_order_closed(cid)
             return False
         self.orders_submitted += 1
+        self._orders_placed_real += 1
         return True
 
 
