@@ -437,6 +437,8 @@ class PaperRunner:
         if not decision.approved:
             self.audit.log("order_blocked",
                            {"client_order_id": cid, "reason": decision.reason})
+            print(f"paper_run: order BLOCKED by risk: {decision.reason}",
+                  flush=True)
             return False
         if self.dry_run:
             # Count the simulated intent so a dry-run terminates: the audit
@@ -452,12 +454,17 @@ class PaperRunner:
             result = self.venue.submit(order, symbol=self.symbol)
         except Exception as exc:
             self.audit.log("submit_error", {
-                "client_order_id": cid, "error": type(exc).__name__})
+                "client_order_id": cid, "error": type(exc).__name__,
+                "detail": str(exc)[:200]})
+            print(f"paper_run: submit ERROR {type(exc).__name__}: "
+                  f"{str(exc)[:200]}", flush=True)
             self.risk.note_order_closed(cid)
             return False
         self.audit.log("order_submitted", {
             "client_order_id": cid, "status": result.status,
             "reason": result.reason})
+        print(f"paper_run: venue response status={result.status} "
+              f"reason={result.reason}", flush=True)
         if result.status == "rejected":
             self.risk.note_order_closed(cid)
             return False
