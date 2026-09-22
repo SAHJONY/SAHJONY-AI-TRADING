@@ -27,6 +27,14 @@ on:
         options:
           - account
           - trade
+      max_orders:
+        description: "Trade mode: max intents per run (default 5)"
+        required: false
+        default: "5"
+      interval:
+        description: "Trade mode: seconds between signal polls (default 60)"
+        required: false
+        default: "60"
 
 permissions:
   contents: read
@@ -55,4 +63,4 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run paper runner (account = read-only, trade = dry-run, no orders submitted)
-        run: python -m hft.paper_run --mode ${{ inputs.mode }}
+        run: python -u -m hft.paper_run --mode ${{ inputs.mode }} --max-orders ${{ inputs.max_orders }} --interval ${{ inputs.interval }}
