@@ -424,6 +424,23 @@ footer .warn{color:var(--amber);font-weight:600}
       </div>
     </div>
   </section>
+
+  <!-- 13 · PAPER TRADING LAB -->
+  <section class="sec">
+    <div class="sec-h"><h2><span class="n">13</span><span data-i18n="paperLabTitle">Paper Trading Lab · Alpaca</span></h2><div class="rule"></div>
+      <span class="pill vmode-paper" data-i18n="paper">MODO PRUEBA</span>
+      <span class="mut mono" style="font-size:10.5px" id="paperMeta">—</span></div>
+    <div class="grid g2" style="grid-template-columns:repeat(auto-fit,minmax(340px,1fr))">
+      <div class="panel">
+        <div class="sec-h" style="margin-bottom:6px"><h2 style="font-size:11px"><span data-i18n="paperLastRun">Última prueba</span></h2><div class="rule"></div></div>
+        <div id="paperBody"><div class="empty">—</div></div>
+      </div>
+      <div class="panel">
+        <div class="sec-h" style="margin-bottom:6px"><h2 style="font-size:11px"><span data-i18n="paperConfig">Configuración</span></h2><div class="rule"></div></div>
+        <div id="paperConfig"><div class="empty">—</div></div>
+      </div>
+    </div>
+  </section>
 </main>
 
 <footer>
@@ -483,7 +500,12 @@ es:{
   dataMinAgo:"datos de hace", dataJustNow:"datos actuales", dataStale:"DATOS OBSOLETOS",
   cycle:"ciclo", broker:"Bróker", mode:"Modo", entries:"entradas", valid:"válida",
   symbols:"símbolos", venues:"Mercados",
-  vs:"vs", benchmark:"Referencia", perOrderCap:"Tope por orden", haltLevel:"Nivel de halt"
+  vs:"vs", benchmark:"Referencia", perOrderCap:"Tope por orden", haltLevel:"Nivel de halt",
+  paperLabTitle:"Paper Trading Lab · Alpaca", paperLastRun:"Última prueba", paperConfig:"Configuración",
+  paperSignal:"Señal", paperSide:"Lado", paperOrders:"Órdenes", paperBlocked:"Bloqueadas",
+  paperErrors:"Errores", paperIters:"Iteraciones", paperRun:"Ejecución", paperViewLog:"ver log",
+  paperSymbol:"Símbolo", paperNotional:"Nocional máx.", paperDryRun:"Simulación", paperInterval:"Intervalo",
+  yes:"sí", no:"no",
 },
 en:{
   boot:"BOOTING AI CORE…", subtitle:"Autonomous command terminal",
@@ -529,7 +551,12 @@ en:{
   dataMinAgo:"data from", dataJustNow:"live data", dataStale:"STALE DATA",
   cycle:"cycle", broker:"Broker", mode:"Mode", entries:"entries", valid:"valid",
   symbols:"symbols", venues:"Venues",
-  vs:"vs", benchmark:"Benchmark", perOrderCap:"Per-order cap", haltLevel:"Halt level"
+  vs:"vs", benchmark:"Benchmark", perOrderCap:"Per-order cap", haltLevel:"Halt level",
+  paperLabTitle:"Paper Trading Lab · Alpaca", paperLastRun:"Last test run", paperConfig:"Configuration",
+  paperSignal:"Signal", paperSide:"Side", paperOrders:"Orders", paperBlocked:"Blocked",
+  paperErrors:"Errors", paperIters:"Iterations", paperRun:"Run", paperViewLog:"view log",
+  paperSymbol:"Symbol", paperNotional:"Max notional", paperDryRun:"Dry-run", paperInterval:"Interval",
+  yes:"yes", no:"no",
 }};
 let LANG = "es";
 try{ LANG = localStorage.getItem("sahjony-cmd-lang") || "es"; }catch(e){}
@@ -557,7 +584,7 @@ function dirClass(d){ d=String(d||"").toLowerCase(); return d==="long"?"long":(d
 function dirLabel(d){ d=String(d||"").toLowerCase(); return d==="long"?t("long"):(d==="short"?t("short"):t("flat")); }
 
 /* ── state ── */
-let S=null, EVAL=null, KNOW=null, CATALOG=null, TT=null, CGT=null;
+let S=null, EVAL=null, KNOW=null, CATALOG=null, TT=null, CGT=null, PAPER=null;
 let CG={list:[],byId:{},ts:0};
 let NEWS={list:[],ts:0,src:""};
 let SYM=0;               // selected council symbol index
@@ -590,7 +617,8 @@ async function loadAll(){
     getJSON("./knowledge.json"+q).then(function(j){KNOW=j;}).catch(function(){}),
     getJSON("./strategy_catalog.json"+q).then(function(j){CATALOG=j;}).catch(function(){}),
     getJSON("./top_traders.json"+q).then(function(j){TT=j;}).catch(function(){}),
-    getJSON("./congress_trades.json"+q).then(function(j){CGT=j;}).catch(function(){})
+    getJSON("./congress_trades.json"+q).then(function(j){CGT=j;}).catch(function(){}),
+    getJSON("./paper_test.json"+q).then(function(j){PAPER=j;}).catch(function(){})
   ];
   await Promise.all(jobs);
 }
@@ -1216,6 +1244,40 @@ function renderBrief(){
   }
 }
 
+/* ── render: paper trading lab ── */
+function renderPaper(){
+  const body=$("#paperBody"), cfg=$("#paperConfig"), meta=$("#paperMeta");
+  if(!PAPER||!PAPER.results){
+    if(body) body.innerHTML='<div class="empty">'+esc(t("awaitingData"))+"</div>";
+    if(cfg) cfg.innerHTML='<div class="empty">'+esc(t("awaitingData"))+"</div>";
+    if(meta) meta.textContent="—";
+    return;
+  }
+  const r=PAPER.results, c=PAPER.config||{};
+  const sig=r.last_signal;
+  const sigCls=sig==null?"":(sig>0?"up":"down");
+  const sigTxt=sig==null?"—":(sig>0?"+":"")+sig.toFixed(3);
+  const sideTxt=r.last_side||"—";
+  const sideCls=r.last_side==="BUY"?"up":(r.last_side==="SELL"?"down":"");
+  let h="";
+  h+='<div class="row"><span>'+esc(t("paperSignal"))+'</span><span class="mono '+sigCls+'"><b>'+sigTxt+"</b></span></div>";
+  h+='<div class="row"><span>'+esc(t("paperSide"))+'</span><span class="mono '+sideCls+'"><b>'+esc(sideTxt)+"</b></span></div>";
+  h+='<div class="row"><span>'+esc(t("paperOrders"))+'</span><span class="mono">'+r.orders_submitted+" / "+c.max_orders+"</span></div>";
+  h+='<div class="row"><span>'+esc(t("paperBlocked"))+'</span><span class="mono">'+r.blocked+"</span></div>";
+  h+='<div class="row"><span>'+esc(t("paperErrors"))+'</span><span class="mono '+(r.errors?"down":"")+'">'+r.errors+"</span></div>";
+  h+='<div class="row"><span>'+esc(t("paperIters"))+'</span><span class="mono">'+r.iterations+"</span></div>";
+  if(r.kill_switch) h+='<div class="row"><span>kill switch</span><span class="mono down"><b>TRIPPED</b></span></div>';
+  if(PAPER.run_url) h+='<div class="row"><span>'+esc(t("paperRun"))+'</span><a class="linklike mono" style="font-size:10px" href="'+esc(PAPER.run_url)+'" target="_blank" rel="noopener">'+esc(t("paperViewLog"))+"</a></div>";
+  body.innerHTML=h;
+  let ch="";
+  ch+='<div class="row"><span>'+esc(t("paperSymbol"))+'</span><span class="mono"><b>'+esc(PAPER.symbol||"—")+"</b></span></div>";
+  ch+='<div class="row"><span>'+esc(t("paperNotional"))+'</span><span class="mono">$'+esc(String(c.max_notional!=null?c.max_notional:"—"))+"</span></div>";
+  ch+='<div class="row"><span>'+esc(t("paperDryRun"))+'</span><span class="mono">'+(c.dry_run?esc(t("yes")):esc(t("no")))+"</span></div>";
+  ch+='<div class="row"><span>'+esc(t("paperInterval"))+'</span><span class="mono">'+esc(String(c.interval_s||"—"))+"s</span></div>";
+  cfg.innerHTML=ch;
+  if(meta) meta.textContent=PAPER.timestamp?("· "+PAPER.timestamp):"—";
+}
+
 /* ── render: news wire ── */
 function renderNews(){
   const box=$("#newsList");
@@ -1242,7 +1304,7 @@ function render(){
   if(!S) return;
   renderHeader(); renderVenues(); renderCouncil(); renderStream(); renderBrain();
   renderEquity(); renderPositions(); renderRisk(); renderRegime(); renderLab(); renderNews();
-  renderIntel(); renderTopTraders(); renderCongress(); renderBrief();
+  renderIntel(); renderTopTraders(); renderCongress(); renderBrief(); renderPaper();
   Array.prototype.forEach.call(document.querySelectorAll("[data-i18n]"),function(el){
     if(!el.textContent||el.getAttribute("data-i18n-live")==="1") el.textContent=t(el.getAttribute("data-i18n"));
   });
