@@ -35,6 +35,10 @@ on:
         description: "Trade mode: seconds between signal polls (default 60)"
         required: false
         default: "60"
+      max_iterations:
+        description: "Trade mode: max signal polls per run; stops even with no signals (empty = unbounded)"
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -63,4 +67,9 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run paper runner (account = read-only, trade = dry-run, no orders submitted)
-        run: python -u -m hft.paper_run --mode ${{ inputs.mode }} --max-orders ${{ inputs.max_orders }} --interval ${{ inputs.interval }}
+        run: |
+          ARGS="--mode ${{ inputs.mode }} --max-orders ${{ inputs.max_orders }} --interval ${{ inputs.interval }}"
+          if [ -n "${{ inputs.max_iterations }}" ]; then
+            ARGS="$ARGS --max-iterations ${{ inputs.max_iterations }}"
+          fi
+          python -u -m hft.paper_run $ARGS

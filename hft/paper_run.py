@@ -233,6 +233,7 @@ class PaperRunner:
                  interval: float = 60.0, max_orders: int = 5,
                  max_notional: float = 25.0, bars: int = 60,
                  dry_run: bool = True, daily_loss: float = 50.0,
+                 max_iterations: Optional[int] = None,
                  audit: Optional[AuditLog] = None,
                  audit_path: str = "hft/paper-run-audit.jsonl",
                  venue=None, strategy=None, risk=None) -> None:
@@ -244,6 +245,11 @@ class PaperRunner:
         self.max_notional = max(1.0, float(max_notional))
         self.bars = max(5, int(bars))
         self.dry_run = bool(dry_run)
+        # Safety bound on signal polls: the loop also exits after this many
+        # iterations even if no trade signal ever fires (a quiet market would
+        # otherwise loop forever). None = unbounded (live operator watches).
+        self.max_iterations = (max(1, int(max_iterations))
+                               if max_iterations is not None else None)
         self.audit = audit or AuditLog(audit_path)
         self.venue = venue
         self.strategy = strategy or MultiLevelFlowStrategy(
@@ -285,19 +291,35 @@ class PaperRunner:
         self.audit.log("run_start", {
             "symbol": self.symbol, "dry_run": self.dry_run,
             "interval_s": self.interval, "max_orders": self.max_orders,
-            "max_notional": self.max_notional})
+            "max_notional": self.max_notional,
+            "max_iterations": self.max_iterations})
         print(f"paper_run: mode=trade symbol={self.symbol} "
               f"dry_run={self.dry_run} interval={self.interval:g}s "
               f"max_orders={self.max_orders} "
-              f"max_notional=${self.max_notional:g} (Ctrl-C stops)")
+              f"max_notional=${self.max_notional:g} "
+              f"max_iterations={self.max_iterations} (Ctrl-C stops)",
+              flush=True)
+        iterations = 0
         try:
             while not self._stop:
                 self._trade_iteration()
+                iterations += 1
                 if self.orders_submitted >= self.max_orders:
                     self.audit.log("run_stop",
                                    {"reason": "max_orders_reached",
-                                    "orders_submitted": self.orders_submitted})
-                    print("paper_run: max orders reached; stopping.")
+                                    "orders_submitted": self.orders_submitted,
+                                    "iterations": iterations})
+                    print("paper_run: max orders reached; stopping.",
+                          flush=True)
+                    break
+                if (self.max_iterations is not None
+                        and iterations >= self.max_iterations):
+                    self.audit.log("run_stop",
+                                   {"reason": "max_iterations_reached",
+                                    "orders_submitted": self.orders_submitted,
+                                    "iterations": iterations})
+                    print("paper_run: max iterations reached; stopping.",
+                          flush=True)
                     break
                 self._sleep()
         except PaperRunnerError as exc:
@@ -364,10 +386,16 @@ class PaperRunner:
 
         intents = self.strategy.decide(ts_ns)
         ref_mid = snap.mid if snap.mid is not None else 0.0
+        n_intents = 0
         for intent in intents:
             if self._stop or self.orders_submitted >= self.max_orders:
                 break
             self._submit_intent(intent, ref_mid, position, ts_ns)
+            n_intents += 1
+        print(f"paper_run: iter done mid={ref_mid:.2f} "
+              f"imbalance={snap.imbalance:+.2f} position={position} "
+              f"intents={n_intents} submitted={self.orders_submitted}",
+              flush=True)
 
     def _submit_intent(self, intent: OrderIntent, ref_mid_ticks: float,
                        position: int, ts_ns: int) -> bool:
@@ -451,6 +479,10 @@ def build_parser() -> argparse.ArgumentParser:
                    help="seconds between signal polls (default 60).")
     p.add_argument("--max-orders", type=int, default=5,
                    help="max paper orders submitted per run (default 5).")
+    p.add_argument("--max-iterations", type=int, default=None,
+                   help="max signal polls per run; the loop also stops after "
+                        "this many iterations even if no signal fires "
+                        "(default None = unbounded).")
     p.add_argument("--max-notional", type=float, default=25.0,
                    help="max dollars per paper order (default 25).")
     p.add_argument("--bars", type=int, default=60,
@@ -494,6 +526,7 @@ def main(argv=None) -> int:
                          interval=args.interval, max_orders=args.max_orders,
                          max_notional=args.max_notional, bars=args.bars,
                          dry_run=args.dry_run, daily_loss=args.daily_loss,
+                         max_iterations=args.max_iterations,
                          audit=audit, venue=venue)
     return runner.run_trade()
 

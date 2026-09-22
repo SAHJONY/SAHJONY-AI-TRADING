@@ -135,8 +135,7 @@ class TestDryRun(unittest.TestCase):
         runner.audit.close()
         os.unlink(path)
 
-    def test_dry_run_counts_intent_so_loop_terminates(self):
-        # Regression: dry-run intents must advance orders_submitted, or the
+    def test_dry_run_counts_intent_so_loop_terminates(self):        # Regression: dry-run intents must advance orders_submitted, or the
         # trade loop (which exits on orders_submitted >= max_orders) never
         # stops in dry-run mode.
         runner, venue, path = _runner(dry_run=True, max_notional=10_000.0,
@@ -149,6 +148,25 @@ class TestDryRun(unittest.TestCase):
             intents = [json.loads(line) for line in fh
                        if json.loads(line)["event"] == "order_intent"]
         self.assertTrue(all(e["dry_run"] for e in intents))
+        runner.audit.close()
+        os.unlink(path)
+
+    def test_max_iterations_stops_loop_without_signals(self):
+        # The loop must also terminate after max_iterations polls even when
+        # the strategy never fires (quiet market), or CI dry-runs hang.
+        runner, venue, path = _runner(dry_run=True, max_orders=100,
+                                      max_iterations=2, interval=0.01)
+        runner._trade_iteration = lambda: None  # no signal, no intents
+        rc = runner.run_trade()
+        self.assertEqual(rc, 0)
+        self.assertEqual(runner.orders_submitted, 0)
+        self.assertEqual(venue.submits, [])
+        with open(path) as fh:
+            events = [json.loads(line) for line in fh]
+        stops = [e for e in events if e["event"] == "run_stop"]
+        self.assertEqual(len(stops), 1)
+        self.assertEqual(stops[0]["reason"], "max_iterations_reached")
+        self.assertEqual(stops[0]["iterations"], 2)
         runner.audit.close()
         os.unlink(path)
 
