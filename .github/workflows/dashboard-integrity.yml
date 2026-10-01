@@ -27,7 +27,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          expected="d08f2f892c5486e58fbdd264fbecb60a75ee73c8"
+          expected="98dcf8833a6210e8f643b84f3df52e36a44c3016"
           test -f public/index.html
           actual="$(git hash-object public/index.html)"
           test "$actual" = "$expected"
