@@ -3,27 +3,9 @@
   "orders_enabled": false,
   "providers": [
     {
-      "provider": "gemini",
-      "score": 20.67,
-      "observations": 1427,
-      "net_return": 3.666e-05,
-      "annualized_sharpe": 0.006,
-      "max_drawdown": 0.0238,
-      "hit_rate": 0.3266,
-      "calibration_error": 0.4784,
-      "average_turnover_cost_bps": 1.0,
-      "average_latency_ms": 8513.11,
-      "schema_valid_rate": 1.0,
-      "fallback_rate": 0.0,
-      "promotion_eligible": false,
-      "blockers": [
-        "incremental Sharpe below threshold"
-      ]
-    },
-    {
       "provider": "neutral",
       "score": 29.91,
-      "observations": 37898,
+      "observations": 37937,
       "net_return": 0.0,
       "annualized_sharpe": 0.0,
       "max_drawdown": 0.0,
@@ -31,6 +13,25 @@
       "calibration_error": 0.5094,
       "average_turnover_cost_bps": 1.0,
       "average_latency_ms": 0.0,
+      "schema_valid_rate": 1.0,
+      "fallback_rate": 0.0,
+      "promotion_eligible": false,
+      "blockers": [
+        "incremental Sharpe below threshold",
+        "net shadow contribution is non-positive"
+      ]
+    },
+    {
+      "provider": "gemini",
+      "score": 18.22,
+      "observations": 1440,
+      "net_return": -0.00982638,
+      "annualized_sharpe": -0.1519,
+      "max_drawdown": 0.032551,
+      "hit_rate": 0.325,
+      "calibration_error": 0.4784,
+      "average_turnover_cost_bps": 1.0,
+      "average_latency_ms": 8487.62,
       "schema_valid_rate": 1.0,
       "fallback_rate": 0.0,
       "promotion_eligible": false,
@@ -61,16 +62,16 @@
     {
       "provider": "consensus",
       "score": 0.0,
-      "observations": 37898,
-      "net_return": -0.30728148,
-      "annualized_sharpe": -0.2721,
-      "max_drawdown": 0.31064,
-      "hit_rate": 0.2062,
+      "observations": 37937,
+      "net_return": -0.31411354,
+      "annualized_sharpe": -0.279,
+      "max_drawdown": 0.316819,
+      "hit_rate": 0.206,
       "calibration_error": 0.4985,
       "average_turnover_cost_bps": 1.0,
-      "average_latency_ms": 7255.01,
+      "average_latency_ms": 7249.5,
       "schema_valid_rate": 1.0,
-      "fallback_rate": 0.6263,
+      "fallback_rate": 0.6256,
       "promotion_eligible": false,
       "blockers": [
         "shadow drawdown exceeds threshold",
@@ -140,46 +141,46 @@
   ],
   "recommended_provider": null,
   "promotion_policy": "manual approval required; shadow evidence cannot arm live trading",
-  "observations": 140661,
+  "observations": 140791,
   "source": "/home/runner/work/SAHJONY-AI-TRADING/SAHJONY-AI-TRADING/data/ai_shadow_observations.jsonl",
   "leaders": {
     "today": {
       "provider": "gemini",
-      "score": 5.29,
-      "sharpe": -1.7228,
-      "observations": 39
+      "score": 0.0,
+      "sharpe": -3.744,
+      "observations": 52
     },
     "week": {
       "provider": "gemini",
-      "score": 4.25,
-      "sharpe": -1.7925,
-      "observations": 390
+      "score": 0.0,
+      "sharpe": -2.1736,
+      "observations": 403
     },
     "month": {
       "provider": "gemini",
-      "score": 21.03,
-      "sharpe": -0.1232,
-      "observations": 1105
+      "score": 18.38,
+      "sharpe": -0.2998,
+      "observations": 1118
     },
     "market_regime": {
       "provider": "gemini",
-      "score": 20.67,
-      "sharpe": 0.006,
-      "observations": 1427,
+      "score": 18.22,
+      "sharpe": -0.1519,
+      "observations": 1440,
       "regime": "normal"
     },
     "crypto": {
       "provider": "gemini",
-      "score": 20.67,
-      "sharpe": 0.006,
-      "observations": 1427
+      "score": 18.22,
+      "sharpe": -0.1519,
+      "observations": 1440
     },
     "equity": null,
     "options": null
   },
   "pipeline": "autonomous-learning",
-  "last_cycle": 3691,
+  "last_cycle": 3694,
   "resolved_this_cycle": 39,
   "pending_symbols": 13,
-  "archive_record": "/home/runner/work/SAHJONY-AI-TRADING/SAHJONY-AI-TRADING/data/shadow/2026/October/001810.json"
+  "archive_record": "/home/runner/work/SAHJONY-AI-TRADING/SAHJONY-AI-TRADING/data/shadow/2026/October/001813.json"
 }
