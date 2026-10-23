@@ -5,7 +5,7 @@
     {
       "provider": "neutral",
       "score": 29.92,
-      "observations": 41473,
+      "observations": 41512,
       "net_return": 0.0,
       "annualized_sharpe": 0.0,
       "max_drawdown": 0.0,
@@ -23,39 +23,19 @@
     },
     {
       "provider": "gemini",
-      "score": 18.04,
-      "observations": 1531,
-      "net_return": -0.01015029,
-      "annualized_sharpe": -0.152,
-      "max_drawdown": 0.034448,
-      "hit_rate": 0.3246,
-      "calibration_error": 0.477,
+      "score": 17.14,
+      "observations": 1544,
+      "net_return": -0.01463395,
+      "annualized_sharpe": -0.2179,
+      "max_drawdown": 0.037248,
+      "hit_rate": 0.3245,
+      "calibration_error": 0.4766,
       "average_turnover_cost_bps": 1.0,
-      "average_latency_ms": 8482.23,
+      "average_latency_ms": 8462.06,
       "schema_valid_rate": 1.0,
       "fallback_rate": 0.0,
       "promotion_eligible": false,
       "blockers": [
-        "incremental Sharpe below threshold",
-        "net shadow contribution is non-positive"
-      ]
-    },
-    {
-      "provider": "consensus",
-      "score": 0.0,
-      "observations": 41473,
-      "net_return": -0.31433791,
-      "annualized_sharpe": -0.267,
-      "max_drawdown": 0.318159,
-      "hit_rate": 0.1892,
-      "calibration_error": 0.4976,
-      "average_turnover_cost_bps": 1.0,
-      "average_latency_ms": 6649.83,
-      "schema_valid_rate": 1.0,
-      "fallback_rate": 0.5723,
-      "promotion_eligible": false,
-      "blockers": [
-        "shadow drawdown exceeds threshold",
         "incremental Sharpe below threshold",
         "net shadow contribution is non-positive"
       ]
@@ -75,6 +55,26 @@
       "fallback_rate": 0.0,
       "promotion_eligible": false,
       "blockers": [
+        "incremental Sharpe below threshold",
+        "net shadow contribution is non-positive"
+      ]
+    },
+    {
+      "provider": "consensus",
+      "score": 0.0,
+      "observations": 41512,
+      "net_return": -0.31744371,
+      "annualized_sharpe": -0.2699,
+      "max_drawdown": 0.320136,
+      "hit_rate": 0.1891,
+      "calibration_error": 0.4976,
+      "average_turnover_cost_bps": 1.0,
+      "average_latency_ms": 6645.49,
+      "schema_valid_rate": 1.0,
+      "fallback_rate": 0.5717,
+      "promotion_eligible": false,
+      "blockers": [
+        "shadow drawdown exceeds threshold",
         "incremental Sharpe below threshold",
         "net shadow contribution is non-positive"
       ]
@@ -141,41 +141,46 @@
   ],
   "recommended_provider": null,
   "promotion_policy": "manual approval required; shadow evidence cannot arm live trading",
-  "observations": 151490,
+  "observations": 151620,
   "source": "/home/runner/work/SAHJONY-AI-TRADING/SAHJONY-AI-TRADING/data/ai_shadow_observations.jsonl",
   "leaders": {
-    "today": null,
+    "today": {
+      "provider": "gemini",
+      "score": 0.0,
+      "sharpe": -4.6965,
+      "observations": 13
+    },
     "week": {
       "provider": "gemini",
-      "score": 8.48,
-      "sharpe": -1.4679,
-      "observations": 338
+      "score": 6.15,
+      "sharpe": -1.6842,
+      "observations": 351
     },
     "month": {
       "provider": "gemini",
-      "score": 18.44,
-      "sharpe": -0.2777,
-      "observations": 1183
+      "score": 17.46,
+      "sharpe": -0.3511,
+      "observations": 1196
     },
     "market_regime": {
-      "provider": "gemini",
-      "score": 18.04,
-      "sharpe": -0.152,
-      "observations": 1531,
+      "provider": "grok",
+      "score": 17.52,
+      "sharpe": -0.2689,
+      "observations": 1780,
       "regime": "normal"
     },
     "crypto": {
-      "provider": "gemini",
-      "score": 18.04,
-      "sharpe": -0.152,
-      "observations": 1531
+      "provider": "grok",
+      "score": 17.52,
+      "sharpe": -0.2689,
+      "observations": 1780
     },
     "equity": null,
     "options": null
   },
   "pipeline": "autonomous-learning",
-  "last_cycle": 3966,
+  "last_cycle": 3969,
   "resolved_this_cycle": 39,
   "pending_symbols": 13,
-  "archive_record": "/home/runner/work/SAHJONY-AI-TRADING/SAHJONY-AI-TRADING/data/shadow/2026/October/002085.json"
+  "archive_record": "/home/runner/work/SAHJONY-AI-TRADING/SAHJONY-AI-TRADING/data/shadow/2026/October/002088.json"
 }
