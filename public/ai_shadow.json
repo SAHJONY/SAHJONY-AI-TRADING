@@ -3,14 +3,32 @@
   "orders_enabled": false,
   "providers": [
     {
+      "provider": "gemini",
+      "score": 19.17,
+      "observations": 2220,
+      "net_return": 0.00304971,
+      "annualized_sharpe": 0.039,
+      "max_drawdown": 0.051052,
+      "hit_rate": 0.3198,
+      "calibration_error": 0.4642,
+      "average_turnover_cost_bps": 1.0,
+      "average_latency_ms": 8035.79,
+      "schema_valid_rate": 1.0,
+      "fallback_rate": 0.0,
+      "promotion_eligible": false,
+      "blockers": [
+        "incremental Sharpe below threshold"
+      ]
+    },
+    {
       "provider": "neutral",
       "score": 30.01,
-      "observations": 54447,
+      "observations": 54486,
       "net_return": 0.0,
       "annualized_sharpe": 0.0,
       "max_drawdown": 0.0,
       "hit_rate": 0.0,
-      "calibration_error": 0.4994,
+      "calibration_error": 0.4993,
       "average_turnover_cost_bps": 1.0,
       "average_latency_ms": 0.0,
       "schema_valid_rate": 1.0,
@@ -22,37 +40,18 @@
       ]
     },
     {
-      "provider": "gemini",
-      "score": 18.51,
-      "observations": 2181,
-      "net_return": -0.00244582,
-      "annualized_sharpe": -0.0225,
-      "max_drawdown": 0.051052,
-      "hit_rate": 0.32,
-      "calibration_error": 0.4655,
-      "average_turnover_cost_bps": 1.0,
-      "average_latency_ms": 8051.22,
-      "schema_valid_rate": 1.0,
-      "fallback_rate": 0.0,
-      "promotion_eligible": false,
-      "blockers": [
-        "incremental Sharpe below threshold",
-        "net shadow contribution is non-positive"
-      ]
-    },
-    {
       "provider": "consensus",
       "score": 0.0,
-      "observations": 54447,
-      "net_return": -0.30900107,
-      "annualized_sharpe": -0.226,
+      "observations": 54486,
+      "net_return": -0.30519436,
+      "annualized_sharpe": -0.2224,
       "max_drawdown": 0.329884,
-      "hit_rate": 0.1478,
-      "calibration_error": 0.4913,
+      "hit_rate": 0.1479,
+      "calibration_error": 0.4912,
       "average_turnover_cost_bps": 1.0,
-      "average_latency_ms": 5149.26,
+      "average_latency_ms": 5150.71,
       "schema_valid_rate": 1.0,
-      "fallback_rate": 0.4359,
+      "fallback_rate": 0.4356,
       "promotion_eligible": false,
       "blockers": [
         "shadow drawdown exceeds threshold",
@@ -141,46 +140,46 @@
   ],
   "recommended_provider": null,
   "promotion_policy": "manual approval required; shadow evidence cannot arm live trading",
-  "observations": 191062,
+  "observations": 191218,
   "source": "/home/runner/work/SAHJONY-AI-TRADING/SAHJONY-AI-TRADING/data/ai_shadow_observations.jsonl",
   "leaders": {
     "today": {
       "provider": "gemini",
-      "score": 37.63,
-      "sharpe": 0.5285,
-      "observations": 13
+      "score": 68.19,
+      "sharpe": 4.0657,
+      "observations": 52
     },
     "week": {
       "provider": "gemini",
-      "score": 39.11,
-      "sharpe": 1.3246,
-      "observations": 455
+      "score": 39.67,
+      "sharpe": 1.4116,
+      "observations": 429
     },
     "month": {
       "provider": "gemini",
-      "score": 17.73,
-      "sharpe": -0.2123,
-      "observations": 1521
+      "score": 18.66,
+      "sharpe": -0.1227,
+      "observations": 1547
     },
     "market_regime": {
       "provider": "gemini",
-      "score": 18.51,
-      "sharpe": -0.0225,
-      "observations": 2181,
+      "score": 19.17,
+      "sharpe": 0.039,
+      "observations": 2220,
       "regime": "normal"
     },
     "crypto": {
       "provider": "gemini",
-      "score": 18.51,
-      "sharpe": -0.0225,
-      "observations": 2181
+      "score": 19.17,
+      "sharpe": 0.039,
+      "observations": 2220
     },
     "equity": null,
     "options": null
   },
   "pipeline": "autonomous-learning",
-  "last_cycle": 4964,
-  "resolved_this_cycle": 39,
+  "last_cycle": 4967,
+  "resolved_this_cycle": 52,
   "pending_symbols": 13,
-  "archive_record": "/home/runner/work/SAHJONY-AI-TRADING/SAHJONY-AI-TRADING/data/shadow/2026/November/000117.json"
+  "archive_record": "/home/runner/work/SAHJONY-AI-TRADING/SAHJONY-AI-TRADING/data/shadow/2026/November/000120.json"
 }
