@@ -4,15 +4,15 @@
   "providers": [
     {
       "provider": "gemini",
-      "score": 20.55,
-      "observations": 2584,
-      "net_return": 0.01523741,
-      "annualized_sharpe": 0.1577,
+      "score": 20.46,
+      "observations": 2597,
+      "net_return": 0.01445333,
+      "annualized_sharpe": 0.1495,
       "max_drawdown": 0.051052,
-      "hit_rate": 0.3231,
+      "hit_rate": 0.3219,
       "calibration_error": 0.4577,
       "average_turnover_cost_bps": 1.0,
-      "average_latency_ms": 8017.52,
+      "average_latency_ms": 8006.85,
       "schema_valid_rate": 1.0,
       "fallback_rate": 0.0,
       "promotion_eligible": false,
@@ -23,7 +23,7 @@
     {
       "provider": "neutral",
       "score": 30.04,
-      "observations": 60765,
+      "observations": 60804,
       "net_return": 0.0,
       "annualized_sharpe": 0.0,
       "max_drawdown": 0.0,
@@ -42,16 +42,16 @@
     {
       "provider": "consensus",
       "score": 0.0,
-      "observations": 60765,
-      "net_return": -0.29675202,
-      "annualized_sharpe": -0.2032,
+      "observations": 60804,
+      "net_return": -0.29729515,
+      "annualized_sharpe": -0.2036,
       "max_drawdown": 0.329884,
-      "hit_rate": 0.1347,
+      "hit_rate": 0.1346,
       "calibration_error": 0.4888,
       "average_turnover_cost_bps": 1.0,
-      "average_latency_ms": 4665.83,
+      "average_latency_ms": 4664.1,
       "schema_valid_rate": 1.0,
-      "fallback_rate": 0.3906,
+      "fallback_rate": 0.3903,
       "promotion_eligible": false,
       "blockers": [
         "shadow drawdown exceeds threshold",
@@ -140,41 +140,46 @@
   ],
   "recommended_provider": null,
   "promotion_policy": "manual approval required; shadow evidence cannot arm live trading",
-  "observations": 210419,
+  "observations": 210549,
   "source": "/home/runner/work/SAHJONY-AI-TRADING/SAHJONY-AI-TRADING/data/ai_shadow_observations.jsonl",
   "leaders": {
-    "today": null,
+    "today": {
+      "provider": "gemini",
+      "score": 0.0,
+      "sharpe": -8.4164,
+      "observations": 13
+    },
     "week": {
       "provider": "gemini",
-      "score": 45.49,
-      "sharpe": 2.0144,
-      "observations": 416
+      "score": 44.11,
+      "sharpe": 1.8907,
+      "observations": 429
     },
     "month": {
       "provider": "gemini",
-      "score": 20.51,
-      "sharpe": -0.0123,
-      "observations": 1690
+      "score": 20.32,
+      "sharpe": -0.0278,
+      "observations": 1703
     },
     "market_regime": {
       "provider": "gemini",
-      "score": 20.55,
-      "sharpe": 0.1577,
-      "observations": 2584,
+      "score": 20.46,
+      "sharpe": 0.1495,
+      "observations": 2597,
       "regime": "normal"
     },
     "crypto": {
       "provider": "gemini",
-      "score": 20.55,
-      "sharpe": 0.1577,
-      "observations": 2584
+      "score": 20.46,
+      "sharpe": 0.1495,
+      "observations": 2597
     },
     "equity": null,
     "options": null
   },
   "pipeline": "autonomous-learning",
-  "last_cycle": 5450,
+  "last_cycle": 5453,
   "resolved_this_cycle": 39,
   "pending_symbols": 13,
-  "archive_record": "/home/runner/work/SAHJONY-AI-TRADING/SAHJONY-AI-TRADING/data/shadow/2026/November/000603.json"
+  "archive_record": "/home/runner/work/SAHJONY-AI-TRADING/SAHJONY-AI-TRADING/data/shadow/2026/November/000606.json"
 }
