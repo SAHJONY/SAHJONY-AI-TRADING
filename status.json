@@ -6,12 +6,12 @@
   "benchmark": {
     "symbol": "BTC-USD",
     "start_price": 64337.05,
-    "last_price": 74579.83,
-    "return_pct": 15.92,
-    "alpha_pct": -15.92
+    "last_price": 74884.82,
+    "return_pct": 16.395,
+    "alpha_pct": -16.395
   },
-  "ts": "2026-11-09T20:31:47.024549+00:00",
-  "cycle": 5485,
+  "ts": "2026-11-09T21:03:49.554167+00:00",
+  "cycle": 5488,
   "strategy_ranking": [
     {
       "name": "Momentum",
@@ -30,7 +30,7 @@
       "key": "ai_consensus",
       "stage": "shadow",
       "score": 0.0,
-      "observations": 61220,
+      "observations": 61259,
       "win_rate": 0.1339,
       "evidence": "ai-shadow",
       "live_eligible": false,
@@ -129,7 +129,7 @@
         "evidence": {},
         "approvals": {},
         "created_at": "2026-07-31T07:38:01.624897+00:00",
-        "updated_at": "2026-11-09T20:31:46.958378+00:00"
+        "updated_at": "2026-11-09T21:03:49.485700+00:00"
       },
       {
         "key": "spread",
@@ -139,7 +139,7 @@
         "evidence": {},
         "approvals": {},
         "created_at": "2026-07-31T07:38:01.623113+00:00",
-        "updated_at": "2026-11-09T20:31:46.958524+00:00"
+        "updated_at": "2026-11-09T21:03:49.485849+00:00"
       },
       {
         "key": "institutional_research",
@@ -149,7 +149,7 @@
         "evidence": {},
         "approvals": {},
         "created_at": "2026-07-31T07:36:25.948812+00:00",
-        "updated_at": "2026-11-09T20:31:34.529087+00:00"
+        "updated_at": "2026-11-09T21:03:36.866194+00:00"
       },
       {
         "key": "mean_reversion",
@@ -159,7 +159,7 @@
         "evidence": {},
         "approvals": {},
         "created_at": "2026-07-31T07:38:01.622615+00:00",
-        "updated_at": "2026-11-09T20:31:46.958479+00:00"
+        "updated_at": "2026-11-09T21:03:49.485804+00:00"
       },
       {
         "key": "daytrade",
@@ -169,7 +169,7 @@
         "evidence": {},
         "approvals": {},
         "created_at": "2026-07-31T07:38:01.621297+00:00",
-        "updated_at": "2026-11-09T20:31:46.958243+00:00"
+        "updated_at": "2026-11-09T21:03:49.485546+00:00"
       },
       {
         "key": "pairs",
@@ -179,7 +179,7 @@
         "evidence": {},
         "approvals": {},
         "created_at": "2026-07-31T07:38:01.622116+00:00",
-        "updated_at": "2026-11-09T20:31:46.958431+00:00"
+        "updated_at": "2026-11-09T21:03:49.485756+00:00"
       },
       {
         "key": "regime_momentum",
@@ -189,7 +189,7 @@
         "evidence": {},
         "approvals": {},
         "created_at": "2026-07-31T07:38:01.624374+00:00",
-        "updated_at": "2026-11-09T20:31:46.958652+00:00"
+        "updated_at": "2026-11-09T21:03:49.486007+00:00"
       },
       {
         "key": "volatility_breakout",
@@ -199,7 +199,7 @@
         "evidence": {},
         "approvals": {},
         "created_at": "2026-07-31T07:38:01.623965+00:00",
-        "updated_at": "2026-11-09T20:31:46.958610+00:00"
+        "updated_at": "2026-11-09T21:03:49.485957+00:00"
       },
       {
         "key": "wheel",
@@ -209,7 +209,7 @@
         "evidence": {},
         "approvals": {},
         "created_at": "2026-07-31T07:38:01.623545+00:00",
-        "updated_at": "2026-11-09T20:31:46.958568+00:00"
+        "updated_at": "2026-11-09T21:03:49.485892+00:00"
       }
     ],
     "audit": [],
@@ -263,7 +263,7 @@
     },
     "model_accuracy": 0.3225,
     "learning_progress": 1.0,
-    "observation_count": 211836,
+    "observation_count": 211953,
     "training_coverage": 0.7667,
     "promotion_ready": false,
     "overall_intelligence": 63.4,
@@ -312,7 +312,7 @@
     "cadence": {
       "degraded": false,
       "reason": "",
-      "gap_min": 9.6,
+      "gap_min": 9.9,
       "expected_min": 5,
       "tolerance_min": 90.0
     },
@@ -375,21 +375,40 @@
       "agent": "hermes",
       "goal": "Beat buy-and-hold (positive alpha vs BTC) while keeping max drawdown under 15% and never risking the mandate on a single trade \u2014 capital preservation first. Near-term: prove a sustained, fee-aware, positive out-of-sample edge on the paper trainer over ~90 days before scaling any live capital; grow the live account only on demonstrated alpha.",
       "used": true,
-      "data_ok_pct": 1.0,
+      "data_ok_pct": 0.538,
       "quarantined": [],
-      "issues": {},
+      "issues": {
+        "XRP/USD": [
+          "short history"
+        ],
+        "DOGE/USD": [
+          "short history"
+        ],
+        "ADA/USD": [
+          "short history"
+        ],
+        "AVAX/USD": [
+          "short history"
+        ],
+        "XLM/USD": [
+          "short history"
+        ],
+        "ETC/USD": [
+          "short history"
+        ]
+      },
       "hit_rates": {
         "BTC/USD": 0.408,
-        "ETH/USD": 0.501,
+        "ETH/USD": 0.516,
         "SOL/USD": 0.467,
         "LTC/USD": 0.499,
         "XRP/USD": 0.495,
         "DOGE/USD": 0.517,
         "ADA/USD": 0.551,
         "AVAX/USD": 0.409,
-        "LINK/USD": 0.496,
+        "LINK/USD": 0.453,
         "BCH/USD": 0.547,
-        "UNI/USD": 0.449,
+        "UNI/USD": 0.468,
         "XLM/USD": 0.556,
         "ETC/USD": 0.508
       },
@@ -435,211 +454,211 @@
     {
       "symbol": "BTC/USD",
       "scores": {
-        "buffett": -0.069,
+        "buffett": -0.072,
         "munger": 0.3,
         "macro": 0.97,
-        "growth": 0.415,
-        "quant": 0.179
+        "growth": 0.418,
+        "quant": 0.175
       },
       "gate": 1.0,
-      "composite": 0.312,
-      "tilt": 0.0312,
+      "composite": 0.311,
+      "tilt": 0.0311,
       "rationale": {
-        "buffett": "-2.1% vs 200d mean, vol 32%",
-        "munger": "-8.5% vs 50d trend, 5d move -7.1%",
+        "buffett": "-2.2% vs 200d mean, vol 32%",
+        "munger": "-8.4% vs 50d trend, 5d move -7.0%",
         "macro": "benchmark 50/200 spread +11.6% (risk-on)",
-        "growth": "6m +16.8%, -13.8% off the high",
-        "quant": "z -1.54, 20/50 trend -3.7%",
-        "risk_gate": "drawdown -13.8%, vol 32% \u2192 gate 1.00"
+        "growth": "6m +16.9%, -13.6% off the high",
+        "quant": "z -1.51, 20/50 trend -3.7%",
+        "risk_gate": "drawdown -13.6%, vol 32% \u2192 gate 1.00"
       }
     },
     {
       "symbol": "ETH/USD",
       "scores": {
-        "buffett": -0.176,
-        "munger": 0.133,
+        "buffett": -0.178,
+        "munger": 0.136,
         "macro": 0.97,
-        "growth": 0.301,
-        "quant": 0.113
+        "growth": 0.303,
+        "quant": 0.112
       },
-      "gate": 0.898,
+      "gate": 0.9,
       "composite": 0.219,
       "tilt": 0.0197,
       "rationale": {
-        "buffett": "+1.3% vs 200d mean, vol 44%",
-        "munger": "-14.0% vs 50d trend, 5d move -12.2%",
+        "buffett": "+1.2% vs 200d mean, vol 44%",
+        "munger": "-13.9% vs 50d trend, 5d move -12.1%",
         "macro": "benchmark 50/200 spread +11.6% (risk-on)",
-        "growth": "6m +18.3%, -23.4% off the high",
-        "quant": "z -1.92, 20/50 trend -7.2%",
-        "risk_gate": "drawdown -23.4%, vol 44% \u2192 gate 0.90"
+        "growth": "6m +18.4%, -23.3% off the high",
+        "quant": "z -1.90, 20/50 trend -7.2%",
+        "risk_gate": "drawdown -23.3%, vol 44% \u2192 gate 0.90"
       }
     },
     {
       "symbol": "SOL/USD",
       "scores": {
-        "buffett": -0.172,
-        "munger": 0.257,
+        "buffett": -0.17,
+        "munger": 0.25,
         "macro": 0.97,
-        "growth": 0.042,
-        "quant": 0.006
+        "growth": 0.037,
+        "quant": 0.007
       },
-      "gate": 0.73,
-      "composite": 0.164,
-      "tilt": 0.012,
+      "gate": 0.728,
+      "composite": 0.162,
+      "tilt": 0.0118,
       "rationale": {
-        "buffett": "+2.6% vs 200d mean, vol 45%",
-        "munger": "-18.8% vs 50d trend, 5d move -9.1%",
+        "buffett": "+2.7% vs 200d mean, vol 45%",
+        "munger": "-18.9% vs 50d trend, 5d move -9.3%",
         "macro": "benchmark 50/200 spread +11.6% (risk-on)",
-        "growth": "6m +6.0%, -29.0% off the high",
-        "quant": "z -1.61, 20/50 trend -9.8%",
-        "risk_gate": "drawdown -29.0%, vol 45% \u2192 gate 0.73"
+        "growth": "6m +5.8%, -29.1% off the high",
+        "quant": "z -1.62, 20/50 trend -9.8%",
+        "risk_gate": "drawdown -29.1%, vol 45% \u2192 gate 0.73"
       }
     },
     {
       "symbol": "LTC/USD",
       "scores": {
-        "buffett": -0.138,
-        "munger": 0.292,
+        "buffett": -0.136,
+        "munger": 0.285,
         "macro": 0.97,
-        "growth": 0.18,
-        "quant": -0.024
+        "growth": 0.177,
+        "quant": -0.023
       },
-      "gate": 0.731,
-      "composite": 0.198,
-      "tilt": 0.0145,
+      "gate": 0.73,
+      "composite": 0.197,
+      "tilt": 0.0144,
       "rationale": {
-        "buffett": "+1.0% vs 200d mean, vol 41%",
-        "munger": "-16.0% vs 50d trend, 5d move -8.2%",
+        "buffett": "+1.1% vs 200d mean, vol 41%",
+        "munger": "-16.0% vs 50d trend, 5d move -8.4%",
         "macro": "benchmark 50/200 spread +11.6% (risk-on)",
-        "growth": "6m +15.2%, -29.0% off the high",
-        "quant": "z -1.39, 20/50 trend -9.6%",
+        "growth": "6m +15.0%, -29.0% off the high",
+        "quant": "z -1.39, 20/50 trend -9.7%",
         "risk_gate": "drawdown -29.0%, vol 41% \u2192 gate 0.73"
       }
     },
     {
       "symbol": "XRP/USD",
       "scores": {
-        "buffett": 0.054,
-        "munger": -0.039,
+        "buffett": 0.45,
+        "munger": 0.3,
         "macro": 0.97,
-        "growth": -0.157,
-        "quant": 0.125
+        "growth": 0.35,
+        "quant": 0.0
       },
-      "gate": 0.679,
-      "composite": 0.15,
-      "tilt": 0.0102,
+      "gate": 1.0,
+      "composite": 0.368,
+      "tilt": 0.0368,
       "rationale": {
-        "buffett": "+14.0% vs 200d mean, vol 45%",
-        "munger": "-20.1% vs 50d trend, 5d move -16.5%",
+        "buffett": "+0.0% vs 200d mean, vol 0%",
+        "munger": "+0.0% vs 50d trend, 5d move +0.0%",
         "macro": "benchmark 50/200 spread +11.6% (risk-on)",
-        "growth": "6m -4.8%, -30.7% off the high",
-        "quant": "z -2.31, 20/50 trend -8.1%",
-        "risk_gate": "drawdown -30.7%, vol 45% \u2192 gate 0.68"
+        "growth": "6m +0.0%, +0.0% off the high",
+        "quant": "insufficient history",
+        "risk_gate": "drawdown +0.0%, vol 0% \u2192 gate 1.00"
       }
     },
     {
       "symbol": "DOGE/USD",
       "scores": {
-        "buffett": 0.11,
-        "munger": 0.254,
+        "buffett": 0.45,
+        "munger": 0.3,
         "macro": 0.97,
-        "growth": -0.34,
-        "quant": 0.014
+        "growth": 0.35,
+        "quant": 0.0
       },
-      "gate": 0.418,
-      "composite": 0.151,
-      "tilt": 0.0063,
+      "gate": 1.0,
+      "composite": 0.368,
+      "tilt": 0.0368,
       "rationale": {
-        "buffett": "+18.1% vs 200d mean, vol 45%",
-        "munger": "-16.8% vs 50d trend, 5d move -9.1%",
+        "buffett": "+0.0% vs 200d mean, vol 0%",
+        "munger": "+0.0% vs 50d trend, 5d move +0.0%",
         "macro": "benchmark 50/200 spread +11.6% (risk-on)",
-        "growth": "6m -8.6%, -39.4% off the high",
-        "quant": "z -1.71, 20/50 trend -10.0%",
-        "risk_gate": "drawdown -39.4%, vol 45% \u2192 gate 0.42"
+        "growth": "6m +0.0%, +0.0% off the high",
+        "quant": "insufficient history",
+        "risk_gate": "drawdown +0.0%, vol 0% \u2192 gate 1.00"
       }
     },
     {
       "symbol": "ADA/USD",
       "scores": {
-        "buffett": -0.132,
-        "munger": 0.23,
+        "buffett": 0.45,
+        "munger": 0.3,
         "macro": 0.97,
-        "growth": -0.246,
-        "quant": -0.077
+        "growth": 0.35,
+        "quant": 0.0
       },
-      "gate": 0.328,
-      "composite": 0.089,
-      "tilt": 0.0,
+      "gate": 1.0,
+      "composite": 0.368,
+      "tilt": 0.0368,
       "rationale": {
-        "buffett": "+13.9% vs 200d mean, vol 57%",
-        "munger": "-20.7% vs 50d trend, 5d move -9.7%",
+        "buffett": "+0.0% vs 200d mean, vol 0%",
+        "munger": "+0.0% vs 50d trend, 5d move +0.0%",
         "macro": "benchmark 50/200 spread +11.6% (risk-on)",
-        "growth": "6m -3.3%, -38.7% off the high",
-        "quant": "z -1.42, 20/50 trend -12.6%",
-        "risk_gate": "drawdown -38.7%, vol 57% \u2192 gate 0.33"
+        "growth": "6m +0.0%, +0.0% off the high",
+        "quant": "insufficient history",
+        "risk_gate": "drawdown +0.0%, vol 0% \u2192 gate 1.00"
       }
     },
     {
       "symbol": "AVAX/USD",
       "scores": {
-        "buffett": -0.548,
+        "buffett": 0.45,
         "munger": 0.3,
         "macro": 0.97,
-        "growth": 0.367,
-        "quant": -0.375
+        "growth": 0.35,
+        "quant": 0.0
       },
-      "gate": 0.753,
-      "composite": 0.059,
-      "tilt": 0.0044,
+      "gate": 1.0,
+      "composite": 0.368,
+      "tilt": 0.0368,
       "rationale": {
-        "buffett": "-7.2% vs 200d mean, vol 56%",
-        "munger": "-11.4% vs 50d trend, 5d move -0.4%",
+        "buffett": "+0.0% vs 200d mean, vol 0%",
+        "munger": "+0.0% vs 50d trend, 5d move +0.0%",
         "macro": "benchmark 50/200 spread +11.6% (risk-on)",
-        "growth": "6m +25.7%, -25.1% off the high",
-        "quant": "z +0.04, 20/50 trend -11.6%",
-        "risk_gate": "drawdown -25.1%, vol 56% \u2192 gate 0.75"
+        "growth": "6m +0.0%, +0.0% off the high",
+        "quant": "insufficient history",
+        "risk_gate": "drawdown +0.0%, vol 0% \u2192 gate 1.00"
       }
     },
     {
       "symbol": "LINK/USD",
       "scores": {
-        "buffett": -0.431,
+        "buffett": -0.426,
         "munger": 0.3,
         "macro": 0.97,
-        "growth": 0.361,
-        "quant": -0.052
+        "growth": 0.357,
+        "quant": -0.04
       },
-      "gate": 0.669,
-      "composite": 0.164,
-      "tilt": 0.011,
+      "gate": 0.662,
+      "composite": 0.167,
+      "tilt": 0.0111,
       "rationale": {
-        "buffett": "-5.8% vs 200d mean, vol 50%",
-        "munger": "-14.6% vs 50d trend, 5d move -6.6%",
+        "buffett": "-5.5% vs 200d mean, vol 50%",
+        "munger": "-14.8% vs 50d trend, 5d move -6.7%",
         "macro": "benchmark 50/200 spread +11.6% (risk-on)",
-        "growth": "6m +33.2%, -30.8% off the high",
-        "quant": "z -1.21, 20/50 trend -9.6%",
-        "risk_gate": "drawdown -30.8%, vol 50% \u2192 gate 0.67"
+        "growth": "6m +33.1%, -31.1% off the high",
+        "quant": "z -1.28, 20/50 trend -9.5%",
+        "risk_gate": "drawdown -31.1%, vol 50% \u2192 gate 0.66"
       }
     },
     {
       "symbol": "BCH/USD",
       "scores": {
-        "buffett": -0.186,
-        "munger": 0.027,
+        "buffett": -0.183,
+        "munger": 0.029,
         "macro": 0.97,
-        "growth": -0.359,
-        "quant": 0.206
+        "growth": -0.362,
+        "quant": 0.209
       },
       "gate": 0.0,
-      "composite": 0.089,
+      "composite": 0.09,
       "tilt": 0.0,
       "rationale": {
-        "buffett": "+13.1% vs 200d mean, vol 63%",
-        "munger": "-17.2% vs 50d trend, 5d move -14.8%",
+        "buffett": "+13.3% vs 200d mean, vol 62%",
+        "munger": "-17.3% vs 50d trend, 5d move -14.8%",
         "macro": "benchmark 50/200 spread +11.6% (risk-on)",
-        "growth": "6m -0.5%, -50.0% off the high",
-        "quant": "z -2.24, 20/50 trend -5.2%",
-        "risk_gate": "drawdown -50.0%, vol 63% \u2192 gate 0.00"
+        "growth": "6m -0.7%, -50.1% off the high",
+        "quant": "z -2.27, 20/50 trend -5.2%",
+        "risk_gate": "drawdown -50.1%, vol 62% \u2192 gate 0.00"
       }
     },
     {
@@ -648,61 +667,61 @@
         "buffett": -0.969,
         "munger": 0.3,
         "macro": 0.97,
-        "growth": 0.562,
-        "quant": -0.311
+        "growth": 0.563,
+        "quant": -0.318
       },
-      "gate": 0.345,
-      "composite": 0.021,
+      "gate": 0.346,
+      "composite": 0.019,
       "tilt": 0.0,
       "rationale": {
-        "buffett": "-44.2% vs 200d mean, vol 71%",
-        "munger": "-10.0% vs 50d trend, 5d move -7.6%",
+        "buffett": "-44.4% vs 200d mean, vol 72%",
+        "munger": "-9.9% vs 50d trend, 5d move -7.4%",
         "macro": "benchmark 50/200 spread +11.6% (risk-on)",
-        "growth": "6m +121.7%, -31.1% off the high",
-        "quant": "z -0.07, 20/50 trend -9.8%",
-        "risk_gate": "drawdown -31.1%, vol 71% \u2192 gate 0.34"
+        "growth": "6m +121.9%, -31.0% off the high",
+        "quant": "z -0.04, 20/50 trend -9.8%",
+        "risk_gate": "drawdown -31.0%, vol 72% \u2192 gate 0.35"
       }
     },
     {
       "symbol": "XLM/USD",
       "scores": {
-        "buffett": -0.094,
-        "munger": 0.136,
+        "buffett": 0.45,
+        "munger": 0.3,
         "macro": 0.97,
-        "growth": -0.629,
-        "quant": -0.022
+        "growth": 0.35,
+        "quant": 0.0
       },
-      "gate": 0.077,
-      "composite": 0.018,
-      "tilt": 0.0,
+      "gate": 1.0,
+      "composite": 0.368,
+      "tilt": 0.0368,
       "rationale": {
-        "buffett": "+19.3% vs 200d mean, vol 65%",
-        "munger": "-21.7% vs 50d trend, 5d move -12.1%",
+        "buffett": "+0.0% vs 200d mean, vol 0%",
+        "munger": "+0.0% vs 50d trend, 5d move +0.0%",
         "macro": "benchmark 50/200 spread +11.6% (risk-on)",
-        "growth": "6m -26.2%, -43.2% off the high",
-        "quant": "z -1.79, 20/50 trend -12.4%",
-        "risk_gate": "drawdown -43.2%, vol 65% \u2192 gate 0.08"
+        "growth": "6m +0.0%, +0.0% off the high",
+        "quant": "insufficient history",
+        "risk_gate": "drawdown +0.0%, vol 0% \u2192 gate 1.00"
       }
     },
     {
       "symbol": "ETC/USD",
       "scores": {
-        "buffett": -0.06,
+        "buffett": 0.45,
         "munger": 0.3,
         "macro": 0.97,
-        "growth": -0.143,
-        "quant": -0.067
+        "growth": 0.35,
+        "quant": 0.0
       },
-      "gate": 0.666,
-      "composite": 0.141,
-      "tilt": 0.0094,
+      "gate": 1.0,
+      "composite": 0.368,
+      "tilt": 0.0368,
       "rationale": {
-        "buffett": "+10.9% vs 200d mean, vol 49%",
-        "munger": "-15.2% vs 50d trend, 5d move -6.6%",
+        "buffett": "+0.0% vs 200d mean, vol 0%",
+        "munger": "+0.0% vs 50d trend, 5d move +0.0%",
         "macro": "benchmark 50/200 spread +11.6% (risk-on)",
-        "growth": "6m -3.5%, -31.1% off the high",
-        "quant": "z -1.16, 20/50 trend -9.9%",
-        "risk_gate": "drawdown -31.1%, vol 49% \u2192 gate 0.67"
+        "growth": "6m +0.0%, +0.0% off the high",
+        "quant": "insufficient history",
+        "risk_gate": "drawdown +0.0%, vol 0% \u2192 gate 1.00"
       }
     }
   ],
@@ -716,7 +735,7 @@
       "confidence": 0.0,
       "rationale": "no usable price history for 13 ticker(s) (13 feed failures)",
       "inputs": [],
-      "ts": "2026-11-09T20:30:31.466766+00:00",
+      "ts": "2026-11-09T21:02:32.226373+00:00",
       "abstain_reason": "no usable price history for 13 ticker(s) (13 feed failures)",
       "details": {}
     },
@@ -731,13 +750,13 @@
       "inputs": [
         "intel.top_traders.load_payload"
       ],
-      "ts": "2026-11-09T20:30:31.469979+00:00",
+      "ts": "2026-11-09T21:02:32.229572+00:00",
       "abstain_reason": null,
       "details": {
         "alert_count": 0,
         "summary": {
           "available": true,
-          "ts": "2026-11-09T20:24:24.041825+00:00",
+          "ts": "2026-11-09T20:53:23.475048+00:00",
           "trader_count": 20,
           "top_trader": {
             "alias": "0x5b5d\u2026c060",
@@ -750,7 +769,7 @@
               "ETH": 21.4
             },
             "net_bias": "short",
-            "ts": "2026-11-09T20:24:17.115034+00:00"
+            "ts": "2026-11-09T20:53:17.225728+00:00"
           },
           "whale_alert_count": 0,
           "funds_tracked": 5,
@@ -767,20 +786,20 @@
       "name": "Sentiment Analyst",
       "role": "Article-count buzz proxy (NOT true sentiment)",
       "status": "abstained",
-      "finding": "Sentiment Analyst abstained this cycle: GDELT feed unreachable for all coins: BTC (ReadTimeout), ETH (ReadTimeout), SOL (ReadTimeout), LTC (ReadTimeout), XRP (ReadTimeout), DOGE (ReadTimeout). No numbers were estimated in place of the missing data.",
+      "finding": "Sentiment Analyst abstained this cycle: GDELT feed unreachable for all coins: BTC (ReadTimeout), ETH (HTTPError), SOL (ReadTimeout), LTC (ReadTimeout), XRP (ReadTimeout), DOGE (HTTPError). No numbers were estimated in place of the missing data.",
       "conviction_delta": 0.0,
       "confidence": 0.0,
-      "rationale": "GDELT feed unreachable for all coins: BTC (ReadTimeout), ETH (ReadTimeout), SOL (ReadTimeout), LTC (ReadTimeout), XRP (ReadTimeout), DOGE (ReadTimeout)",
+      "rationale": "GDELT feed unreachable for all coins: BTC (ReadTimeout), ETH (HTTPError), SOL (ReadTimeout), LTC (ReadTimeout), XRP (ReadTimeout), DOGE (HTTPError)",
       "inputs": [],
-      "ts": "2026-11-09T20:31:34.097668+00:00",
-      "abstain_reason": "GDELT feed unreachable for all coins: BTC (ReadTimeout), ETH (ReadTimeout), SOL (ReadTimeout), LTC (ReadTimeout), XRP (ReadTimeout), DOGE (ReadTimeout)",
+      "ts": "2026-11-09T21:03:36.051876+00:00",
+      "abstain_reason": "GDELT feed unreachable for all coins: BTC (ReadTimeout), ETH (HTTPError), SOL (ReadTimeout), LTC (ReadTimeout), XRP (ReadTimeout), DOGE (HTTPError)",
       "details": {}
     },
     {
       "name": "Macro Analyst",
       "role": "Crypto macro: BTC dominance, funding, fear/greed",
       "status": "active",
-      "finding": "Crypto macro read \u2014 BTC dominance 59.6%; avg funding -0.0007%/h (~-6%/yr); fear/greed 29 (Fear). Net tilt +0.12 (contrarian lean on extremes only). Context for the dashboard, not a position signal.",
+      "finding": "Crypto macro read \u2014 BTC dominance 59.6%; avg funding -0.0010%/h (~-9%/yr); fear/greed 29 (Fear). Net tilt +0.12 (contrarian lean on extremes only). Context for the dashboard, not a position signal.",
       "conviction_delta": 0.12,
       "confidence": 0.55,
       "rationale": "sources=3/3 ok; tilt +0.12",
@@ -789,11 +808,11 @@
         "Hyperliquid funding",
         "fear/greed index"
       ],
-      "ts": "2026-11-09T20:31:34.450197+00:00",
+      "ts": "2026-11-09T21:03:36.820787+00:00",
       "abstain_reason": null,
       "details": {
-        "btc_dominance": 59.56172051160111,
-        "funding_per_hour": -7.218374468085107e-06,
+        "btc_dominance": 59.56056948443392,
+        "funding_per_hour": -9.735848085106383e-06,
         "fear_greed": 29.0,
         "dropped": []
       }
@@ -813,7 +832,7 @@
         "cfg.max_total_deployed_pct",
         "cfg.max_daily_drawdown_pct"
       ],
-      "ts": "2026-11-09T20:31:34.450249+00:00",
+      "ts": "2026-11-09T21:03:36.820836+00:00",
       "abstain_reason": null,
       "details": {
         "advisories": [
@@ -835,7 +854,7 @@
         "state.hermes_events",
         "db.recent_trades"
       ],
-      "ts": "2026-11-09T20:31:34.450548+00:00",
+      "ts": "2026-11-09T21:03:36.821154+00:00",
       "abstain_reason": null,
       "details": {
         "by_strategy": {
@@ -859,7 +878,7 @@
       "confidence": 0.0,
       "rationale": "no cost or P&L data recorded yet",
       "inputs": [],
-      "ts": "2026-11-09T20:31:34.450572+00:00",
+      "ts": "2026-11-09T21:03:36.821179+00:00",
       "abstain_reason": "no cost or P&L data recorded yet",
       "details": {}
     },
@@ -874,14 +893,14 @@
       "inputs": [
         "intel.top_traders.load_payload"
       ],
-      "ts": "2026-11-09T20:31:34.450966+00:00",
+      "ts": "2026-11-09T21:03:36.821544+00:00",
       "abstain_reason": null,
       "details": {
         "signal": {
           "label": "INTELLIGENCE ONLY \u2014 not auto-copying",
           "assets": "{'BTC': 14.3, 'ETH': 21.4}",
           "net_bias": "short",
-          "ts": "2026-11-09T20:24:17.115034+00:00"
+          "ts": "2026-11-09T20:53:17.225728+00:00"
         }
       }
     },
@@ -894,28 +913,28 @@
       "confidence": 0.0,
       "rationale": "no symbol in context",
       "inputs": [],
-      "ts": "2026-11-09T20:31:34.450994+00:00",
+      "ts": "2026-11-09T21:03:36.821569+00:00",
       "abstain_reason": "no symbol in context",
       "details": {}
     }
   ],
   "options_flow": {
     "available": true,
-    "ts": "2026-11-09T20:24:12.672313+00:00",
-    "underlying_price": 75345.04,
+    "ts": "2026-11-09T20:53:12.403295+00:00",
+    "underlying_price": 75291.49,
     "flow_read": {
       "label": "INTELLIGENCE ONLY \u2014 not a trade signal",
       "bias": "watch",
-      "put_call_oi_ratio": 0.729,
-      "nearest_expiry_skew": 7.2,
-      "term_slope": -4.84,
+      "put_call_oi_ratio": 0.728,
+      "nearest_expiry_skew": 7.28,
+      "term_slope": -4.79,
       "flags": [
         "put/call OI ratio 0.73 \u2264 0.8 (call-skewed / complacent)",
-        "nearest-expiry put skew +7.2 IV points (puts trading rich)"
+        "nearest-expiry put skew +7.3 IV points (puts trading rich)"
       ]
     },
-    "option_oi_usd": 25781754149.8,
-    "volume_24h_usd": 61812899.34,
+    "option_oi_usd": 25765583613.54,
+    "volume_24h_usd": 61865279.57,
     "expiry_count": 11,
     "stale": false,
     "sources": [
@@ -925,7 +944,7 @@
   },
   "top_traders": {
     "available": true,
-    "ts": "2026-11-09T20:24:24.041825+00:00",
+    "ts": "2026-11-09T20:53:23.475048+00:00",
     "trader_count": 20,
     "top_trader": {
       "alias": "0x5b5d\u2026c060",
@@ -938,7 +957,7 @@
         "ETH": 21.4
       },
       "net_bias": "short",
-      "ts": "2026-11-09T20:24:17.115034+00:00"
+      "ts": "2026-11-09T20:53:17.225728+00:00"
     },
     "whale_alert_count": 0,
     "funds_tracked": 5,
@@ -951,7 +970,7 @@
   },
   "news": {
     "available": true,
-    "ts": "2026-11-09T20:24:57.056335+00:00",
+    "ts": "2026-11-09T20:53:55.237469+00:00",
     "fear_greed": {
       "value": 29.0,
       "classification": "Fear",
@@ -967,10 +986,10 @@
       "DACITY",
       "AVAX",
       "KNTQ",
-      "PEARL",
-      "PENGU",
-      "NEAR",
-      "ARB"
+      "ARB",
+      "BTC",
+      "HYPE",
+      "XRP"
     ],
     "stale": true,
     "errors": 3,
@@ -982,10 +1001,10 @@
   },
   "onchain": {
     "available": true,
-    "ts": "2026-11-09T20:24:58.535269+00:00",
-    "fastest_fee_sat_vb": 2.0,
+    "ts": "2026-11-09T20:53:56.505455+00:00",
+    "fastest_fee_sat_vb": 3.0,
     "fee_pressure": "calm",
-    "tip_height": 975213,
+    "tip_height": 975216,
     "congestion": "heavy",
     "full_projected_blocks": 7,
     "hashrate_th_s": 818651898.7392089,
@@ -996,7 +1015,7 @@
       "bias": "cautious",
       "note": "Fee pressure is calm while hashrate trends down \u2014 on-chain demand and miner commitment both read soft.",
       "disclaimer": "INTELLIGENCE ONLY \u2014 a demand/security gauge, not a trade directive",
-      "ts": "2026-11-09T20:24:58.535283+00:00"
+      "ts": "2026-11-09T20:53:56.505472+00:00"
     },
     "stale": false,
     "sources": [
@@ -1052,7 +1071,7 @@
   },
   "congress": {
     "available": true,
-    "ts": "2026-11-09T20:25:00.735067+00:00",
+    "ts": "2026-11-09T20:53:58.707771+00:00",
     "filing_count": 974,
     "by_chamber": {
       "House": 974
@@ -1073,8 +1092,8 @@
   "signal_attribution": {
     "available": true,
     "enabled": true,
-    "ts": "2026-11-09T20:22:50.784009+00:00",
-    "ledger_records": 2303639,
+    "ts": "2026-11-09T20:51:38.652018+00:00",
+    "ledger_records": 2304146,
     "pending_snapshots": 10647,
     "engines_tracked": 12,
     "engines_ranked": 12,
@@ -1082,36 +1101,36 @@
     "decay": 0.97,
     "top": [
       {
-        "engine": "D.E. Shaw Options",
-        "hit_rate": 0.676,
-        "mean_signed_bps": 103.54
+        "engine": "Renaissance Medallion",
+        "hit_rate": 0.593,
+        "mean_signed_bps": 78.59
       },
       {
-        "engine": "Goldman Technical",
-        "hit_rate": 0.736,
-        "mean_signed_bps": 81.5
+        "engine": "JPMorgan Fundamental",
+        "hit_rate": 0.628,
+        "mean_signed_bps": 65.45
       },
       {
-        "engine": "Citadel Securities MM",
-        "hit_rate": 0.746,
-        "mean_signed_bps": 75.8
+        "engine": "Millennium Pod",
+        "hit_rate": 0.66,
+        "mean_signed_bps": 63.42
       }
     ],
     "bottom": [
       {
         "engine": "AQR Factor",
-        "hit_rate": 0.614,
-        "mean_signed_bps": -92.46
+        "hit_rate": 0.395,
+        "mean_signed_bps": -142.54
       },
       {
-        "engine": "Citadel Systematic",
-        "hit_rate": 0.254,
-        "mean_signed_bps": -75.8
+        "engine": "Goldman Technical",
+        "hit_rate": 0.458,
+        "mean_signed_bps": -38.78
       },
       {
-        "engine": "Bridgewater Risk",
-        "hit_rate": 0.254,
-        "mean_signed_bps": -75.8
+        "engine": "Sovereign Wealth",
+        "hit_rate": 0.488,
+        "mean_signed_bps": -38.56
       }
     ],
     "stale": false,
@@ -1123,32 +1142,32 @@
     "unavailable": false,
     "stale": false,
     "cycles_recorded": 721,
-    "newest_ts": "2026-11-09T20:31:46.675811+00:00",
+    "newest_ts": "2026-11-09T21:03:49.296839+00:00",
     "segments": {
       "brain_call": {
         "n": 721,
-        "p50": 11.181,
+        "p50": 11.225,
         "p95": 20.299,
         "p99": 30.912,
-        "last": 12.07,
+        "last": 12.356,
         "trend_ratio": 1.092,
         "degraded": false
       },
       "council_deliberate": {
         "n": 721,
-        "p50": 74.483,
-        "p95": 85.615,
-        "p99": 91.037,
-        "last": 68.815,
-        "trend_ratio": 1.031,
+        "p50": 74.523,
+        "p95": 85.63,
+        "p99": 92.105,
+        "last": 252.929,
+        "trend_ratio": 1.032,
         "degraded": false
       },
       "feed_refresh": {
         "n": 721,
-        "p50": 2.806,
+        "p50": 2.805,
         "p95": 3.772,
         "p99": 6.425,
-        "last": 1.454,
+        "last": 1.515,
         "trend_ratio": 0.425,
         "degraded": false
       },
@@ -1157,7 +1176,7 @@
         "p50": 0.002,
         "p95": 0.003,
         "p99": 0.003,
-        "last": 0.003,
+        "last": 0.002,
         "trend_ratio": 1.008,
         "degraded": false
       },
@@ -1211,7 +1230,7 @@
         "p50": 0.003,
         "p95": 0.004,
         "p99": 0.004,
-        "last": 0.004,
+        "last": 0.003,
         "trend_ratio": 1.0,
         "degraded": false
       },
@@ -1221,24 +1240,24 @@
         "p95": 0.0,
         "p99": 0.0,
         "last": 0.0,
-        "trend_ratio": 0.956,
+        "trend_ratio": 0.944,
         "degraded": false
       },
       "reporting": {
         "n": 721,
-        "p50": 31.669,
-        "p95": 38.217,
+        "p50": 31.736,
+        "p95": 38.326,
         "p99": 40.935,
         "last": 0.057,
-        "trend_ratio": 1.157,
+        "trend_ratio": 1.156,
         "degraded": false
       },
       "risk_checks": {
         "n": 721,
-        "p50": 0.213,
+        "p50": 0.212,
         "p95": 0.402,
         "p99": 0.484,
-        "last": 0.134,
+        "last": 0.13,
         "trend_ratio": 1.202,
         "degraded": false
       }
@@ -1284,109 +1303,109 @@
       "details": []
     },
     "council_calibration_accuracy": {
-      "Bridgewater Risk": 0.468,
-      "AQR Factor": 0.458,
-      "Citadel Securities MM": 0.516,
-      "Citadel Systematic": 0.468,
-      "Two Sigma Backtest": 0.452,
-      "Renaissance Patterns": 0.515,
-      "Goldman Technical": 0.513,
-      "JPMorgan Fundamental": 0.514,
-      "D.E. Shaw Options": 0.561,
-      "Sovereign Wealth": 0.516,
-      "Renaissance Medallion": 0.447,
-      "Millennium Pod": 0.483
+      "Bridgewater Risk": 0.561,
+      "AQR Factor": 0.489,
+      "Citadel Securities MM": 0.434,
+      "Citadel Systematic": 0.561,
+      "Two Sigma Backtest": 0.557,
+      "Renaissance Patterns": 0.456,
+      "Goldman Technical": 0.463,
+      "JPMorgan Fundamental": 0.52,
+      "D.E. Shaw Options": 0.377,
+      "Sovereign Wealth": 0.434,
+      "Renaissance Medallion": 0.519,
+      "Millennium Pod": 0.537
     },
     "dispersion": {
       "BTC/USD": {
         "scale": 0.3,
         "reason": "disagreement haircut",
-        "dispersion": 0.419,
-        "accurate_mass_pct": 0.1,
+        "dispersion": 0.446,
+        "accurate_mass_pct": 0.3,
         "k": 2.5
       },
       "ETH/USD": {
         "scale": 0.3,
         "reason": "disagreement haircut",
-        "dispersion": 0.449,
-        "accurate_mass_pct": 0.1,
+        "dispersion": 0.473,
+        "accurate_mass_pct": 0.289,
         "k": 2.5
       },
       "SOL/USD": {
         "scale": 0.3,
         "reason": "disagreement haircut",
-        "dispersion": 0.456,
-        "accurate_mass_pct": 0.105,
+        "dispersion": 0.482,
+        "accurate_mass_pct": 0.287,
         "k": 2.5
       },
       "LTC/USD": {
         "scale": 0.3,
         "reason": "disagreement haircut",
-        "dispersion": 0.436,
-        "accurate_mass_pct": 0.125,
+        "dispersion": 0.462,
+        "accurate_mass_pct": 0.281,
         "k": 2.5
       },
       "XRP/USD": {
-        "scale": 0.3,
+        "scale": 0.803,
         "reason": "disagreement haircut",
-        "dispersion": 0.558,
-        "accurate_mass_pct": 0.114,
+        "dispersion": 0.079,
+        "accurate_mass_pct": 0.199,
         "k": 2.5
       },
       "DOGE/USD": {
-        "scale": 0.3,
+        "scale": 0.803,
         "reason": "disagreement haircut",
-        "dispersion": 0.524,
-        "accurate_mass_pct": 0.115,
+        "dispersion": 0.079,
+        "accurate_mass_pct": 0.199,
         "k": 2.5
       },
       "ADA/USD": {
-        "scale": 0.3,
+        "scale": 0.803,
         "reason": "disagreement haircut",
-        "dispersion": 0.527,
-        "accurate_mass_pct": 0.117,
+        "dispersion": 0.079,
+        "accurate_mass_pct": 0.199,
         "k": 2.5
       },
       "AVAX/USD": {
-        "scale": 0.3,
+        "scale": 0.803,
         "reason": "disagreement haircut",
-        "dispersion": 0.419,
-        "accurate_mass_pct": 0.135,
+        "dispersion": 0.079,
+        "accurate_mass_pct": 0.199,
         "k": 2.5
       },
       "LINK/USD": {
         "scale": 0.3,
         "reason": "disagreement haircut",
-        "dispersion": 0.418,
-        "accurate_mass_pct": 0.127,
+        "dispersion": 0.466,
+        "accurate_mass_pct": 0.286,
         "k": 2.5
       },
       "BCH/USD": {
         "scale": 0.3,
         "reason": "disagreement haircut",
-        "dispersion": 0.574,
-        "accurate_mass_pct": 0.111,
+        "dispersion": 0.582,
+        "accurate_mass_pct": 0.294,
         "k": 2.5
       },
       "UNI/USD": {
         "scale": 0.3,
         "reason": "disagreement haircut",
-        "dispersion": 0.542,
-        "accurate_mass_pct": 0.133,
+        "dispersion": 0.597,
+        "accurate_mass_pct": 0.316,
         "k": 2.5
       },
       "XLM/USD": {
-        "scale": 0.3,
+        "scale": 0.803,
         "reason": "disagreement haircut",
-        "dispersion": 0.473,
-        "accurate_mass_pct": 0.094,
+        "dispersion": 0.079,
+        "accurate_mass_pct": 0.199,
         "k": 2.5
       },
       "ETC/USD": {
-        "scale": 0.3,
+        "scale": 0.803,
         "reason": "disagreement haircut",
-        "dispersion": 0.476,
-        "accurate_mass_pct": 0.12,
+        "dispersion": 0.079,
+        "accurate_mass_pct": 0.199,
         "k": 2.5
       }
     },
@@ -1464,14 +1483,14 @@
         "result": "feeds fresh"
       }
     ],
-    "last_check": "2026-11-09T20:31:46.659716+00:00",
+    "last_check": "2026-11-09T21:03:49.280814+00:00",
     "latency_watch": {
       "stale": false,
       "unavailable": false,
       "cycles_recorded": 721,
       "degraded_segments": [],
       "slowest_p99": {
-        "council_deliberate": 91.037,
+        "council_deliberate": 92.105,
         "reporting": 40.937,
         "brain_call": 30.912
       },
@@ -1517,169 +1536,169 @@
           [
             1.0,
             0.999,
-            0.472,
+            0.492,
             -0.996,
-            -0.987,
+            -0.983,
             0.996,
-            0.0,
+            -0.0,
             -0.999,
-            0.959,
-            0.405,
+            0.942,
+            0.266,
             0.999,
             -0.996
           ],
           [
             0.999,
             1.0,
-            0.489,
-            -0.993,
-            -0.985,
+            0.51,
+            -0.992,
+            -0.981,
             0.994,
-            -0.0,
+            0.0,
             -1.0,
-            0.962,
-            0.395,
+            0.947,
+            0.253,
             1.0,
-            -0.995
+            -0.994
           ],
           [
-            0.472,
-            0.489,
+            0.492,
+            0.51,
             1.0,
-            -0.466,
-            -0.333,
-            0.519,
-            -0.0,
-            -0.484,
-            0.598,
-            -0.032,
-            0.488,
-            -0.518
+            -0.486,
+            -0.337,
+            0.542,
+            0.0,
+            -0.505,
+            0.645,
+            -0.184,
+            0.509,
+            -0.54
           ],
           [
             -0.996,
-            -0.993,
-            -0.466,
+            -0.992,
+            -0.486,
             1.0,
-            0.98,
+            0.976,
             -0.998,
-            -0.0,
+            0.0,
             0.993,
-            -0.953,
-            -0.415,
-            -0.993,
+            -0.934,
+            -0.279,
+            -0.992,
             0.998
           ],
           [
-            -0.987,
-            -0.985,
-            -0.333,
-            0.98,
+            -0.983,
+            -0.981,
+            -0.337,
+            0.976,
             1.0,
-            -0.972,
+            -0.966,
             0.0,
-            0.986,
-            -0.917,
-            -0.437,
-            -0.985,
-            0.972
+            0.982,
+            -0.885,
+            -0.333,
+            -0.981,
+            0.967
           ],
           [
             0.996,
             0.994,
-            0.519,
+            0.542,
             -0.998,
-            -0.972,
+            -0.966,
             1.0,
-            0.0,
+            -0.0,
             -0.994,
-            0.963,
-            0.399,
+            0.948,
+            0.253,
             0.994,
             -1.0
           ],
           [
-            0.0,
-            -0.0,
-            -0.0,
             -0.0,
             0.0,
             0.0,
+            0.0,
+            0.0,
+            -0.0,
             1.0,
             -0.0,
-            0.0,
             -0.0,
+            0.0,
             -0.0,
             -0.0
           ],
           [
             -0.999,
             -1.0,
-            -0.484,
+            -0.505,
             0.993,
-            0.986,
+            0.982,
             -0.994,
             -0.0,
             1.0,
-            -0.962,
-            -0.397,
+            -0.946,
+            -0.256,
             -1.0,
             0.994
           ],
           [
-            0.959,
-            0.962,
-            0.598,
-            -0.953,
-            -0.917,
-            0.963,
-            0.0,
-            -0.962,
+            0.942,
+            0.947,
+            0.645,
+            -0.934,
+            -0.885,
+            0.948,
+            -0.0,
+            -0.946,
             1.0,
-            0.392,
-            0.962,
-            -0.963
+            0.15,
+            0.947,
+            -0.948
           ],
           [
-            0.405,
-            0.395,
-            -0.032,
-            -0.415,
-            -0.437,
-            0.399,
-            -0.0,
-            -0.397,
-            0.392,
+            0.266,
+            0.253,
+            -0.184,
+            -0.279,
+            -0.333,
+            0.253,
+            0.0,
+            -0.256,
+            0.15,
             1.0,
-            0.395,
-            -0.399
+            0.254,
+            -0.254
           ],
           [
             0.999,
             1.0,
-            0.488,
-            -0.993,
-            -0.985,
+            0.509,
+            -0.992,
+            -0.981,
             0.994,
             -0.0,
             -1.0,
-            0.962,
-            0.395,
+            0.947,
+            0.254,
             1.0,
-            -0.995
+            -0.994
           ],
           [
             -0.996,
-            -0.995,
-            -0.518,
+            -0.994,
+            -0.54,
             0.998,
-            0.972,
+            0.967,
             -1.0,
             -0.0,
             0.994,
-            -0.963,
-            -0.399,
-            -0.995,
+            -0.948,
+            -0.254,
+            -0.994,
             1.0
           ]
         ],
@@ -1707,168 +1726,168 @@
           [
             1.0,
             0.998,
-            -0.177,
-            -0.998,
-            -0.994,
-            0.998,
-            0.171,
+            -0.148,
+            -0.997,
+            -0.991,
+            0.997,
+            0.175,
             -0.999,
-            0.956,
-            0.558,
+            0.932,
+            0.587,
             0.998,
-            -0.998
+            -0.997
           ],
           [
             0.998,
             1.0,
-            -0.143,
-            -0.993,
-            -0.99,
+            -0.113,
+            -0.992,
+            -0.988,
             0.996,
-            0.145,
+            0.147,
             -1.0,
-            0.963,
-            0.551,
+            0.943,
+            0.582,
             1.0,
             -0.996
           ],
           [
-            -0.177,
-            -0.143,
+            -0.148,
+            -0.113,
             1.0,
-            0.183,
-            0.274,
-            -0.121,
-            -0.748,
+            0.153,
+            0.261,
+            -0.085,
+            -0.742,
+            0.119,
             0.149,
-            0.051,
-            -0.141,
-            -0.143,
-            0.122
+            -0.183,
+            -0.113,
+            0.087
           ],
           [
-            -0.998,
-            -0.993,
-            0.183,
-            1.0,
-            0.989,
             -0.997,
-            -0.177,
+            -0.992,
+            0.153,
+            1.0,
+            0.986,
+            -0.997,
+            -0.18,
             0.993,
-            -0.951,
-            -0.563,
-            -0.993,
-            0.998
+            -0.926,
+            -0.587,
+            -0.992,
+            0.997
           ],
           [
-            -0.994,
-            -0.99,
-            0.274,
+            -0.991,
+            -0.988,
+            0.261,
+            0.986,
+            1.0,
+            -0.979,
+            -0.237,
             0.989,
-            1.0,
-            -0.984,
-            -0.224,
-            0.991,
-            -0.924,
-            -0.568,
-            -0.99,
-            0.984
+            -0.888,
+            -0.611,
+            -0.988,
+            0.979
           ],
           [
-            0.998,
+            0.997,
             0.996,
-            -0.121,
+            -0.085,
             -0.997,
-            -0.984,
+            -0.979,
             1.0,
-            0.131,
+            0.13,
             -0.996,
-            0.966,
-            0.558,
+            0.947,
+            0.58,
             0.996,
             -1.0
           ],
           [
-            0.171,
-            0.145,
-            -0.748,
-            -0.177,
-            -0.224,
-            0.131,
+            0.175,
+            0.147,
+            -0.742,
+            -0.18,
+            -0.237,
+            0.13,
             1.0,
-            -0.149,
-            0.049,
-            -0.104,
-            0.145,
+            -0.151,
+            0.013,
+            -0.095,
+            0.147,
             -0.132
           ],
           [
             -0.999,
             -1.0,
-            0.149,
+            0.119,
             0.993,
-            0.991,
+            0.989,
             -0.996,
-            -0.149,
+            -0.151,
             1.0,
-            -0.962,
-            -0.552,
+            -0.942,
+            -0.582,
             -1.0,
             0.996
           ],
           [
-            0.956,
-            0.963,
-            0.051,
-            -0.951,
-            -0.924,
-            0.966,
-            0.049,
-            -0.962,
+            0.932,
+            0.943,
+            0.149,
+            -0.926,
+            -0.888,
+            0.947,
+            0.013,
+            -0.942,
             1.0,
-            0.462,
-            0.963,
-            -0.966
+            0.416,
+            0.943,
+            -0.947
           ],
           [
-            0.558,
-            0.551,
-            -0.141,
-            -0.563,
-            -0.568,
-            0.558,
-            -0.104,
-            -0.552,
-            0.462,
+            0.587,
+            0.582,
+            -0.183,
+            -0.587,
+            -0.611,
+            0.58,
+            -0.095,
+            -0.582,
+            0.416,
             1.0,
-            0.551,
-            -0.558
+            0.582,
+            -0.58
           ],
           [
             0.998,
             1.0,
-            -0.143,
-            -0.993,
-            -0.99,
+            -0.113,
+            -0.992,
+            -0.988,
             0.996,
-            0.145,
+            0.147,
             -1.0,
-            0.963,
-            0.551,
+            0.943,
+            0.582,
             1.0,
             -0.996
           ],
           [
-            -0.998,
+            -0.997,
             -0.996,
-            0.122,
-            0.998,
-            0.984,
+            0.087,
+            0.997,
+            0.979,
             -1.0,
             -0.132,
             0.996,
-            -0.966,
-            -0.558,
+            -0.947,
+            -0.58,
             -0.996,
             1.0
           ]
@@ -1897,168 +1916,168 @@
           [
             1.0,
             0.997,
-            -0.901,
+            -0.89,
             -0.998,
-            -0.994,
+            -0.993,
             0.996,
-            0.908,
+            0.897,
             -0.998,
-            0.944,
-            0.688,
+            0.919,
+            0.66,
             0.997,
-            -0.997
+            -0.996
           ],
           [
             0.997,
             1.0,
-            -0.882,
+            -0.869,
             -0.994,
-            -0.99,
+            -0.988,
             0.995,
-            0.89,
+            0.876,
             -1.0,
-            0.955,
-            0.691,
+            0.935,
+            0.659,
             1.0,
             -0.995
           ],
           [
-            -0.901,
-            -0.882,
+            -0.89,
+            -0.869,
             1.0,
-            0.882,
-            0.931,
-            -0.864,
-            -0.975,
-            0.884,
-            -0.749,
-            -0.647,
-            -0.881,
-            0.865
+            0.869,
+            0.927,
+            -0.848,
+            -0.979,
+            0.872,
+            -0.683,
+            -0.664,
+            -0.869,
+            0.849
           ],
           [
             -0.998,
             -0.994,
-            0.882,
+            0.869,
             1.0,
-            0.986,
+            0.985,
             -0.999,
-            -0.893,
+            -0.879,
             0.994,
-            -0.947,
-            -0.678,
-            -0.993,
+            -0.926,
+            -0.646,
+            -0.994,
             0.999
           ],
           [
-            -0.994,
-            -0.99,
-            0.931,
-            0.986,
+            -0.993,
+            -0.988,
+            0.927,
+            0.985,
             1.0,
-            -0.982,
-            -0.93,
-            0.991,
-            -0.919,
-            -0.702,
-            -0.99,
-            0.983
+            -0.98,
+            -0.925,
+            0.989,
+            -0.885,
+            -0.688,
+            -0.988,
+            0.98
           ],
           [
             0.996,
             0.995,
-            -0.864,
+            -0.848,
             -0.999,
-            -0.982,
+            -0.98,
             1.0,
-            0.877,
+            0.86,
             -0.995,
-            0.957,
-            0.676,
+            0.939,
+            0.639,
             0.995,
             -1.0
           ],
           [
-            0.908,
-            0.89,
-            -0.975,
-            -0.893,
-            -0.93,
-            0.877,
+            0.897,
+            0.876,
+            -0.979,
+            -0.879,
+            -0.925,
+            0.86,
             1.0,
-            -0.892,
-            0.75,
-            0.644,
-            0.89,
-            -0.878
+            -0.879,
+            0.687,
+            0.66,
+            0.876,
+            -0.861
           ],
           [
             -0.998,
             -1.0,
-            0.884,
+            0.872,
             0.994,
-            0.991,
+            0.989,
             -0.995,
-            -0.892,
+            -0.879,
             1.0,
-            -0.954,
-            -0.692,
+            -0.933,
+            -0.66,
             -1.0,
             0.995
           ],
           [
-            0.944,
-            0.955,
-            -0.749,
-            -0.947,
-            -0.919,
-            0.957,
-            0.75,
-            -0.954,
+            0.919,
+            0.935,
+            -0.683,
+            -0.926,
+            -0.885,
+            0.939,
+            0.687,
+            -0.933,
             1.0,
-            0.571,
-            0.955,
-            -0.957
+            0.453,
+            0.935,
+            -0.939
           ],
           [
-            0.688,
-            0.691,
-            -0.647,
-            -0.678,
-            -0.702,
-            0.676,
-            0.644,
-            -0.692,
-            0.571,
+            0.66,
+            0.659,
+            -0.664,
+            -0.646,
+            -0.688,
+            0.639,
+            0.66,
+            -0.66,
+            0.453,
             1.0,
-            0.691,
-            -0.677
+            0.658,
+            -0.64
           ],
           [
             0.997,
             1.0,
-            -0.881,
-            -0.993,
-            -0.99,
+            -0.869,
+            -0.994,
+            -0.988,
             0.995,
-            0.89,
+            0.876,
             -1.0,
-            0.955,
-            0.691,
+            0.935,
+            0.658,
             1.0,
             -0.995
           ],
           [
-            -0.997,
+            -0.996,
             -0.995,
-            0.865,
+            0.849,
             0.999,
-            0.983,
+            0.98,
             -1.0,
-            -0.878,
+            -0.861,
             0.995,
-            -0.957,
-            -0.677,
+            -0.939,
+            -0.64,
             -0.995,
             1.0
           ]
@@ -2086,170 +2105,170 @@
         "correlation_matrix": [
           [
             1.0,
-            0.826,
-            -0.852,
-            -0.994,
-            -0.994,
-            0.995,
-            0.945,
-            -0.994,
-            -0.247,
-            0.652,
-            0.826,
-            -0.995
+            0.875,
+            -0.899,
+            -0.996,
+            -0.995,
+            0.996,
+            0.962,
+            -0.996,
+            -0.172,
+            0.736,
+            0.875,
+            -0.997
           ],
           [
-            0.826,
+            0.875,
             1.0,
-            -0.994,
-            -0.838,
-            -0.842,
-            0.828,
-            0.802,
-            -0.851,
-            -0.746,
-            0.516,
+            -0.995,
+            -0.88,
+            -0.889,
+            0.876,
+            0.85,
+            -0.895,
+            -0.622,
+            0.66,
             1.0,
-            -0.81
+            -0.864
           ],
           [
-            -0.852,
-            -0.994,
+            -0.899,
+            -0.995,
             1.0,
-            0.86,
-            0.862,
-            -0.847,
-            -0.832,
-            0.871,
-            0.709,
-            -0.55,
+            0.901,
+            0.907,
+            -0.894,
+            -0.877,
+            0.913,
+            0.576,
+            -0.691,
             -0.994,
-            0.83
+            0.884
           ],
           [
-            -0.994,
-            -0.838,
-            0.86,
+            -0.996,
+            -0.88,
+            0.901,
             1.0,
-            0.982,
-            -0.998,
-            -0.927,
-            0.983,
-            0.285,
-            -0.608,
-            -0.838,
-            0.997
-          ],
-          [
-            -0.994,
-            -0.842,
-            0.862,
-            0.982,
-            1.0,
-            -0.986,
+            0.987,
+            -0.999,
             -0.949,
-            1.0,
-            0.269,
-            -0.674,
-            -0.842,
-            0.986
-          ],
-          [
-            0.995,
-            0.828,
-            -0.847,
-            -0.998,
-            -0.986,
-            1.0,
-            0.926,
-            -0.986,
-            -0.264,
-            0.609,
-            0.828,
-            -0.999
-          ],
-          [
-            0.945,
-            0.802,
-            -0.832,
-            -0.927,
-            -0.949,
-            0.926,
-            1.0,
-            -0.951,
-            -0.259,
-            0.653,
-            0.802,
-            -0.925
-          ],
-          [
-            -0.994,
-            -0.851,
-            0.871,
-            0.983,
-            1.0,
-            -0.986,
-            -0.951,
-            1.0,
-            0.285,
-            -0.674,
-            -0.85,
-            0.985
-          ],
-          [
-            -0.247,
-            -0.746,
-            0.709,
-            0.285,
-            0.269,
-            -0.264,
-            -0.259,
-            0.285,
-            1.0,
-            -0.072,
-            -0.747,
-            0.232
-          ],
-          [
-            0.652,
-            0.516,
-            -0.55,
-            -0.608,
-            -0.674,
-            0.609,
-            0.653,
-            -0.674,
-            -0.072,
-            1.0,
-            0.516,
-            -0.612
-          ],
-          [
-            0.826,
-            1.0,
-            -0.994,
-            -0.838,
-            -0.842,
-            0.828,
-            0.802,
-            -0.85,
-            -0.747,
-            0.516,
-            1.0,
-            -0.81
+            0.987,
+            0.198,
+            -0.703,
+            -0.88,
+            0.998
           ],
           [
             -0.995,
-            -0.81,
-            0.83,
-            0.997,
-            0.986,
+            -0.889,
+            0.907,
+            0.987,
+            1.0,
+            -0.99,
+            -0.964,
+            1.0,
+            0.194,
+            -0.752,
+            -0.889,
+            0.99
+          ],
+          [
+            0.996,
+            0.876,
+            -0.894,
             -0.999,
-            -0.925,
-            0.985,
-            0.232,
-            -0.612,
-            -0.81,
+            -0.99,
+            1.0,
+            0.948,
+            -0.99,
+            -0.184,
+            0.702,
+            0.876,
+            -1.0
+          ],
+          [
+            0.962,
+            0.85,
+            -0.877,
+            -0.949,
+            -0.964,
+            0.948,
+            1.0,
+            -0.965,
+            -0.168,
+            0.739,
+            0.849,
+            -0.949
+          ],
+          [
+            -0.996,
+            -0.895,
+            0.913,
+            0.987,
+            1.0,
+            -0.99,
+            -0.965,
+            1.0,
+            0.207,
+            -0.753,
+            -0.895,
+            0.989
+          ],
+          [
+            -0.172,
+            -0.622,
+            0.576,
+            0.198,
+            0.194,
+            -0.184,
+            -0.168,
+            0.207,
+            1.0,
+            -0.11,
+            -0.622,
+            0.161
+          ],
+          [
+            0.736,
+            0.66,
+            -0.691,
+            -0.703,
+            -0.752,
+            0.702,
+            0.739,
+            -0.753,
+            -0.11,
+            1.0,
+            0.66,
+            -0.703
+          ],
+          [
+            0.875,
+            1.0,
+            -0.994,
+            -0.88,
+            -0.889,
+            0.876,
+            0.849,
+            -0.895,
+            -0.622,
+            0.66,
+            1.0,
+            -0.864
+          ],
+          [
+            -0.997,
+            -0.864,
+            0.884,
+            0.998,
+            0.99,
+            -1.0,
+            -0.949,
+            0.989,
+            0.161,
+            -0.703,
+            -0.864,
             1.0
           ]
         ],
@@ -2276,170 +2295,170 @@
         "correlation_matrix": [
           [
             1.0,
-            0.893,
-            -0.511,
-            -0.996,
-            -0.985,
-            0.995,
-            -0.744,
-            -0.996,
-            0.723,
-            0.337,
-            0.9,
-            -0.997
-          ],
-          [
-            0.893,
+            0.944,
             1.0,
-            -0.838,
-            -0.922,
-            -0.918,
-            0.92,
-            -0.744,
-            -0.925,
-            0.956,
-            -0.065,
-            1.0,
-            -0.896
-          ],
-          [
-            -0.511,
-            -0.838,
-            1.0,
-            0.572,
-            0.585,
-            -0.56,
-            0.46,
-            0.568,
-            -0.953,
-            0.559,
-            -0.828,
-            0.512
-          ],
-          [
-            -0.996,
-            -0.922,
-            0.572,
-            1.0,
-            0.986,
+            -0.995,
+            -0.983,
+            0.856,
             -0.998,
-            0.754,
-            0.996,
-            -0.77,
-            -0.262,
-            -0.928,
-            0.996
-          ],
-          [
-            -0.985,
-            -0.918,
-            0.585,
-            0.986,
-            1.0,
-            -0.98,
-            0.723,
-            0.985,
-            -0.768,
-            -0.24,
-            -0.923,
-            0.977
-          ],
-          [
-            0.995,
-            0.92,
-            -0.56,
-            -0.998,
-            -0.98,
-            1.0,
-            -0.784,
-            -0.997,
-            0.767,
-            0.281,
-            0.926,
+            -0.951,
+            0.993,
+            0.999,
+            0.942,
             -0.998
           ],
           [
-            -0.744,
-            -0.744,
-            0.46,
-            0.754,
-            0.723,
-            -0.784,
+            0.944,
             1.0,
-            0.775,
-            -0.667,
-            -0.201,
-            -0.751,
-            0.779
+            0.942,
+            -0.969,
+            -0.983,
+            0.962,
+            -0.957,
+            -0.991,
+            0.974,
+            0.941,
+            1.0,
+            -0.961
           ],
           [
-            -0.996,
-            -0.925,
-            0.568,
-            0.996,
-            0.985,
-            -0.997,
-            0.775,
             1.0,
-            -0.774,
-            -0.29,
-            -0.931,
-            0.995
-          ],
-          [
-            0.723,
-            0.956,
-            -0.953,
-            -0.77,
-            -0.768,
-            0.767,
-            -0.667,
-            -0.774,
+            0.942,
             1.0,
-            -0.315,
-            0.951,
-            -0.729
-          ],
-          [
-            0.337,
-            -0.065,
-            0.559,
-            -0.262,
-            -0.24,
-            0.281,
-            -0.201,
-            -0.29,
-            -0.315,
-            1.0,
-            -0.048,
-            -0.33
-          ],
-          [
-            0.9,
-            1.0,
-            -0.828,
-            -0.928,
-            -0.923,
-            0.926,
-            -0.751,
-            -0.931,
-            0.951,
-            -0.048,
-            1.0,
-            -0.903
-          ],
-          [
-            -0.997,
-            -0.896,
-            0.512,
-            0.996,
-            0.977,
+            -0.995,
+            -0.982,
+            0.853,
             -0.998,
-            0.779,
-            0.995,
-            -0.729,
-            -0.33,
+            -0.949,
+            0.992,
+            0.999,
+            0.939,
+            -0.998
+          ],
+          [
+            -0.995,
+            -0.969,
+            -0.995,
+            1.0,
+            0.996,
             -0.903,
+            0.998,
+            0.976,
+            -0.997,
+            -0.995,
+            -0.968,
+            0.999
+          ],
+          [
+            -0.983,
+            -0.983,
+            -0.982,
+            0.996,
+            1.0,
+            -0.935,
+            0.988,
+            0.991,
+            -0.992,
+            -0.983,
+            -0.982,
+            0.992
+          ],
+          [
+            0.856,
+            0.962,
+            0.853,
+            -0.903,
+            -0.935,
+            1.0,
+            -0.877,
+            -0.974,
+            0.894,
+            0.861,
+            0.964,
+            -0.888
+          ],
+          [
+            -0.998,
+            -0.957,
+            -0.998,
+            0.998,
+            0.988,
+            -0.877,
+            1.0,
+            0.962,
+            -0.996,
+            -0.998,
+            -0.955,
+            0.999
+          ],
+          [
+            -0.951,
+            -0.991,
+            -0.949,
+            0.976,
+            0.991,
+            -0.974,
+            0.962,
+            1.0,
+            -0.971,
+            -0.953,
+            -0.991,
+            0.969
+          ],
+          [
+            0.993,
+            0.974,
+            0.992,
+            -0.997,
+            -0.992,
+            0.894,
+            -0.996,
+            -0.971,
+            1.0,
+            0.99,
+            0.972,
+            -0.996
+          ],
+          [
+            0.999,
+            0.941,
+            0.999,
+            -0.995,
+            -0.983,
+            0.861,
+            -0.998,
+            -0.953,
+            0.99,
+            1.0,
+            0.939,
+            -0.998
+          ],
+          [
+            0.942,
+            1.0,
+            0.939,
+            -0.968,
+            -0.982,
+            0.964,
+            -0.955,
+            -0.991,
+            0.972,
+            0.939,
+            1.0,
+            -0.959
+          ],
+          [
+            -0.998,
+            -0.961,
+            -0.998,
+            0.999,
+            0.992,
+            -0.888,
+            0.999,
+            0.969,
+            -0.996,
+            -0.998,
+            -0.959,
             1.0
           ]
         ],
@@ -2466,170 +2485,170 @@
         "correlation_matrix": [
           [
             1.0,
-            0.591,
-            -0.848,
-            -0.993,
-            -0.994,
-            0.992,
-            0.662,
-            -0.993,
-            -0.368,
-            0.513,
-            0.588,
-            -0.997
+            0.918,
+            1.0,
+            -0.988,
+            -0.861,
+            0.967,
+            -0.999,
+            -0.971,
+            0.974,
+            0.998,
+            0.906,
+            -1.0
           ],
           [
-            0.591,
+            0.918,
             1.0,
-            -0.904,
-            -0.67,
-            -0.659,
-            0.675,
-            0.231,
-            -0.67,
-            -0.966,
-            0.969,
+            0.918,
+            -0.95,
+            -0.928,
+            0.958,
+            -0.911,
+            -0.957,
+            0.809,
+            0.938,
             1.0,
-            -0.628
+            -0.925
           ],
           [
-            -0.848,
-            -0.904,
             1.0,
-            0.893,
-            0.892,
-            -0.887,
-            -0.552,
-            0.887,
-            0.774,
-            -0.856,
-            -0.902,
-            0.86
+            0.918,
+            1.0,
+            -0.987,
+            -0.86,
+            0.966,
+            -0.999,
+            -0.971,
+            0.974,
+            0.998,
+            0.905,
+            -1.0
           ],
           [
-            -0.993,
-            -0.67,
-            0.893,
+            -0.988,
+            -0.95,
+            -0.987,
             1.0,
-            0.995,
-            -0.998,
-            -0.639,
-            0.995,
-            0.462,
-            -0.591,
-            -0.667,
+            0.93,
+            -0.995,
+            0.981,
+            0.996,
+            -0.945,
+            -0.992,
+            -0.94,
+            0.991
+          ],
+          [
+            -0.861,
+            -0.928,
+            -0.86,
+            0.93,
+            1.0,
+            -0.962,
+            0.842,
+            0.957,
+            -0.785,
+            -0.877,
+            -0.927,
+            0.873
+          ],
+          [
+            0.967,
+            0.958,
+            0.966,
+            -0.995,
+            -0.962,
+            1.0,
+            -0.957,
+            -1.0,
+            0.914,
+            0.974,
+            0.951,
+            -0.973
+          ],
+          [
+            -0.999,
+            -0.911,
+            -0.999,
+            0.981,
+            0.842,
+            -0.957,
+            1.0,
+            0.962,
+            -0.974,
+            -0.996,
+            -0.898,
             0.997
           ],
           [
-            -0.994,
-            -0.659,
-            0.892,
-            0.995,
-            1.0,
-            -0.994,
-            -0.639,
-            0.997,
-            0.449,
-            -0.584,
-            -0.656,
-            0.993
-          ],
-          [
-            0.992,
-            0.675,
-            -0.887,
-            -0.998,
-            -0.994,
-            1.0,
-            0.609,
-            -0.997,
-            -0.468,
-            0.595,
-            0.672,
-            -0.998
-          ],
-          [
-            0.662,
-            0.231,
-            -0.552,
-            -0.639,
-            -0.639,
-            0.609,
-            1.0,
-            -0.619,
-            -0.048,
-            0.223,
-            0.227,
-            -0.623
-          ],
-          [
-            -0.993,
-            -0.67,
-            0.887,
-            0.995,
-            0.997,
-            -0.997,
-            -0.619,
-            1.0,
-            0.461,
-            -0.595,
-            -0.667,
-            0.996
-          ],
-          [
-            -0.368,
-            -0.966,
-            0.774,
-            0.462,
-            0.449,
-            -0.468,
-            -0.048,
-            0.461,
-            1.0,
-            -0.941,
-            -0.966,
-            0.413
-          ],
-          [
-            0.513,
-            0.969,
-            -0.856,
-            -0.591,
-            -0.584,
-            0.595,
-            0.223,
-            -0.595,
-            -0.941,
-            1.0,
-            0.969,
-            -0.546
-          ],
-          [
-            0.588,
-            1.0,
-            -0.902,
-            -0.667,
-            -0.656,
-            0.672,
-            0.227,
-            -0.667,
-            -0.966,
-            0.969,
-            1.0,
-            -0.625
-          ],
-          [
-            -0.997,
-            -0.628,
-            0.86,
-            0.997,
-            0.993,
-            -0.998,
-            -0.623,
+            -0.971,
+            -0.957,
+            -0.971,
             0.996,
-            0.413,
-            -0.546,
-            -0.625,
+            0.957,
+            -1.0,
+            0.962,
+            1.0,
+            -0.921,
+            -0.978,
+            -0.949,
+            0.977
+          ],
+          [
+            0.974,
+            0.809,
+            0.974,
+            -0.945,
+            -0.785,
+            0.914,
+            -0.974,
+            -0.921,
+            1.0,
+            0.961,
+            0.79,
+            -0.971
+          ],
+          [
+            0.998,
+            0.938,
+            0.998,
+            -0.992,
+            -0.877,
+            0.974,
+            -0.996,
+            -0.978,
+            0.961,
+            1.0,
+            0.927,
+            -0.999
+          ],
+          [
+            0.906,
+            1.0,
+            0.905,
+            -0.94,
+            -0.927,
+            0.951,
+            -0.898,
+            -0.949,
+            0.79,
+            0.927,
+            1.0,
+            -0.913
+          ],
+          [
+            -1.0,
+            -0.925,
+            -1.0,
+            0.991,
+            0.873,
+            -0.973,
+            0.997,
+            0.977,
+            -0.971,
+            -0.999,
+            -0.913,
             1.0
           ]
         ],
@@ -2656,170 +2675,170 @@
         "correlation_matrix": [
           [
             1.0,
-            0.725,
-            -0.356,
-            -0.994,
-            -0.993,
-            0.989,
-            0.898,
+            0.994,
+            1.0,
+            -0.989,
+            -0.948,
+            0.908,
+            -0.999,
+            -0.977,
+            0.991,
+            1.0,
+            0.937,
+            -1.0
+          ],
+          [
+            0.994,
+            1.0,
+            0.994,
+            -0.996,
+            -0.97,
+            0.939,
             -0.991,
-            -0.166,
-            -0.119,
-            0.403,
-            -0.751
+            -0.99,
+            0.975,
+            0.994,
+            0.948,
+            -0.994
           ],
           [
-            0.725,
             1.0,
-            -0.898,
-            -0.779,
-            -0.769,
-            0.807,
-            0.518,
-            -0.78,
-            -0.797,
-            -0.619,
-            0.43,
-            -0.094
-          ],
-          [
-            -0.356,
-            -0.898,
+            0.994,
             1.0,
-            0.435,
-            0.411,
-            -0.472,
-            -0.126,
-            0.428,
-            0.978,
-            0.746,
-            -0.329,
-            -0.349
-          ],
-          [
-            -0.994,
-            -0.779,
-            0.435,
+            -0.989,
+            -0.948,
+            0.907,
+            -0.999,
+            -0.977,
+            0.992,
             1.0,
-            0.99,
-            -0.998,
-            -0.874,
-            0.99,
-            0.251,
-            0.183,
-            -0.397,
-            0.692
+            0.937,
+            -1.0
           ],
           [
+            -0.989,
+            -0.996,
+            -0.989,
+            1.0,
+            0.984,
+            -0.959,
+            0.983,
+            0.998,
+            -0.976,
+            -0.989,
+            -0.946,
+            0.992
+          ],
+          [
+            -0.948,
+            -0.97,
+            -0.948,
+            0.984,
+            1.0,
             -0.993,
-            -0.769,
-            0.411,
-            0.99,
-            1.0,
-            -0.992,
-            -0.892,
-            1.0,
-            0.229,
-            0.188,
-            -0.425,
-            0.706
+            0.935,
+            0.994,
+            -0.931,
+            -0.948,
+            -0.935,
+            0.953
           ],
           [
-            0.989,
-            0.807,
-            -0.472,
-            -0.998,
-            -0.992,
-            1.0,
-            0.867,
+            0.908,
+            0.939,
+            0.907,
+            -0.959,
             -0.993,
-            -0.293,
-            -0.225,
-            0.406,
-            -0.661
-          ],
-          [
-            0.898,
-            0.518,
-            -0.126,
-            -0.874,
-            -0.892,
-            0.867,
             1.0,
-            -0.887,
-            0.047,
-            -0.017,
-            0.289,
-            -0.814
+            -0.89,
+            -0.975,
+            0.884,
+            0.907,
+            0.908,
+            -0.914
           ],
           [
+            -0.999,
             -0.991,
-            -0.78,
-            0.428,
-            0.99,
+            -0.999,
+            0.983,
+            0.935,
+            -0.89,
             1.0,
-            -0.993,
-            -0.887,
-            1.0,
-            0.247,
-            0.202,
-            -0.428,
-            0.693
+            0.968,
+            -0.99,
+            -0.999,
+            -0.932,
+            0.998
           ],
           [
-            -0.166,
-            -0.797,
-            0.978,
-            0.251,
-            0.229,
-            -0.293,
-            0.047,
-            0.247,
+            -0.977,
+            -0.99,
+            -0.977,
+            0.998,
+            0.994,
+            -0.975,
+            0.968,
             1.0,
-            0.8,
-            -0.267,
-            -0.522
+            -0.962,
+            -0.977,
+            -0.947,
+            0.981
           ],
           [
-            -0.119,
-            -0.619,
-            0.746,
-            0.183,
-            0.188,
-            -0.225,
-            -0.017,
-            0.202,
-            0.8,
+            0.991,
+            0.975,
+            0.992,
+            -0.976,
+            -0.931,
+            0.884,
+            -0.99,
+            -0.962,
             1.0,
-            -0.279,
-            -0.4
+            0.992,
+            0.916,
+            -0.992
           ],
           [
-            0.403,
-            0.43,
-            -0.329,
-            -0.397,
-            -0.425,
-            0.406,
-            0.289,
-            -0.428,
-            -0.267,
-            -0.279,
             1.0,
-            -0.162
+            0.994,
+            1.0,
+            -0.989,
+            -0.948,
+            0.907,
+            -0.999,
+            -0.977,
+            0.992,
+            1.0,
+            0.936,
+            -1.0
           ],
           [
-            -0.751,
-            -0.094,
-            -0.349,
-            0.692,
-            0.706,
-            -0.661,
-            -0.814,
-            0.693,
-            -0.522,
-            -0.4,
-            -0.162,
+            0.937,
+            0.948,
+            0.937,
+            -0.946,
+            -0.935,
+            0.908,
+            -0.932,
+            -0.947,
+            0.916,
+            0.936,
+            1.0,
+            -0.938
+          ],
+          [
+            -1.0,
+            -0.994,
+            -1.0,
+            0.992,
+            0.953,
+            -0.914,
+            0.998,
+            0.981,
+            -0.992,
+            -1.0,
+            -0.938,
             1.0
           ]
         ],
@@ -2846,170 +2865,170 @@
         "correlation_matrix": [
           [
             1.0,
-            0.991,
-            -1.0,
-            -0.998,
-            0.85,
-            0.991,
-            0.999,
-            -0.991,
-            -0.995,
-            0.986,
-            0.993,
-            -0.992
-          ],
-          [
-            0.991,
+            0.683,
             1.0,
-            -0.993,
-            -0.997,
-            0.793,
-            1.0,
-            0.993,
-            -1.0,
-            -0.991,
-            0.979,
-            0.997,
-            -1.0
-          ],
-          [
-            -1.0,
-            -0.993,
-            1.0,
-            0.999,
-            -0.839,
-            -0.994,
-            -0.999,
-            0.994,
+            -0.402,
+            -0.733,
+            -0.547,
+            -0.883,
+            -0.097,
             0.995,
-            -0.986,
-            -0.994,
-            0.994
+            0.878,
+            0.475,
+            -0.991
           ],
           [
-            -0.998,
-            -0.997,
-            0.999,
+            0.683,
             1.0,
-            -0.826,
-            -0.998,
-            -0.998,
-            0.998,
-            0.996,
-            -0.985,
-            -0.997,
-            0.998
+            0.672,
+            -0.942,
+            -0.075,
+            0.238,
+            -0.261,
+            -0.794,
+            0.609,
+            0.944,
+            0.965,
+            -0.773
           ],
           [
-            0.85,
-            0.793,
-            -0.839,
-            -0.826,
             1.0,
-            0.796,
-            0.851,
-            -0.795,
-            -0.864,
-            0.84,
-            0.831,
-            -0.798
-          ],
-          [
-            0.991,
+            0.672,
             1.0,
-            -0.994,
-            -0.998,
-            0.796,
-            1.0,
-            0.993,
-            -1.0,
-            -0.992,
-            0.98,
-            0.998,
-            -1.0
-          ],
-          [
-            0.999,
-            0.993,
-            -0.999,
-            -0.998,
-            0.851,
-            0.993,
-            1.0,
-            -0.993,
-            -0.997,
-            0.986,
-            0.996,
-            -0.994
-          ],
-          [
-            -0.991,
-            -1.0,
-            0.994,
-            0.998,
-            -0.795,
-            -1.0,
-            -0.993,
-            1.0,
-            0.991,
-            -0.979,
-            -0.998,
-            1.0
-          ],
-          [
-            -0.995,
-            -0.991,
-            0.995,
-            0.996,
-            -0.864,
-            -0.992,
-            -0.997,
-            0.991,
-            1.0,
-            -0.989,
-            -0.997,
-            0.992
-          ],
-          [
-            0.986,
-            0.979,
-            -0.986,
-            -0.985,
-            0.84,
-            0.98,
-            0.986,
-            -0.979,
-            -0.989,
-            1.0,
-            0.981,
-            -0.98
-          ],
-          [
-            0.993,
+            -0.388,
+            -0.742,
+            -0.56,
+            -0.89,
+            -0.082,
             0.997,
-            -0.994,
-            -0.997,
-            0.831,
-            0.998,
-            0.996,
-            -0.998,
-            -0.997,
-            0.981,
-            1.0,
-            -0.998
+            0.871,
+            0.462,
+            -0.989
           ],
           [
-            -0.992,
-            -1.0,
-            0.994,
-            0.998,
-            -0.798,
-            -1.0,
-            -0.994,
+            -0.402,
+            -0.942,
+            -0.388,
             1.0,
-            0.992,
-            -0.98,
-            -0.998,
+            -0.248,
+            -0.546,
+            -0.075,
+            0.949,
+            -0.311,
+            -0.787,
+            -0.993,
+            0.519
+          ],
+          [
+            -0.733,
+            -0.075,
+            -0.742,
+            -0.248,
+            1.0,
+            0.889,
+            0.931,
+            -0.508,
+            -0.79,
+            -0.355,
+            0.183,
+            0.649
+          ],
+          [
+            -0.547,
+            0.238,
+            -0.56,
+            -0.546,
+            0.889,
+            1.0,
+            0.874,
+            -0.78,
+            -0.625,
+            -0.085,
+            0.475,
+            0.432
+          ],
+          [
+            -0.883,
+            -0.261,
+            -0.89,
+            -0.075,
+            0.931,
+            0.874,
+            1.0,
+            -0.379,
+            -0.924,
+            -0.552,
+            -0.008,
+            0.813
+          ],
+          [
+            -0.097,
+            -0.794,
+            -0.082,
+            0.949,
+            -0.508,
+            -0.78,
+            -0.379,
+            1.0,
+            -0.001,
+            -0.556,
+            -0.919,
+            0.228
+          ],
+          [
+            0.995,
+            0.609,
+            0.997,
+            -0.311,
+            -0.79,
+            -0.625,
+            -0.924,
+            -0.001,
+            1.0,
+            0.828,
+            0.387,
+            -0.974
+          ],
+          [
+            0.878,
+            0.944,
+            0.871,
+            -0.787,
+            -0.355,
+            -0.085,
+            -0.552,
+            -0.556,
+            0.828,
+            1.0,
+            0.833,
+            -0.933
+          ],
+          [
+            0.475,
+            0.965,
+            0.462,
+            -0.993,
+            0.183,
+            0.475,
+            -0.008,
+            -0.919,
+            0.387,
+            0.833,
+            1.0,
+            -0.587
+          ],
+          [
+            -0.991,
+            -0.773,
+            -0.989,
+            0.519,
+            0.649,
+            0.432,
+            0.813,
+            0.228,
+            -0.974,
+            -0.933,
+            -0.587,
             1.0
           ]
         ],
@@ -3036,170 +3055,170 @@
         "correlation_matrix": [
           [
             1.0,
-            0.77,
-            -0.629,
-            -0.994,
-            -0.99,
+            0.76,
+            -0.676,
+            -0.991,
+            -0.992,
             0.99,
-            0.847,
-            -0.99,
-            -0.089,
-            0.502,
-            0.777,
-            -0.987
+            0.888,
+            -0.992,
+            -0.168,
+            0.602,
+            0.767,
+            -0.986
           ],
           [
-            0.77,
+            0.76,
             1.0,
-            0.009,
-            -0.828,
-            -0.825,
-            0.834,
-            0.691,
-            -0.835,
-            0.557,
-            -0.083,
+            -0.038,
+            -0.83,
+            -0.807,
+            0.83,
+            0.708,
+            -0.817,
+            0.505,
+            0.004,
             1.0,
-            -0.852
+            -0.848
           ],
           [
-            -0.629,
-            0.009,
+            -0.676,
+            -0.038,
             1.0,
-            0.547,
-            0.547,
-            -0.531,
-            -0.502,
-            0.535,
-            0.818,
-            -0.894,
-            -0.002,
-            0.505
+            0.58,
+            0.612,
+            -0.578,
+            -0.577,
+            0.601,
+            0.829,
+            -0.926,
+            -0.05,
+            0.551
           ],
           [
-            -0.994,
-            -0.828,
-            0.547,
+            -0.991,
+            -0.83,
+            0.58,
             1.0,
-            0.992,
-            -0.996,
-            -0.852,
-            0.994,
-            -0.011,
-            -0.425,
-            -0.834,
-            0.996
-          ],
-          [
-            -0.99,
-            -0.825,
-            0.547,
-            0.992,
-            1.0,
-            -0.997,
-            -0.826,
-            1.0,
-            0.007,
-            -0.418,
-            -0.831,
-            0.996
-          ],
-          [
             0.99,
-            0.834,
-            -0.531,
-            -0.996,
             -0.997,
-            1.0,
-            0.83,
-            -0.998,
-            0.016,
-            0.404,
-            0.84,
-            -0.999
-          ],
-          [
-            0.847,
-            0.691,
-            -0.502,
-            -0.852,
-            -0.826,
-            0.83,
-            1.0,
-            -0.832,
-            0.003,
-            0.417,
-            0.696,
-            -0.831
-          ],
-          [
-            -0.99,
-            -0.835,
-            0.535,
-            0.994,
-            1.0,
-            -0.998,
-            -0.832,
-            1.0,
-            -0.012,
-            -0.409,
-            -0.841,
+            -0.887,
+            0.992,
+            0.049,
+            -0.513,
+            -0.837,
             0.997
           ],
           [
-            -0.089,
-            0.557,
-            0.818,
-            -0.011,
-            0.007,
-            0.016,
-            0.003,
-            -0.012,
+            -0.992,
+            -0.807,
+            0.612,
+            0.99,
             1.0,
-            -0.771,
-            0.548,
-            -0.049
+            -0.996,
+            -0.872,
+            1.0,
+            0.099,
+            -0.535,
+            -0.813,
+            0.994
           ],
           [
-            0.502,
-            -0.083,
-            -0.894,
-            -0.425,
-            -0.418,
-            0.404,
-            0.417,
-            -0.409,
-            -0.771,
+            0.99,
+            0.83,
+            -0.578,
+            -0.997,
+            -0.996,
             1.0,
-            -0.073,
-            -0.38
+            0.871,
+            -0.997,
+            -0.056,
+            0.504,
+            0.836,
+            -0.999
           ],
           [
-            0.777,
+            0.888,
+            0.708,
+            -0.577,
+            -0.887,
+            -0.872,
+            0.871,
             1.0,
-            -0.002,
-            -0.834,
-            -0.831,
-            0.84,
-            0.696,
-            -0.841,
-            0.548,
-            -0.073,
-            1.0,
-            -0.858
+            -0.877,
+            -0.085,
+            0.518,
+            0.715,
+            -0.87
           ],
           [
-            -0.987,
-            -0.852,
+            -0.992,
+            -0.817,
+            0.601,
+            0.992,
+            1.0,
+            -0.997,
+            -0.877,
+            1.0,
+            0.081,
+            -0.526,
+            -0.824,
+            0.995
+          ],
+          [
+            -0.168,
             0.505,
-            0.996,
-            0.996,
-            -0.999,
-            -0.831,
+            0.829,
+            0.049,
+            0.099,
+            -0.056,
+            -0.085,
+            0.081,
+            1.0,
+            -0.786,
+            0.495,
+            0.022
+          ],
+          [
+            0.602,
+            0.004,
+            -0.926,
+            -0.513,
+            -0.535,
+            0.504,
+            0.518,
+            -0.526,
+            -0.786,
+            1.0,
+            0.015,
+            -0.479
+          ],
+          [
+            0.767,
+            1.0,
+            -0.05,
+            -0.837,
+            -0.813,
+            0.836,
+            0.715,
+            -0.824,
+            0.495,
+            0.015,
+            1.0,
+            -0.854
+          ],
+          [
+            -0.986,
+            -0.848,
+            0.551,
             0.997,
-            -0.049,
-            -0.38,
-            -0.858,
+            0.994,
+            -0.999,
+            -0.87,
+            0.995,
+            0.022,
+            -0.479,
+            -0.854,
             1.0
           ]
         ],
@@ -3226,170 +3245,170 @@
         "correlation_matrix": [
           [
             1.0,
-            0.797,
-            -0.103,
-            -0.964,
-            -0.989,
-            0.987,
-            0.854,
+            0.72,
+            -0.178,
+            -0.962,
+            -0.986,
+            0.984,
+            0.866,
+            -0.995,
+            -0.042,
+            0.305,
+            0.773,
+            -0.966
+          ],
+          [
+            0.72,
+            1.0,
+            -0.808,
+            -0.825,
+            -0.813,
+            0.798,
+            0.66,
+            -0.759,
+            -0.721,
+            -0.317,
+            0.997,
+            -0.852
+          ],
+          [
+            -0.178,
+            -0.808,
+            1.0,
+            0.373,
+            0.313,
+            -0.308,
+            -0.184,
+            0.23,
+            0.99,
+            0.703,
+            -0.757,
+            0.399
+          ],
+          [
+            -0.962,
+            -0.825,
+            0.373,
+            1.0,
+            0.962,
             -0.994,
-            0.098,
-            0.361,
-            0.844,
-            -0.977
+            -0.833,
+            0.953,
+            0.245,
+            -0.117,
+            -0.863,
+            0.996
           ],
           [
-            0.797,
+            -0.986,
+            -0.813,
+            0.313,
+            0.962,
             1.0,
-            -0.676,
-            -0.838,
-            -0.858,
-            0.833,
-            0.698,
-            -0.826,
-            -0.518,
-            -0.168,
+            -0.982,
+            -0.877,
             0.996,
-            -0.87
+            0.182,
+            -0.188,
+            -0.857,
+            0.979
           ],
           [
-            -0.103,
-            -0.676,
-            1.0,
-            0.243,
-            0.202,
-            -0.193,
-            -0.077,
-            0.144,
-            0.979,
-            0.704,
-            -0.612,
-            0.264
-          ],
-          [
-            -0.964,
-            -0.838,
-            0.243,
-            1.0,
-            0.947,
-            -0.993,
-            -0.809,
-            0.943,
-            0.049,
-            -0.229,
-            -0.871,
-            0.994
-          ],
-          [
-            -0.989,
-            -0.858,
-            0.202,
-            0.947,
-            1.0,
-            -0.975,
-            -0.868,
-            0.998,
-            0.006,
-            -0.272,
-            -0.898,
-            0.973
-          ],
-          [
-            0.987,
-            0.833,
-            -0.193,
-            -0.993,
-            -0.975,
-            1.0,
-            0.853,
-            -0.973,
-            0.003,
-            0.265,
-            0.873,
-            -0.997
-          ],
-          [
-            0.854,
-            0.698,
-            -0.077,
-            -0.809,
-            -0.868,
-            0.853,
-            1.0,
-            -0.869,
-            0.072,
-            0.184,
-            0.741,
-            -0.845
-          ],
-          [
+            0.984,
+            0.798,
+            -0.308,
             -0.994,
-            -0.826,
-            0.144,
-            0.943,
-            0.998,
-            -0.973,
-            -0.869,
+            -0.982,
             1.0,
-            -0.054,
-            -0.32,
-            -0.87,
-            0.968
+            0.87,
+            -0.979,
+            -0.177,
+            0.174,
+            0.841,
+            -0.995
           ],
           [
-            0.098,
-            -0.518,
-            0.979,
-            0.049,
-            0.006,
-            0.003,
-            0.072,
-            -0.054,
+            0.866,
+            0.66,
+            -0.184,
+            -0.833,
+            -0.877,
+            0.87,
             1.0,
-            0.787,
-            -0.444,
-            0.07
+            -0.879,
+            -0.082,
+            0.154,
+            0.707,
+            -0.858
           ],
           [
-            0.361,
-            -0.168,
-            0.704,
-            -0.229,
-            -0.272,
-            0.265,
-            0.184,
-            -0.32,
-            0.787,
-            1.0,
-            -0.101,
-            -0.207
-          ],
-          [
-            0.844,
+            -0.995,
+            -0.759,
+            0.23,
+            0.953,
             0.996,
-            -0.612,
-            -0.871,
-            -0.898,
-            0.873,
-            0.741,
-            -0.87,
-            -0.444,
-            -0.101,
+            -0.979,
+            -0.879,
             1.0,
-            -0.904
+            0.096,
+            -0.259,
+            -0.809,
+            0.967
           ],
           [
-            -0.977,
-            -0.87,
-            0.264,
-            0.994,
-            0.973,
-            -0.997,
-            -0.845,
-            0.968,
-            0.07,
-            -0.207,
-            -0.904,
+            -0.042,
+            -0.721,
+            0.99,
+            0.245,
+            0.182,
+            -0.177,
+            -0.082,
+            0.096,
+            1.0,
+            0.761,
+            -0.662,
+            0.272
+          ],
+          [
+            0.305,
+            -0.317,
+            0.703,
+            -0.117,
+            -0.188,
+            0.174,
+            0.154,
+            -0.259,
+            0.761,
+            1.0,
+            -0.255,
+            -0.094
+          ],
+          [
+            0.773,
+            0.997,
+            -0.757,
+            -0.863,
+            -0.857,
+            0.841,
+            0.707,
+            -0.809,
+            -0.662,
+            -0.255,
+            1.0,
+            -0.889
+          ],
+          [
+            -0.966,
+            -0.852,
+            0.399,
+            0.996,
+            0.979,
+            -0.995,
+            -0.858,
+            0.967,
+            0.272,
+            -0.094,
+            -0.889,
             1.0
           ]
         ],
@@ -3416,170 +3435,170 @@
         "correlation_matrix": [
           [
             1.0,
-            0.964,
-            -0.816,
-            -0.952,
-            0.421,
-            0.963,
-            0.0,
-            -0.963,
-            0.736,
-            0.916,
-            -0.575,
-            -0.962
+            0.968,
+            -0.759,
+            -0.965,
+            0.321,
+            0.972,
+            0.449,
+            -0.973,
+            0.556,
+            0.878,
+            -0.73,
+            -0.97
           ],
           [
-            0.964,
+            0.968,
             1.0,
-            -0.866,
-            -0.992,
-            0.19,
-            0.998,
-            0.0,
-            -1.0,
-            0.716,
-            0.93,
-            -0.566,
+            -0.713,
+            -0.991,
+            0.138,
+            0.997,
+            0.354,
+            -0.997,
+            0.465,
+            0.838,
+            -0.697,
             -0.998
           ],
           [
-            -0.816,
-            -0.866,
+            -0.759,
+            -0.713,
             1.0,
-            0.915,
-            0.096,
-            -0.865,
-            0.0,
-            0.874,
-            -0.889,
-            -0.934,
-            0.857,
-            0.878
+            0.779,
+            0.088,
+            -0.75,
+            -0.873,
+            0.768,
+            -0.933,
+            -0.964,
+            0.837,
+            0.74
           ],
           [
-            -0.952,
-            -0.992,
-            0.915,
+            -0.965,
+            -0.991,
+            0.779,
             1.0,
-            -0.127,
-            -0.994,
-            0.0,
-            0.993,
-            -0.766,
-            -0.95,
-            0.64,
+            -0.074,
+            -0.995,
+            -0.422,
+            0.995,
+            -0.536,
+            -0.884,
+            0.77,
             0.996
           ],
           [
-            0.421,
-            0.19,
-            0.096,
-            -0.127,
+            0.321,
+            0.138,
+            0.088,
+            -0.074,
             1.0,
-            0.188,
-            0.0,
-            -0.182,
-            0.063,
-            0.135,
-            0.095,
-            -0.175
+            0.13,
+            -0.045,
+            -0.122,
+            -0.037,
+            0.035,
+            0.105,
+            -0.121
           ],
           [
-            0.963,
-            0.998,
-            -0.865,
-            -0.994,
-            0.188,
+            0.972,
+            0.997,
+            -0.75,
+            -0.995,
+            0.13,
             1.0,
-            0.0,
+            0.407,
             -0.998,
-            0.713,
-            0.928,
-            -0.564,
-            -1.0
+            0.515,
+            0.865,
+            -0.714,
+            -0.999
           ],
           [
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
+            0.449,
+            0.354,
+            -0.873,
+            -0.422,
+            -0.045,
+            0.407,
             1.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0
+            -0.429,
+            0.987,
+            0.763,
+            -0.543,
+            -0.385
           ],
           [
-            -0.963,
-            -1.0,
-            0.874,
-            0.993,
-            -0.182,
+            -0.973,
+            -0.997,
+            0.768,
+            0.995,
+            -0.122,
             -0.998,
-            0.0,
+            -0.429,
             1.0,
-            -0.724,
-            -0.933,
-            0.577,
+            -0.537,
+            -0.878,
+            0.728,
             0.998
           ],
           [
-            0.736,
-            0.716,
-            -0.889,
-            -0.766,
-            0.063,
-            0.713,
-            0.0,
-            -0.724,
-            1.0,
-            0.873,
-            -0.962,
-            -0.727
-          ],
-          [
-            0.916,
-            0.93,
-            -0.934,
-            -0.95,
-            0.135,
-            0.928,
-            0.0,
+            0.556,
+            0.465,
             -0.933,
-            0.873,
+            -0.536,
+            -0.037,
+            0.515,
+            0.987,
+            -0.537,
             1.0,
-            -0.77,
-            -0.934
+            0.847,
+            -0.668,
+            -0.496
           ],
           [
-            -0.575,
-            -0.566,
-            0.857,
-            0.64,
-            0.095,
-            -0.564,
-            0.0,
-            0.577,
-            -0.962,
-            -0.77,
-            1.0,
-            0.583
-          ],
-          [
-            -0.962,
-            -0.998,
             0.878,
+            0.838,
+            -0.964,
+            -0.884,
+            0.035,
+            0.865,
+            0.763,
+            -0.878,
+            0.847,
+            1.0,
+            -0.86,
+            -0.858
+          ],
+          [
+            -0.73,
+            -0.697,
+            0.837,
+            0.77,
+            0.105,
+            -0.714,
+            -0.543,
+            0.728,
+            -0.668,
+            -0.86,
+            1.0,
+            0.72
+          ],
+          [
+            -0.97,
+            -0.998,
+            0.74,
             0.996,
-            -0.175,
-            -1.0,
-            0.0,
+            -0.121,
+            -0.999,
+            -0.385,
             0.998,
-            -0.727,
-            -0.934,
-            0.583,
+            -0.496,
+            -0.858,
+            0.72,
             1.0
           ]
         ],
@@ -3602,174 +3621,174 @@
           "Renaissance Medallion",
           "Sovereign Wealth"
         ],
-        "covariance_share": 0.0,
+        "covariance_share": 0.1981,
         "correlation_matrix": [
           [
             1.0,
-            0.77,
-            0.097,
+            0.912,
+            1.0,
+            -0.996,
+            -0.955,
+            0.981,
+            1.0,
+            -0.977,
+            0.978,
+            0.994,
+            0.912,
+            -1.0
+          ],
+          [
+            0.912,
+            1.0,
+            0.911,
+            -0.936,
+            -0.974,
+            0.959,
+            0.909,
+            -0.964,
+            0.857,
+            0.906,
+            1.0,
+            -0.917
+          ],
+          [
+            1.0,
+            0.911,
+            1.0,
+            -0.996,
+            -0.955,
+            0.981,
+            1.0,
+            -0.977,
+            0.979,
+            0.994,
+            0.911,
+            -1.0
+          ],
+          [
+            -0.996,
+            -0.936,
+            -0.996,
+            1.0,
+            0.976,
+            -0.994,
             -0.997,
-            -0.987,
-            0.997,
-            0.218,
-            -0.992,
-            0.235,
-            0.318,
-            0.773,
-            -0.992
+            0.991,
+            -0.978,
+            -0.994,
+            -0.937,
+            0.998
           ],
           [
-            0.77,
+            -0.955,
+            -0.974,
+            -0.955,
+            0.976,
             1.0,
-            -0.547,
-            -0.799,
-            -0.834,
-            0.795,
-            -0.45,
-            -0.83,
-            -0.432,
-            -0.133,
-            1.0,
-            -0.836
+            -0.994,
+            -0.955,
+            0.995,
+            -0.941,
+            -0.96,
+            -0.974,
+            0.959
           ],
           [
-            0.097,
-            -0.547,
+            0.981,
+            0.959,
+            0.981,
+            -0.994,
+            -0.994,
             1.0,
-            -0.047,
-            0.03,
-            0.062,
+            0.981,
+            -1.0,
+            0.967,
+            0.983,
+            0.959,
+            -0.983
+          ],
+          [
+            1.0,
+            0.909,
+            1.0,
+            -0.997,
+            -0.955,
+            0.981,
+            1.0,
+            -0.977,
+            0.981,
+            0.995,
+            0.909,
+            -1.0
+          ],
+          [
+            -0.977,
+            -0.964,
+            -0.977,
+            0.991,
+            0.995,
+            -1.0,
+            -0.977,
+            1.0,
+            -0.962,
+            -0.98,
+            -0.964,
+            0.98
+          ],
+          [
+            0.978,
+            0.857,
+            0.979,
+            -0.978,
+            -0.941,
+            0.967,
+            0.981,
+            -0.962,
+            1.0,
             0.988,
-            -0.009,
-            0.985,
-            0.666,
-            -0.544,
-            0.008
+            0.857,
+            -0.979
           ],
           [
-            -0.997,
-            -0.799,
-            -0.047,
-            1.0,
-            0.987,
-            -0.999,
-            -0.166,
-            0.992,
-            -0.183,
-            -0.273,
-            -0.801,
-            0.997
-          ],
-          [
-            -0.987,
-            -0.834,
-            0.03,
-            0.987,
-            1.0,
-            -0.984,
-            -0.099,
-            0.989,
-            -0.117,
-            -0.23,
-            -0.836,
-            0.987
-          ],
-          [
-            0.997,
-            0.795,
-            0.062,
-            -0.999,
-            -0.984,
-            1.0,
-            0.178,
-            -0.995,
-            0.195,
-            0.291,
-            0.797,
-            -0.997
-          ],
-          [
-            0.218,
-            -0.45,
+            0.994,
+            0.906,
+            0.994,
+            -0.994,
+            -0.96,
+            0.983,
+            0.995,
+            -0.98,
             0.988,
-            -0.166,
-            -0.099,
-            0.178,
             1.0,
-            -0.125,
-            0.999,
-            0.684,
-            -0.447,
-            -0.107
+            0.907,
+            -0.995
           ],
           [
-            -0.992,
-            -0.83,
-            -0.009,
-            0.992,
-            0.989,
+            0.912,
+            1.0,
+            0.911,
+            -0.937,
+            -0.974,
+            0.959,
+            0.909,
+            -0.964,
+            0.857,
+            0.907,
+            1.0,
+            -0.917
+          ],
+          [
+            -1.0,
+            -0.917,
+            -1.0,
+            0.998,
+            0.959,
+            -0.983,
+            -1.0,
+            0.98,
+            -0.979,
             -0.995,
-            -0.125,
-            1.0,
-            -0.144,
-            -0.279,
-            -0.832,
-            0.996
-          ],
-          [
-            0.235,
-            -0.432,
-            0.985,
-            -0.183,
-            -0.117,
-            0.195,
-            0.999,
-            -0.144,
-            1.0,
-            0.707,
-            -0.429,
-            -0.125
-          ],
-          [
-            0.318,
-            -0.133,
-            0.666,
-            -0.273,
-            -0.23,
-            0.291,
-            0.684,
-            -0.279,
-            0.707,
-            1.0,
-            -0.13,
-            -0.245
-          ],
-          [
-            0.773,
-            1.0,
-            -0.544,
-            -0.801,
-            -0.836,
-            0.797,
-            -0.447,
-            -0.832,
-            -0.429,
-            -0.13,
-            1.0,
-            -0.838
-          ],
-          [
-            -0.992,
-            -0.836,
-            0.008,
-            0.997,
-            0.987,
-            -0.997,
-            -0.107,
-            0.996,
-            -0.125,
-            -0.245,
-            -0.838,
+            -0.917,
             1.0
           ]
         ],
@@ -3796,170 +3815,170 @@
         "correlation_matrix": [
           [
             1.0,
-            0.891,
-            -0.606,
-            -0.988,
+            0.987,
+            1.0,
+            -0.943,
+            -0.783,
+            0.803,
+            -0.947,
+            -0.89,
+            0.996,
+            0.998,
+            0.579,
+            -0.999
+          ],
+          [
+            0.987,
+            1.0,
+            0.987,
+            -0.978,
+            -0.864,
+            0.878,
+            -0.894,
+            -0.946,
+            0.995,
+            0.992,
+            0.69,
+            -0.993
+          ],
+          [
+            1.0,
+            0.987,
+            1.0,
+            -0.943,
+            -0.782,
+            0.802,
+            -0.947,
+            -0.889,
+            0.996,
+            0.998,
+            0.577,
+            -0.999
+          ],
+          [
+            -0.943,
+            -0.978,
+            -0.943,
+            1.0,
+            0.942,
+            -0.955,
+            0.792,
+            0.988,
+            -0.966,
+            -0.959,
+            -0.803,
+            0.958
+          ],
+          [
+            -0.783,
+            -0.864,
+            -0.782,
+            0.942,
+            1.0,
             -0.993,
-            0.99,
-            0.925,
-            -0.994,
-            0.918,
-            0.755,
-            0.966,
-            -0.99
+            0.55,
+            0.98,
+            -0.831,
+            -0.816,
+            -0.949,
+            0.812
           ],
           [
-            0.891,
-            1.0,
-            -0.888,
-            -0.826,
-            -0.876,
-            0.859,
-            0.699,
-            -0.893,
-            0.789,
-            0.569,
-            0.854,
-            -0.856
-          ],
-          [
-            -0.606,
-            -0.888,
-            1.0,
-            0.506,
-            0.57,
-            -0.553,
-            -0.366,
-            0.601,
-            -0.534,
-            -0.301,
-            -0.599,
-            0.548
-          ],
-          [
-            -0.988,
-            -0.826,
-            0.506,
-            1.0,
-            0.976,
-            -0.997,
-            -0.924,
-            0.973,
-            -0.886,
-            -0.727,
-            -0.937,
-            0.997
-          ],
-          [
+            0.803,
+            0.878,
+            0.802,
+            -0.955,
             -0.993,
-            -0.876,
-            0.57,
-            0.976,
             1.0,
-            -0.975,
-            -0.939,
-            0.999,
-            -0.929,
-            -0.789,
-            -0.969,
-            0.976
-          ],
-          [
-            0.99,
-            0.859,
-            -0.553,
-            -0.997,
-            -0.975,
-            1.0,
-            0.896,
-            -0.974,
-            0.868,
-            0.693,
-            0.927,
-            -1.0
-          ],
-          [
+            -0.583,
+            -0.982,
+            0.846,
+            0.831,
             0.925,
-            0.699,
-            -0.366,
+            -0.831
+          ],
+          [
+            -0.947,
+            -0.894,
+            -0.947,
+            0.792,
+            0.55,
+            -0.583,
+            1.0,
+            0.703,
+            -0.917,
+            -0.925,
+            -0.295,
+            0.931
+          ],
+          [
+            -0.89,
+            -0.946,
+            -0.889,
+            0.988,
+            0.98,
+            -0.982,
+            0.703,
+            1.0,
             -0.924,
-            -0.939,
-            0.896,
-            1.0,
-            -0.93,
-            0.956,
-            0.89,
-            0.963,
-            -0.899
+            -0.913,
+            -0.879,
+            0.911
           ],
           [
-            -0.994,
-            -0.893,
-            0.601,
-            0.973,
+            0.996,
+            0.995,
+            0.996,
+            -0.966,
+            -0.831,
+            0.846,
+            -0.917,
+            -0.924,
+            1.0,
             0.999,
-            -0.974,
-            -0.93,
-            1.0,
-            -0.929,
-            -0.781,
-            -0.97,
-            0.975
+            0.645,
+            -0.999
           ],
           [
-            0.918,
-            0.789,
-            -0.534,
-            -0.886,
-            -0.929,
-            0.868,
-            0.956,
-            -0.929,
+            0.998,
+            0.992,
+            0.998,
+            -0.959,
+            -0.816,
+            0.831,
+            -0.925,
+            -0.913,
+            0.999,
             1.0,
-            0.936,
-            0.974,
-            -0.87
+            0.625,
+            -0.999
           ],
           [
-            0.755,
-            0.569,
-            -0.301,
-            -0.727,
-            -0.789,
-            0.693,
-            0.89,
-            -0.781,
-            0.936,
+            0.579,
+            0.69,
+            0.577,
+            -0.803,
+            -0.949,
+            0.925,
+            -0.295,
+            -0.879,
+            0.645,
+            0.625,
             1.0,
-            0.85,
-            -0.697
+            -0.616
           ],
           [
-            0.966,
-            0.854,
-            -0.599,
-            -0.937,
-            -0.969,
-            0.927,
-            0.963,
-            -0.97,
-            0.974,
-            0.85,
-            1.0,
-            -0.928
-          ],
-          [
-            -0.99,
-            -0.856,
-            0.548,
-            0.997,
-            0.976,
-            -1.0,
-            -0.899,
-            0.975,
-            -0.87,
-            -0.697,
-            -0.928,
+            -0.999,
+            -0.993,
+            -0.999,
+            0.958,
+            0.812,
+            -0.831,
+            0.931,
+            0.911,
+            -0.999,
+            -0.999,
+            -0.616,
             1.0
           ]
         ],
@@ -3968,8 +3987,8 @@
     },
     "flags": [],
     "council": {
-      "mean_covariance_share": 0.0,
-      "max_covariance_share": 0.0,
+      "mean_covariance_share": 0.0152,
+      "max_covariance_share": 0.1981,
       "symbols_measured": 13
     },
     "book": {
@@ -3979,7 +3998,7 @@
       "avg_pairwise_corr": null,
       "names": []
     },
-    "cycle": 5485
+    "cycle": 5488
   },
   "risk_attribution": {
     "status": "invalid",
@@ -4031,10 +4050,10 @@
   "council": [
     {
       "symbol": "BTC/USD",
-      "price": 74681.18,
-      "conviction": 0.497,
+      "price": 74777.13,
+      "conviction": 0.468,
       "direction": "flat",
-      "composite": -0.005,
+      "composite": -0.064,
       "risk_multiplier": 0.439,
       "agents": [
         {
@@ -4042,12 +4061,12 @@
           "persona": "Trend/Systematic",
           "score": -0.986,
           "confidence": 1.0,
-          "rationale": "MACD=-367.97, 20-50 slope=-0.041, Q-mom=-5.5%"
+          "rationale": "MACD=-363.51, 20-50 slope=-0.041, Q-mom=-5.4%"
         },
         {
           "name": "Two Sigma Backtest",
           "persona": "Statistical expectancy",
-          "score": 0.043,
+          "score": 0.045,
           "confidence": 0.422,
           "rationale": "ann.Sharpe=+0.09, win-rate=50%"
         },
@@ -4061,21 +4080,21 @@
         {
           "name": "Renaissance Patterns",
           "persona": "Mean-reversion",
-          "score": 0.728,
-          "confidence": 0.608,
-          "rationale": "z(20)=-1.54 (mean-revert), autocorr=+0.07"
+          "score": 0.719,
+          "confidence": 0.602,
+          "rationale": "z(20)=-1.51 (mean-revert), autocorr=+0.07"
         },
         {
           "name": "Goldman Technical",
           "persona": "Technical analysis",
-          "score": 0.252,
+          "score": 0.244,
           "confidence": 0.5,
-          "rationale": "RSI=35, MACD-hist=-367.97"
+          "rationale": "RSI=35, MACD-hist=-363.51"
         },
         {
           "name": "JPMorgan Fundamental",
           "persona": "Valuation proxy",
-          "score": 0.11,
+          "score": 0.112,
           "confidence": 0.45,
           "rationale": "px/200d=1.02, drawdown-from-1y-high=-14% (proxy)"
         },
@@ -4089,23 +4108,23 @@
         {
           "name": "AQR Factor",
           "persona": "Multi-factor",
-          "score": -0.006,
+          "score": -0.008,
           "confidence": 0.55,
-          "rationale": "mom(12-1)=+8.7%, value=+5.5%, quality=-0.32"
+          "rationale": "mom(12-1)=+8.6%, value=+5.4%, quality=-0.32"
         },
         {
           "name": "Citadel Securities MM",
           "persona": "Order-flow microstructure",
-          "score": 0.133,
+          "score": 0.134,
           "confidence": 0.539,
           "rationale": "VPIN order-flow toxicity=0.15 (1=max adverse selection)"
         },
         {
           "name": "Millennium Pod",
           "persona": "Residual alpha / beta-neutral",
-          "score": 0.0,
+          "score": -0.0,
           "confidence": 0.5,
-          "rationale": "ann.alpha=+0.0%, beta=+1.00, beta-neutrality=0.50"
+          "rationale": "ann.alpha=-0.0%, beta=+1.00, beta-neutrality=0.50"
         },
         {
           "name": "Renaissance Medallion",
@@ -4117,7 +4136,7 @@
         {
           "name": "Sovereign Wealth",
           "persona": "Secular macro / SAA",
-          "score": 0.174,
+          "score": 0.173,
           "confidence": 0.4,
           "rationale": "secular trend=+2%, structural drawdown=-14% (accumulate dips)"
         }
@@ -4125,10 +4144,10 @@
     },
     {
       "symbol": "ETH/USD",
-      "price": 2125.9,
-      "conviction": 0.5,
-      "direction": "long",
-      "composite": 0.0,
+      "price": 2127.91,
+      "conviction": 0.467,
+      "direction": "flat",
+      "composite": -0.065,
       "risk_multiplier": 0.318,
       "agents": [
         {
@@ -4136,13 +4155,13 @@
           "persona": "Trend/Systematic",
           "score": -1.0,
           "confidence": 1.0,
-          "rationale": "MACD=-9.56, 20-50 slope=-0.083, Q-mom=-14.5%"
+          "rationale": "MACD=-9.45, 20-50 slope=-0.083, Q-mom=-14.4%"
         },
         {
           "name": "Two Sigma Backtest",
           "persona": "Statistical expectancy",
-          "score": 0.0,
-          "confidence": 0.4,
+          "score": 0.001,
+          "confidence": 0.401,
           "rationale": "ann.Sharpe=+0.00, win-rate=52%"
         },
         {
@@ -4155,21 +4174,21 @@
         {
           "name": "Renaissance Patterns",
           "persona": "Mean-reversion",
-          "score": 0.819,
-          "confidence": 0.684,
-          "rationale": "z(20)=-1.92 (mean-revert), autocorr=+0.02"
+          "score": 0.815,
+          "confidence": 0.681,
+          "rationale": "z(20)=-1.90 (mean-revert), autocorr=+0.02"
         },
         {
           "name": "Goldman Technical",
           "persona": "Technical analysis",
-          "score": 0.216,
+          "score": 0.211,
           "confidence": 0.5,
-          "rationale": "RSI=36, MACD-hist=-9.56"
+          "rationale": "RSI=36, MACD-hist=-9.45"
         },
         {
           "name": "JPMorgan Fundamental",
           "persona": "Valuation proxy",
-          "score": 0.091,
+          "score": 0.092,
           "confidence": 0.45,
           "rationale": "px/200d=0.99, drawdown-from-1y-high=-23% (proxy)"
         },
@@ -4183,9 +4202,9 @@
         {
           "name": "AQR Factor",
           "persona": "Multi-factor",
-          "score": 0.028,
+          "score": 0.027,
           "confidence": 0.55,
-          "rationale": "mom(12-1)=+11.6%, value=+14.5%, quality=-0.44"
+          "rationale": "mom(12-1)=+11.5%, value=+14.4%, quality=-0.44"
         },
         {
           "name": "Citadel Securities MM",
@@ -4197,8 +4216,8 @@
         {
           "name": "Millennium Pod",
           "persona": "Residual alpha / beta-neutral",
-          "score": -0.135,
-          "confidence": 0.602,
+          "score": -0.137,
+          "confidence": 0.603,
           "rationale": "ann.alpha=-3.4%, beta=+1.25, beta-neutrality=0.38"
         },
         {
@@ -4206,12 +4225,12 @@
           "persona": "Regime / cointegration",
           "score": 0.0,
           "confidence": 0.8,
-          "rationale": "state=calm (p_stay=0.89), coint-z=-1.02"
+          "rationale": "state=calm (p_stay=0.89), coint-z=-1.03"
         },
         {
           "name": "Sovereign Wealth",
           "persona": "Secular macro / SAA",
-          "score": 0.268,
+          "score": 0.267,
           "confidence": 0.4,
           "rationale": "secular trend=-1%, structural drawdown=-23% (accumulate dips)"
         }
@@ -4219,10 +4238,10 @@
     },
     {
       "symbol": "SOL/USD",
-      "price": 86.69,
-      "conviction": 0.499,
+      "price": 86.59,
+      "conviction": 0.464,
       "direction": "flat",
-      "composite": -0.003,
+      "composite": -0.071,
       "risk_multiplier": 0.308,
       "agents": [
         {
@@ -4230,13 +4249,13 @@
           "persona": "Trend/Systematic",
           "score": -1.0,
           "confidence": 1.0,
-          "rationale": "MACD=-0.68, 20-50 slope=-0.121, Q-mom=-16.3%"
+          "rationale": "MACD=-0.69, 20-50 slope=-0.121, Q-mom=-16.5%"
         },
         {
           "name": "Two Sigma Backtest",
           "persona": "Statistical expectancy",
-          "score": -0.053,
-          "confidence": 0.427,
+          "score": -0.055,
+          "confidence": 0.428,
           "rationale": "ann.Sharpe=-0.11, win-rate=50%"
         },
         {
@@ -4249,21 +4268,21 @@
         {
           "name": "Renaissance Patterns",
           "persona": "Mean-reversion",
-          "score": 0.747,
-          "confidence": 0.622,
-          "rationale": "z(20)=-1.61 (mean-revert), autocorr=+0.04"
+          "score": 0.75,
+          "confidence": 0.624,
+          "rationale": "z(20)=-1.62 (mean-revert), autocorr=+0.04"
         },
         {
           "name": "Goldman Technical",
           "persona": "Technical analysis",
-          "score": 0.512,
+          "score": 0.523,
           "confidence": 0.5,
-          "rationale": "RSI=26, MACD-hist=-0.68"
+          "rationale": "RSI=25, MACD-hist=-0.69"
         },
         {
           "name": "JPMorgan Fundamental",
           "persona": "Valuation proxy",
-          "score": 0.093,
+          "score": 0.091,
           "confidence": 0.45,
           "rationale": "px/200d=0.97, drawdown-from-1y-high=-29% (proxy)"
         },
@@ -4277,30 +4296,30 @@
         {
           "name": "AQR Factor",
           "persona": "Multi-factor",
-          "score": 0.089,
+          "score": 0.092,
           "confidence": 0.55,
-          "rationale": "mom(12-1)=+17.3%, value=+16.3%, quality=-0.45"
+          "rationale": "mom(12-1)=+17.4%, value=+16.5%, quality=-0.45"
         },
         {
           "name": "Citadel Securities MM",
           "persona": "Order-flow microstructure",
           "score": 0.137,
-          "confidence": 0.543,
+          "confidence": 0.542,
           "rationale": "VPIN order-flow toxicity=0.14 (1=max adverse selection)"
         },
         {
           "name": "Millennium Pod",
           "persona": "Residual alpha / beta-neutral",
-          "score": -0.315,
-          "confidence": 0.744,
-          "rationale": "ann.alpha=-8.1%, beta=+1.22, beta-neutrality=0.39"
+          "score": -0.326,
+          "confidence": 0.754,
+          "rationale": "ann.alpha=-8.5%, beta=+1.22, beta-neutrality=0.39"
         },
         {
           "name": "Renaissance Medallion",
           "persona": "Regime / cointegration",
-          "score": -0.011,
+          "score": -0.012,
           "confidence": 0.8,
-          "rationale": "state=calm (p_stay=0.74), coint-z=-0.76"
+          "rationale": "state=calm (p_stay=0.74), coint-z=-0.80"
         },
         {
           "name": "Sovereign Wealth",
@@ -4313,10 +4332,10 @@
     },
     {
       "symbol": "LTC/USD",
-      "price": 51.53,
-      "conviction": 0.485,
+      "price": 51.5,
+      "conviction": 0.452,
       "direction": "flat",
-      "composite": -0.03,
+      "composite": -0.097,
       "risk_multiplier": 0.346,
       "agents": [
         {
@@ -4324,13 +4343,13 @@
           "persona": "Trend/Systematic",
           "score": -1.0,
           "confidence": 1.0,
-          "rationale": "MACD=-0.33, 20-50 slope=-0.115, Q-mom=-6.5%"
+          "rationale": "MACD=-0.34, 20-50 slope=-0.115, Q-mom=-6.7%"
         },
         {
           "name": "Two Sigma Backtest",
           "persona": "Statistical expectancy",
-          "score": -0.118,
-          "confidence": 0.459,
+          "score": -0.12,
+          "confidence": 0.46,
           "rationale": "ann.Sharpe=-0.24, win-rate=52%"
         },
         {
@@ -4343,21 +4362,21 @@
         {
           "name": "Renaissance Patterns",
           "persona": "Mean-reversion",
-          "score": 0.681,
-          "confidence": 0.577,
+          "score": 0.683,
+          "confidence": 0.578,
           "rationale": "z(20)=-1.39 (mean-revert), autocorr=+0.02"
         },
         {
           "name": "Goldman Technical",
           "persona": "Technical analysis",
-          "score": 0.128,
+          "score": 0.136,
           "confidence": 0.5,
-          "rationale": "RSI=39, MACD-hist=-0.33"
+          "rationale": "RSI=38, MACD-hist=-0.34"
         },
         {
           "name": "JPMorgan Fundamental",
           "persona": "Valuation proxy",
-          "score": 0.124,
+          "score": 0.123,
           "confidence": 0.45,
           "rationale": "px/200d=0.99, drawdown-from-1y-high=-29% (proxy)"
         },
@@ -4371,9 +4390,9 @@
         {
           "name": "AQR Factor",
           "persona": "Multi-factor",
-          "score": 0.012,
+          "score": 0.014,
           "confidence": 0.55,
-          "rationale": "mom(12-1)=+13.5%, value=+6.5%, quality=-0.41"
+          "rationale": "mom(12-1)=+13.7%, value=+6.7%, quality=-0.41"
         },
         {
           "name": "Citadel Securities MM",
@@ -4385,16 +4404,16 @@
         {
           "name": "Millennium Pod",
           "persona": "Residual alpha / beta-neutral",
-          "score": -0.45,
-          "confidence": 0.863,
-          "rationale": "ann.alpha=-12.1%, beta=+0.91, beta-neutrality=0.55"
+          "score": -0.458,
+          "confidence": 0.871,
+          "rationale": "ann.alpha=-12.4%, beta=+0.91, beta-neutrality=0.55"
         },
         {
           "name": "Renaissance Medallion",
           "persona": "Regime / cointegration",
           "score": -0.023,
           "confidence": 0.8,
-          "rationale": "state=calm (p_stay=0.95), coint-z=-0.76"
+          "rationale": "state=calm (p_stay=0.95), coint-z=-0.80"
         },
         {
           "name": "Sovereign Wealth",
@@ -4408,426 +4427,426 @@
     {
       "symbol": "XRP/USD",
       "price": 1.09,
-      "conviction": 0.48,
-      "direction": "flat",
-      "composite": -0.04,
-      "risk_multiplier": 0.308,
+      "conviction": 0.513,
+      "direction": "long",
+      "composite": 0.026,
+      "risk_multiplier": 1.0,
       "agents": [
         {
           "name": "Citadel Systematic",
           "persona": "Trend/Systematic",
-          "score": -1.0,
-          "confidence": 1.0,
-          "rationale": "MACD=-0.01, 20-50 slope=-0.101, Q-mom=-22.0%"
+          "score": 0.0,
+          "confidence": 0.3,
+          "rationale": "MACD=0.00, 20-50 slope=+0.000, Q-mom=+0.0%"
         },
         {
           "name": "Two Sigma Backtest",
           "persona": "Statistical expectancy",
-          "score": -0.279,
-          "confidence": 0.539,
-          "rationale": "ann.Sharpe=-0.57, win-rate=45%"
+          "score": 0.0,
+          "confidence": 0.2,
+          "rationale": "insufficient history"
         },
         {
           "name": "Bridgewater Risk",
           "persona": "Risk parity / vol-target",
-          "score": -0.268,
+          "score": 0.146,
           "confidence": 0.6,
-          "rationale": "ann.vol=45% vs target 15%, risk_scale=0.33"
+          "rationale": "ann.vol=0% vs target 15%, risk_scale=1.00"
         },
         {
           "name": "Renaissance Patterns",
           "persona": "Mean-reversion",
-          "score": 0.883,
-          "confidence": 0.763,
-          "rationale": "z(20)=-2.31 (mean-revert), autocorr=+0.15"
+          "score": 0.0,
+          "confidence": 0.2,
+          "rationale": "insufficient history"
         },
         {
           "name": "Goldman Technical",
           "persona": "Technical analysis",
-          "score": 0.552,
+          "score": 0.0,
           "confidence": 0.5,
-          "rationale": "RSI=24, MACD-hist=-0.01"
+          "rationale": "RSI=50, MACD-hist=+0.00"
         },
         {
           "name": "JPMorgan Fundamental",
           "persona": "Valuation proxy",
-          "score": -0.125,
+          "score": 0.0,
           "confidence": 0.45,
-          "rationale": "px/200d=0.86, drawdown-from-1y-high=-31% (proxy)"
+          "rationale": "px/200d=1.00, drawdown-from-1y-high=+0% (proxy)"
         },
         {
           "name": "D.E. Shaw Options",
           "persona": "Vol surface / premium",
-          "score": 0.216,
-          "confidence": 0.76,
-          "rationale": "vol=45%, IV-rank=87% \u2192 premium-sell favorability 87%"
+          "score": 0.0,
+          "confidence": 0.65,
+          "rationale": "vol=25%, IV-rank=50% \u2192 premium-sell favorability 50%"
         },
         {
           "name": "AQR Factor",
           "persona": "Multi-factor",
-          "score": 0.115,
+          "score": -0.1,
           "confidence": 0.55,
-          "rationale": "mom(12-1)=+16.4%, value=+22.0%, quality=-0.45"
+          "rationale": "mom(12-1)=+0.0%, value=-0.0%, quality=-0.25"
         },
         {
           "name": "Citadel Securities MM",
           "persona": "Order-flow microstructure",
-          "score": 0.134,
-          "confidence": 0.54,
-          "rationale": "VPIN order-flow toxicity=0.15 (1=max adverse selection)"
+          "score": 0.185,
+          "confidence": 0.6,
+          "rationale": "VPIN order-flow toxicity=0.00 (1=max adverse selection)"
         },
         {
           "name": "Millennium Pod",
           "persona": "Residual alpha / beta-neutral",
-          "score": -0.859,
-          "confidence": 0.9,
-          "rationale": "ann.alpha=-32.2%, beta=+1.21, beta-neutrality=0.39"
+          "score": 0.0,
+          "confidence": 0.5,
+          "rationale": "ann.alpha=+0.0%, beta=+1.00, beta-neutrality=0.50"
         },
         {
           "name": "Renaissance Medallion",
           "persona": "Regime / cointegration",
-          "score": -0.061,
+          "score": 0.0,
           "confidence": 0.8,
-          "rationale": "state=calm (p_stay=0.93), coint-z=-2.68"
+          "rationale": "state=calm (p_stay=0.50), coint-z=+0.00"
         },
         {
           "name": "Sovereign Wealth",
           "persona": "Secular macro / SAA",
-          "score": 0.29,
+          "score": 0.0,
           "confidence": 0.4,
-          "rationale": "secular trend=-14%, structural drawdown=-31% (accumulate dips)"
+          "rationale": "secular trend=+0%, structural drawdown=+0% (accumulate dips)"
         }
       ]
     },
     {
       "symbol": "DOGE/USD",
       "price": 0.07,
-      "conviction": 0.448,
-      "direction": "flat",
-      "composite": -0.104,
-      "risk_multiplier": 0.307,
+      "conviction": 0.513,
+      "direction": "long",
+      "composite": 0.026,
+      "risk_multiplier": 1.0,
       "agents": [
         {
           "name": "Citadel Systematic",
           "persona": "Trend/Systematic",
-          "score": -1.0,
-          "confidence": 1.0,
-          "rationale": "MACD=-0.00, 20-50 slope=-0.120, Q-mom=-22.7%"
+          "score": 0.0,
+          "confidence": 0.3,
+          "rationale": "MACD=0.00, 20-50 slope=+0.000, Q-mom=+0.0%"
         },
         {
           "name": "Two Sigma Backtest",
           "persona": "Statistical expectancy",
-          "score": -0.372,
-          "confidence": 0.586,
-          "rationale": "ann.Sharpe=-0.78, win-rate=48%"
+          "score": 0.0,
+          "confidence": 0.2,
+          "rationale": "insufficient history"
         },
         {
           "name": "Bridgewater Risk",
           "persona": "Risk parity / vol-target",
-          "score": -0.271,
+          "score": 0.146,
           "confidence": 0.6,
-          "rationale": "ann.vol=45% vs target 15%, risk_scale=0.33"
+          "rationale": "ann.vol=0% vs target 15%, risk_scale=1.00"
         },
         {
           "name": "Renaissance Patterns",
           "persona": "Mean-reversion",
-          "score": 0.771,
-          "confidence": 0.641,
-          "rationale": "z(20)=-1.71 (mean-revert), autocorr=+0.06"
+          "score": 0.0,
+          "confidence": 0.2,
+          "rationale": "insufficient history"
         },
         {
           "name": "Goldman Technical",
           "persona": "Technical analysis",
-          "score": 0.28,
+          "score": 0.0,
           "confidence": 0.5,
-          "rationale": "RSI=34, MACD-hist=-0.00"
+          "rationale": "RSI=50, MACD-hist=+0.00"
         },
         {
           "name": "JPMorgan Fundamental",
           "persona": "Valuation proxy",
-          "score": -0.163,
+          "score": 0.0,
           "confidence": 0.45,
-          "rationale": "px/200d=0.82, drawdown-from-1y-high=-39% (proxy)"
+          "rationale": "px/200d=1.00, drawdown-from-1y-high=+0% (proxy)"
         },
         {
           "name": "D.E. Shaw Options",
           "persona": "Vol surface / premium",
-          "score": 0.204,
-          "confidence": 0.753,
-          "rationale": "vol=45%, IV-rank=84% \u2192 premium-sell favorability 84%"
+          "score": 0.0,
+          "confidence": 0.65,
+          "rationale": "vol=25%, IV-rank=50% \u2192 premium-sell favorability 50%"
         },
         {
           "name": "AQR Factor",
           "persona": "Multi-factor",
-          "score": 0.076,
+          "score": -0.1,
           "confidence": 0.55,
-          "rationale": "mom(12-1)=+12.2%, value=+22.7%, quality=-0.45"
+          "rationale": "mom(12-1)=+0.0%, value=-0.0%, quality=-0.25"
         },
         {
           "name": "Citadel Securities MM",
           "persona": "Order-flow microstructure",
-          "score": 0.135,
-          "confidence": 0.541,
-          "rationale": "VPIN order-flow toxicity=0.15 (1=max adverse selection)"
+          "score": 0.185,
+          "confidence": 0.6,
+          "rationale": "VPIN order-flow toxicity=0.00 (1=max adverse selection)"
         },
         {
           "name": "Millennium Pod",
           "persona": "Residual alpha / beta-neutral",
-          "score": -0.912,
-          "confidence": 0.9,
-          "rationale": "ann.alpha=-38.5%, beta=+1.14, beta-neutrality=0.43"
+          "score": 0.0,
+          "confidence": 0.5,
+          "rationale": "ann.alpha=+0.0%, beta=+1.00, beta-neutrality=0.50"
         },
         {
           "name": "Renaissance Medallion",
           "persona": "Regime / cointegration",
-          "score": -0.084,
+          "score": 0.0,
           "confidence": 0.8,
-          "rationale": "state=calm (p_stay=0.68), coint-z=-1.85"
+          "rationale": "state=calm (p_stay=0.50), coint-z=+0.00"
         },
         {
           "name": "Sovereign Wealth",
           "persona": "Secular macro / SAA",
-          "score": 0.365,
+          "score": 0.0,
           "confidence": 0.4,
-          "rationale": "secular trend=-18%, structural drawdown=-39% (accumulate dips)"
+          "rationale": "secular trend=+0%, structural drawdown=+0% (accumulate dips)"
         }
       ]
     },
     {
       "symbol": "ADA/USD",
       "price": 0.18,
-      "conviction": 0.442,
-      "direction": "flat",
-      "composite": -0.117,
-      "risk_multiplier": 0.239,
+      "conviction": 0.513,
+      "direction": "long",
+      "composite": 0.026,
+      "risk_multiplier": 1.0,
       "agents": [
         {
           "name": "Citadel Systematic",
           "persona": "Trend/Systematic",
-          "score": -1.0,
-          "confidence": 1.0,
-          "rationale": "MACD=-0.00, 20-50 slope=-0.158, Q-mom=-19.3%"
+          "score": 0.0,
+          "confidence": 0.3,
+          "rationale": "MACD=0.00, 20-50 slope=+0.000, Q-mom=+0.0%"
         },
         {
           "name": "Two Sigma Backtest",
           "persona": "Statistical expectancy",
-          "score": -0.35,
-          "confidence": 0.575,
-          "rationale": "ann.Sharpe=-0.73, win-rate=44%"
+          "score": 0.0,
+          "confidence": 0.2,
+          "rationale": "insufficient history"
         },
         {
           "name": "Bridgewater Risk",
           "persona": "Risk parity / vol-target",
-          "score": -0.345,
+          "score": 0.146,
           "confidence": 0.6,
-          "rationale": "ann.vol=57% vs target 15%, risk_scale=0.26"
+          "rationale": "ann.vol=0% vs target 15%, risk_scale=1.00"
         },
         {
           "name": "Renaissance Patterns",
           "persona": "Mean-reversion",
-          "score": 0.691,
-          "confidence": 0.583,
-          "rationale": "z(20)=-1.42 (mean-revert), autocorr=+0.14"
+          "score": 0.0,
+          "confidence": 0.2,
+          "rationale": "insufficient history"
         },
         {
           "name": "Goldman Technical",
           "persona": "Technical analysis",
-          "score": 0.41,
+          "score": 0.0,
           "confidence": 0.5,
-          "rationale": "RSI=29, MACD-hist=-0.00"
+          "rationale": "RSI=50, MACD-hist=+0.00"
         },
         {
           "name": "JPMorgan Fundamental",
           "persona": "Valuation proxy",
-          "score": -0.084,
+          "score": 0.0,
           "confidence": 0.45,
-          "rationale": "px/200d=0.86, drawdown-from-1y-high=-39% (proxy)"
+          "rationale": "px/200d=1.00, drawdown-from-1y-high=+0% (proxy)"
         },
         {
           "name": "D.E. Shaw Options",
           "persona": "Vol surface / premium",
-          "score": 0.208,
-          "confidence": 0.756,
-          "rationale": "vol=57%, IV-rank=85% \u2192 premium-sell favorability 85%"
+          "score": 0.0,
+          "confidence": 0.65,
+          "rationale": "vol=25%, IV-rank=50% \u2192 premium-sell favorability 50%"
         },
         {
           "name": "AQR Factor",
           "persona": "Multi-factor",
-          "score": 0.07,
+          "score": -0.1,
           "confidence": 0.55,
-          "rationale": "mom(12-1)=+18.4%, value=+19.3%, quality=-0.57"
+          "rationale": "mom(12-1)=+0.0%, value=-0.0%, quality=-0.25"
         },
         {
           "name": "Citadel Securities MM",
           "persona": "Order-flow microstructure",
-          "score": 0.127,
-          "confidence": 0.531,
-          "rationale": "VPIN order-flow toxicity=0.17 (1=max adverse selection)"
+          "score": 0.185,
+          "confidence": 0.6,
+          "rationale": "VPIN order-flow toxicity=0.00 (1=max adverse selection)"
         },
         {
           "name": "Millennium Pod",
           "persona": "Residual alpha / beta-neutral",
-          "score": -0.962,
-          "confidence": 0.9,
-          "rationale": "ann.alpha=-49.4%, beta=+1.41, beta-neutrality=0.30"
+          "score": 0.0,
+          "confidence": 0.5,
+          "rationale": "ann.alpha=+0.0%, beta=+1.00, beta-neutrality=0.50"
         },
         {
           "name": "Renaissance Medallion",
           "persona": "Regime / cointegration",
-          "score": -0.099,
+          "score": 0.0,
           "confidence": 0.8,
-          "rationale": "state=calm (p_stay=0.68), coint-z=-1.53"
+          "rationale": "state=calm (p_stay=0.50), coint-z=+0.00"
         },
         {
           "name": "Sovereign Wealth",
           "persona": "Secular macro / SAA",
-          "score": 0.376,
+          "score": 0.0,
           "confidence": 0.4,
-          "rationale": "secular trend=-14%, structural drawdown=-39% (accumulate dips)"
+          "rationale": "secular trend=+0%, structural drawdown=+0% (accumulate dips)"
         }
       ]
     },
     {
       "symbol": "AVAX/USD",
-      "price": 8.7,
-      "conviction": 0.414,
-      "direction": "flat",
-      "composite": -0.173,
-      "risk_multiplier": 0.249,
+      "price": 8.57,
+      "conviction": 0.513,
+      "direction": "long",
+      "composite": 0.026,
+      "risk_multiplier": 1.0,
       "agents": [
         {
           "name": "Citadel Systematic",
           "persona": "Trend/Systematic",
-          "score": -1.0,
-          "confidence": 1.0,
-          "rationale": "MACD=0.01, 20-50 slope=-0.130, Q-mom=+7.7%"
+          "score": 0.0,
+          "confidence": 0.3,
+          "rationale": "MACD=0.00, 20-50 slope=+0.000, Q-mom=+0.0%"
         },
         {
           "name": "Two Sigma Backtest",
           "persona": "Statistical expectancy",
-          "score": -0.067,
-          "confidence": 0.433,
-          "rationale": "ann.Sharpe=-0.13, win-rate=50%"
+          "score": 0.0,
+          "confidence": 0.2,
+          "rationale": "insufficient history"
         },
         {
           "name": "Bridgewater Risk",
           "persona": "Risk parity / vol-target",
-          "score": -0.339,
+          "score": 0.146,
           "confidence": 0.6,
-          "rationale": "ann.vol=56% vs target 15%, risk_scale=0.27"
+          "rationale": "ann.vol=0% vs target 15%, risk_scale=1.00"
         },
         {
           "name": "Renaissance Patterns",
           "persona": "Mean-reversion",
-          "score": -0.025,
-          "confidence": 0.308,
-          "rationale": "z(20)=+0.04 (mean-revert), autocorr=+0.07"
+          "score": 0.0,
+          "confidence": 0.2,
+          "rationale": "insufficient history"
         },
         {
           "name": "Goldman Technical",
           "persona": "Technical analysis",
-          "score": 0.351,
+          "score": 0.0,
           "confidence": 0.5,
-          "rationale": "RSI=47, MACD-hist=+0.01"
+          "rationale": "RSI=50, MACD-hist=+0.00"
         },
         {
           "name": "JPMorgan Fundamental",
           "persona": "Valuation proxy",
-          "score": 0.263,
+          "score": 0.0,
           "confidence": 0.45,
-          "rationale": "px/200d=1.07, drawdown-from-1y-high=-25% (proxy)"
+          "rationale": "px/200d=1.00, drawdown-from-1y-high=+0% (proxy)"
         },
         {
           "name": "D.E. Shaw Options",
           "persona": "Vol surface / premium",
-          "score": 0.279,
-          "confidence": 0.793,
-          "rationale": "vol=56%, IV-rank=98% \u2192 premium-sell favorability 98%"
+          "score": 0.0,
+          "confidence": 0.65,
+          "rationale": "vol=25%, IV-rank=50% \u2192 premium-sell favorability 50%"
         },
         {
           "name": "AQR Factor",
           "persona": "Multi-factor",
-          "score": -0.176,
+          "score": -0.1,
           "confidence": 0.55,
-          "rationale": "mom(12-1)=+9.3%, value=-7.7%, quality=-0.56"
+          "rationale": "mom(12-1)=+0.0%, value=-0.0%, quality=-0.25"
         },
         {
           "name": "Citadel Securities MM",
           "persona": "Order-flow microstructure",
-          "score": 0.141,
-          "confidence": 0.548,
-          "rationale": "VPIN order-flow toxicity=0.13 (1=max adverse selection)"
+          "score": 0.185,
+          "confidence": 0.6,
+          "rationale": "VPIN order-flow toxicity=0.00 (1=max adverse selection)"
         },
         {
           "name": "Millennium Pod",
           "persona": "Residual alpha / beta-neutral",
-          "score": -0.498,
-          "confidence": 0.9,
-          "rationale": "ann.alpha=-13.7%, beta=+1.14, beta-neutrality=0.43"
+          "score": 0.0,
+          "confidence": 0.5,
+          "rationale": "ann.alpha=+0.0%, beta=+1.00, beta-neutrality=0.50"
         },
         {
           "name": "Renaissance Medallion",
           "persona": "Regime / cointegration",
-          "score": -0.007,
-          "confidence": 0.5,
-          "rationale": "state=stressed (p_stay=0.20), coint-z=+0.04"
+          "score": 0.0,
+          "confidence": 0.8,
+          "rationale": "state=calm (p_stay=0.50), coint-z=+0.00"
         },
         {
           "name": "Sovereign Wealth",
           "persona": "Secular macro / SAA",
-          "score": 0.325,
+          "score": 0.0,
           "confidence": 0.4,
-          "rationale": "secular trend=+7%, structural drawdown=-25% (accumulate dips)"
+          "rationale": "secular trend=+0%, structural drawdown=+0% (accumulate dips)"
         }
       ]
     },
     {
       "symbol": "LINK/USD",
-      "price": 10.67,
-      "conviction": 0.528,
+      "price": 10.64,
+      "conviction": 0.504,
       "direction": "long",
-      "composite": 0.056,
-      "risk_multiplier": 0.275,
+      "composite": 0.009,
+      "risk_multiplier": 0.273,
       "agents": [
         {
           "name": "Citadel Systematic",
           "persona": "Trend/Systematic",
           "score": -1.0,
           "confidence": 1.0,
-          "rationale": "MACD=-0.03, 20-50 slope=-0.112, Q-mom=-16.3%"
+          "rationale": "MACD=-0.04, 20-50 slope=-0.112, Q-mom=-16.3%"
         },
         {
           "name": "Two Sigma Backtest",
           "persona": "Statistical expectancy",
-          "score": 0.148,
-          "confidence": 0.474,
-          "rationale": "ann.Sharpe=+0.30, win-rate=51%"
+          "score": 0.132,
+          "confidence": 0.466,
+          "rationale": "ann.Sharpe=+0.27, win-rate=51%"
         },
         {
           "name": "Bridgewater Risk",
           "persona": "Risk parity / vol-target",
-          "score": -0.304,
+          "score": -0.305,
           "confidence": 0.6,
           "rationale": "ann.vol=50% vs target 15%, risk_scale=0.30"
         },
         {
           "name": "Renaissance Patterns",
           "persona": "Mean-reversion",
-          "score": 0.621,
-          "confidence": 0.542,
-          "rationale": "z(20)=-1.21 (mean-revert), autocorr=-0.07"
+          "score": 0.645,
+          "confidence": 0.556,
+          "rationale": "z(20)=-1.28 (mean-revert), autocorr=-0.08"
         },
         {
           "name": "Goldman Technical",
           "persona": "Technical analysis",
-          "score": -0.029,
+          "score": -0.03,
           "confidence": 0.5,
-          "rationale": "RSI=43, MACD-hist=-0.03"
+          "rationale": "RSI=43, MACD-hist=-0.04"
         },
         {
           "name": "JPMorgan Fundamental",
           "persona": "Valuation proxy",
-          "score": 0.264,
+          "score": 0.259,
           "confidence": 0.45,
           "rationale": "px/200d=1.06, drawdown-from-1y-high=-31% (proxy)"
         },
@@ -4843,33 +4862,33 @@
           "persona": "Multi-factor",
           "score": 0.01,
           "confidence": 0.55,
-          "rationale": "mom(12-1)=+11.3%, value=+16.3%, quality=-0.50"
+          "rationale": "mom(12-1)=+11.4%, value=+16.3%, quality=-0.50"
         },
         {
           "name": "Citadel Securities MM",
           "persona": "Order-flow microstructure",
-          "score": 0.134,
-          "confidence": 0.539,
-          "rationale": "VPIN order-flow toxicity=0.15 (1=max adverse selection)"
+          "score": 0.129,
+          "confidence": 0.533,
+          "rationale": "VPIN order-flow toxicity=0.17 (1=max adverse selection)"
         },
         {
           "name": "Millennium Pod",
           "persona": "Residual alpha / beta-neutral",
-          "score": 0.325,
-          "confidence": 0.753,
-          "rationale": "ann.alpha=+8.4%, beta=+1.22, beta-neutrality=0.39"
+          "score": 0.378,
+          "confidence": 0.798,
+          "rationale": "ann.alpha=+9.9%, beta=+1.22, beta-neutrality=0.39"
         },
         {
           "name": "Renaissance Medallion",
           "persona": "Regime / cointegration",
-          "score": 0.036,
+          "score": 0.032,
           "confidence": 0.8,
-          "rationale": "state=calm (p_stay=0.81), coint-z=+0.42"
+          "rationale": "state=calm (p_stay=0.78), coint-z=+0.40"
         },
         {
           "name": "Sovereign Wealth",
           "persona": "Secular macro / SAA",
-          "score": 0.379,
+          "score": 0.38,
           "confidence": 0.4,
           "rationale": "secular trend=+6%, structural drawdown=-31% (accumulate dips)"
         }
@@ -4877,88 +4896,88 @@
     },
     {
       "symbol": "BCH/USD",
-      "price": 240.12,
-      "conviction": 0.444,
+      "price": 239.72,
+      "conviction": 0.403,
       "direction": "flat",
-      "composite": -0.113,
-      "risk_multiplier": 0.213,
+      "composite": -0.195,
+      "risk_multiplier": 0.217,
       "agents": [
         {
           "name": "Citadel Systematic",
           "persona": "Trend/Systematic",
           "score": -0.999,
           "confidence": 1.0,
-          "rationale": "MACD=-4.71, 20-50 slope=-0.063, Q-mom=-7.4%"
+          "rationale": "MACD=-4.72, 20-50 slope=-0.063, Q-mom=-7.3%"
         },
         {
           "name": "Two Sigma Backtest",
           "persona": "Statistical expectancy",
-          "score": -0.485,
-          "confidence": 0.642,
-          "rationale": "ann.Sharpe=-1.06, win-rate=45%"
+          "score": -0.494,
+          "confidence": 0.647,
+          "rationale": "ann.Sharpe=-1.08, win-rate=45%"
         },
         {
           "name": "Bridgewater Risk",
           "persona": "Risk parity / vol-target",
-          "score": -0.371,
+          "score": -0.369,
           "confidence": 0.6,
-          "rationale": "ann.vol=63% vs target 15%, risk_scale=0.24"
+          "rationale": "ann.vol=62% vs target 15%, risk_scale=0.24"
         },
         {
           "name": "Renaissance Patterns",
           "persona": "Mean-reversion",
-          "score": 0.873,
-          "confidence": 0.748,
-          "rationale": "z(20)=-2.24 (mean-revert), autocorr=+0.04"
+          "score": 0.877,
+          "confidence": 0.755,
+          "rationale": "z(20)=-2.27 (mean-revert), autocorr=+0.04"
         },
         {
           "name": "Goldman Technical",
           "persona": "Technical analysis",
-          "score": 0.26,
+          "score": 0.267,
           "confidence": 0.5,
-          "rationale": "RSI=35, MACD-hist=-4.71"
+          "rationale": "RSI=34, MACD-hist=-4.72"
         },
         {
           "name": "JPMorgan Fundamental",
           "persona": "Valuation proxy",
-          "score": -0.012,
+          "score": -0.014,
           "confidence": 0.45,
           "rationale": "px/200d=0.87, drawdown-from-1y-high=-50% (proxy)"
         },
         {
           "name": "D.E. Shaw Options",
           "persona": "Vol surface / premium",
-          "score": 0.173,
-          "confidence": 0.737,
-          "rationale": "vol=63%, IV-rank=79% \u2192 premium-sell favorability 79%"
+          "score": 0.174,
+          "confidence": 0.738,
+          "rationale": "vol=62%, IV-rank=79% \u2192 premium-sell favorability 79%"
         },
         {
           "name": "AQR Factor",
           "persona": "Multi-factor",
-          "score": -0.063,
+          "score": -0.062,
           "confidence": 0.55,
-          "rationale": "mom(12-1)=+14.3%, value=+7.4%, quality=-0.63"
+          "rationale": "mom(12-1)=+14.4%, value=+7.3%, quality=-0.62"
         },
         {
           "name": "Citadel Securities MM",
           "persona": "Order-flow microstructure",
-          "score": 0.109,
-          "confidence": 0.512,
-          "rationale": "VPIN order-flow toxicity=0.22 (1=max adverse selection)"
+          "score": 0.12,
+          "confidence": 0.523,
+          "rationale": "VPIN order-flow toxicity=0.19 (1=max adverse selection)"
         },
         {
           "name": "Millennium Pod",
           "persona": "Residual alpha / beta-neutral",
-          "score": -0.994,
+          "score": -0.993,
           "confidence": 0.9,
-          "rationale": "ann.alpha=-72.7%, beta=+1.20, beta-neutrality=0.40"
+          "rationale": "ann.alpha=-70.8%, beta=+1.19, beta-neutrality=0.41"
         },
         {
           "name": "Renaissance Medallion",
           "persona": "Regime / cointegration",
-          "score": -0.156,
+          "score": -0.159,
           "confidence": 0.8,
-          "rationale": "state=calm (p_stay=0.94), coint-z=-0.87"
+          "rationale": "state=calm (p_stay=0.93), coint-z=-0.87"
         },
         {
           "name": "Sovereign Wealth",
@@ -4971,51 +4990,51 @@
     },
     {
       "symbol": "UNI/USD",
-      "price": 7.04,
-      "conviction": 0.55,
+      "price": 7.05,
+      "conviction": 0.545,
       "direction": "long",
-      "composite": 0.1,
-      "risk_multiplier": 0.191,
+      "composite": 0.09,
+      "risk_multiplier": 0.192,
       "agents": [
         {
           "name": "Citadel Systematic",
           "persona": "Trend/Systematic",
           "score": -1.0,
           "confidence": 1.0,
-          "rationale": "MACD=0.02, 20-50 slope=-0.109, Q-mom=+2.7%"
+          "rationale": "MACD=0.02, 20-50 slope=-0.108, Q-mom=+2.9%"
         },
         {
           "name": "Two Sigma Backtest",
           "persona": "Statistical expectancy",
-          "score": 0.385,
-          "confidence": 0.593,
-          "rationale": "ann.Sharpe=+0.81, win-rate=50%"
+          "score": 0.384,
+          "confidence": 0.592,
+          "rationale": "ann.Sharpe=+0.81, win-rate=51%"
         },
         {
           "name": "Bridgewater Risk",
           "persona": "Risk parity / vol-target",
-          "score": -0.405,
+          "score": -0.406,
           "confidence": 0.6,
-          "rationale": "ann.vol=71% vs target 15%, risk_scale=0.21"
+          "rationale": "ann.vol=72% vs target 15%, risk_scale=0.21"
         },
         {
           "name": "Renaissance Patterns",
           "persona": "Mean-reversion",
-          "score": 0.04,
-          "confidence": 0.313,
-          "rationale": "z(20)=-0.07 (mean-revert), autocorr=+0.03"
+          "score": 0.023,
+          "confidence": 0.308,
+          "rationale": "z(20)=-0.04 (mean-revert), autocorr=+0.02"
         },
         {
           "name": "Goldman Technical",
           "persona": "Technical analysis",
-          "score": 0.28,
+          "score": 0.276,
           "confidence": 0.5,
           "rationale": "RSI=49, MACD-hist=+0.02"
         },
         {
           "name": "JPMorgan Fundamental",
           "persona": "Valuation proxy",
-          "score": 0.777,
+          "score": 0.779,
           "confidence": 0.45,
           "rationale": "px/200d=1.44, drawdown-from-1y-high=-31% (proxy)"
         },
@@ -5024,35 +5043,35 @@
           "persona": "Vol surface / premium",
           "score": 0.287,
           "confidence": 0.797,
-          "rationale": "vol=71%, IV-rank=99% \u2192 premium-sell favorability 99%"
+          "rationale": "vol=72%, IV-rank=99% \u2192 premium-sell favorability 99%"
         },
         {
           "name": "AQR Factor",
           "persona": "Multi-factor",
-          "score": -0.26,
+          "score": -0.263,
           "confidence": 0.55,
-          "rationale": "mom(12-1)=+3.6%, value=-2.7%, quality=-0.71"
+          "rationale": "mom(12-1)=+3.5%, value=-2.9%, quality=-0.72"
         },
         {
           "name": "Citadel Securities MM",
           "persona": "Order-flow microstructure",
-          "score": 0.123,
-          "confidence": 0.527,
-          "rationale": "VPIN order-flow toxicity=0.18 (1=max adverse selection)"
+          "score": 0.13,
+          "confidence": 0.535,
+          "rationale": "VPIN order-flow toxicity=0.16 (1=max adverse selection)"
         },
         {
           "name": "Millennium Pod",
           "persona": "Residual alpha / beta-neutral",
-          "score": 0.966,
+          "score": 0.974,
           "confidence": 0.9,
-          "rationale": "ann.alpha=+50.9%, beta=+1.31, beta-neutrality=0.35"
+          "rationale": "ann.alpha=+54.1%, beta=+1.31, beta-neutrality=0.34"
         },
         {
           "name": "Renaissance Medallion",
           "persona": "Regime / cointegration",
           "score": 0.055,
           "confidence": 0.5,
-          "rationale": "state=stressed (p_stay=0.37), coint-z=+1.50"
+          "rationale": "state=stressed (p_stay=0.40), coint-z=+1.51"
         },
         {
           "name": "Sovereign Wealth",
@@ -5066,188 +5085,188 @@
     {
       "symbol": "XLM/USD",
       "price": 0.15,
-      "conviction": 0.474,
-      "direction": "flat",
-      "composite": -0.052,
-      "risk_multiplier": 0.215,
+      "conviction": 0.513,
+      "direction": "long",
+      "composite": 0.026,
+      "risk_multiplier": 1.0,
       "agents": [
         {
           "name": "Citadel Systematic",
           "persona": "Trend/Systematic",
-          "score": -1.0,
-          "confidence": 1.0,
-          "rationale": "MACD=-0.00, 20-50 slope=-0.159, Q-mom=-23.8%"
+          "score": 0.0,
+          "confidence": 0.3,
+          "rationale": "MACD=0.00, 20-50 slope=+0.000, Q-mom=+0.0%"
         },
         {
           "name": "Two Sigma Backtest",
           "persona": "Statistical expectancy",
-          "score": -0.047,
-          "confidence": 0.424,
-          "rationale": "ann.Sharpe=-0.09, win-rate=46%"
+          "score": 0.0,
+          "confidence": 0.2,
+          "rationale": "insufficient history"
         },
         {
           "name": "Bridgewater Risk",
           "persona": "Risk parity / vol-target",
-          "score": -0.381,
+          "score": 0.146,
           "confidence": 0.6,
-          "rationale": "ann.vol=65% vs target 15%, risk_scale=0.23"
+          "rationale": "ann.vol=0% vs target 15%, risk_scale=1.00"
         },
         {
           "name": "Renaissance Patterns",
           "persona": "Mean-reversion",
-          "score": 0.792,
-          "confidence": 0.659,
-          "rationale": "z(20)=-1.79 (mean-revert), autocorr=+0.08"
+          "score": 0.0,
+          "confidence": 0.2,
+          "rationale": "insufficient history"
         },
         {
           "name": "Goldman Technical",
           "persona": "Technical analysis",
-          "score": 0.338,
+          "score": 0.0,
           "confidence": 0.5,
-          "rationale": "RSI=32, MACD-hist=-0.00"
+          "rationale": "RSI=50, MACD-hist=+0.00"
         },
         {
           "name": "JPMorgan Fundamental",
           "persona": "Valuation proxy",
-          "score": -0.168,
+          "score": 0.0,
           "confidence": 0.45,
-          "rationale": "px/200d=0.81, drawdown-from-1y-high=-43% (proxy)"
+          "rationale": "px/200d=1.00, drawdown-from-1y-high=+0% (proxy)"
         },
         {
           "name": "D.E. Shaw Options",
           "persona": "Vol surface / premium",
-          "score": -0.122,
-          "confidence": 0.589,
-          "rationale": "vol=65%, IV-rank=30% \u2192 premium-sell favorability 30%"
+          "score": 0.0,
+          "confidence": 0.65,
+          "rationale": "vol=25%, IV-rank=50% \u2192 premium-sell favorability 50%"
         },
         {
           "name": "AQR Factor",
           "persona": "Multi-factor",
-          "score": 0.052,
+          "score": -0.1,
           "confidence": 0.55,
-          "rationale": "mom(12-1)=+16.9%, value=+23.8%, quality=-0.65"
+          "rationale": "mom(12-1)=+0.0%, value=-0.0%, quality=-0.25"
         },
         {
           "name": "Citadel Securities MM",
           "persona": "Order-flow microstructure",
-          "score": 0.139,
-          "confidence": 0.545,
-          "rationale": "VPIN order-flow toxicity=0.14 (1=max adverse selection)"
+          "score": 0.185,
+          "confidence": 0.6,
+          "rationale": "VPIN order-flow toxicity=0.00 (1=max adverse selection)"
         },
         {
           "name": "Millennium Pod",
           "persona": "Residual alpha / beta-neutral",
-          "score": -0.436,
-          "confidence": 0.85,
-          "rationale": "ann.alpha=-11.7%, beta=+1.03, beta-neutrality=0.49"
+          "score": 0.0,
+          "confidence": 0.5,
+          "rationale": "ann.alpha=+0.0%, beta=+1.00, beta-neutrality=0.50"
         },
         {
           "name": "Renaissance Medallion",
           "persona": "Regime / cointegration",
-          "score": -0.015,
+          "score": 0.0,
           "confidence": 0.8,
-          "rationale": "state=calm (p_stay=0.95), coint-z=-1.46"
+          "rationale": "state=calm (p_stay=0.50), coint-z=+0.00"
         },
         {
           "name": "Sovereign Wealth",
           "persona": "Secular macro / SAA",
-          "score": 0.399,
+          "score": 0.0,
           "confidence": 0.4,
-          "rationale": "secular trend=-19%, structural drawdown=-43% (accumulate dips)"
+          "rationale": "secular trend=+0%, structural drawdown=+0% (accumulate dips)"
         }
       ]
     },
     {
       "symbol": "ETC/USD",
-      "price": 6.86,
-      "conviction": 0.398,
-      "direction": "flat",
-      "composite": -0.203,
-      "risk_multiplier": 0.287,
+      "price": 6.85,
+      "conviction": 0.513,
+      "direction": "long",
+      "composite": 0.026,
+      "risk_multiplier": 1.0,
       "agents": [
         {
           "name": "Citadel Systematic",
           "persona": "Trend/Systematic",
-          "score": -1.0,
-          "confidence": 1.0,
-          "rationale": "MACD=-0.02, 20-50 slope=-0.117, Q-mom=-13.2%"
+          "score": 0.0,
+          "confidence": 0.3,
+          "rationale": "MACD=0.00, 20-50 slope=+0.000, Q-mom=+0.0%"
         },
         {
           "name": "Two Sigma Backtest",
           "persona": "Statistical expectancy",
-          "score": -0.237,
-          "confidence": 0.518,
-          "rationale": "ann.Sharpe=-0.48, win-rate=46%"
+          "score": 0.0,
+          "confidence": 0.2,
+          "rationale": "insufficient history"
         },
         {
           "name": "Bridgewater Risk",
           "persona": "Risk parity / vol-target",
-          "score": -0.296,
+          "score": 0.146,
           "confidence": 0.6,
-          "rationale": "ann.vol=49% vs target 15%, risk_scale=0.31"
+          "rationale": "ann.vol=0% vs target 15%, risk_scale=1.00"
         },
         {
           "name": "Renaissance Patterns",
           "persona": "Mean-reversion",
-          "score": 0.603,
-          "confidence": 0.533,
-          "rationale": "z(20)=-1.16 (mean-revert), autocorr=-0.07"
+          "score": 0.0,
+          "confidence": 0.2,
+          "rationale": "insufficient history"
         },
         {
           "name": "Goldman Technical",
           "persona": "Technical analysis",
-          "score": 0.211,
+          "score": 0.0,
           "confidence": 0.5,
-          "rationale": "RSI=36, MACD-hist=-0.02"
+          "rationale": "RSI=50, MACD-hist=+0.00"
         },
         {
           "name": "JPMorgan Fundamental",
           "persona": "Valuation proxy",
-          "score": -0.063,
+          "score": 0.0,
           "confidence": 0.45,
-          "rationale": "px/200d=0.89, drawdown-from-1y-high=-31% (proxy)"
+          "rationale": "px/200d=1.00, drawdown-from-1y-high=+0% (proxy)"
         },
         {
           "name": "D.E. Shaw Options",
           "persona": "Vol surface / premium",
-          "score": 0.173,
-          "confidence": 0.737,
-          "rationale": "vol=49%, IV-rank=79% \u2192 premium-sell favorability 79%"
+          "score": 0.0,
+          "confidence": 0.65,
+          "rationale": "vol=25%, IV-rank=50% \u2192 premium-sell favorability 50%"
         },
         {
           "name": "AQR Factor",
           "persona": "Multi-factor",
-          "score": -0.001,
+          "score": -0.1,
           "confidence": 0.55,
-          "rationale": "mom(12-1)=+11.6%, value=+13.2%, quality=-0.49"
+          "rationale": "mom(12-1)=+0.0%, value=-0.0%, quality=-0.25"
         },
         {
           "name": "Citadel Securities MM",
           "persona": "Order-flow microstructure",
-          "score": 0.145,
-          "confidence": 0.552,
-          "rationale": "VPIN order-flow toxicity=0.12 (1=max adverse selection)"
+          "score": 0.185,
+          "confidence": 0.6,
+          "rationale": "VPIN order-flow toxicity=0.00 (1=max adverse selection)"
         },
         {
           "name": "Millennium Pod",
           "persona": "Residual alpha / beta-neutral",
-          "score": -0.83,
-          "confidence": 0.9,
-          "rationale": "ann.alpha=-29.7%, beta=+1.12, beta-neutrality=0.44"
+          "score": 0.0,
+          "confidence": 0.5,
+          "rationale": "ann.alpha=+0.0%, beta=+1.00, beta-neutrality=0.50"
         },
         {
           "name": "Renaissance Medallion",
           "persona": "Regime / cointegration",
-          "score": -0.022,
-          "confidence": 0.5,
-          "rationale": "state=stressed (p_stay=0.39), coint-z=-1.75"
+          "score": 0.0,
+          "confidence": 0.8,
+          "rationale": "state=calm (p_stay=0.50), coint-z=+0.00"
         },
         {
           "name": "Sovereign Wealth",
           "persona": "Secular macro / SAA",
-          "score": 0.309,
+          "score": 0.0,
           "confidence": 0.4,
-          "rationale": "secular trend=-11%, structural drawdown=-31% (accumulate dips)"
+          "rationale": "secular trend=+0%, structural drawdown=+0% (accumulate dips)"
         }
       ]
     }
@@ -5291,7 +5310,7 @@
         {
           "provider": "neutral",
           "score": 30.04,
-          "observations": 61220,
+          "observations": 61259,
           "net_return": 0.0,
           "annualized_sharpe": 0.0,
           "max_drawdown": 0.0,
@@ -5310,16 +5329,16 @@
         {
           "provider": "consensus",
           "score": 0.0,
-          "observations": 61220,
+          "observations": 61259,
           "net_return": -0.29625774,
           "annualized_sharpe": -0.202,
           "max_drawdown": 0.329884,
           "hit_rate": 0.1339,
           "calibration_error": 0.4886,
           "average_turnover_cost_bps": 1.0,
-          "average_latency_ms": 4636.72,
+          "average_latency_ms": 4633.77,
           "schema_valid_rate": 1.0,
-          "fallback_rate": 0.3877,
+          "fallback_rate": 0.3874,
           "promotion_eligible": false,
           "blockers": [
             "shadow drawdown exceeds threshold",
@@ -5408,7 +5427,7 @@
       ],
       "recommended_provider": null,
       "promotion_policy": "manual approval required; shadow evidence cannot arm live trading",
-      "observations": 211836,
+      "observations": 211953,
       "source": "/home/runner/work/SAHJONY-AI-TRADING/SAHJONY-AI-TRADING/data/ai_shadow_observations.jsonl",
       "leaders": {
         "today": {
@@ -5446,10 +5465,10 @@
         "options": null
       },
       "pipeline": "autonomous-learning",
-      "last_cycle": 5485,
+      "last_cycle": 5488,
       "resolved_this_cycle": 39,
       "pending_symbols": 13,
-      "archive_record": "/home/runner/work/SAHJONY-AI-TRADING/SAHJONY-AI-TRADING/data/shadow/2026/November/000638.json"
+      "archive_record": "/home/runner/work/SAHJONY-AI-TRADING/SAHJONY-AI-TRADING/data/shadow/2026/November/000641.json"
     }
   },
   "positions": [],
@@ -5489,8 +5508,8 @@
   },
   "audit_chain": {
     "valid": true,
-    "entries": 24128,
-    "head": "22331c10747952c057a7bc964a5ac8c7b9138c350f5ab380531abfc1afe53d18"
+    "entries": 24131,
+    "head": "6bb04c34481d12765fb02e312a48a646d9ac226c910e39e60ff57e450d9ed5ff"
   },
   "institutional_health": {
     "score": 90,
@@ -5524,269 +5543,168 @@
   },
   "institutional_intelligence": {
     "version": "institutional-research-v1",
-    "as_of": "2026-11-09T20:31:34.451126+00:00",
+    "as_of": "2026-11-09T21:03:36.821696+00:00",
     "point_in_time": true,
     "execution_authority": false,
     "universe": [
-      "ADA/USD",
-      "AVAX/USD",
       "BCH/USD",
       "BTC/USD",
-      "DOGE/USD",
-      "ETC/USD",
       "ETH/USD",
       "LINK/USD",
       "LTC/USD",
       "SOL/USD",
-      "UNI/USD",
-      "XLM/USD",
-      "XRP/USD"
+      "UNI/USD"
     ],
-    "coverage": 1.0,
+    "coverage": 0.5384615384615384,
     "configured_symbols": 13,
-    "successful_symbols": 13,
-    "rejected_symbols": {},
+    "successful_symbols": 7,
+    "rejected_symbols": {
+      "XRP/USD": "invalid_or_short_history",
+      "DOGE/USD": "invalid_or_short_history",
+      "ADA/USD": "invalid_or_short_history",
+      "AVAX/USD": "invalid_or_short_history",
+      "XLM/USD": "invalid_or_short_history",
+      "ETC/USD": "invalid_or_short_history"
+    },
     "market": {
       "regime": "stress",
       "regime_probabilities": {
-        "risk_on": 0.06139,
-        "transition": 0.146513,
-        "stress": 0.792096
+        "risk_on": 0.053559,
+        "transition": 0.130409,
+        "stress": 0.816032
       },
-      "breadth_20d": 0.076923,
+      "breadth_20d": 0.0,
       "breadth_50d": 0.0,
-      "breadth_200d": 0.307692,
-      "median_correlation_60d": 0.262468,
-      "correlation_pairs": 78,
+      "breadth_200d": 0.428571,
+      "median_correlation_60d": 0.686506,
+      "correlation_pairs": 21,
       "minimum_pair_overlap": 60,
-      "cross_sectional_dispersion": 0.19880607,
-      "average_volatility": 0.510424,
-      "volatility_change": -0.055595,
-      "expected_shortfall_95": -0.0671541,
-      "stress_score": 0.872849,
-      "advisory_risk_multiplier": 0.563575
+      "cross_sectional_dispersion": 0.21472596,
+      "average_volatility": 0.493578,
+      "volatility_change": 0.01526,
+      "expected_shortfall_95": -0.06566573,
+      "stress_score": 0.935533,
+      "advisory_risk_multiplier": 0.532234
     },
     "factors": {
-      "ADA/USD": {
-        "momentum_1m": -0.18353498,
-        "momentum_3m": -0.19265843,
-        "momentum_6m": -0.03313773,
-        "volatility": 0.57302478,
-        "volatility_change": -0.14154775,
-        "expected_shortfall_95": -0.08029808,
-        "max_drawdown": -0.50582112,
-        "amihud_illiquidity": 3.70228493,
-        "above_sma20": 0.0,
-        "above_sma50": 0.0,
-        "above_sma200": 0.0,
-        "momentum_rank": -0.5,
-        "low_vol_rank": -0.5,
-        "liquidity_rank": -0.0,
-        "composite_factor_score": -0.433333
-      },
-      "AVAX/USD": {
-        "momentum_1m": -0.09309842,
-        "momentum_3m": 0.07714215,
-        "momentum_6m": 0.25726261,
-        "volatility": 0.56275133,
-        "volatility_change": -0.16395054,
-        "expected_shortfall_95": -0.078017,
-        "max_drawdown": -0.4386082,
-        "amihud_illiquidity": 4.0251564,
-        "above_sma20": 1.0,
-        "above_sma50": 0.0,
-        "above_sma200": 1.0,
-        "momentum_rank": 0.833333,
-        "low_vol_rank": -0.333333,
-        "liquidity_rank": -0.166667,
-        "composite_factor_score": 0.191667
-      },
       "BCH/USD": {
-        "momentum_1m": -0.14316788,
-        "momentum_3m": -0.07449062,
-        "momentum_6m": -0.00538102,
-        "volatility": 0.62634992,
-        "volatility_change": -0.2825477,
-        "expected_shortfall_95": -0.09118573,
-        "max_drawdown": -0.60415019,
-        "amihud_illiquidity": 14.91449967,
+        "momentum_1m": -0.14409107,
+        "momentum_3m": -0.07283582,
+        "momentum_6m": -0.00740876,
+        "volatility": 0.6238091,
+        "volatility_change": -0.29250348,
+        "expected_shortfall_95": -0.09159338,
+        "max_drawdown": -0.60405642,
+        "amihud_illiquidity": 0.00039604,
         "above_sma20": 0.0,
         "above_sma50": 0.0,
         "above_sma200": 0.0,
-        "momentum_rank": -0.166667,
+        "momentum_rank": -0.666667,
         "low_vol_rank": -0.666667,
-        "liquidity_rank": -0.833333,
-        "composite_factor_score": -0.508333
+        "liquidity_rank": -0.0,
+        "composite_factor_score": -0.566667
       },
       "BTC/USD": {
-        "momentum_1m": -0.08694082,
-        "momentum_3m": -0.05482757,
-        "momentum_6m": 0.16805498,
-        "volatility": 0.31557897,
-        "volatility_change": 0.16740746,
+        "momentum_1m": -0.08608839,
+        "momentum_3m": -0.05394516,
+        "momentum_6m": 0.16914547,
+        "volatility": 0.3155807,
+        "volatility_change": 0.16816426,
         "expected_shortfall_95": -0.04109974,
         "max_drawdown": -0.28593934,
         "amihud_illiquidity": 0.0,
         "above_sma20": 0.0,
         "above_sma50": 0.0,
         "above_sma200": 1.0,
-        "momentum_rank": 0.5,
+        "momentum_rank": 0.333333,
         "low_vol_rank": 1.0,
         "liquidity_rank": 1.0,
-        "composite_factor_score": 0.775
-      },
-      "DOGE/USD": {
-        "momentum_1m": -0.12193236,
-        "momentum_3m": -0.22665207,
-        "momentum_6m": -0.08642166,
-        "volatility": 0.45318521,
-        "volatility_change": -0.20986324,
-        "expected_shortfall_95": -0.06234991,
-        "max_drawdown": -0.40280543,
-        "amihud_illiquidity": 0.29546597,
-        "above_sma20": 0.0,
-        "above_sma50": 0.0,
-        "above_sma200": 0.0,
-        "momentum_rank": -0.833333,
-        "low_vol_rank": 0.166667,
-        "liquidity_rank": 0.333333,
-        "composite_factor_score": -0.283333
-      },
-      "ETC/USD": {
-        "momentum_1m": -0.1162701,
-        "momentum_3m": -0.13244949,
-        "momentum_6m": -0.03497191,
-        "volatility": 0.49062955,
-        "volatility_change": -0.1079564,
-        "expected_shortfall_95": -0.06136414,
-        "max_drawdown": -0.39032711,
-        "amihud_illiquidity": 146.27357562,
-        "above_sma20": 0.0,
-        "above_sma50": 0.0,
-        "above_sma200": 0.0,
-        "momentum_rank": -0.333333,
-        "low_vol_rank": -0.0,
-        "liquidity_rank": -1.0,
-        "composite_factor_score": -0.35
+        "composite_factor_score": 0.7
       },
       "ETH/USD": {
-        "momentum_1m": -0.11554501,
-        "momentum_3m": -0.14520395,
-        "momentum_6m": 0.1831298,
-        "volatility": 0.43639167,
-        "volatility_change": 0.3753569,
+        "momentum_1m": -0.1148163,
+        "momentum_3m": -0.14449968,
+        "momentum_6m": 0.18410459,
+        "volatility": 0.43639564,
+        "volatility_change": 0.37597364,
         "expected_shortfall_95": -0.05620737,
         "max_drawdown": -0.35323412,
         "amihud_illiquidity": 4e-07,
         "above_sma20": 0.0,
         "above_sma50": 0.0,
         "above_sma200": 0.0,
-        "momentum_rank": 0.166667,
-        "low_vol_rank": 0.666667,
-        "liquidity_rank": 0.833333,
-        "composite_factor_score": 0.458333
+        "momentum_rank": -0.333333,
+        "low_vol_rank": 0.333333,
+        "liquidity_rank": 0.666667,
+        "composite_factor_score": 0.066667
       },
       "LINK/USD": {
-        "momentum_1m": -0.11305617,
-        "momentum_3m": -0.16314335,
-        "momentum_6m": 0.33234525,
-        "volatility": 0.50346872,
-        "volatility_change": 0.08686536,
-        "expected_shortfall_95": -0.06408555,
-        "max_drawdown": -0.32873807,
-        "amihud_illiquidity": 5.28983444,
+        "momentum_1m": -0.11436047,
+        "momentum_3m": -0.1625326,
+        "momentum_6m": 0.33147108,
+        "volatility": 0.50431752,
+        "volatility_change": 0.09496239,
+        "expected_shortfall_95": -0.06432852,
+        "max_drawdown": -0.32853906,
+        "amihud_illiquidity": 0.00559702,
         "above_sma20": 0.0,
         "above_sma50": 0.0,
         "above_sma200": 1.0,
         "momentum_rank": 0.666667,
-        "low_vol_rank": -0.166667,
-        "liquidity_rank": -0.333333,
-        "composite_factor_score": 0.258333
+        "low_vol_rank": -0.333333,
+        "liquidity_rank": -0.666667,
+        "composite_factor_score": 0.116667
       },
       "LTC/USD": {
-        "momentum_1m": -0.13506394,
-        "momentum_3m": -0.06498235,
-        "momentum_6m": 0.15204489,
-        "volatility": 0.40634607,
-        "volatility_change": 0.04617661,
+        "momentum_1m": -0.13660738,
+        "momentum_3m": -0.06665085,
+        "momentum_6m": 0.14998911,
+        "volatility": 0.40621154,
+        "volatility_change": 0.04284039,
         "expected_shortfall_95": -0.05390021,
         "max_drawdown": -0.32308093,
         "amihud_illiquidity": 0.00093542,
         "above_sma20": 0.0,
         "above_sma50": 0.0,
         "above_sma200": 0.0,
-        "momentum_rank": 0.333333,
-        "low_vol_rank": 0.833333,
-        "liquidity_rank": 0.5,
-        "composite_factor_score": 0.541667
+        "momentum_rank": 0.0,
+        "low_vol_rank": 0.666667,
+        "liquidity_rank": -0.333333,
+        "composite_factor_score": 0.166667
       },
       "SOL/USD": {
-        "momentum_1m": -0.17276848,
-        "momentum_3m": -0.16316301,
-        "momentum_6m": 0.06047475,
-        "volatility": 0.45245983,
-        "volatility_change": -0.16998191,
+        "momentum_1m": -0.17438983,
+        "momentum_3m": -0.16480319,
+        "momentum_6m": 0.05839624,
+        "volatility": 0.45244163,
+        "volatility_change": -0.17186064,
         "expected_shortfall_95": -0.05874254,
         "max_drawdown": -0.36064122,
         "amihud_illiquidity": 4.738e-05,
         "above_sma20": 0.0,
         "above_sma50": 0.0,
         "above_sma200": 0.0,
-        "momentum_rank": 0.0,
-        "low_vol_rank": 0.333333,
-        "liquidity_rank": 0.666667,
-        "composite_factor_score": 0.233333
+        "momentum_rank": -1.0,
+        "low_vol_rank": -0.0,
+        "liquidity_rank": 0.333333,
+        "composite_factor_score": -0.416667
       },
       "UNI/USD": {
-        "momentum_1m": -0.03585117,
-        "momentum_3m": 0.02657047,
-        "momentum_6m": 1.2166866,
-        "volatility": 0.7149189,
-        "volatility_change": -0.11936759,
-        "expected_shortfall_95": -0.0934172,
-        "max_drawdown": -0.42356765,
-        "amihud_illiquidity": 6.06820338,
+        "momentum_1m": -0.03469517,
+        "momentum_3m": 0.02940685,
+        "momentum_6m": 1.21935269,
+        "volatility": 0.71629113,
+        "volatility_change": -0.1107564,
+        "expected_shortfall_95": -0.09378833,
+        "max_drawdown": -0.42098314,
+        "amihud_illiquidity": 0.00636298,
         "above_sma20": 0.0,
         "above_sma50": 0.0,
         "above_sma200": 1.0,
         "momentum_rank": 1.0,
         "low_vol_rank": -1.0,
-        "liquidity_rank": -0.666667,
-        "composite_factor_score": 0.033333
-      },
-      "XLM/USD": {
-        "momentum_1m": -0.16938158,
-        "momentum_3m": -0.23813828,
-        "momentum_6m": -0.26188356,
-        "volatility": 0.6505009,
-        "volatility_change": -0.12902581,
-        "expected_shortfall_95": -0.07414703,
-        "max_drawdown": -0.43661527,
-        "amihud_illiquidity": 5.57734733,
-        "above_sma20": 0.0,
-        "above_sma50": 0.0,
-        "above_sma200": 0.0,
-        "momentum_rank": -1.0,
-        "low_vol_rank": -0.833333,
-        "liquidity_rank": -0.5,
-        "composite_factor_score": -0.808333
-      },
-      "XRP/USD": {
-        "momentum_1m": -0.16379562,
-        "momentum_3m": -0.21995216,
-        "momentum_6m": -0.04765693,
-        "volatility": 0.44990335,
-        "volatility_change": -0.07430056,
-        "expected_shortfall_95": -0.05818882,
-        "max_drawdown": -0.35691745,
-        "amihud_illiquidity": 0.37672914,
-        "above_sma20": 0.0,
-        "above_sma50": 0.0,
-        "above_sma200": 0.0,
-        "momentum_rank": -0.666667,
-        "low_vol_rank": 0.5,
-        "liquidity_rank": 0.166667,
-        "composite_factor_score": -0.108333
+        "liquidity_rank": -1.0,
+        "composite_factor_score": -0.066667
       }
     },
     "provenance": {
@@ -5796,112 +5714,64 @@
         "bar_timestamp"
       ],
       "method": "transparent_public_domain_estimators",
-      "latest_bar_timestamp": "2026-11-09T20:29:10+00:00",
-      "oldest_age_seconds": 73894.451,
+      "latest_bar_timestamp": "2026-11-09T20:59:10+00:00",
+      "oldest_age_seconds": 356.822,
       "snapshots": {
         "BTC/USD": {
-          "bar_timestamp": "2026-11-09T20:28:40+00:00",
+          "bar_timestamp": "2026-11-09T20:58:00+00:00",
           "exchange_timestamp": null,
-          "feed_timestamp": 1794256120000,
-          "retrieved_at": "2026-11-09T20:30:25.770788+00:00",
-          "latency_ms": 105770.788,
-          "age_seconds": 174.451
+          "feed_timestamp": 1794257880000,
+          "retrieved_at": "2026-11-09T20:59:23.972853+00:00",
+          "latency_ms": 83972.853,
+          "age_seconds": 336.822
         },
         "ETH/USD": {
-          "bar_timestamp": "2026-11-09T20:28:40+00:00",
+          "bar_timestamp": "2026-11-09T20:58:00+00:00",
           "exchange_timestamp": null,
-          "feed_timestamp": 1794256120000,
-          "retrieved_at": "2026-11-09T20:30:25.961539+00:00",
-          "latency_ms": 105961.539,
-          "age_seconds": 174.451
+          "feed_timestamp": 1794257880000,
+          "retrieved_at": "2026-11-09T20:59:24.161529+00:00",
+          "latency_ms": 84161.529,
+          "age_seconds": 336.822
         },
         "SOL/USD": {
-          "bar_timestamp": "2026-11-09T20:29:00+00:00",
+          "bar_timestamp": "2026-11-09T20:57:50+00:00",
           "exchange_timestamp": null,
-          "feed_timestamp": 1794256140000,
-          "retrieved_at": "2026-11-09T20:30:26.134652+00:00",
-          "latency_ms": 86134.652,
-          "age_seconds": 154.451
+          "feed_timestamp": 1794257870000,
+          "retrieved_at": "2026-11-09T20:59:24.343744+00:00",
+          "latency_ms": 94343.744,
+          "age_seconds": 346.822
         },
         "LTC/USD": {
-          "bar_timestamp": "2026-11-09T20:28:50+00:00",
+          "bar_timestamp": "2026-11-09T20:57:40+00:00",
           "exchange_timestamp": null,
-          "feed_timestamp": 1794256130000,
-          "retrieved_at": "2026-11-09T20:30:26.447508+00:00",
-          "latency_ms": 96447.508,
-          "age_seconds": 164.451
-        },
-        "XRP/USD": {
-          "bar_timestamp": "2026-11-09T00:00:00+00:00",
-          "exchange_timestamp": null,
-          "feed_timestamp": 1794182400,
-          "retrieved_at": "2026-11-09T20:30:26.687903+00:00",
-          "latency_ms": 73826687.903,
-          "age_seconds": 73894.451
-        },
-        "DOGE/USD": {
-          "bar_timestamp": "2026-11-09T20:29:10+00:00",
-          "exchange_timestamp": null,
-          "feed_timestamp": 1794256150000,
-          "retrieved_at": "2026-11-09T20:30:26.881137+00:00",
-          "latency_ms": 76881.137,
-          "age_seconds": 144.451
-        },
-        "ADA/USD": {
-          "bar_timestamp": "2026-11-09T00:00:00+00:00",
-          "exchange_timestamp": null,
-          "feed_timestamp": 1794182400,
-          "retrieved_at": "2026-11-09T20:30:27.237788+00:00",
-          "latency_ms": 73827237.788,
-          "age_seconds": 73894.451
-        },
-        "AVAX/USD": {
-          "bar_timestamp": "2026-11-09T00:00:00+00:00",
-          "exchange_timestamp": null,
-          "feed_timestamp": 1794182400,
-          "retrieved_at": "2026-11-09T20:30:27.496315+00:00",
-          "latency_ms": 73827496.315,
-          "age_seconds": 73894.451
+          "feed_timestamp": 1794257860000,
+          "retrieved_at": "2026-11-09T20:59:24.527977+00:00",
+          "latency_ms": 104527.977,
+          "age_seconds": 356.822
         },
         "LINK/USD": {
-          "bar_timestamp": "2026-11-09T00:00:00+00:00",
+          "bar_timestamp": "2026-11-09T20:59:00+00:00",
           "exchange_timestamp": null,
-          "feed_timestamp": 1794182400,
-          "retrieved_at": "2026-11-09T20:30:27.666890+00:00",
-          "latency_ms": 73827666.89,
-          "age_seconds": 73894.451
+          "feed_timestamp": 1794257940000,
+          "retrieved_at": "2026-11-09T21:00:26.730772+00:00",
+          "latency_ms": 86730.772,
+          "age_seconds": 276.822
         },
         "BCH/USD": {
-          "bar_timestamp": "2026-11-09T00:00:00+00:00",
+          "bar_timestamp": "2026-11-09T20:59:10+00:00",
           "exchange_timestamp": null,
-          "feed_timestamp": 1794182400,
-          "retrieved_at": "2026-11-09T20:30:27.849444+00:00",
-          "latency_ms": 73827849.444,
-          "age_seconds": 73894.451
+          "feed_timestamp": 1794257950000,
+          "retrieved_at": "2026-11-09T21:00:28.268278+00:00",
+          "latency_ms": 78268.278,
+          "age_seconds": 266.822
         },
         "UNI/USD": {
-          "bar_timestamp": "2026-11-09T00:00:00+00:00",
+          "bar_timestamp": "2026-11-09T20:59:10+00:00",
           "exchange_timestamp": null,
-          "feed_timestamp": 1794182400,
-          "retrieved_at": "2026-11-09T20:30:28.111061+00:00",
-          "latency_ms": 73828111.061,
-          "age_seconds": 73894.451
-        },
-        "XLM/USD": {
-          "bar_timestamp": "2026-11-09T00:00:00+00:00",
-          "exchange_timestamp": null,
-          "feed_timestamp": 1794182400,
-          "retrieved_at": "2026-11-09T20:30:28.355089+00:00",
-          "latency_ms": 73828355.089,
-          "age_seconds": 73894.451
-        },
-        "ETC/USD": {
-          "bar_timestamp": "2026-11-09T00:00:00+00:00",
-          "exchange_timestamp": null,
-          "feed_timestamp": 1794182400,
-          "retrieved_at": "2026-11-09T20:30:28.705704+00:00",
-          "latency_ms": 73828705.704,
-          "age_seconds": 73894.451
+          "feed_timestamp": 1794257950000,
+          "retrieved_at": "2026-11-09T21:00:29.448733+00:00",
+          "latency_ms": 79448.733,
+          "age_seconds": 266.822
         }
       },
       "future_data_used": false
@@ -5911,7 +5781,7 @@
       "stage": "research",
       "feature_flag_enabled": false,
       "multiplier_active": false,
-      "proposed_multiplier": 0.563575,
+      "proposed_multiplier": 0.532234,
       "applied_multiplier": 1.0
     }
   },
@@ -6328,33 +6198,6 @@
     }
   ],
   "equity_curve": [
-    {
-      "ts": "2026-11-07T20:15:53.630979+00:00",
-      "cycle": 5336,
-      "equity": 0.0,
-      "cash": 0.0,
-      "deployed": 0.0,
-      "realized_pnl": 0.0,
-      "premium": 0.0
-    },
-    {
-      "ts": "2026-11-07T20:25:18.926345+00:00",
-      "cycle": 5337,
-      "equity": 0.0,
-      "cash": 0.0,
-      "deployed": 0.0,
-      "realized_pnl": 0.0,
-      "premium": 0.0
-    },
-    {
-      "ts": "2026-11-07T20:34:52.064526+00:00",
-      "cycle": 5338,
-      "equity": 0.0,
-      "cash": 0.0,
-      "deployed": 0.0,
-      "realized_pnl": 0.0,
-      "premium": 0.0
-    },
     {
       "ts": "2026-11-07T20:44:19.939215+00:00",
       "cycle": 5339,
@@ -7677,6 +7520,33 @@
       "deployed": 0.0,
       "realized_pnl": 0.0,
       "premium": 0.0
+    },
+    {
+      "ts": "2026-11-09T20:41:20.867195+00:00",
+      "cycle": 5486,
+      "equity": 0.0,
+      "cash": 0.0,
+      "deployed": 0.0,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-11-09T20:51:03.491405+00:00",
+      "cycle": 5487,
+      "equity": 0.0,
+      "cash": 0.0,
+      "deployed": 0.0,
+      "realized_pnl": 0.0,
+      "premium": 0.0
+    },
+    {
+      "ts": "2026-11-09T21:03:49.277620+00:00",
+      "cycle": 5488,
+      "equity": 0.0,
+      "cash": 0.0,
+      "deployed": 0.0,
+      "realized_pnl": 0.0,
+      "premium": 0.0
     }
   ],
   "decisions": [
@@ -8398,74 +8268,74 @@
         {
           "symbol": "BTC/USD",
           "interval_m": 5,
-          "bars": 4581,
+          "bars": 4584,
           "usable": 0,
           "ticks_per_bar": 1.0,
           "single_tick_pct": 100.0,
-          "span_days": 94.64
+          "span_days": 94.66
         },
         {
           "symbol": "ETH/USD",
           "interval_m": 5,
-          "bars": 4581,
+          "bars": 4584,
           "usable": 0,
           "ticks_per_bar": 1.0,
           "single_tick_pct": 100.0,
-          "span_days": 94.64
+          "span_days": 94.66
         },
         {
           "symbol": "SOL/USD",
           "interval_m": 5,
-          "bars": 4581,
+          "bars": 4584,
           "usable": 0,
           "ticks_per_bar": 1.0,
           "single_tick_pct": 100.0,
-          "span_days": 94.64
+          "span_days": 94.66
         },
         {
           "symbol": "LTC/USD",
           "interval_m": 5,
-          "bars": 4579,
+          "bars": 4582,
           "usable": 0,
           "ticks_per_bar": 1.0,
           "single_tick_pct": 100.0,
-          "span_days": 94.64
+          "span_days": 94.66
         },
         {
           "symbol": "XRP/USD",
           "interval_m": 5,
-          "bars": 4578,
+          "bars": 4581,
           "usable": 0,
           "ticks_per_bar": 1.0,
           "single_tick_pct": 100.0,
-          "span_days": 94.64
+          "span_days": 94.66
         },
         {
           "symbol": "AVAX/USD",
           "interval_m": 5,
-          "bars": 4573,
+          "bars": 4576,
           "usable": 0,
           "ticks_per_bar": 1.0,
           "single_tick_pct": 100.0,
-          "span_days": 88.49
+          "span_days": 88.51
         },
         {
           "symbol": "LINK/USD",
           "interval_m": 5,
-          "bars": 4573,
+          "bars": 4576,
           "usable": 0,
           "ticks_per_bar": 1.0,
           "single_tick_pct": 100.0,
-          "span_days": 88.49
+          "span_days": 88.51
         },
         {
           "symbol": "UNI/USD",
           "interval_m": 5,
-          "bars": 4573,
+          "bars": 4576,
           "usable": 0,
           "ticks_per_bar": 1.0,
           "single_tick_pct": 100.0,
-          "span_days": 88.49
+          "span_days": 88.51
         }
       ]
     }
